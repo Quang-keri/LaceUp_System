@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
+import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.PaymentMethod;
 
 import java.math.BigDecimal;
@@ -34,17 +35,11 @@ public class Payment extends BaseEntity {
     @Column(name = "payment_method", length = 20)
     PaymentMethod paymentMethod;
 
-    @Column(name = "payment_status", length = 20)
-    PaymentStatus paymentStatus;
+
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "wallet_id")
-    Wallet wallet;
 
-    @OneToOne
-    private BookingIntent bookingIntent;
 }

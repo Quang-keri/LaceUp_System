@@ -32,24 +32,15 @@ const AppHeader = () => {
         alignItems: "center",
         justifyContent: "space-between",
         borderRadius: 20,
-        margin: 20,
+        margin: 10,
         boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
       }}
     >
-
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            background: "#22c55e",
-            borderRadius: 10,
-          }}
-        />
-        <span style={{ fontWeight: 700, fontSize: 20 }}>SPORTYBOOK</span>
+        Logo
+        <span style={{ fontWeight: 700, fontSize: 20 }}>Lace Up</span>
       </div>
 
-   
       <Menu
         mode="horizontal"
         selectedKeys={[location.pathname]}
@@ -64,7 +55,6 @@ const AppHeader = () => {
         }}
       />
 
-   
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <Badge count={3} size="small">
           <BellOutlined style={{ fontSize: 20, cursor: "pointer" }} />
@@ -73,7 +63,7 @@ const AppHeader = () => {
         <Avatar
           size={40}
           style={{
-            backgroundColor: "#22c55e",
+            backgroundColor: "#3e89de",
             cursor: "pointer",
           }}
           icon={<UserOutlined />}
