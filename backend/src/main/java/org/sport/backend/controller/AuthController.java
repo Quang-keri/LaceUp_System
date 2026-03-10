@@ -22,13 +22,12 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequestMapping("/auth")
 @Tag(name = "1. Authentication")
 public class AuthController {
 
-    AuthService authService;
-    AuthGoogleService authGoogleService;
+    private final AuthService authService;
+    private final AuthGoogleService authGoogleService;
     UserService userService;
 //    EmailService emailService;
 
