@@ -1,7 +1,7 @@
 package org.sport.backend.repository;
 
 import jakarta.validation.constraints.NotNull;
-import org.rent.room.be.entity.Role;
+import org.sport.backend.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

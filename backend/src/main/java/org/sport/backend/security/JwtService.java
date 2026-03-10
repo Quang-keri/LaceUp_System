@@ -3,7 +3,7 @@ package org.sport.backend.security;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.rent.room.be.properties.JwtProperties;
+import org.sport.backend.properties.JwtProperties;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -34,39 +34,26 @@ public class JwtService {
         return generateToken(user, jwtProperties.getRefreshExpiration(), "refresh");
     }
 
-    private String generateToken(
-            UserDetails user,
-            long expirationSeconds,
-            String type
-    ) {
+    private String generateToken(UserDetails user, long expirationSeconds, String type) {
         Instant now = Instant.now();
-
-        JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
-
-        String userId = "";
-        if (user instanceof CustomUserDetails customUserDetails) {
-            userId = customUserDetails.getUserId().toString();
-        }
-
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(expirationSeconds))
                 .subject(user.getUsername())
-                .claim("userId", userId)
-                .claim("type", type)
-                .claim("email", user.getUsername())
-                .claim("roles", user.getAuthorities()
-                        .stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .toList())
-                .build();
+                .claim("type", type);
 
-        return jwtEncoder.encode(
-                JwtEncoderParameters.from(jwsHeader, claims)
-        ).getTokenValue();
+        // Chỉ thêm Roles và thông tin chi tiết nếu là Access Token
+        if ("access".equals(type)) {
+            if (user instanceof CustomUserDetails customUserDetails) {
+                claimsBuilder.claim("userId", customUserDetails.getUserId().toString());
+            }
+            claimsBuilder.claim("roles", user.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority).toList());
+        }
+
+        return jwtEncoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claimsBuilder.build()))
+                .getTokenValue();
     }
-
-    // Thêm vào JwtService.java
 
     public Authentication getAuthentication(String token) {
         Jwt jwt = jwtDecoder.decode(token);
