@@ -1,7 +1,7 @@
 package org.sport.backend.repository;
 
-import org.rent.room.be.constant.MessageStatus;
-import org.rent.room.be.entity.Message;
+import org.sport.backend.constant.MessageStatus;
+import org.sport.backend.entity.Message;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
