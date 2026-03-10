@@ -28,6 +28,9 @@ public enum ErrorCode {
     //Role
     ROLE_NOT_FOUND(3001, "Role not found", HttpStatus.NOT_FOUND),
 
+    //Permission
+    PERMISSION_NOT_FOUND(3002, "Permission not found", HttpStatus.NOT_FOUND),
+
     // Page Errors
     INVALID_PAGINATION(4001, "Invalid pagination parameters", HttpStatus.BAD_REQUEST),
 

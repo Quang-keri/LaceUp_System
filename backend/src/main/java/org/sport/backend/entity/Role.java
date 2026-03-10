@@ -1,11 +1,10 @@
 package org.sport.backend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.Set;
 
 @Entity
 @Table(name = "roles")
@@ -18,7 +17,18 @@ public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long roleId;
+
+    @Column(nullable = false, unique = true)
     private String roleName;
+
     private String description;
     private boolean active;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "roles_permissions",
+            joinColumns = @JoinColumn(name = "role_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    private Set<Permission> permissions;
 }
