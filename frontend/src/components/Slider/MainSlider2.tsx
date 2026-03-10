@@ -21,11 +21,6 @@ const MainSlider2 = () => {
       classStrock: "caulong-strock",
       classFill: "caulong-text",
     },
-    {
-      img: image3,
-      classStrock: "pickleball-strock",
-      classFill: "pickleball-text",
-    },
   ];
 
   return (

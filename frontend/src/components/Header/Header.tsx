@@ -11,14 +11,14 @@ const AppHeader = () => {
   const items = [
     {
       key: "/",
-      label: "Home",
+      label: "Trang chủ",
     },
     {
-      key: "/news",
-      label: "News",
+      key: "/tin-tuc",
+      label: "Tin tức",
     },
     {
-      key: "/my-bookings",
+      key: "/lich-dat-cua-toi",
       label: "My Bookings",
     },
   ];
