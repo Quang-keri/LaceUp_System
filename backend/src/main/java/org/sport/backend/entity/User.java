@@ -1,12 +1,10 @@
 package org.sport.backend.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.*;
 import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.AuthProvider;
-
 
 import java.time.LocalDate;
 import java.util.List;
@@ -69,14 +67,14 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "user2", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Conversation> receivedConversations;
 
-//    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-//    List<Subscription> subscriptions;
-
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     List<Payment> payments;
 
-
-//    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
-//    private Review review;
-
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "users_permissions",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id")
+    )
+    List<Permission> extraPermissions;
 }

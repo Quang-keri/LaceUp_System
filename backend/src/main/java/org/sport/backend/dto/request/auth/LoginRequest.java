@@ -1,4 +1,4 @@
-package org.sport.backend.dto.request;
+package org.sport.backend.dto.request.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -16,6 +16,6 @@ public class LoginRequest {
     String email;
 
     @NotBlank(message = "PASSWORD_REQUIRED")
-    @Size(min = 8, message = "PASSWORD_TOO_SHORT")
+    @Size(min = 6, message = "PASSWORD_TOO_SHORT")
     String password;
 }

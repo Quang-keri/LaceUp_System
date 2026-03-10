@@ -1,6 +1,6 @@
 package org.sport.backend.repository;
 
-import org.rent.room.be.entity.Conversation;
+import org.sport.backend.entity.Conversation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

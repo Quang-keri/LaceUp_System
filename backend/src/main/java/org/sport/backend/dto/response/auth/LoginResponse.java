@@ -1,4 +1,4 @@
-package org.sport.backend.dto.response;
+package org.sport.backend.dto.response.auth;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
