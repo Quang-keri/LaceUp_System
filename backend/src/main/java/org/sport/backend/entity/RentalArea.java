@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
+import org.sport.backend.base.BaseEntity;
+import org.sport.backend.constant.RentalAreaStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -52,7 +54,7 @@ public class RentalArea extends BaseEntity {
     User owner;
 
     @OneToMany(mappedBy = "rentalArea",fetch = FetchType.LAZY)
-    List<Court> room;
+    List<Court> courts;
 
     @OneToMany(mappedBy = "rentalArea",fetch = FetchType.LAZY)
     List<Booking> bookings;

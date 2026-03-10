@@ -2,6 +2,7 @@ package org.sport.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.sport.backend.constant.PostStatus;
 
 import java.util.UUID;
 
