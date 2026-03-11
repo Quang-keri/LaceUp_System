@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/auth")
+@RequestMapping("/v1/auth")
 @Tag(name = "1. Authentication")
 public class AuthController {
 
@@ -35,7 +35,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
+        System.out.println(request.getEmail());
         LoginResponse loginResponse = authService.login(request);
+        System.out.println(loginResponse);
         return ResponseEntity.ok(ApiResponse.<LoginResponse>builder()
                 .code(200)
                 .message("Login successfully")

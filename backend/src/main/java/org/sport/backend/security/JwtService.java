@@ -40,6 +40,7 @@ public class JwtService {
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(expirationSeconds))
                 .subject(user.getUsername())
+                .claim("email", user.getUsername())
                 .claim("type", type);
 
         // Chỉ thêm Roles và thông tin chi tiết nếu là Access Token

@@ -3,7 +3,7 @@ import authService from '../../../service/authService';
 import {useNavigate} from 'react-router-dom';
 import './style.css'; // Import file CSS ở đây
 
-const LoginPage: React.FC = () => {
+const LoginAdminPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -72,4 +72,4 @@ const LoginPage: React.FC = () => {
     );
 };
 
-export default LoginPage;
+export default LoginAdminPage;
