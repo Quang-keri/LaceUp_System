@@ -2,7 +2,6 @@ import React, {useState} from 'react';
 import authService from '../../../service/authService';
 import {useNavigate} from 'react-router-dom';
 import './style.css';
-import {useAuth} from "../../../context/AuthContext.tsx";
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -10,7 +9,6 @@ const LoginPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const {login} = useAuth();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,7 +19,6 @@ const LoginPage: React.FC = () => {
                 alert('Đăng nhập thành công!');
                 localStorage.setItem('accessToken', response.result.accessToken);
                 localStorage.setItem('refreshToken', response.result.refreshToken);
-                login()
                 navigate('/trang-chính');
             }
         } catch (error: any) {
