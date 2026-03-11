@@ -24,11 +24,10 @@ interface AdminHeaderProps {
 const OwnerHeader: React.FC<AdminHeaderProps> = ({
   collapsed,
   toggleCollapsed,
-  // adminUser,
+  adminUser,
   isDark,
   onThemeToggle,
 }) => {
-
   const displayName = adminUser?.userName || "Admin";
 
   const userMenu: MenuProps["items"] = [

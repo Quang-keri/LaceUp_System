@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { Layout, ConfigProvider, theme as antTheme } from "antd";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../../components/Owner/Sidebar";
-import AdminHeader from "../../components/Owner/Header";
-// import { useAuth } from "../../context/AuthContext";
+import OwnerHeader from "../../components/Owner/Header";
+import { useAuth } from "../../context/AuthContext";
+
+const { Content } = Layout;
+
+const THEME_KEY = "adminTheme";
 
 export default function OwnerLayout() {
- 
-  //   const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
@@ -23,12 +26,6 @@ export default function OwnerLayout() {
 
   const handleThemeToggle = () => setIsDark((prev) => !prev);
 
-  // 3. Hàm xử lý logout: Chỉ cần gọi hàm của Context
-  const handleLogoutClick = async () => {
-    await logout();
-    // Không cần navigate ở đây nữa, vì AuthContext đã dùng window.location.href
-  };
-
   return (
     <ConfigProvider
       theme={{
@@ -43,15 +40,13 @@ export default function OwnerLayout() {
           collapsed={collapsed}
           toggleCollapsed={() => setCollapsed(!collapsed)}
           isDark={isDark}
-          //   adminUser={user}
-          handleLogout={handleLogoutClick}
         />
 
         <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
-          <AdminHeader
+          <OwnerHeader
             collapsed={collapsed}
             toggleCollapsed={() => setCollapsed(!collapsed)}
-            // adminUser={user}
+            adminUser={user}
             isDark={isDark}
             onThemeToggle={handleThemeToggle}
           />

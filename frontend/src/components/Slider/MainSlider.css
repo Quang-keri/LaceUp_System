@@ -64,16 +64,7 @@
 }
 
 .caulong-text {
-  background-image: url("../../assets/caulong_fill_v1.png");
-  z-index: -1;
-}
-
-.pickleball-strock {
-  background-image: url("../../assets/pickleball_stroke_v1.png");
-}
-
-.pickleball-text {
-  background-image: url("../../assets/pickleball_fill_v1.png");
+  background-image: url("../../assets/cau_long_fill_v3.png");
   z-index: -1;
 }
 
@@ -128,11 +119,7 @@
 }
 
 .carousel .thumb:nth-child(2) {
-  background-image: url("../../assets/caulong_fill_v1.png");
-}
-
-.carousel .thumb:nth-child(3) {
-  background-image: url("../../assets/pickleball_fill_V1.png");
+  background-image: url("../../assets/cau_long_fill_v3.png");
 }
 
 .carousel .thumb:hover {
