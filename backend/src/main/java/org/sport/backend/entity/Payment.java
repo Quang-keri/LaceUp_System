@@ -6,6 +6,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
 import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.PaymentMethod;
+import org.sport.backend.constant.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @SuperBuilder
 @Table(name = "payments")
 @Entity
-@FieldDefaults(level = AccessLevel.PRIVATE)
+
 public class Payment extends BaseEntity {
 
     @Id
@@ -32,10 +33,13 @@ public class Payment extends BaseEntity {
     @Column(name = "amount", precision = 19, scale = 2, nullable = false)
     BigDecimal amount;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", length = 20)
     PaymentMethod paymentMethod;
 
-
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", length = 20)
+    PaymentStatus paymentStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

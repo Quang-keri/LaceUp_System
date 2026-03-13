@@ -20,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -53,14 +54,14 @@ public class UserServiceImpl implements UserService {
 
         User user = User.builder()
                 .userName(request.getUserName())
-                .email(request.getEmail())
+                .email(request.getEmail().toLowerCase())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .passwordHash(request.getPassword())
                 .gender(request.getGender())
                 .phone(request.getPhone())
                 .dateOfBirth(request.getDateOfBirth())
                 .role(role)
                 .active(true)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         return userMapper.toUserResponse(userRepository.save(user));

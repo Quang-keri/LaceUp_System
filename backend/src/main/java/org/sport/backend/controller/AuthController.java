@@ -35,7 +35,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
+        System.out.println(request.getEmail());
         LoginResponse loginResponse = authService.login(request);
+        System.out.println(loginResponse);
         return ResponseEntity.ok(ApiResponse.<LoginResponse>builder()
                 .code(200)
                 .message("Login successfully")

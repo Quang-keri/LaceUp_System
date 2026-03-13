@@ -10,6 +10,7 @@ import org.sport.backend.constant.BookingStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -19,26 +20,25 @@ import java.util.UUID;
 @SuperBuilder
 @Table(name = "bookings")
 @Entity
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Booking extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "booking_id")
-    UUID bookingId;
+   private   UUID bookingId;
 
     @Column(name = "booking_title")
     private String bookingTitle;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "booking_status", length = 20)
-    BookingStatus bookingStatus;
+    private  BookingStatus bookingStatus;
 
     @Column(name = "total_price", precision = 19, scale = 2)
-    BigDecimal totalPrice;
+    private  BigDecimal totalPrice;
 
     @Column(name = "note", length = 500)
-    String note;
+    private  String note;
 
     @Column(name = "start_time_booking")
     private LocalDateTime startTime;
@@ -46,46 +46,37 @@ public class Booking extends BaseEntity {
     @Column(name = "end_time_booking")
     private LocalDateTime endTime;
 
-    @Column(name = "check_in")
-    LocalDateTime checkIn;
+    @Column(name = "booker_name")
+    private String bookerName;
 
-    @Column(name = "check_out")
-    LocalDateTime checkOut;
+    @Column(name = "booker_phone",length = 11)
+    private String bookerPhone;
 
     @Column(name = "escrow_released_at")
-    LocalDateTime escrowReleasedAt;
+    private LocalDateTime escrowReleasedAt;
 
     @Column(name = "dispute_flag")
-    Boolean disputeFlag;
+    private  Boolean disputeFlag;
 
     @Column(name = "dispute_note", length = 500)
-    String disputeNote;
+    private String disputeNote;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "renter_id")
-    User renter;
+    private User renter;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "wallet_id")
-//    Wallet wallet;
-
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "review_id")
-//    Review review;
-
-//    @OneToMany(mappedBy = "booking", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-//    List<Slot> slots;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "booking_type")
-    BookingStatus bookingType;
+    private  BookingStatus bookingType;
 
-//    @OneToMany(mappedBy = "booking", fetch = FetchType.LAZY)
-//    private List<BookingQR> bookingQRs;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rental_area_id")
     private RentalArea rentalArea;
+
+    @OneToMany(mappedBy = "booking", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    List<Slot> slots;
 
     @Column(name = "invoice_url")
     private String invoiceUrl;

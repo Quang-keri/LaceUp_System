@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
+import org.sport.backend.base.BaseEntity;
 
 import java.util.List;
 
@@ -14,17 +15,17 @@ import java.util.List;
 @Setter
 @SuperBuilder
 @Table(name = "categories")
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class Category {
+
+public class Category extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "category_id")
-    Integer categoryId;
+    private   Integer categoryId;
 
     @Column(name = "category_name", length = 50, nullable = false, unique = true)
     String categoryName;
 
-//    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
-//    List<Room> rooms;
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    List<Court> courts;
 }

@@ -8,8 +8,6 @@ import {
   MenuFoldOutlined,
 } from "@ant-design/icons";
 
-// import { type UserResponse } from "../../services/usersService";
-
 const { Header } = Layout;
 
 interface AdminHeaderProps {

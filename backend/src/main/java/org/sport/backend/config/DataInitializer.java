@@ -1,10 +1,8 @@
 package org.sport.backend.config;
 
 import lombok.RequiredArgsConstructor;
-import org.sport.backend.entity.Role;
-import org.sport.backend.entity.User;
-import org.sport.backend.repository.RoleRepository;
-import org.sport.backend.repository.UserRepository;
+import org.sport.backend.entity.*;
+import org.sport.backend.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -21,6 +19,9 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+   private  final CityRepository cityRepository;
+   private final CategoryRepository categoryRepository;
+   private final AmenityRepository amenityRepository;
 
     @Override
     @Transactional
@@ -80,5 +81,62 @@ public class DataInitializer implements CommandLineRunner {
 
             userRepository.saveAll(users);
         }
+
+
+        if(cityRepository.count() == 0) {
+            List<City> cities = new ArrayList<>();
+
+            City city1 = City.builder()
+                    .cityName("Thành Phố Hồ Chí Minh")
+                    .build();
+            City city2 = City.builder()
+                    .cityName("Bình Dương")
+                    .build();
+            cities.add(city1);
+            cities.add(city2);
+            cityRepository.saveAll(cities);
+
+        }
+
+
+        if(categoryRepository.count() == 0) {
+            seedCategories();
+        }
+
+        if(amenityRepository.count() == 0) {
+            seedAmenities();
+        }
+
+
     }
+
+    private void seedCategories() {
+        List<String> categories = List.of(
+                "Sân cầu lông",
+                "Sân bóng đá",
+                "Sân pickleball"
+        );
+
+        for (String name : categories) {
+            if (!categoryRepository.existsByCategoryName(name)) {
+                categoryRepository.save(Category.builder()
+                        .categoryName(name)
+                        .build());
+            }
+        }
+    }
+
+    private void seedAmenities() {
+
+        List<Amenity> amenities = List.of(
+                Amenity.builder().amenityName("Wifi tốc độ cao").iconKey("FaWifi").build(),
+                Amenity.builder().amenityName("Ổ điện").iconKey("FaPlug").build()
+        );
+
+        for (Amenity a : amenities) {
+            if (!amenityRepository.existsByAmenityName(a.getAmenityName())) {
+                amenityRepository.save(a);
+            }
+        }
+        }
 }

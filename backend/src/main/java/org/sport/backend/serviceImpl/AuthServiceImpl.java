@@ -50,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
 
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword().toLowerCase())
+                    new UsernamePasswordAuthenticationToken(request.getEmail().toLowerCase(), request.getPassword())
             );
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             return generateAndSaveTokens(userDetails);

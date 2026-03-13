@@ -87,7 +87,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.builder()
                         .code(500)
-                        .message("Internal server error")
+                        .message(e.getMessage())
                         .build());
     }
 

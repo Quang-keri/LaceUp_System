@@ -5,7 +5,7 @@ import {
   AppstoreOutlined,
   CalendarOutlined,
   TeamOutlined,
-  ShopOutlined, 
+  ShopOutlined,
   DollarOutlined,
   SettingOutlined,
   LogoutOutlined,
@@ -42,7 +42,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
   isDark,
-//   adminUser,
+  //   adminUser,
   handleLogout,
 }) => {
   const location = useLocation();
@@ -57,92 +57,97 @@ const Sidebar: React.FC<SidebarProps> = ({
     setOpenKeys(keys);
   };
 
-
   const items: MenuItem[] = [
-    getItem(<Link to="/admin">Dashboard</Link>, "/admin", <AppstoreOutlined />),
+    getItem(
+      <Link to="/owner">Báo cáo và thống kê</Link>,
+      "/owner",
+      <AppstoreOutlined />,
+    ),
 
-    getItem("Quản lý Đặt phòng", "sub_booking", <CalendarOutlined />, [
+    getItem("Quản lý đặt lịch", "sub_booking", <CalendarOutlined />, [
       getItem(
-        <Link to="/admin/bookings/calendar">Lịch phòng (Calendar)</Link>,
-        "/admin/bookings/calendar",
+        <Link to="/owner/bookings/list">Danh sách đơn đặt</Link>,
+        "/owner/bookings/list",
       ),
       getItem(
-        <Link to="/admin/bookings/list">Danh sách đơn đặt</Link>,
-        "/admin/bookings/list",
+        <Link to="/owner/bookings/calendar">Lịch hẹn </Link>,
+        "/owner/bookings/calendar",
       ),
+
       getItem(
-        <Link to="/admin/bookings/check-in">Check-in/Check-out</Link>,
-        "/admin/bookings/check-in",
+        <Link to="/owner/bookings/check-in">Nhận/Trả</Link>,
+        "/owner/bookings/check-in",
+      ),
+    ]),
+    getItem("Quản lý hàng hóa", "sub_product", <CalendarOutlined />, [
+      getItem(<Link to="/owner/product/list">Tất cả</Link>, "/owner/area/list"),
+      getItem(
+        <Link to="/owner/product/types">Loại hàng hóa</Link>,
+        "/owner/product/types",
       ),
     ]),
 
-   
+    //
+    getItem("Quản lý Cơ sở", "sub_area", <CalendarOutlined />, [
+      getItem(<Link to="/owner/area/list">Chi nhánh</Link>, "/owner/area/list"),
+      getItem(
+        <Link to="/owner/area/devices">Thiết bị và tiện ích </Link>,
+        "/owner/area/list",
+      ),
+    ]),
     getItem(
-      <Link to="/admin/rooms">Quản lý Phòng & Cơ sở</Link>,
-      "/admin/rooms",
+      <Link to="/owner/posts">Quản lý bài đăng</Link>,
+      "/owner/posts",
       <ShopOutlined />,
-    ),
-   
-    getItem(
-      <Link to="/admin/posts">Quản lý Bài đăng</Link>,
-      "/admin/posts",
-      <ShopOutlined />,
-    ),
-  
-    getItem(
-      <Link to="/admin/customers">Khách hàng</Link>,
-      "/admin/customers",
-      <TeamOutlined />,
     ),
 
+    getItem("Quản lý người dùng", "sub_users", <CalendarOutlined />, [
+      getItem(
+        <Link to="/owner/users/customers">Khách hàng </Link>,
+        "/owner/users/customers",
+      ),
+      getItem(
+        <Link to="/owner/users/staffs">Nhân viên </Link>,
+        "/owner/users/staffs",
+      ),
+    ]),
 
     getItem("Tài chính & Hóa đơn", "sub_finance", <DollarOutlined />, [
       getItem(
-        <Link to="/admin/invoices">Hóa đơn dịch vụ</Link>,
-        "/admin/invoices",
+        <Link to="/owner/invoices">Hóa đơn dịch vụ</Link>,
+        "/owner/invoices",
       ),
       getItem(
-        <Link to="/admin/transactions">Lịch sử giao dịch</Link>,
-        "/admin/transactions",
+        <Link to="/owner/transactions">Lịch sử giao dịch</Link>,
+        "/owner/transactions",
       ),
       getItem(
-        <Link to="/admin/wallet-overview">Tổng quan ví hệ thống</Link>,
-        "/admin/wallet-overview",
+        <Link to="/owner/wallet-overview">Tổng quan ví hệ thống</Link>,
+        "/owner/wallet-overview",
       ),
       getItem(
-        <Link to="/admin/commission-config">Cấu hình Commission</Link>,
-        "/admin/commission-config",
+        <Link to="/owner/commission-config">Cấu hình Commission</Link>,
+        "/owner/commission-config",
       ),
       getItem(
-        <Link to="/admin/wallet-freeze">Khóa/Mở khóa ví</Link>,
-        "/admin/wallet-freeze",
+        <Link to="/owner/wallet-freeze">Khóa/Mở khóa ví</Link>,
+        "/owner/wallet-freeze",
       ),
     ]),
 
-   
     getItem(
-      <Link to="/admin/reviews">Đánh giá từ khách</Link>,
-      "/admin/reviews",
+      <Link to="/owner/reviews">Đánh giá từ khách</Link>,
+      "/owner/reviews",
       <StarOutlined />,
     ),
 
     getItem("Cài đặt hệ thống", "sub_settings", <SettingOutlined />, [
       getItem(
-        <Link to="/admin/room-types">Loại phòng</Link>,
-        "/admin/room-types",
-      ),
-      getItem(
-        <Link to="/admin/amenities">Thiết bị & Tiện ích</Link>,
-        "/admin/amenities",
-      ),
-      getItem(<Link to="/admin/packages">Gói Premium</Link>, "/admin/packages"),
-      getItem(
-        <Link to="/admin/settings">Cài đặt chung</Link>,
-        "/admin/settings",
+        <Link to="/owner/settings">Cài đặt chung</Link>,
+        "/owner/settings",
       ),
     ]),
 
-   
     getItem("Đăng xuất", "logout", <LogoutOutlined />),
   ];
 
@@ -164,7 +169,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
       }}
     >
-    
       <div
         className={`h-16 flex items-center justify-center border-b transition-colors ${
           isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
@@ -172,7 +176,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <div className="flex items-center gap-2 overflow-hidden px-4">
           <div className="min-w-[32px] h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-            E
+            L
           </div>
           {!collapsed && (
             <div
@@ -180,7 +184,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 isDark ? "text-white" : "text-gray-800"
               }`}
             >
-              EduRoom
+              Lace Up
             </div>
           )}
         </div>
