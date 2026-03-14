@@ -6,9 +6,6 @@ export default function DefaultLayout() {
   return (
     <div>
       <AppHeader />
-
-
-
       <Outlet />
       <Footer />
     </div>

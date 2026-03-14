@@ -14,7 +14,7 @@ interface RoleModalProps {
 const RoleModal: React.FC<RoleModalProps> = ({ open, editingRole, onCancel, onSuccess }) => {
     const [form] = Form.useForm();
     const [allPermissions, setAllPermissions] = useState<PermissionResponse[]>([]);
-    const [loadingPerms, setLoadingPerms] = useState(false);
+    const [, setLoadingPerms] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -76,7 +76,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ open, editingRole, onCancel, onSu
                     <Input.TextArea rows={2} placeholder="Mô tả vai trò..." />
                 </Form.Item>
 
-                <Divider orientation="left">Quyền hạn (Permissions)</Divider>
+                <Divider>Quyền hạn (Permissions)</Divider>
 
                 <Form.Item name="permissionIds">
                     <Checkbox.Group style={{ width: '100%' }}>

@@ -25,7 +25,7 @@ public class UserController {
 
     private final UserService userService;
 
-    // --- GET ME API ---
+
     @GetMapping("/my-info")
     public ResponseEntity<ApiResponse<UserResponse>> getMyInfo() {
         return ResponseEntity.ok(
@@ -33,10 +33,10 @@ public class UserController {
         );
     }
 
-    // --- CRUD APIs ---
+
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody @Valid CreateUserRequest request) {
-        // HTTP 201 Created là chuẩn RESTful cho việc tạo mới
+
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ApiResponse.success("Tạo người dùng thành công", userService.createUser(request))
         );
@@ -88,7 +88,7 @@ public class UserController {
         );
     }
 
-    // --- RBAC APIs ---
+
     @PutMapping("/{userId}/role/{roleId}")
     public ResponseEntity<ApiResponse<UserResponse>> assignRoleToUser(
             @PathVariable UUID userId,

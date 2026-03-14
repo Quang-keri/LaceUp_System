@@ -35,16 +35,17 @@ public enum ErrorCode {
     // Page Errors
     INVALID_PAGINATION(4001, "Invalid pagination parameters", HttpStatus.BAD_REQUEST),
 
-    // Package Errors
-    RENTPACKAGE_NOT_FOUND(4002, "Package not found", HttpStatus.NOT_FOUND),      // đổi 4001→4002
-    INVALID_RENTPACKAGE(4003, "Invalid package data", HttpStatus.BAD_REQUEST),    // đổi 4002→4003
 
     // Rental Area
     RENTAL_AREA_NOT_FOUND(4004, "Rental area not found", HttpStatus.NOT_FOUND),  // đổi 4001→4004
 
-    // Subscription
-    SUBSCRIPTION_ALREADY_ACTIVE(4005, "User already has an active subscription", HttpStatus.BAD_REQUEST),
-    SUBSCRIPTION_NOT_FOUND(4006, "Subscription not found", HttpStatus.NOT_FOUND),
+//COURT_NOT_FOUND
+COURT_NOT_FOUND(4004,"Court not found",HttpStatus.NOT_FOUND),
+    //CATEGORY NOT FOUND
+    CATEGORY_NOT_FOUND(4004,"Category not found",HttpStatus.NOT_FOUND),
+
+    //POST_NOT_FOUND
+    POST_NOT_FOUND(4004,"Post not found",HttpStatus.NOT_FOUND),
 
     //QR
     QR_NOT_FOUND(4000, "QR không hợp lệ",HttpStatus.BAD_REQUEST),
@@ -52,9 +53,15 @@ public enum ErrorCode {
     QR_ALREADY_USED(4000, "QR đã dùng",HttpStatus.BAD_REQUEST),
     QR_EXPIRED(4000, "QR hết hạn",HttpStatus.BAD_REQUEST),
     BOOKING_NOT_FOUND(4004, "Không tìm thấy booking",HttpStatus.NOT_FOUND),
+    BOOKING_INTENT_NOT_FOUND(4004, "Không tìm thấy booking intent",HttpStatus.NOT_FOUND),
     BOOKING_ALREADY_CHECKED_IN(4000, "Đã check-in rồi",HttpStatus.BAD_REQUEST),
     CANNOT_CHECKOUT_BEFORE_CHECKIN(4000, "Chưa check-in thì không thể check-out",HttpStatus.BAD_REQUEST),
+
+
+    //City
+    CITY_NOT_FOUND(4000, "City không tìm thấy", HttpStatus.NOT_FOUND),
     ;
+
 
     private int code;
     private String message;

@@ -13,7 +13,7 @@ import org.springframework.context.annotation.*;
 import java.util.List;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-// http://localhost:8080/api/swagger-ui/index.html
+// http://localhost:9999/api/v1/lace-up/swagger-ui/index.html
 @OpenAPIDefinition(
         tags = {
                 @Tag(name = "1. Authentication", description = "API quản lý xác thực"),
@@ -34,7 +34,7 @@ public class SwaggerConfig {
                         .description("Tài liệu API cho hệ thống quản lý cho thuê phòng học.")
                         .license(new License().name("API License").url("http://domain.com/license")))
                 .servers(List.of(
-                        new Server().url("/api").description("Local Server URL") ))
+                        new Server().url("/api/v1/lace-up").description("Local Server URL") ))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,

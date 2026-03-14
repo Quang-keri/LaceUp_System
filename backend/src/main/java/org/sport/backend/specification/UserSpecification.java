@@ -12,6 +12,11 @@ public class UserSpecification {
 
     public static Specification<User> filterUsers(String keyword, String role, Boolean active) {
         return (root, query, criteriaBuilder) -> {
+
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("extraPermissions", jakarta.persistence.criteria.JoinType.LEFT);
+            }
+
             List<Predicate> predicates = new ArrayList<>();
 
             if (StringUtils.hasText(keyword)) {
