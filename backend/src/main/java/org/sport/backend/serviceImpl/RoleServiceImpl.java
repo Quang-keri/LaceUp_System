@@ -66,9 +66,9 @@ public class RoleServiceImpl implements RoleService {
 
     @Transactional
     @Override
-    public void deleteRole(Long roleId) {
+    public void updateStatus(Long roleId, boolean active) {
         Role role = getRoleEntity(roleId);
-        role.setActive(false); // Soft delete
+        role.setActive(false);
         roleRepository.save(role);
     }
 

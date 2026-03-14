@@ -1,12 +1,15 @@
-import { createBrowserRouter } from "react-router-dom";
+import {createBrowserRouter} from "react-router-dom";
 import DefaultLayout from "../layouts/DefaultLayout/DefaultLayout";
 import LoginPage from "../page/customer/login-page/LoginPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
-import AdminPage from "../page/admin/AdminPage.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
 import {ProtectedRouter} from "./ProtectedRouter.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
 import PostPage from "../page/customer/post/PostPage.tsx";
+import AdminLayout from "../layouts/AdminLayout/AdminLayout.tsx";
+import UserManagement from "../page/admin/user-management/UserManagement.tsx";
+import RoleManagement from "../page/admin/role-management/RoleManagement.tsx";
+import PermissionManagement from "../page/admin/permission-management/PermissionManagement.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -26,7 +29,7 @@ export const router = createBrowserRouter([
             },
             {
                 path: "danh-sach-san",
-                element: <PostPage />,
+                element: <PostPage/>,
             },
         ]
     },
@@ -39,13 +42,25 @@ export const router = createBrowserRouter([
         path: "/admin",
         element: (
             <ProtectedRouter>
-                <AdminPage/>
+                <AdminLayout/>
             </ProtectedRouter>
         ),
         children: [
             {
                 index: true,
-                element: <AdminDashboard />,
+                element: <AdminDashboard/>,
+            },
+            {
+                path: "users",
+                element: <UserManagement/>,
+            },
+            {
+                path: "roles",
+                element: <RoleManagement/>,
+            },
+            {
+                path: "permissions",
+                element: <PermissionManagement/>,
             },
         ],
     },

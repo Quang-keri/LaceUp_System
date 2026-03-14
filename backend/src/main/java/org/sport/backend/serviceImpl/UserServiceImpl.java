@@ -3,6 +3,7 @@ package org.sport.backend.serviceImpl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.response.user.UserResponse;
@@ -16,6 +17,12 @@ import org.sport.backend.repository.PermissionRepository;
 import org.sport.backend.repository.RoleRepository;
 import org.sport.backend.repository.UserRepository;
 import org.sport.backend.service.UserService;
+import org.sport.backend.specification.UserSpecification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -79,10 +86,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(userMapper::toUserResponse)
-                .collect(Collectors.toList());
+    public PageResponse<UserResponse> getAllUsers(int page, int size, String role, Boolean active, String keyword) {
+
+        Sort sort = Sort.by("createdAt").descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Specification<User> spec = UserSpecification.filterUsers(keyword, role, active);
+
+        Page<User> pageData = userRepository.findAll(spec, pageable);
+
+        Page<UserResponse> responsePage = pageData.map(userMapper::toUserResponse);
+
+        return PageResponse.<UserResponse>builder()
+                .currentPage(page + 1)
+                .totalPages(pageData.getTotalPages())
+                .pageSize(pageData.getSize())
+                .totalElements(pageData.getTotalElements())
+                .data(responsePage.getContent())
+                .build();
     }
 
     @Override
@@ -104,11 +125,16 @@ public class UserServiceImpl implements UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    @Transactional
     @Override
-    public void deleteUser(UUID userId) {
-        User user = getUserEntity(userId);
-        user.setActive(false);
+    public void updateStatus(UUID id, Boolean active) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if ("ADMIN".equals(user.getRole().getRoleName())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        user.setActive(active);
         userRepository.save(user);
     }
 

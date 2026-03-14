@@ -52,6 +52,11 @@ public class PermissionServiceImpl implements PermissionService {
     public PermissionResponse updatePermission(Integer permissionId, PermissionRequest request) {
         Permission permission = getPermissionEntity(permissionId);
 
+        if (!permission.getPermissionName().equals(request.getPermissionName()) &&
+                permissionRepository.existsByPermissionName(request.getPermissionName())) {
+            throw new AppException(ErrorCode.PERMISSION_EXISTED);
+        }
+
         permission.setPermissionName(request.getPermissionName());
         permission.setDescription(request.getDescription());
 

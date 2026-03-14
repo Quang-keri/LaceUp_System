@@ -1,5 +1,3 @@
-import MainSlider2 from "../../../components/Slider/MainSlider2";
-
 export default function LandingPage() {
 
     return (
@@ -32,10 +30,6 @@ export default function LandingPage() {
                         Tìm ngay
                     </button>
                 </div>
-            </div>
-
-            <div className="w-[80%]">
-                <MainSlider2/>
             </div>
         </div>
     )

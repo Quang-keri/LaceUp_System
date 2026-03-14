@@ -1,7 +1,8 @@
 import React, {useState} from 'react';
 import authService from '../../../service/authService';
 import {useNavigate} from 'react-router-dom';
-import './style.css'; // Import file CSS ở đây
+import './style.css';
+import {toast} from "react-toastify";
 
 const LoginAdminPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -15,10 +16,8 @@ const LoginAdminPage: React.FC = () => {
         try {
             const response = await authService.login({email, password});
             if (response.code === 200) {
-                alert('Đăng nhập thành công!');
-                localStorage.setItem('accessToken', response.result.accessToken);
-                localStorage.setItem('refreshToken', response.result.refreshToken);
-                navigate('/dashboard');
+                toast("Đăng nhập thành công.")
+                navigate('/admin');
             }
         } catch (error: any) {
             alert('Đăng nhập thất bại: ' + (error.response?.data?.message || 'Lỗi kết nối'));

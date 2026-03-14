@@ -1,6 +1,7 @@
 package org.sport.backend.service;
 
 import jakarta.transaction.Transactional;
+import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.response.user.UserResponse;
@@ -17,15 +18,14 @@ public interface UserService {
 
     UserResponse getMyInfo();
 
-    List<UserResponse> getAllUsers();
+    PageResponse<UserResponse> getAllUsers(int page, int size, String role, Boolean active, String keyword);
 
     UserResponse getUserById(UUID userId);
 
     @Transactional
     UserResponse updateUser(UUID userId, UpdateUserRequest request);
 
-    @Transactional
-    void deleteUser(UUID userId);
+    void updateStatus(UUID id, Boolean active);
 
     Set<String> getUserAuthorities(UUID userId);
 
