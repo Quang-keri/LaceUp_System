@@ -25,20 +25,20 @@ public class Booking extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "booking_id")
-   private   UUID bookingId;
+    private UUID bookingId;
 
     @Column(name = "booking_title")
     private String bookingTitle;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "booking_status", length = 20)
-    private  BookingStatus bookingStatus;
+    private BookingStatus bookingStatus;
 
     @Column(name = "total_price", precision = 19, scale = 2)
-    private  BigDecimal totalPrice;
+    private BigDecimal totalPrice;
 
     @Column(name = "note", length = 500)
-    private  String note;
+    private String note;
 
     @Column(name = "start_time_booking")
     private LocalDateTime startTime;
@@ -49,14 +49,14 @@ public class Booking extends BaseEntity {
     @Column(name = "booker_name")
     private String bookerName;
 
-    @Column(name = "booker_phone",length = 11)
+    @Column(name = "booker_phone", length = 11)
     private String bookerPhone;
 
     @Column(name = "escrow_released_at")
     private LocalDateTime escrowReleasedAt;
 
     @Column(name = "dispute_flag")
-    private  Boolean disputeFlag;
+    private Boolean disputeFlag;
 
     @Column(name = "dispute_note", length = 500)
     private String disputeNote;
@@ -65,11 +65,9 @@ public class Booking extends BaseEntity {
     @JoinColumn(name = "renter_id")
     private User renter;
 
-
     @Enumerated(EnumType.STRING)
     @Column(name = "booking_type")
-    private  BookingStatus bookingType;
-
+    private BookingStatus bookingType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rental_area_id")

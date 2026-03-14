@@ -27,14 +27,14 @@ public class CourtController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> createCourt(
-            @Valid @ModelAttribute CourtRequest request,
-            @RequestParam(value = "images", required = false) MultipartFile[] images
+            @Valid @ModelAttribute CourtRequest request
     ) {
         try {
+            List<MultipartFile> images = request.getImages();
             return ApiResponse.success(
                     201,
                     "Create court successfully",
-                    courtService.createCourt(request, List.of(images))
+                    courtService.createCourt(request, images)
             );
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
@@ -137,7 +137,7 @@ public class CourtController {
     @PutMapping(value = "/{courtId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> updateCourt(
             @PathVariable UUID courtId,
-            @Valid  @ModelAttribute("data")  CourtUpdateRequest request,
+            @Valid @ModelAttribute("data") CourtUpdateRequest request,
             @RequestParam(value = "images", required = false) MultipartFile[] images
     ) {
         return ApiResponse.success(

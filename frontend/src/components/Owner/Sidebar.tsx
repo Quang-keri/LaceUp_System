@@ -66,8 +66,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     getItem("Quản lý đặt lịch", "sub_booking", <CalendarOutlined />, [
       getItem(
-        <Link to="/owner/bookings/list">Danh sách đơn đặt</Link>,
-        "/owner/bookings/list",
+        <Link to="/owner/bookings/management">Danh sách đơn đặt</Link>,
+        "/owner/bookings/management",
       ),
       getItem(
         <Link to="/owner/bookings/calendar">Lịch hẹn </Link>,
@@ -92,10 +92,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       getItem(
         <Link to="/owner/buildings/list">Danh sách tòa nhà</Link>,
         "/owner/buildings/list",
-      ),
-      getItem(
-        <Link to="/owner/buildings/create">Tạo tòa nhà</Link>,
-        "/owner/buildings/create",
       ),
       getItem(<Link to="/owner/area/list">Chi nhánh</Link>, "/owner/area/list"),
       getItem(

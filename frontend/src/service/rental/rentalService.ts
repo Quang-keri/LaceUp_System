@@ -61,9 +61,10 @@ class RentalService {
     formData.append("contactPhone", request.contactPhone);
     formData.append("cityId", request.cityId.toString());
 
-    // Get current user ID from token or context (you may need to adjust this)
-    const userId = localStorage.getItem("userId") || "";
-    formData.append("userId", userId);
+    // Use userId from request (passed from component via useAuth context)
+    if (request.userId) {
+      formData.append("userId", request.userId);
+    }
 
     images.forEach((image) => {
       formData.append("images", image);

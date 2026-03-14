@@ -13,11 +13,9 @@ import {
 } from "antd";
 import { UploadOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
-import type { UploadFile, FormInstance } from "antd";
+import type { UploadFile } from "antd";
 import RentalService from "../../../service/rental/rentalService";
-import type { RentalAreaResponse } from "../../../types/rental";
 import { useAuth } from "../../../context/AuthContext";
-
 const CITIES = [
   { label: "Hà Nội", value: 1 },
   { label: "TP Hồ Chí Minh", value: 2 },
@@ -35,20 +33,20 @@ export default function BuildingFormPage() {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
-  
+
   useEffect(() => {
     if (buildingId) {
       setIsEditMode(true);
       loadBuildingData(buildingId);
     }
   }, [buildingId]);
-
+  const { user } = useAuth();
   const loadBuildingData = async (id: string) => {
     setPageLoading(true);
     try {
       const response = await RentalService.getRentalAreaById(id);
-      if (response.data) {
-        const building = response.data.data;
+      if (response.data && response.data.result) {
+        const building = response.data.result;
         form.setFieldsValue({
           rentalAreaName: building.rentalAreaName,
           address: building.address,
@@ -102,6 +100,7 @@ export default function BuildingFormPage() {
         }
 
         const createData = {
+          userId: user?.userId,
           rentalAreaName: values.rentalAreaName,
           address: values.address,
           contactName: values.contactName,
@@ -153,7 +152,7 @@ export default function BuildingFormPage() {
           <Row gutter={[16, 16]}>
             <Col xs={24} md={12}>
               <Form.Item
-                label="Tên tòa nhà"
+                label="Tên tòa nhà 1"
                 name="rentalAreaName"
                 rules={[
                   {

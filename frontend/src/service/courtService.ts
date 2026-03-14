@@ -33,33 +33,63 @@ class CourtService {
     return response.data;
   }
 
-  async createCourt(request: CreateCourtRequest) {
-    const requestBody = {
-      courtName: request.courtName,
-      categoryId: request.categoryId,
-      pricePerHour: request.price,
-      rentalAreaId: request.rentalAreaId,
-      courtCodes: request.courtCodes,
-    };
+  async createCourt(request: CreateCourtRequest, images: File[] = []) {
+    const formData = new FormData();
+
+    formData.append("courtName", request.courtName);
+    formData.append("categoryId", String(request.categoryId));
+    formData.append("pricePerHour", String(request.price));
+    formData.append("rentalAreaId", request.rentalAreaId);
+
+
+    request.courtCodes.forEach((code) => {
+      formData.append("courtCodes", code);
+    });
+
+    
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
 
     const response = await api.post<ApiResponse<CourtResponse>>(
       "/courts",
-      requestBody,
+      formData,
     );
+
     return response.data;
   }
 
-  async updateCourt(courtId: string, request: UpdateCourtRequest) {
-    const requestBody = {
-      courtName: request.courtName,
-      categoryId: request.categoryId,
-      pricePerHour: request.price,
-      courtCodes: request.courtCodes,
-    };
+  async updateCourt(
+    courtId: string,
+    request: UpdateCourtRequest,
+    images: File[] = [],
+  ) {
+    const formData = new FormData();
+    if (request.courtName) formData.append("courtName", request.courtName);
+    if (request.categoryId) formData.append("categoryId", request.categoryId);
+    if (request.price !== undefined)
+      formData.append("pricePerHour", request.price);
+
+    // Append court codes if provided
+    if (request.courtCodes && request.courtCodes.length > 0) {
+      request.courtCodes.forEach((code, index) => {
+        formData.append(`courtCodes[${index}]`, code);
+      });
+    }
+
+    // Append images if provided
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
 
     const response = await api.put<ApiResponse<CourtResponse>>(
       `/courts/${courtId}`,
-      requestBody,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
     );
     return response.data;
   }

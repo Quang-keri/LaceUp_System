@@ -3,30 +3,40 @@ package org.sport.backend.serviceImpl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Permission;
 import org.sport.backend.entity.Role;
 import org.sport.backend.entity.User;
+import org.sport.backend.entity.mongo.PasswordResetToken;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.UserMapper;
 import org.sport.backend.repository.PermissionRepository;
 import org.sport.backend.repository.RoleRepository;
 import org.sport.backend.repository.UserRepository;
+import org.sport.backend.repository.mongo.PasswordResetTokenRepository;
+import org.sport.backend.security.CustomUserDetails;
+import org.sport.backend.service.EmailService;
 import org.sport.backend.service.UserService;
+import org.sport.backend.specification.UserSpecification;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -36,9 +46,14 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     private final UserMapper userMapper;
+
+    @Value("${token_reset_password_expire_seconds}")
+    private long EXPIRATION_SEC;
 
     // --- CRUD OPERATIONS ---
 
@@ -79,10 +94,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(userMapper::toUserResponse)
-                .collect(Collectors.toList());
+    public PageResponse<UserResponse> getAllUsers(int page, int size, String role, Boolean active, String keyword) {
+
+        Sort sort = Sort.by("createdAt").descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Specification<User> spec = UserSpecification.filterUsers(keyword, role, active);
+
+        Page<User> pageData = userRepository.findAll(spec, pageable);
+
+        Page<UserResponse> responsePage = pageData.map(userMapper::toUserResponse);
+
+        return PageResponse.<UserResponse>builder()
+                .currentPage(page + 1)
+                .totalPages(pageData.getTotalPages())
+                .pageSize(pageData.getSize())
+                .totalElements(pageData.getTotalElements())
+                .data(responsePage.getContent())
+                .build();
     }
 
     @Override
@@ -104,12 +133,46 @@ public class UserServiceImpl implements UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    @Override
+    public void updateStatus(UUID id, Boolean active) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if ("ADMIN".equals(user.getRole().getRoleName())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        user.setActive(active);
+        userRepository.save(user);
+    }
+
+    @Override
+    public void processForgotPassword(String email) {
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isPresent()) {
+            String token = createTokenResetPassword(email);
+            String resetLink = "http://localhost:5173/reset-password?token=" + token;
+            emailService.sendResetPasswordEmail(email, resetLink);
+        }
+    }
+
     @Transactional
     @Override
-    public void deleteUser(UUID userId) {
-        User user = getUserEntity(userId);
-        user.setActive(false);
+    public void processResetPassword(ResetPasswordRequest request) {
+        // 1. Validate token bên Mongo -> Lấy ra email
+        String email = validateTokenResetPassword(request.getToken());
+
+        // 2. Tìm user
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        // 3. Mã hóa và cập nhật mật khẩu mới
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // 4. Xóa token để không dùng lại được nữa
+        deleteTokenResetPassword(request.getToken());
     }
 
     // --- RBAC & PERMISSION LOGIC ---
@@ -167,9 +230,74 @@ public class UserServiceImpl implements UserService {
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    @Override
+    public User findByUserId(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Override
+    public User getCurrentUserEntity() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AppException(ErrorCode.USER_NOT_AUTHENTICATED);
+        }
+
+        Object principal = authentication.getPrincipal();
+        String email;
+
+        if (principal instanceof CustomUserDetails customUserDetails) {
+            email = customUserDetails.getUsername();
+        } else if (principal instanceof String s) {
+            // Thông thường getName() sẽ là email do JwtAuthenticationFilter set
+            email = authentication.getName();
+        } else {
+            throw new AppException(ErrorCode.USER_NOT_AUTHENTICATED);
+        }
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
     private User getUserEntity(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
+    private String createTokenResetPassword(String email) {
+        passwordResetTokenRepository.deleteByEmail(email);
+
+        String tokenString = UUID.randomUUID().toString();
+
+        // 3. Tính thời gian hết hạn
+        Instant expiryDate = Instant.now().plusSeconds(EXPIRATION_SEC);
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .email(email)
+                .token(tokenString)
+                .expiryDate(expiryDate)
+                .build();
+
+        passwordResetTokenRepository.save(resetToken);
+
+        return tokenString;
+    }
+
+    private String validateTokenResetPassword(String token) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Token không hợp lệ hoặc không tồn tại"));
+
+        // Kiểm tra hết hạn thủ công (đề phòng MongoDB chưa kịp xóa background)
+        if (resetToken.getExpiryDate().isBefore(Instant.now())) {
+            passwordResetTokenRepository.delete(resetToken);
+            throw new RuntimeException("Token đã hết hạn");
+        }
+
+        return resetToken.getEmail();
+    }
+
+    private void deleteTokenResetPassword(String token) {
+        passwordResetTokenRepository.findByToken(token)
+                .ifPresent(passwordResetTokenRepository::delete);
+    }
 }

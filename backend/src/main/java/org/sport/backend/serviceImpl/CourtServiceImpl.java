@@ -340,8 +340,8 @@ public class CourtServiceImpl implements CourtService {
                                         if (slot.getBooking() != null) {
                                             bookingRes = BookingShortResponse.builder()
                                                     .bookingId(slot.getBooking().getBookingId())
-                                                    .userName(slot.getBooking().getRenter().getUserName())
-                                                    .userPhone(slot.getBooking().getRenter().getPhone())
+                                                    .userName(slot.getBooking().getBookerName())
+                                                    .userPhone(slot.getBooking().getBookerPhone())
                                                     .note(slot.getBooking().getNote())
                                                     .build();
                                         }

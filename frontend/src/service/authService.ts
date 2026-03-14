@@ -11,6 +11,8 @@ class AuthService {
 
     async login(request: LoginRequest): Promise<ApiResponse<LoginResponse>> {
         const response = await api.post<ApiResponse<LoginResponse>>('/auth/login', request);
+        localStorage.setItem('accessToken', response.data.result.accessToken);
+        localStorage.setItem('refreshToken', response.data.result.refreshToken);
         return response.data;
     }
 

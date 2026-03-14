@@ -20,6 +20,7 @@ export interface RentalAreaResponse {
 }
 
 export interface CreateRentalAreaRequest {
+  userId?: string;
   rentalAreaName: string;
   address: string;
   contactName: string;

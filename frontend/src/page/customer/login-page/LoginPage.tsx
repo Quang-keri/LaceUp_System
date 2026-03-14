@@ -17,8 +17,6 @@ const LoginPage: React.FC = () => {
             const response = await authService.login({email, password});
             if (response.code === 200) {
                 alert('Đăng nhập thành công!');
-                localStorage.setItem('accessToken', response.result.accessToken);
-                localStorage.setItem('refreshToken', response.result.refreshToken);
                 navigate('/trang-chính');
             }
         } catch (error: any) {

@@ -30,6 +30,7 @@ import type {
   RentalAreaStatus,
 } from "../../../types/rental";
 import type { UploadFile } from "antd";
+import { useAuth } from "../../../context/AuthContext";
 
 const statusColorMap: Record<string, string> = {
   ACTIVE: "green",
@@ -40,6 +41,7 @@ const statusColorMap: Record<string, string> = {
 
 export default function BuildingListPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [buildings, setBuildings] = useState<RentalAreaResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -60,8 +62,8 @@ export default function BuildingListPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const CITIES = [
-    { label: "Hà Nội", value: 1 },
-    { label: "TP Hồ Chí Minh", value: 2 },
+    { label: "TP Hồ Chí Minh", value: 1 },
+    { label: "Hà Nội", value: 2 },
     { label: "Đà Nẵng", value: 3 },
     { label: "Hải Phòng", value: 4 },
     { label: "Cần Thơ", value: 5 },
@@ -70,6 +72,7 @@ export default function BuildingListPage() {
   const fetchBuildings = async (page: number, size: number) => {
     setLoading(true);
     try {
+      
       const response = await RentalService.getMyRentalAreas(
         page,
         size,
@@ -77,12 +80,13 @@ export default function BuildingListPage() {
         filterStatus,
       );
 
-      if (response.data && response.data.result) {
-        setBuildings(response.data.result.data || []);
+      // SỬA Ở ĐÂY: Bỏ chữ .data đầu tiên đi
+      if (response && response.result) {
+        setBuildings(response.result.data || []);
         setPagination({
           current: page,
           pageSize: size,
-          total: response.data.result.totalElements || 0,
+          total: response.result.totalElements || 0,
         });
       }
     } catch (error) {
@@ -137,6 +141,7 @@ export default function BuildingListPage() {
       }
 
       const createData = {
+        userId: user?.userId,
         rentalAreaName: values.rentalAreaName,
         address: values.address,
         contactName: values.contactName,
@@ -302,9 +307,9 @@ export default function BuildingListPage() {
         )}
       </Card>
 
-      {/* Create Building Modal */}
+   
       <Modal
-        title="Tạo tòa nhà mới"
+        title="Tạo tòa nhà mới 2"
         open={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false);

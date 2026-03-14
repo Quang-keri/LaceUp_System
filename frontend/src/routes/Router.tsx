@@ -5,17 +5,17 @@ import PostPage from "../page/customer/post/PostPage.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
 import { ProtectedRouter } from "./ProtectedRouter.tsx";
-import AdminPage from "../page/admin/AdminPage.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
+import AdminLayout from "../layouts/AdminLayout/AdminLayout.tsx";
+import UserManagement from "../page/admin/user-management/UserManagement.tsx";
+import RoleManagement from "../page/admin/role-management/RoleManagement.tsx";
+import PermissionManagement from "../page/admin/permission-management/PermissionManagement.tsx";
 import OwnerLayout from "../layouts/OwnerLayout/OwnerLayout.tsx";
-import NotFound from "../page/NotFoundPage.tsx";
-import Forbidden from "../page/Forbidden.tsx";
-import RentalAreaDetailPage from "../page/customer/rental/RentalAreaDetailPage.tsx";
-import PaymentPage from "../page/customer/payment/PaymentPage.tsx";
-import PaymentSuccessPage from "../page/customer/payment/PaymentSuccessPage.tsx";
+import ChatHome from "../page/customer/chat/ChatHome.tsx";
 import BuildingListPage from "../page/owner/building/BuildingListPage.tsx";
 import BuildingFormPage from "../page/owner/building/BuildingFormPage.tsx";
-import CourtManagementPage from "../page/owner/building/CourtManagementPage.tsx";
+import CourtManagementPage from "../page/owner/court/CourtManagementPage.tsx";
+import BookingManagementPage from "../page/owner/booking/BookingManagementPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -38,28 +38,13 @@ export const router = createBrowserRouter([
         handle: { breadcrumb: "Trang chính" },
       },
       {
-        path: "rental-area/:id",
-        element: <RentalAreaDetailPage />,
-      },
-      {
-        path: "payment/:bookingId",
-        element: <PaymentPage />,
-      },
-      {
-        path: "payment-success/:bookingId",
-        element: <PaymentSuccessPage />,
-      },
-      {
         path: "danh-sach-san",
         element: <PostPage />,
       },
       {
-        path: "/403",
-        element: <Forbidden />,
-      },
-      {
-        path: "*",
-        element: <NotFound />,
+        path: "chat",
+        element: <ChatHome />,
+        handle: { breadcrumb: "Chat" },
       },
     ],
   },
@@ -72,7 +57,7 @@ export const router = createBrowserRouter([
     path: "/admin",
     element: (
       <ProtectedRouter>
-        <AdminPage />
+        <AdminLayout />
       </ProtectedRouter>
     ),
     children: [
@@ -80,9 +65,20 @@ export const router = createBrowserRouter([
         index: true,
         element: <AdminDashboard />,
       },
+      {
+        path: "users",
+        element: <UserManagement />,
+      },
+      {
+        path: "roles",
+        element: <RoleManagement />,
+      },
+      {
+        path: "permissions",
+        element: <PermissionManagement />,
+      },
     ],
   },
-
   {
     path: "/owner",
     element: <OwnerLayout />,
@@ -92,16 +88,16 @@ export const router = createBrowserRouter([
         element: <BuildingListPage />,
       },
       {
-        path: "buildings/create",
-        element: <BuildingFormPage />,
-      },
-      {
         path: "buildings/edit/:buildingId",
         element: <BuildingFormPage />,
       },
       {
         path: "buildings/:buildingId/courts",
         element: <CourtManagementPage />,
+      },
+      {
+        path: "bookings/management",
+        element: <BookingManagementPage />,
       },
     ],
   },

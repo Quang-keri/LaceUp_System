@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,4 +28,6 @@ public class CourtRequest {
     @NotNull(message = "mã phòng không bỏ trống")
     @Size(min = 1, message = "phải có ít nhất 1 mã phòng")
     private List<String> courtCodes;
+
+    private List<MultipartFile> images;
 }
