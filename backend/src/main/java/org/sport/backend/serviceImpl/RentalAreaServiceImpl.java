@@ -7,6 +7,7 @@ import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
+import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
 import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
@@ -317,7 +318,15 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                     .findFirst()
                     .map(CourtImage::getImageUrl)
                     .orElse(null);
-
+            List<CourtCopyResponse> copies = courtCopyRepository
+                    .findByCourt(court)
+                    .stream()
+                    .map(copy -> CourtCopyResponse.builder()
+                            .courtCopyId(copy.getCourtCopyId())
+                            .courtCode(copy.getCourtCode())
+                            .status(copy.getCourtCopyStatus())
+                            .build())
+                    .toList();
             return CourtSummaryResponse.builder()
                     .courtId(court.getCourtId())
                     .courtName(court.getCourtName())
@@ -325,6 +334,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                     .totalCourts(totalCopies)
                     .categoryName(court.getCategory().getCategoryName())
                     .coverImage(cover)
+                    .courtCopies(copies)
                     .build();
 
         }).toList();
@@ -344,6 +354,16 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .images(images)
                 .courts(courtResponses)
                 .build();
+    }
+
+    @Override
+    public void deleteRentalArea(UUID rentalAreaId) {
+        RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
+                .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
+        
+
+        rentalArea.setDeletedAt(LocalDateTime.now());
+        rentalAreaRepository.save(rentalArea);
     }
 
 }

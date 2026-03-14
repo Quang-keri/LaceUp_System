@@ -36,4 +36,6 @@ public interface RentalAreaService {
     RentalAreaResponse updateRentalArea(UUID rentalAreaId, RentalAreaUpdateRequest request);
 
     RentalAreaDetailResponse getRentalAreaById(UUID rentalAreaId);
+
+    void deleteRentalArea(UUID rentalAreaId);
 }

@@ -6,9 +6,11 @@ import org.sport.backend.constant.CourtStatus;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.court.CourtRequest;
 import org.sport.backend.dto.request.court.CourtUpdateRequest;
+import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.court.CourtImageResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
+import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
@@ -50,6 +52,7 @@ public class CourtServiceImpl implements CourtService {
     private UserService userService;
     @Autowired
     private CategoryRepository categoryRepository;
+
     @Override
     @Transactional
     public CourtResponse createCourt(CourtRequest request, List<MultipartFile> images) {
@@ -144,7 +147,6 @@ public class CourtServiceImpl implements CourtService {
         courtRepository.save(court);
 
 
-
         List<CourtCopy> existingCopies = courtCopyRepository.findByCourt(court);
 
         List<String> requestCodes = request.getCourtCodes();
@@ -237,7 +239,7 @@ public class CourtServiceImpl implements CourtService {
     ) {
 
         Pageable pageable = PageRequest.of(
-                page -1,
+                page - 1,
                 size,
                 Sort.by("createdAt").descending()
         );
@@ -263,6 +265,7 @@ public class CourtServiceImpl implements CourtService {
                 .data(data)
                 .build();
     }
+
     @Override
     public PageResponse<CourtResponse> getMyCourts(
             int page,
@@ -276,7 +279,7 @@ public class CourtServiceImpl implements CourtService {
         UUID userId = userService.getMyInfo().getUserId();
 
         Pageable pageable = PageRequest.of(
-                page -1,
+                page - 1,
                 size,
                 Sort.by("createdAt").descending()
         );
@@ -328,11 +331,38 @@ public class CourtServiceImpl implements CourtService {
                 courtCopyRepository.findByCourt_CourtId(court.getCourtId());
 
         List<CourtCopyResponse> copyResponses = courtCopies.stream()
-                .map(copy -> CourtCopyResponse.builder()
-                        .courtCopyId(copy.getCourtCopyId())
-                        .courtCode(copy.getCourtCode())
-                        .status(copy.getCourtCopyStatus())
-                        .build())
+                .map(copy -> {
+                            List<SlotResponse> slotResponses = copy.getSlots().stream().map(
+                                    slot -> {
+
+                                        BookingShortResponse bookingRes = null;
+
+                                        if (slot.getBooking() != null) {
+                                            bookingRes = BookingShortResponse.builder()
+                                                    .bookingId(slot.getBooking().getBookingId())
+                                                    .userName(slot.getBooking().getRenter().getUserName())
+                                                    .userPhone(slot.getBooking().getRenter().getPhone())
+                                                    .note(slot.getBooking().getNote())
+                                                    .build();
+                                        }
+
+                                        return SlotResponse.builder()
+                                                .slotId(slot.getSlotId())
+                                                .startTime(slot.getStartTime())
+                                                .endTime(slot.getEndTime())
+                                                .slotStatus(slot.getSlotStatus())
+                                                .bookingShortResponse(bookingRes)
+                                                .build();
+                                    }).toList();
+
+                            return CourtCopyResponse.builder()
+                                    .courtCopyId(copy.getCourtCopyId())
+                                    .courtCode(copy.getCourtCode())
+                                    .status(copy.getCourtCopyStatus())
+                                    .slots(slotResponses)
+                                    .build();
+                        }
+                )
                 .toList();
 
         return CourtResponse.builder()
@@ -344,5 +374,45 @@ public class CourtServiceImpl implements CourtService {
                 .images(imageResponses)
                 .courtCopies(copyResponses)
                 .build();
+    }
+
+    @Override
+    public CourtResponse getCourtById(UUID courtId) {
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
+        return mapToResponse(court);
+    }
+
+    @Override
+    public PageResponse<CourtResponse> getCourtsByRentalArea(UUID rentalAreaId, int page, int size, String keyword) {
+        RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
+                .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
+
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Specification<Court> spec = Specification
+                .where(CourtSpecification.byRentalArea(rentalAreaId))
+                .and(CourtSpecification.hasKeyword(keyword));
+
+        Page<Court> courtPage = courtRepository.findAll(spec, pageable);
+
+        List<CourtResponse> data = courtPage.getContent()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+
+        return PageResponse.<CourtResponse>builder()
+                .currentPage(courtPage.getNumber())
+                .totalPages(courtPage.getTotalPages())
+                .pageSize(courtPage.getSize())
+                .totalElements(courtPage.getTotalElements())
+                .data(data)
+                .build();
+    }
+
+    @Override
+    public void deleteCourt(UUID courtId) {
+        Court court = courtRepository.findById(courtId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
+        courtRepository.delete(court);
     }
 }

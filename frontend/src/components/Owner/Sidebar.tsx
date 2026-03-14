@@ -88,7 +88,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     ]),
 
     //
-    getItem("Quản lý Cơ sở", "sub_area", <CalendarOutlined />, [
+    getItem("Quản lý Cơ sở", "sub_area", <ShopOutlined />, [
+      getItem(
+        <Link to="/owner/buildings/list">Danh sách tòa nhà</Link>,
+        "/owner/buildings/list",
+      ),
+      getItem(
+        <Link to="/owner/buildings/create">Tạo tòa nhà</Link>,
+        "/owner/buildings/create",
+      ),
       getItem(<Link to="/owner/area/list">Chi nhánh</Link>, "/owner/area/list"),
       getItem(
         <Link to="/owner/area/devices">Thiết bị và tiện ích </Link>,

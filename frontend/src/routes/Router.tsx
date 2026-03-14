@@ -8,6 +8,14 @@ import { ProtectedRouter } from "./ProtectedRouter.tsx";
 import AdminPage from "../page/admin/AdminPage.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
 import OwnerLayout from "../layouts/OwnerLayout/OwnerLayout.tsx";
+import NotFound from "../page/NotFoundPage.tsx";
+import Forbidden from "../page/Forbidden.tsx";
+import RentalAreaDetailPage from "../page/customer/rental/RentalAreaDetailPage.tsx";
+import PaymentPage from "../page/customer/payment/PaymentPage.tsx";
+import PaymentSuccessPage from "../page/customer/payment/PaymentSuccessPage.tsx";
+import BuildingListPage from "../page/owner/building/BuildingListPage.tsx";
+import BuildingFormPage from "../page/owner/building/BuildingFormPage.tsx";
+import CourtManagementPage from "../page/owner/building/CourtManagementPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -30,8 +38,28 @@ export const router = createBrowserRouter([
         handle: { breadcrumb: "Trang chính" },
       },
       {
+        path: "rental-area/:id",
+        element: <RentalAreaDetailPage />,
+      },
+      {
+        path: "payment/:bookingId",
+        element: <PaymentPage />,
+      },
+      {
+        path: "payment-success/:bookingId",
+        element: <PaymentSuccessPage />,
+      },
+      {
         path: "danh-sach-san",
         element: <PostPage />,
+      },
+      {
+        path: "/403",
+        element: <Forbidden />,
+      },
+      {
+        path: "*",
+        element: <NotFound />,
       },
     ],
   },
@@ -58,6 +86,23 @@ export const router = createBrowserRouter([
   {
     path: "/owner",
     element: <OwnerLayout />,
-    children: [],
+    children: [
+      {
+        path: "buildings/list",
+        element: <BuildingListPage />,
+      },
+      {
+        path: "buildings/create",
+        element: <BuildingFormPage />,
+      },
+      {
+        path: "buildings/edit/:buildingId",
+        element: <BuildingFormPage />,
+      },
+      {
+        path: "buildings/:buildingId/courts",
+        element: <CourtManagementPage />,
+      },
+    ],
   },
 ]);

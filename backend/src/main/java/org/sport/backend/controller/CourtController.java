@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("courts")
+@RequestMapping("/courts")
 public class CourtController {
 
     @Autowired
@@ -89,6 +89,50 @@ public class CourtController {
         }
     }
 
+    @GetMapping("/{courtId}")
+    public ApiResponse<?> getCourtById(@PathVariable UUID courtId) {
+        try {
+            return ApiResponse.success(
+                    200,
+                    "Get court successfully",
+                    courtService.getCourtById(courtId)
+            );
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
+    }
+
+    @GetMapping("/rental-area/{rentalAreaId}")
+    public ApiResponse<?> getCourtsByRentalArea(
+            @PathVariable UUID rentalAreaId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword
+    ) {
+        try {
+            return ApiResponse.success(
+                    200,
+                    "Get courts by rental area successfully",
+                    courtService.getCourtsByRentalArea(rentalAreaId, page, size, keyword)
+            );
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{courtId}")
+    public ApiResponse<?> deleteCourt(@PathVariable UUID courtId) {
+        try {
+            courtService.deleteCourt(courtId);
+            return ApiResponse.success(
+                    200,
+                    "Delete court successfully",
+                    null
+            );
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
+    }
 
     @PutMapping(value = "/{courtId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> updateCourt(

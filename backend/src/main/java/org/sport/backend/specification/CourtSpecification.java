@@ -62,4 +62,14 @@ public class CourtSpecification {
         };
     }
 
+    public static Specification<Court> byRentalArea(UUID rentalAreaId) {
+
+        return (root, query, cb) -> {
+
+            if (rentalAreaId == null) return null;
+
+            return cb.equal(root.get("rentalArea").get("rentalAreaId"), rentalAreaId);
+        };
+    }
+
 }

@@ -28,8 +28,18 @@ public class BookingController {
             @Valid @RequestBody BookingRequest request
     ) {
 
-        return ApiResponse.success(
+        return ApiResponse.success(200, "Create booking intent successfully",
                 bookingService.createBookingIntent(request)
+        );
+    }
+
+    @GetMapping("/intent/{intentId}")
+    public ApiResponse<?> getBookingIntentById(@PathVariable UUID intentId) {
+
+        return ApiResponse.success(
+                200,
+                "Get booking intent successfully",
+                bookingService.getBookingIntentById(intentId)
         );
     }
 
