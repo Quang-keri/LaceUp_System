@@ -5,5 +5,6 @@ import org.sport.backend.constant.BookingStatus;
 import java.util.Map;
 
 public interface ReportService {
-    Map<BookingStatus, Long> getDashboardStats();
+
+    Map<String, Object> getFullDashboardStats(String range);
 }

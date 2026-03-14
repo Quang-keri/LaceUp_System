@@ -25,16 +25,15 @@ public class RentalAreaController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> createRentalArea(
-            @Valid @ModelAttribute RentalAreaRequest request,
-            @RequestParam("images") MultipartFile[] images
-    ) {
+            @Valid @ModelAttribute RentalAreaRequest request
+            ) {
         try {
-
-            System.err.println("images length = " + (images == null ? 0 : images.length));
+            List<MultipartFile> images = request.getImages();
+            System.err.println("images length = " + (images == null ? 0 : images.size()));
             return ApiResponse.success(
                     201,
                     "Create rental successfully",
-                    rentalAreaService.createRentalArea(request, Arrays.asList(images))
+                    rentalAreaService.createRentalArea(request, images)
             );
         } catch (Exception e) {
             return ApiResponse.success(500, "Create rental failed", e.getMessage());
@@ -66,6 +65,7 @@ public class RentalAreaController {
                 )
         );
     }
+
     @GetMapping("/{rentalAreaId}")
     public ApiResponse<?> getRentalAreaById(@PathVariable UUID rentalAreaId) {
 
@@ -75,6 +75,7 @@ public class RentalAreaController {
                 rentalAreaService.getRentalAreaById(rentalAreaId)
         );
     }
+
     @GetMapping("/my-rentals")
     public ApiResponse<?> getMyRentalAreas(
             @RequestParam(defaultValue = "1") int page,
