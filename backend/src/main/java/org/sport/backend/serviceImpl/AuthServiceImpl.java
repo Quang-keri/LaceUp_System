@@ -8,14 +8,17 @@ import org.sport.backend.dto.request.auth.LoginRequest;
 import org.sport.backend.dto.response.auth.LoginResponse;
 import org.sport.backend.entity.Role;
 import org.sport.backend.entity.User;
+import org.sport.backend.entity.mongo.RefreshToken;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.repository.RoleRepository;
 import org.sport.backend.repository.UserRepository;
+import org.sport.backend.repository.mongo.RefreshTokenRepository;
 import org.sport.backend.security.CustomUserDetails;
 import org.sport.backend.security.CustomUserDetailsService;
 import org.sport.backend.security.JwtService;
 import org.sport.backend.service.AuthService;
+import org.sport.backend.utils.Hash;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -35,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final JwtDecoder jwtDecoder;
     private final CustomUserDetailsService userDetailsService;
-//    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
 
@@ -103,53 +106,52 @@ public class AuthServiceImpl implements AuthService {
         return generateAndSaveTokens(userDetails);
     }
 
-//    @Override
-//    @Transactional
-//    public LoginResponse refresh(HttpServletRequest request) {
-//
-//        log.info("REFRESH_SERVICE start");
-//
-//        String authHeader = request.getHeader("Authorization");
-//
-//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-//            throw new AppException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
-//        }
-//
-//        String refreshToken = authHeader.substring(7);
-//
-//        log.info("REFRESH_SERVICE refresh_token present=true");
-//
-//        String hash = Hash.hashToken(refreshToken);
-//
-//        RefreshToken stored = refreshTokenRepository
-//                .findByTokenHashAndRevokedFalse(hash)
-//                .orElseThrow(() -> new AppException(ErrorCode.REFRESH_TOKEN_REVOKED));
-//
-//        Jwt jwt;
-//        try {
-//            jwt = jwtDecoder.decode(refreshToken);
-//        } catch (JwtException e) {
-//            throw new AppException(ErrorCode.REFRESH_TOKEN_EXPIRED);
-//        }
-//
-//        if (!"refresh".equals(jwt.getClaim("type"))) {
-//            throw new AppException(ErrorCode.INVALID_TOKEN_TYPE);
-//        }
-//
-//        if (stored.getExpiresAt().isBefore(Instant.now())) {
-//            stored.setRevoked(true);
-//            refreshTokenRepository.save(stored);
-//            throw new AppException(ErrorCode.REFRESH_TOKEN_EXPIRED);
-//        }
-//
-//        String email = jwt.getClaim("email");
-//
-//        CustomUserDetails user =
-//                (CustomUserDetails) userDetailsService.loadUserByUsername(email);
-//
-//        return generateAndSaveTokens(user);
-//    }
+    @Override
+    @Transactional
+    public LoginResponse refresh(HttpServletRequest request) {
 
+        log.info("REFRESH_SERVICE start");
+
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new AppException(ErrorCode.REFRESH_TOKEN_NOT_FOUND);
+        }
+
+        String refreshToken = authHeader.substring(7);
+
+        log.info("REFRESH_SERVICE refresh_token present=true");
+
+        String hash = Hash.hashToken(refreshToken);
+
+        RefreshToken stored = refreshTokenRepository
+                .findByTokenHashAndRevokedFalse(hash)
+                .orElseThrow(() -> new AppException(ErrorCode.REFRESH_TOKEN_REVOKED));
+
+        Jwt jwt;
+        try {
+            jwt = jwtDecoder.decode(refreshToken);
+        } catch (JwtException e) {
+            throw new AppException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+        }
+
+        if (!"refresh".equals(jwt.getClaim("type"))) {
+            throw new AppException(ErrorCode.INVALID_TOKEN_TYPE);
+        }
+
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
+            stored.setRevoked(true);
+            refreshTokenRepository.save(stored);
+            throw new AppException(ErrorCode.REFRESH_TOKEN_EXPIRED);
+        }
+
+        String email = jwt.getClaim("email");
+
+        CustomUserDetails user =
+                (CustomUserDetails) userDetailsService.loadUserByUsername(email);
+
+        return generateAndSaveTokens(user);
+    }
 
     private LoginResponse generateAndSaveTokens(CustomUserDetails user) {
 
@@ -158,13 +160,13 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-//        RefreshToken entity = new RefreshToken();
-//        entity.setTokenHash(Hash.hashToken(refreshToken));
-//        entity.setEmail(user.getUsername());
-//        entity.setExpiresAt(Instant.now().plusSeconds(7 * 24 * 60 * 60)); // 7 ngày
-//        entity.setRevoked(false);
-//
-//        refreshTokenRepository.save(entity);
+        RefreshToken entity = new RefreshToken();
+        entity.setTokenHash(Hash.hashToken(refreshToken));
+        entity.setEmail(user.getUsername());
+        entity.setExpiresAt(Instant.now().plusSeconds(7 * 24 * 60 * 60)); // 7 ngày
+        entity.setRevoked(false);
+
+        refreshTokenRepository.save(entity);
 
         return new LoginResponse(accessToken, refreshToken);
     }
