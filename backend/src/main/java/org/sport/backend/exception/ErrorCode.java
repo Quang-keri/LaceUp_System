@@ -30,6 +30,7 @@ public enum ErrorCode {
 
     //Permission
     PERMISSION_NOT_FOUND(3002, "Permission not found", HttpStatus.NOT_FOUND),
+    PERMISSION_EXISTED(3003, "Permission existed", HttpStatus.BAD_REQUEST),
 
     // Page Errors
     INVALID_PAGINATION(4001, "Invalid pagination parameters", HttpStatus.BAD_REQUEST),

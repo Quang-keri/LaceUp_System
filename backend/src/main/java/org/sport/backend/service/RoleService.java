@@ -19,11 +19,10 @@ public interface RoleService {
     RoleResponse updateRole(Long roleId, RoleRequest request);
 
     @Transactional
-    void deleteRole(Long roleId);
-
-    @Transactional
     RoleResponse addPermissionsToRole(Long roleId, Set<Integer> permissionIds);
 
     @Transactional
     RoleResponse removePermissionsFromRole(Long roleId, Set<Integer> permissionIds);
+
+    void updateStatus(Long roleId, boolean active);
 }

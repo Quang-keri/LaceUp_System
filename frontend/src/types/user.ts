@@ -1,3 +1,5 @@
+import type {PermissionResponse} from "./permission.ts";
+
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
 export interface UserResponse {
@@ -12,6 +14,8 @@ export interface UserResponse {
     createdAt: string;
     updatedAt: string;
     active: boolean;
+    permissions?: string[];
+    extraPermissions?: PermissionResponse[];
 }
 
 export interface CreateUserRequest {

@@ -52,12 +52,12 @@ public class RoleController {
         );
     }
 
-    @DeleteMapping("/{roleId}")
-    public ResponseEntity<ApiResponse<Void>> deleteRole(@PathVariable Long roleId) {
-        roleService.deleteRole(roleId);
-        return ResponseEntity.ok(
-                ApiResponse.success("Xóa/Khóa Role thành công", null)
-        );
+    @PatchMapping("/{roleId}/status")
+    public ResponseEntity<ApiResponse<Void>> updateStatus(
+            @PathVariable Long roleId,
+            @RequestBody boolean active) {
+        roleService.updateStatus(roleId, active);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
     }
 
     // --- Role-Permission APIs ---

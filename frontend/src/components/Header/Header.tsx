@@ -1,6 +1,7 @@
 import { Layout, Menu, Avatar, Badge, Dropdown, Space } from "antd";
 import { BellOutlined, UserOutlined, LogoutOutlined, WalletOutlined, SettingOutlined, LoginOutlined } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const { Header } = Layout;
 
@@ -8,12 +9,18 @@ const AppHeader = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Kiểm tra trạng thái đăng nhập
-    const isLoggedIn = !!localStorage.getItem("accessToken");
+    const [token, setToken] = useState(localStorage.getItem("accessToken"));
+
+    useEffect(() => {
+        setToken(localStorage.getItem("accessToken"));
+    }, [location]);
+
+    const isLoggedIn = !!token;
 
     const handleLogout = () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        setToken(null);
         alert("Đã đăng xuất!");
         navigate("/");
     };

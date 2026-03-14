@@ -7,9 +7,26 @@ server:
       enabled: true
       max-file-size: 10MB
       max-request-size: 100MB
+
 spring:
   application:
     name: LaceUP_System_Backend
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
 
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -26,7 +43,13 @@ spring:
       hibernate:
         format_sql: true
 
+  mongodb:
+    uri: ${SPRING_DATA_MONGODB_URI}
+    auto-index-creation: true
+
 jwt:
   secret-key: ${JWT_SECRET_KEY}
   access-expiration: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+
+token_reset_password_expire_seconds: 900

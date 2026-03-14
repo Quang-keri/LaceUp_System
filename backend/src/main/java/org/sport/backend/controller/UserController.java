@@ -3,12 +3,15 @@ package org.sport.backend.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.base.ApiResponse;
+import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
+import org.sport.backend.dto.request.user.UpdateUserStatusRequest;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,9 +43,19 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
+    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String keyword
+    ) {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy danh sách thành công", userService.getAllUsers())
+                ApiResponse.<PageResponse<UserResponse>>builder()
+                        .code(200)
+                        .message("Get users success")
+                        .result(userService.getAllUsers(page - 1, size, role, active, keyword))
+                        .build()
         );
     }
 
@@ -62,11 +75,16 @@ public class UserController {
         );
     }
 
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID userId) {
-        userService.deleteUser(userId);
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> updateStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateUserStatusRequest statusRequest) {
+        userService.updateStatus(id, statusRequest.getStatus());
         return ResponseEntity.ok(
-                ApiResponse.success("Xóa/Khóa người dùng thành công", null)
+                ApiResponse.<Void>builder()
+                        .code(200)
+                        .message("Update status user successfully")
+                        .build()
         );
     }
 
