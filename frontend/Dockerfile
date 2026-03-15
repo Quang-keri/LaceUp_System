@@ -18,7 +18,7 @@ RUN rm -rf ./*
 
 # Copy folder đã build từ Stage 1 sang Nginx
 # LƯU Ý: Nếu project bạn dùng Vite, hãy sửa '/app/build' thành '/app/dist'
-COPY --from=builder /app/dist
+COPY --from=builder /app/dist .
 
 EXPOSE 80
 
