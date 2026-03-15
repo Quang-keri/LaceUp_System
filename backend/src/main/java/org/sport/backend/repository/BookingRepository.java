@@ -16,9 +16,11 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
 
     @Query("SELECT b.bookingStatus, COUNT(b) FROM Booking b " +
             "WHERE b.createdAt BETWEEN :startDate AND :endDate " +
+            "AND (:ownerId IS NULL OR b.rentalArea.owner.userId = :ownerId) " +
             "GROUP BY b.bookingStatus")
     List<Object[]> countAllByStatus(
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endDate") LocalDateTime endDate,
+            @Param("ownerId") UUID ownerId
     );
 }

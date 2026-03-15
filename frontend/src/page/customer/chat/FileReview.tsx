@@ -6,9 +6,9 @@ interface FileItem {
 }
 
 interface FilePreviewProps {
-    imagePreview: string | null;
+    imagePreview?: string | null;
     selectedFiles: FileItem[];
-    onRemoveImagePreview: () => void;
+    onRemoveImagePreview?: () => void;
     onRemoveFile: (index: number) => void;
     onClearAllFiles: () => void;
 }

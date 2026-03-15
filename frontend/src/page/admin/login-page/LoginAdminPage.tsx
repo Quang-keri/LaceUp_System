@@ -3,12 +3,14 @@ import authService from '../../../service/authService';
 import {useNavigate} from 'react-router-dom';
 import './style.css';
 import {toast} from "react-toastify";
+import {useAuth} from "../../../context/AuthContext.tsx";
 
 const LoginAdminPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const {refreshProfile} = useAuth();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -16,7 +18,14 @@ const LoginAdminPage: React.FC = () => {
         try {
             const response = await authService.login({email, password});
             if (response.code === 200) {
-                toast("Đăng nhập thành công.")
+                const token = response.result?.accessToken;
+                if (token) {
+                    localStorage.setItem("accessToken", token);
+                }
+
+                await refreshProfile();
+
+                toast("Đăng nhập thành công.");
                 navigate('/admin');
             }
         } catch (error: any) {
@@ -57,15 +66,6 @@ const LoginAdminPage: React.FC = () => {
                         {loading ? 'Đang xử lý...' : 'Đăng nhập'}
                     </button>
                 </form>
-
-                <div className="divider">HOẶC</div>
-
-                <button
-                    onClick={() => alert('Chức năng Google đang cập nhật')}
-                    className="login-button google"
-                >
-                    Đăng nhập với Google
-                </button>
             </div>
         </div>
     );

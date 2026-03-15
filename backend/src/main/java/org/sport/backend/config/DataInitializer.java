@@ -1,6 +1,8 @@
 package org.sport.backend.config;
 
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.sport.backend.constant.AuthProvider;
 import org.sport.backend.entity.*;
 import org.sport.backend.repository.*;
 import org.springframework.boot.CommandLineRunner;
@@ -30,7 +32,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(String... args) throws Exception {
+    public void run(String @NonNull ... args) {
 
         // 1. Khởi tạo Permissions
         if (permissionRepository.count() == 0) {
@@ -40,8 +42,13 @@ public class DataInitializer implements CommandLineRunner {
                     Permission.builder().permissionName("MANAGE_USERS").description("Quản lý người dùng").build(),
                     Permission.builder().permissionName("MANAGE_ROLES").description("Quản lý vai trò & quyền hạn").build(),
 
-                    // Quyền cho Owner (Chủ trọ)
-                    Permission.builder().permissionName("POST_ROOM").description("Đăng tin cho thuê phòng").build(),
+                    // Quyền cho Staff (Nhân viên vận hành) - MỚI
+                    Permission.builder().permissionName("APPROVE_POST").description("Duyệt tin đăng sân/phòng").build(),
+                    Permission.builder().permissionName("SUPPORT_CUSTOMER").description("Hỗ trợ giải quyết khiếu nại").build(),
+                    Permission.builder().permissionName("VIEW_REPORT").description("Xem báo cáo hệ thống").build(),
+
+                    // Quyền cho Owner (Chủ sân/trọ)
+                    Permission.builder().permissionName("POST_ROOM").description("Đăng tin cho thuê").build(),
                     Permission.builder().permissionName("UPDATE_ROOM").description("Cập nhật thông tin phòng").build(),
                     Permission.builder().permissionName("VIEW_BOOKINGS").description("Xem danh sách đặt phòng").build(),
                     Permission.builder().permissionName("MANAGE_FINANCE").description("Quản lý tài chính/doanh thu").build(),
@@ -49,7 +56,7 @@ public class DataInitializer implements CommandLineRunner {
                     // Quyền cho Renter (Người thuê)
                     Permission.builder().permissionName("SEARCH_ROOM").description("Tìm kiếm phòng trọ").build(),
                     Permission.builder().permissionName("BOOK_ROOM").description("Thực hiện đặt phòng").build(),
-                    Permission.builder().permissionName("CHAT_WITH_OWNER").description("Nhắn tin với chủ trọ").build(),
+                    Permission.builder().permissionName("CHAT_WITH_OWNER").description("Nhắn tin trao đổi").build(),
                     Permission.builder().permissionName("WRITE_REVIEW").description("Viết đánh giá phản hồi").build()
             );
             permissionRepository.saveAll(permissions);
@@ -64,15 +71,29 @@ public class DataInitializer implements CommandLineRunner {
             // Role ADMIN có tất cả quyền
             Role adminRole = Role.builder()
                     .roleName("ADMIN")
-                    .description("Quản trị hệ thống")
+                    .description("Quản trị hệ thống toàn diện")
                     .active(true)
                     .permissions(new HashSet<>(permMap.values()))
                     .build();
 
-            // Role OWNER có quyền quản lý phòng và xem dashboard
+            // STAFF: Quản lý nội dung và hỗ trợ, xem dashboard chung
+            Role staffRole = Role.builder()
+                    .roleName("STAFF")
+                    .description("Nhân viên vận hành hệ thống")
+                    .active(true)
+                    .permissions(Set.of(
+                            permMap.get("VIEW_DASHBOARD"),
+                            permMap.get("APPROVE_POST"),
+                            permMap.get("SUPPORT_CUSTOMER"),
+                            permMap.get("VIEW_REPORT"),
+                            permMap.get("SEARCH_ROOM")
+                    ))
+                    .build();
+
+            // OWNER
             Role ownerRole = Role.builder()
                     .roleName("OWNER")
-                    .description("Chủ trọ")
+                    .description("Chủ sở hữu cơ sở kinh doanh")
                     .active(true)
                     .permissions(Set.of(
                             permMap.get("VIEW_DASHBOARD"),
@@ -84,10 +105,10 @@ public class DataInitializer implements CommandLineRunner {
                     ))
                     .build();
 
-            // Role RENTER có quyền tìm kiếm và đặt phòng
+            // RENTER
             Role renterRole = Role.builder()
                     .roleName("RENTER")
-                    .description("Người thuê phòng")
+                    .description("Khách hàng/Người thuê")
                     .active(true)
                     .permissions(Set.of(
                             permMap.get("SEARCH_ROOM"),
@@ -97,35 +118,88 @@ public class DataInitializer implements CommandLineRunner {
                     ))
                     .build();
 
-            roleRepository.saveAll(List.of(adminRole, ownerRole, renterRole));
+            roleRepository.saveAll(List.of(adminRole, staffRole, ownerRole, renterRole));
         }
 
         Role adminRole = roleRepository.findByRoleName("ADMIN").orElse(null);
         Role ownerRole = roleRepository.findByRoleName("OWNER").orElse(null);
+        Role staffRole = roleRepository.findByRoleName("STAFF").orElse(null);
         Role renterRole = roleRepository.findByRoleName("RENTER").orElse(null);
 
         if (userRepository.count() == 0) {
-            List<User> users = new ArrayList<>();
+
             String commonPass = passwordEncoder.encode("123456");
 
-            users.add(User.builder().userName("System Admin").email("admin@gmail.com").passwordHash(commonPass).role(adminRole).active(true).build());
-            users.add(User.builder().userName("Best Owner").email("owner@gmail.com").passwordHash(commonPass).role(ownerRole).active(true).build());
-            users.add(User.builder().userName("Happy Renter").email("renter@gmail.com").passwordHash(commonPass).role(renterRole).active(true).build());
+            List<User> users = new ArrayList<>();
 
-            for (int i = 1; i <= 7; i++) {
+            // Admin
+            users.add(User.builder()
+                    .userName("System Admin")
+                    .email("admin@gmail.com")
+                    .passwordHash(commonPass)
+                    .gender("Male")
+                    .phone("0901112223")
+                    .dateOfBirth(LocalDate.of(1990, 5, 20))
+                    .provider(AuthProvider.LOCAL)
+                    .role(adminRole)
+                    .active(true)
+                    .build());
+
+            // Staff
+            users.add(User.builder()
+                    .userName("Staff Nguyen")
+                    .email("staff@gmail.com")
+                    .passwordHash(commonPass)
+                    .gender("Female")
+                    .phone("0904445556")
+                    .dateOfBirth(LocalDate.of(1995, 10, 15))
+                    .provider(AuthProvider.LOCAL)
+                    .role(staffRole)
+                    .active(true)
+                    .build());
+
+            // Owner
+            users.add(User.builder()
+                    .userName("Pro Owner")
+                    .email("owner@gmail.com")
+                    .passwordHash(commonPass)
+                    .gender("Male")
+                    .phone("0907778889")
+                    .dateOfBirth(LocalDate.of(1985, 2, 10))
+                    .provider(AuthProvider.LOCAL)
+                    .role(ownerRole)
+                    .active(true)
+                    .build());
+
+            users.add(User.builder()
+                    .userName("Renter Best")
+                    .email("renter@gmail.com")
+                    .passwordHash(commonPass)
+                    .gender("Male")
+                    .phone("0907778811")
+                    .dateOfBirth(LocalDate.of(1989, 6, 18))
+                    .provider(AuthProvider.LOCAL)
+                    .role(ownerRole)
+                    .active(true)
+                    .build());
+
+            // Renter Test Users
+            for (int i = 1; i <= 3; i++) {
                 users.add(User.builder()
-                        .userName("User Test " + i)
+                        .userName("Renter " + i)
                         .email("user" + i + "@gmail.com")
                         .passwordHash(commonPass)
+                        .gender(i % 2 == 0 ? "Female" : "Male")
+                        .phone("091200000" + i)
+                        .dateOfBirth(LocalDate.of(2000, i, 1))
+                        .provider(AuthProvider.LOCAL)
                         .role(renterRole)
                         .active(true)
-                        .dateOfBirth(LocalDate.of(2000, 1, i))
                         .build());
             }
 
             userRepository.saveAll(users);
         }
-
 
         if (cityRepository.count() == 0) {
             List<City> cities = new ArrayList<>();

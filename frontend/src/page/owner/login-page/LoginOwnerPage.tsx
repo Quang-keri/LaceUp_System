@@ -1,11 +1,11 @@
 import React, {useState} from 'react';
 import authService from '../../../service/authService';
 import {useNavigate} from 'react-router-dom';
-import {message} from 'antd';
 import './style.css';
-import {useAuth} from '../../../context/AuthContext';
+import {toast} from "react-toastify";
+import {useAuth} from "../../../context/AuthContext.tsx";
 
-const LoginPage: React.FC = () => {
+const LoginOwnerPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -18,13 +18,18 @@ const LoginPage: React.FC = () => {
         try {
             const response = await authService.login({email, password});
             if (response.code === 200) {
-                message.success('Đăng nhập thành công!');
+                const token = response.result?.accessToken;
+                if (token) {
+                    localStorage.setItem("accessToken", token);
+                }
+
                 await refreshProfile();
-                navigate('/');
+
+                toast("Đăng nhập thành công.");
+                navigate('/owner');
             }
         } catch (error: any) {
-            // Hiển thị thông báo lỗi màu đỏ
-            message.error('Đăng nhập thất bại: ' + (error.response?.data?.message || 'Lỗi kết nối'));
+            alert('Đăng nhập thất bại: ' + (error.response?.data?.message || 'Lỗi kết nối'));
         } finally {
             setLoading(false);
         }
@@ -61,19 +66,9 @@ const LoginPage: React.FC = () => {
                         {loading ? 'Đang xử lý...' : 'Đăng nhập'}
                     </button>
                 </form>
-
-                <div className="divider">HOẶC</div>
-
-                <button
-                    // Hiển thị thông báo dạng thông tin (màu xanh dương)
-                    onClick={() => message.info('Chức năng đăng nhập Google đang được cập nhật')}
-                    className="login-button google"
-                >
-                    Đăng nhập với Google
-                </button>
             </div>
         </div>
     );
 };
 
-export default LoginPage;
+export default LoginOwnerPage;

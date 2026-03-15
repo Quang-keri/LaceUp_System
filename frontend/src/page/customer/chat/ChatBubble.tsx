@@ -116,12 +116,11 @@ const ChatBubble = () => {
                         <>
                             {showChatList ? (
                                 <ChatList
-                                    {...chatLogic}
+                                    error={null} {...chatLogic}
                                     onChatSelect={(chat) => {
                                         chatLogic.handleChatSelect(chat);
                                         setShowChatList(false);
-                                    }}
-                                />
+                                    }}                                />
                             ) : (
                                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                                     <MessageList

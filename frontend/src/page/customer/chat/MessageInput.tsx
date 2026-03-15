@@ -19,13 +19,16 @@ interface MessageInputProps {
     handleSendMessage: () => void;
     selectedFiles: FileItem[];
     setSelectedFiles: React.Dispatch<React.SetStateAction<FileItem[]>>;
-    imagePreview: string | null;
-    setImagePreview: React.Dispatch<React.SetStateAction<string | null>>;
-    isRecording: boolean;
-    onVoiceRecord: () => void;
+
+    // Thêm dấu ? vào các dòng dưới đây
+    imagePreview?: string | null;
+    setImagePreview?: React.Dispatch<React.SetStateAction<string | null>>;
+    isRecording?: boolean;
+    onVoiceRecord?: () => void;
+    onRemoveImagePreview?: () => void;
+
     onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRemoveFile: (index: number) => void;
-    onRemoveImagePreview: () => void;
     onClearAllFiles: () => void;
     isDarkMode?: boolean;
 }

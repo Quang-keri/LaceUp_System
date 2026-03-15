@@ -16,10 +16,21 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     @Query("SELECT SUM(p.amount) FROM Payment p " +
             "WHERE p.paymentStatus = 'COMPLETED' " +
-            "AND p.transactionDate BETWEEN :startDate AND :endDate")
-    BigDecimal getTotalRevenue(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+            "AND p.transactionDate BETWEEN :startDate AND :endDate " +
+            "AND (:ownerId IS NULL OR p.user.userId = :ownerId)")
+    BigDecimal getTotalRevenue(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("ownerId") UUID ownerId
+    );
 
     @Query("SELECT p.paymentStatus, COUNT(p) FROM Payment p " +
-            "WHERE p.transactionDate BETWEEN :startDate AND :endDate GROUP BY p.paymentStatus")
-    List<Object[]> countByPaymentStatus(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+            "WHERE p.transactionDate BETWEEN :startDate AND :endDate " +
+            "AND (:ownerId IS NULL OR p.user.userId = :ownerId) " +
+            "GROUP BY p.paymentStatus")
+    List<Object[]> countByPaymentStatus(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("ownerId") UUID ownerId
+    );
 }
