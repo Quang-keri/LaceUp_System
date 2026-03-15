@@ -1,7 +1,9 @@
 import type {UploadOptions, UploadResult, MediaMetadata} from "../types/upload.ts";
 
+
 export const uploadToCloudinary = async (
     file: File,
+    // @ts-ignore
     options: UploadOptions = {}
 ): Promise<UploadResult> => {
     // TODO: Implement Cloudinary upload

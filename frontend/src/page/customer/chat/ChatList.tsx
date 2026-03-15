@@ -24,9 +24,10 @@ interface ChatListProps {
     selectedChat: Chat | null;
     onChatSelect: (chat: Chat) => void;
 
-    showSettingsMenu: boolean;
-    setShowSettingsMenu: (show: boolean) => void;
-    settingsMenuRef: React.RefObject<HTMLDivElement | null>;
+    showSettingsMenu?: boolean;
+    setShowSettingsMenu?: (show: boolean) => void;
+    settingsMenuRef?: React.RefObject<HTMLDivElement | null>;
+
     conversations: ConversationResponse[];
     loading: boolean;
     error: string | null;

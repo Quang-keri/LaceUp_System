@@ -12,6 +12,9 @@ import RoleManagement from "../page/admin/role-management/RoleManagement.tsx";
 import PermissionManagement from "../page/admin/permission-management/PermissionManagement.tsx";
 import OwnerLayout from "../layouts/OwnerLayout/OwnerLayout.tsx";
 import ChatHome from "../page/customer/chat/ChatHome.tsx";
+import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
+import OwnerDashboard from "../page/owner/dashboard/OwnerDashboard.tsx";
+import LoginOwnerPage from "../page/owner/login-page/LoginOwnerPage.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -42,9 +45,13 @@ export const router = createBrowserRouter([
                 element: <ChatHome />,
                 handle: { breadcrumb: "Chat" },
             },
+            {
+                path: "profile",
+                element: <ProfilePage />,
+                handle: { breadcrumb: "Profile" },
+            },
         ],
     },
-
     {
         path: "/admin/login",
         element: <LoginAdminPage/>,
@@ -52,7 +59,7 @@ export const router = createBrowserRouter([
     {
         path: "/admin",
         element: (
-            <ProtectedRouter>
+            <ProtectedRouter allowedRoles={["ADMIN"]}>
                 <AdminLayout/>
             </ProtectedRouter>
         ),
@@ -76,8 +83,21 @@ export const router = createBrowserRouter([
         ],
     },
     {
+        path: "/owner/login",
+        element: <LoginOwnerPage/>,
+    },
+    {
         path: "/owner",
-        element: <OwnerLayout/>,
-        children: [],
+        element: (
+            <ProtectedRouter allowedRoles={["OWNER"]}>
+                <OwnerLayout />
+            </ProtectedRouter>
+        ),
+        children: [
+            {
+                index: true,
+                element: <OwnerDashboard />,
+            },
+        ],
     },
 ]);

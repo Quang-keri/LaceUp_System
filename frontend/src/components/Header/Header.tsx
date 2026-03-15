@@ -1,5 +1,16 @@
-import { Layout, Menu, Avatar, Badge, Dropdown, Space } from "antd";
-import { BellOutlined, UserOutlined, LogoutOutlined, WalletOutlined, SettingOutlined, LoginOutlined } from "@ant-design/icons";
+import { Layout, Menu, Avatar, Badge, Dropdown, Space, Button, message } from "antd";
+import {
+    BellOutlined,
+    UserOutlined,
+    LogoutOutlined,
+    WalletOutlined,
+    SettingOutlined,
+    LoginOutlined,
+    HomeOutlined,
+    CalendarOutlined,
+    ReadOutlined,
+    FireFilled
+} from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 
@@ -21,71 +32,80 @@ const AppHeader = () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         setToken(null);
-        alert("Đã đăng xuất!");
+        message.success("Đã đăng xuất thành công!"); // Dùng message của antd thay vì alert cho đẹp
         navigate("/");
     };
 
-    // Menu chính giữa
+    // Menu chính giữa (Thêm icon và chuyển sang tiếng Việt cho thân thiện)
     const navItems = [
-        { key: "/", label: "Home" },
-        { key: "/news", label: "News" },
-        { key: "/my-bookings", label: "My Bookings" },
+        { key: "/", label: "Trang chủ", icon: <HomeOutlined /> },
+        { key: "/news", label: "Tin tức", icon: <ReadOutlined /> },
+        { key: "/my-bookings", label: "Sân của tôi", icon: <CalendarOutlined /> },
     ];
 
     // Menu cho Avatar (Dropdown)
-    const userMenuItems = isLoggedIn
-        ? [
-            {
-                key: "/profile",
-                label: "Quản lý cá nhân",
-                icon: <SettingOutlined />,
-                onClick: () => navigate("/profile"),
-            },
-            {
-                key: "/wallet",
-                label: "Ví của tôi",
-                icon: <WalletOutlined />,
-                onClick: () => navigate("/wallet"),
-            },
-            {
-                type: "divider" as const,
-            },
-            {
-                key: "logout",
-                label: "Đăng xuất",
-                icon: <LogoutOutlined />,
-                danger: true,
-                onClick: handleLogout,
-            },
-        ]
-        : [
-            {
-                key: "/login",
-                label: "Đăng nhập",
-                icon: <LoginOutlined />,
-                onClick: () => navigate("/login"),
-            },
-        ];
+    const userMenuItems = [
+        {
+            key: "/profile",
+            label: "Hồ sơ cá nhân",
+            icon: <SettingOutlined />,
+            onClick: () => navigate("/profile"),
+        },
+        {
+            key: "/wallet",
+            label: "Ví của tôi",
+            icon: <WalletOutlined />,
+            onClick: () => navigate("/wallet"),
+        },
+        {
+            type: "divider" as const,
+        },
+        {
+            key: "logout",
+            label: "Đăng xuất",
+            icon: <LogoutOutlined />,
+            danger: true,
+            onClick: handleLogout,
+        },
+    ];
 
     return (
         <Header
             style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1000,
+                width: "100%",
                 background: "#ffffff",
-                padding: "0 40px",
+                padding: "0 50px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                borderRadius: 20,
-                margin: 10,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+                height: "70px", // Tăng chiều cao lên 70px cho thoáng
             }}
         >
             {/* Logo Section */}
             <div
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginRight: 40 }}
                 onClick={() => navigate("/")}
             >
-                <span style={{ fontWeight: 700, fontSize: 20 }}>Lace Up</span>
+                {/* Khối icon thể thao */}
+                <div style={{
+                    background: "#1677ff",
+                    color: "#fff",
+                    padding: "6px 8px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                }}>
+                    <FireFilled style={{ fontSize: 18 }} />
+                </div>
+                {/* Text Logo cách điệu */}
+                <span style={{ fontWeight: 800, fontSize: 22, color: "#1f1f1f", letterSpacing: "-0.5px" }}>
+                    Lace<span style={{ color: "#1677ff" }}>Up</span>
+                </span>
             </div>
 
             {/* Main Navigation */}
@@ -100,30 +120,63 @@ const AppHeader = () => {
                     borderBottom: "none",
                     background: "transparent",
                     fontWeight: 500,
+                    fontSize: "16px",
+                    lineHeight: "70px", // Căn giữa chữ theo chiều dọc của Header
                 }}
             />
 
-            {/* Right Section: Notification & User Dropdown */}
-            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                {isLoggedIn && (
-                    <Badge count={3} size="small">
-                        <BellOutlined style={{ fontSize: 20, cursor: "pointer" }} />
-                    </Badge>
-                )}
+            {/* Right Section: Notification & User Actions */}
+            <div style={{ display: "flex", alignItems: "center", gap: 24, marginLeft: 40 }}>
+                {isLoggedIn ? (
+                    <>
+                        <Badge count={3} size="small" offset={[-2, 2]}>
+                            <div style={{
+                                padding: "8px",
+                                borderRadius: "50%",
+                                background: "#f5f5f5",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "background 0.3s"
+                            }}
+                                 onMouseEnter={(e) => e.currentTarget.style.background = "#e6e6e6"}
+                                 onMouseLeave={(e) => e.currentTarget.style.background = "#f5f5f5"}
+                            >
+                                <BellOutlined style={{ fontSize: 18, color: "#595959" }} />
+                            </div>
+                        </Badge>
 
-                <Dropdown
-                    menu={{ items: userMenuItems }}
-                    trigger={["click"]}
-                    placement="bottomRight"
-                >
-                    <Space style={{ cursor: "pointer" }}>
-                        <Avatar
-                            size={40}
-                            style={{ backgroundColor: "#3e89de" }}
-                            icon={<UserOutlined />}
-                        />
-                    </Space>
-                </Dropdown>
+                        <Dropdown
+                            menu={{ items: userMenuItems }}
+                            trigger={["click"]}
+                            placement="bottomRight"
+                        >
+                            <Space style={{ cursor: "pointer" }}>
+                                <Avatar
+                                    size={42}
+                                    style={{
+                                        backgroundColor: "#1677ff",
+                                        border: "2px solid #e6f4ff",
+                                        cursor: "pointer"
+                                    }}
+                                    icon={<UserOutlined />}
+                                />
+                            </Space>
+                        </Dropdown>
+                    </>
+                ) : (
+                    // Hiển thị nút Đăng nhập rõ ràng nếu chưa có token
+                    <Button
+                        type="primary"
+                        size="large"
+                        icon={<LoginOutlined />}
+                        onClick={() => navigate("/login")}
+                        style={{ borderRadius: "8px", fontWeight: 600 }}
+                    >
+                        Đăng nhập
+                    </Button>
+                )}
             </div>
         </Header>
     );
