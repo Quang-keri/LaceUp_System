@@ -68,18 +68,22 @@ public class CourtServiceImpl implements CourtService {
                 .findById(request.getRentalAreaId())
                 .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
 
-        // tạo court
+
+        Category category = categoryRepository.findById(request.getCategoryId()).orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
+
+
         Court court = Court.builder()
                 .courtName(request.getCourtName())
                 .price(request.getPricePerHour())
                 .courtStatus(CourtStatus.ACTIVE)
+                .category(category)
                 .rentalArea(rentalArea)
                 .build();
 
-        // lưu court trước để có courtId
+
         courtRepository.save(court);
 
-        // tạo court copies
+
         List<CourtCopy> courtCopies = new ArrayList<>();
 
         for (String code : request.getCourtCodes()) {
@@ -332,7 +336,8 @@ public class CourtServiceImpl implements CourtService {
 
         List<CourtCopyResponse> copyResponses = courtCopies.stream()
                 .map(copy -> {
-                            List<SlotResponse> slotResponses = copy.getSlots().stream().map(
+                             List<Slot> slots = copy.getSlots() == null ? List.of() : copy.getSlots();
+                            List<SlotResponse> slotResponses =slots.stream().map(
                                     slot -> {
 
                                         BookingShortResponse bookingRes = null;

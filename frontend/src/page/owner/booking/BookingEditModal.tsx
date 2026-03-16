@@ -28,7 +28,6 @@ export default function BookingEditModal({
 }: Props) {
   const [form] = Form.useForm();
 
-  // Load dữ liệu cũ vào form khi mở Modal
   useEffect(() => {
     if (open && booking) {
       form.setFieldsValue({
@@ -36,7 +35,7 @@ export default function BookingEditModal({
         bookerPhone: booking.phoneNumber,
         status: booking.bookingStatus,
         notes: booking.note,
-        // Chuyển format slot từ string sang dayjs để DatePicker dùng được
+
         slots: booking.slots?.map((slot: any) => ({
           slotId: slot.slotId,
           timeRange: [dayjs(slot.startTime), dayjs(slot.endTime)],
@@ -48,7 +47,6 @@ export default function BookingEditModal({
 
   const handleOk = () => {
     form.validateFields().then((values) => {
-      // Format lại dữ liệu trước khi gửi về Backend
       const payload = {
         bookerName: values.bookerName,
         bookerPhone: values.bookerPhone,
@@ -73,6 +71,7 @@ export default function BookingEditModal({
       width={700}
       okText="Lưu thay đổi"
       cancelText="Hủy"
+      style={{ top: 10 }}
     >
       <Form form={form} layout="vertical">
         <div
@@ -97,8 +96,7 @@ export default function BookingEditModal({
         >
           <Select
             options={[
-              { label: "Chờ xác nhận", value: "PENDING" },
-              { label: "Đã xác nhận", value: "CONFIRMED" },
+              { label: "Đã xác nhận", value: "BOOKED" },
               { label: "Hoàn thành", value: "COMPLETED" },
               { label: "Hủy", value: "CANCELLED" },
             ]}
@@ -128,18 +126,49 @@ export default function BookingEditModal({
                     <Text strong>
                       Sân: {form.getFieldValue(["slots", name, "courtCode"])}
                     </Text>
+
                     <Form.Item
                       {...restField}
                       name={[name, "timeRange"]}
                       label="Thời gian"
-                      rules={[{ required: true, message: "Thiếu thời gian" }]}
+                      rules={[
+                        { required: true, message: "Thiếu thời gian" },
+                        {
+                          validator: (_, value) => {
+                            if (!value) return Promise.resolve();
+                            const [start, end] = value;
+
+                            if (
+                              start.minute() % 30 !== 0 ||
+                              end.minute() % 30 !== 0
+                            ) {
+                              return Promise.reject(
+                                new Error(
+                                  "Phải chọn mốc 30 phút (VD: 10:00, 10:30)",
+                                ),
+                              );
+                            }
+
+                            // 2. Kiểm tra tối thiểu 1 tiếng
+                            if (end.diff(start, "minute") < 60) {
+                              return Promise.reject(
+                                new Error(
+                                  "Thời gian thuê tối thiểu là 1 tiếng",
+                                ),
+                              );
+                            }
+
+                            return Promise.resolve();
+                          },
+                        },
+                      ]}
                     >
                       <DatePicker.RangePicker
-                        showTime
+                        showTime={{ format: "HH:mm", minuteStep: 30 }}
                         format="YYYY-MM-DD HH:mm"
                       />
                     </Form.Item>
-                    {/* Giữ lại slotId để backend biết update slot nào */}
+
                     <Form.Item name={[name, "slotId"]} hidden>
                       <Input />
                     </Form.Item>
