@@ -1,7 +1,8 @@
 package org.sport.backend.constant;
 
 public enum PaymentStatus {
-    PENDING,
+    BOOKED,
     COMPLETED,
     CANCELLED,
+    FAILED,
 }

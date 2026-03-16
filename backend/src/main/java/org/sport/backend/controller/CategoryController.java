@@ -21,7 +21,46 @@ import java.time.LocalDateTime;
 public class CategoryController {
    @Autowired
    private CategoryService categoryService;
+    @GetMapping
+    public ApiResponse<?> getAllCategories(
 
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+
+            @RequestParam(required = false) String keyword,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime from,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime to
+
+    ) {
+
+        try {
+
+            PageResponse<CategoryResponse> result =
+                    categoryService.getAllCategories(
+                            page,
+                            size,
+                            keyword,
+                            from,
+                            to
+                    );
+
+            return ApiResponse.success(
+                    200,
+                    "Get categories successfully",
+                    result
+            );
+
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
+
+    }
     @PostMapping
     public ApiResponse<?> createCategory(
             @Valid @RequestBody CategoryRequest request
@@ -94,44 +133,5 @@ public class CategoryController {
 
     }
 
-    @GetMapping
-    public ApiResponse<?> getAllCategories(
 
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-
-            @RequestParam(required = false) String keyword,
-
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime from,
-
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime to
-
-    ) {
-
-        try {
-
-            PageResponse<CategoryResponse> result =
-                    categoryService.getAllCategories(
-                            page,
-                            size,
-                            keyword,
-                            from,
-                            to
-                    );
-
-            return ApiResponse.success(
-                    200,
-                    "Get categories successfully",
-                    result
-            );
-
-        } catch (Exception e) {
-            return ApiResponse.error(500, e.getMessage());
-        }
-
-    }
 }

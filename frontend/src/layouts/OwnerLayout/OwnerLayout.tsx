@@ -32,42 +32,41 @@ export default function OwnerLayout() {
   const handleThemeToggle = () => setIsDark((prev) => !prev);
 
   return (
-      <ConfigProvider
-          theme={{
-            algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
-            token: {
-              colorPrimary: "#1677ff",
-            },
-          }}
-      >
-        <Layout className="h-screen overflow-hidden flex flex-row">
-          {/* 3. Truyền đầy đủ các props vào Sidebar */}
-          <Sidebar
-              collapsed={collapsed}
-              toggleCollapsed={() => setCollapsed(!collapsed)}
-              isDark={isDark}
-              user={user}
-              handleLogout={handleLogoutClick}
+    <ConfigProvider
+      theme={{
+        algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: "#1677ff",
+        },
+      }}
+    >
+      <Layout className="h-screen overflow-hidden flex flex-row">
+        <Sidebar
+          collapsed={collapsed}
+          toggleCollapsed={() => setCollapsed(!collapsed)}
+          isDark={isDark}
+          user={user}
+          handleLogout={handleLogoutClick}
+        />
+
+        <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
+          <OwnerHeader
+            collapsed={collapsed}
+            toggleCollapsed={() => setCollapsed(!collapsed)}
+            adminUser={user}
+            isDark={isDark}
+            onThemeToggle={handleThemeToggle}
           />
 
-          <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
-            <OwnerHeader
-                collapsed={collapsed}
-                toggleCollapsed={() => setCollapsed(!collapsed)}
-                adminUser={user} // Hoặc ownerUser tùy theo Header của bạn nhận prop gì
-                isDark={isDark}
-                onThemeToggle={handleThemeToggle}
-            />
-
-            <Content
-                className={`flex-1 p-3 overflow-y-auto transition-colors duration-200 ${
-                    isDark ? "bg-[#141414]" : "bg-[#ffff]"
-                }`}
-            >
-              <Outlet context={{ isDark }} />
-            </Content>
-          </Layout>
+          <Content
+            className={`flex-1 p-3 overflow-y-auto transition-colors duration-200 ${
+              isDark ? "bg-[#141414]" : "bg-[#ffff]"
+            }`}
+          >
+            <Outlet context={{ isDark }} />
+          </Content>
         </Layout>
-      </ConfigProvider>
+      </Layout>
+    </ConfigProvider>
   );
 }

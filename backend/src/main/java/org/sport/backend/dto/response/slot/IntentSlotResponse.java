@@ -12,6 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class IntentSlotResponse {
+    private UUID intentSlotId;
     private UUID courtCopyId;
     private String courtCode;
     private LocalDateTime startTime;

@@ -18,15 +18,32 @@ public class BookingIntentResponse {
 
     private UUID bookingIntentId;
 
+
     private BigDecimal previewPrice;
 
-    private LocalDateTime expiresAt;
+
+    private BigDecimal tax;
+    private BigDecimal discount;
+    private BigDecimal totalAmount;
+
 
     private BookingIntentStatus status;
 
-    private LocalDateTime startTime;
 
+    private LocalDateTime expiresAt;
+
+
+    private String bookerName;
+    private String bookerPhone;
+
+
+
+    private LocalDateTime startTime;
     private LocalDateTime endTime;
+
+    private String title;
+    private String note;
+
 
     private List<IntentSlotResponse> slots;
 }

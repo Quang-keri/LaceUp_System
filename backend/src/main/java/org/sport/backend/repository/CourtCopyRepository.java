@@ -1,5 +1,6 @@
 package org.sport.backend.repository;
 
+import org.sport.backend.constant.CourtCopyStatus;
 import org.sport.backend.entity.Court;
 import org.sport.backend.entity.CourtCopy;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -35,4 +36,7 @@ public interface CourtCopyRepository extends JpaRepository<CourtCopy, UUID>, Jpa
             LocalDateTime start,
             LocalDateTime end
     );
+
+    List<CourtCopy> findByCourt_CourtIdAndCourtCopyStatus(UUID courtId, CourtCopyStatus status);
+
 }

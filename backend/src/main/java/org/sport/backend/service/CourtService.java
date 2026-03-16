@@ -33,6 +33,12 @@ public interface CourtService {
             LocalDateTime toDate
     );
 
-    CourtResponse updateCourt(UUID courtId, CourtUpdateRequest request,List<MultipartFile> images);
+    CourtResponse updateCourt(UUID courtId, CourtUpdateRequest request, List<MultipartFile> images);
+
+    CourtResponse getCourtById(UUID courtId);
+
+    PageResponse<CourtResponse> getCourtsByRentalArea(UUID rentalAreaId, int page, int size, String keyword);
+
+    void deleteCourt(UUID courtId);
 
 }

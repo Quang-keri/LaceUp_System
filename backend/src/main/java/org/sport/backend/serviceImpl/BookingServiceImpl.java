@@ -3,6 +3,7 @@ package org.sport.backend.serviceImpl;
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.constant.BookingIntentStatus;
 import org.sport.backend.constant.BookingStatus;
+import org.sport.backend.constant.CourtCopyStatus;
 import org.sport.backend.constant.SlotStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
@@ -56,15 +57,16 @@ public class BookingServiceImpl  implements BookingService {
     private BookingRepository bookingRepository;
  @Autowired
  private UserService userService;
+
     @Override
     @Transactional
     public BookingIntentResponse createBookingIntent(BookingRequest request) {
+
         User user = null;
-        if(request.getUserId() != null){
-             user = userRepository.findById(request.getUserId())
+        if (request.getUserId() != null) {
+            user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         }
-
 
         BookingIntent intent = BookingIntent.builder()
                 .user(user)
@@ -72,67 +74,103 @@ public class BookingServiceImpl  implements BookingService {
                 .bookerPhone(request.getUserPhone())
                 .status(BookingIntentStatus.ACTIVE)
                 .expiresAt(LocalDateTime.now().plusMinutes(5))
-                .startTime(request.getSlotRequests().getFirst().getStartTime())
-
                 .note(request.getNote())
                 .build();
 
         List<IntentSlot> intentSlots = new ArrayList<>();
-
         BigDecimal totalPrice = BigDecimal.ZERO;
         RentalArea rentalArea = null;
+
         for (SlotRequest slotReq : request.getSlotRequests()) {
-            CourtCopy courtCopy = courtCopyRepository
-                    .findById(slotReq.getCourtCopyId())
-                    .orElseThrow(() ->
-                    new RuntimeException("Không tìm thấy phòng"));
-            if (rentalArea == null) {
-                rentalArea = courtCopy.getCourt().getRentalArea();
-            } else if (!rentalArea.getRentalAreaId()
-                    .equals(courtCopy.getCourt().getRentalArea().getRentalAreaId())) {
-                throw new RuntimeException(
-                        "Tất cả sân phải thuộc cùng một khu vực"
-                );
+
+            List<CourtCopy> selectedCopies = new ArrayList<>();
+
+
+            if (slotReq.getCourtCopyId() != null) {
+
+                CourtCopy copy = courtCopyRepository.findById(slotReq.getCourtCopyId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sân"));
+
+                selectedCopies.add(copy);
+
             }
 
 
+            else if (slotReq.getCourtId() != null) {
 
+                int quantity = slotReq.getQuantity() == null ? 1 : slotReq.getQuantity();
 
-            List<Slot> conflicts = slotRepository.findConflictSlot(
-                    courtCopy.getCourtCopyId(),
-                    slotReq.getStartTime(),
-                    slotReq.getEndTime()
-            );
+                List<CourtCopy> copies = courtCopyRepository
+                        .findByCourt_CourtIdAndCourtCopyStatus(slotReq.getCourtId(), CourtCopyStatus.ACTIVE);
 
-            if (!conflicts.isEmpty()) {
-                throw new RuntimeException("Khung giờ "+ slotReq.getStartTime()+"tới "+ slotReq.getEndTime()+" đã được đặt, vui lòng chọn khung giờ khác");
+                if (copies.isEmpty()) {
+                    throw new RuntimeException("Không có sân khả dụng");
+                }
+
+                List<CourtCopy> availableCopies = copies.stream()
+                        .filter(copy -> {
+
+                            List<Slot> conflicts = slotRepository.findConflictSlot(
+                                    copy.getCourtCopyId(),
+                                    slotReq.getStartTime(),
+                                    slotReq.getEndTime()
+                            );
+
+                            return conflicts.isEmpty();
+
+                        })
+                        .limit(quantity)
+                        .toList();
+
+                if (availableCopies.size() < quantity) {
+                    throw new RuntimeException("Không đủ sân trống cho số lượng yêu cầu");
+                }
+
+                selectedCopies.addAll(availableCopies);
+
+            } else {
+                throw new RuntimeException("Phải cung cấp courtId hoặc courtCopyId");
             }
 
-            long minutes = Duration
-                    .between(slotReq.getStartTime(), slotReq.getEndTime())
-                    .toMinutes();
+            /**
+             * tạo slot cho từng courtCopy
+             */
+            for (CourtCopy courtCopy : selectedCopies) {
 
-            BigDecimal hours = BigDecimal
-                    .valueOf(minutes)
-                    .divide(BigDecimal.valueOf(60));
+                if (rentalArea == null) {
+                    rentalArea = courtCopy.getCourt().getRentalArea();
+                } else if (!rentalArea.getRentalAreaId()
+                        .equals(courtCopy.getCourt().getRentalArea().getRentalAreaId())) {
+                    throw new RuntimeException("Tất cả sân phải thuộc cùng một khu vực");
+                }
 
-            BigDecimal price = courtCopy
-                    .getCourt()
-                    .getPrice()
-                    .multiply(hours);
+                long minutes = Duration
+                        .between(slotReq.getStartTime(), slotReq.getEndTime())
+                        .toMinutes();
 
-            totalPrice = totalPrice.add(price);
+                BigDecimal hours = BigDecimal
+                        .valueOf(minutes)
+                        .divide(BigDecimal.valueOf(60));
 
-            IntentSlot intentSlot = IntentSlot.builder()
-                    .bookingIntent(intent)
-                    .courtCopy(courtCopy)
-                    .startTime(slotReq.getStartTime())
-                    .endTime(slotReq.getEndTime())
-                    .price(courtCopy.getCourt().getPrice())
-                    .build();
+                BigDecimal price = courtCopy
+                        .getCourt()
+                        .getPrice()
+                        .multiply(hours);
 
-            intentSlots.add(intentSlot);
+                totalPrice = totalPrice.add(price);
+
+                IntentSlot intentSlot = IntentSlot.builder()
+                        .bookingIntent(intent)
+                        .courtCopy(courtCopy)
+                        .startTime(slotReq.getStartTime())
+                        .endTime(slotReq.getEndTime())
+                        .price(price)
+                        .build();
+
+                intentSlots.add(intentSlot);
+            }
         }
+
         LocalDateTime start = intentSlots.stream()
                 .map(IntentSlot::getStartTime)
                 .min(LocalDateTime::compareTo)
@@ -142,25 +180,24 @@ public class BookingServiceImpl  implements BookingService {
                 .map(IntentSlot::getEndTime)
                 .max(LocalDateTime::compareTo)
                 .orElse(null);
+
         intent.setStartTime(start);
         intent.setEndTime(end);
         intent.setSlots(intentSlots);
         intent.setPreviewPrice(totalPrice);
         intent.setRentalArea(rentalArea);
+
         bookingIntentRepository.save(intent);
 
-        List<IntentSlotResponse> slotResponses =
-                intentSlots.stream().map(slot ->
-
-                        IntentSlotResponse.builder()
-                                .courtCopyId(slot.getCourtCopy().getCourtCopyId())
-                                .courtCode(slot.getCourtCopy().getCourtCode())
-                                .startTime(slot.getStartTime())
-                                .endTime(slot.getEndTime())
-                                .price(slot.getPrice())
-                                .build()
-
-                ).toList();
+        List<IntentSlotResponse> slotResponses = intentSlots.stream()
+                .map(slot -> IntentSlotResponse.builder()
+                        .courtCopyId(slot.getCourtCopy().getCourtCopyId())
+                        .courtCode(slot.getCourtCopy().getCourtCode())
+                        .startTime(slot.getStartTime())
+                        .endTime(slot.getEndTime())
+                        .price(slot.getPrice())
+                        .build())
+                .toList();
 
         return BookingIntentResponse.builder()
                 .bookingIntentId(intent.getBookingIntentId())
@@ -171,7 +208,57 @@ public class BookingServiceImpl  implements BookingService {
                 .build();
     }
 
+    @Override
+    public BookingIntentResponse getBookingIntentById(UUID bookingIntentId) {
 
+        BookingIntent bookingIntent = bookingIntentRepository.findById(bookingIntentId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy mã đặt lịch dự định với id " + bookingIntentId));
+
+        List<IntentSlotResponse> intentSlotResponses =
+                bookingIntent.getSlots().stream().map(intentSlot -> {
+
+                    CourtCopy courtCopy = intentSlot.getCourtCopy();
+
+                    return IntentSlotResponse.builder()
+                            .intentSlotId(intentSlot.getIntentSlotId())
+                            .courtCopyId(courtCopy.getCourtCopyId())
+                            .courtCode(courtCopy.getCourtCode())
+                            .startTime(intentSlot.getStartTime())
+                            .endTime(intentSlot.getEndTime())
+                            .price(intentSlot.getPrice())
+                            .build();
+
+                }).toList();
+
+        BigDecimal tax = BigDecimal.ZERO;
+
+
+        BigDecimal discount = BigDecimal.ZERO;
+
+
+        BigDecimal totalPrice = bookingIntent.getPreviewPrice()
+                .add(tax)
+                .subtract(discount);
+
+        return BookingIntentResponse.builder()
+                .bookingIntentId(bookingIntent.getBookingIntentId())
+                .previewPrice(bookingIntent.getPreviewPrice())
+                .tax(tax)
+                .discount(discount)
+                .totalAmount(totalPrice)
+                .status(bookingIntent.getStatus())
+                .expiresAt(bookingIntent.getExpiresAt())
+                .title(bookingIntent.getTitle())
+                .note(bookingIntent.getNote())
+                .bookerName(bookingIntent.getBookerName())
+                .bookerPhone(bookingIntent.getBookerPhone())
+                .startTime(bookingIntent.getStartTime())
+                .endTime(bookingIntent.getEndTime())
+                .slots(intentSlotResponses)
+
+                .build();
+    }
     @Override
     @Transactional
     public BookingResponse confirmBooking(UUID bookingIntentId) {
@@ -222,7 +309,7 @@ public class BookingServiceImpl  implements BookingService {
                             .startTime(slot.getStartTime())
                             .endTime(slot.getEndTime())
                             .price(slot.getPrice())
-                            .status(slot.getSlotStatus())
+                            .slotStatus(slot.getSlotStatus())
                             .build()
             );
         }
@@ -254,7 +341,7 @@ public class BookingServiceImpl  implements BookingService {
                         .startTime(slot.getStartTime())
                         .endTime(slot.getEndTime())
                         .price(slot.getPrice())
-                        .status(slot.getSlotStatus())
+                        .slotStatus(slot.getSlotStatus())
                         .build())
                 .toList();
 
@@ -403,7 +490,7 @@ public class BookingServiceImpl  implements BookingService {
                         .startTime(slot.getStartTime())
                         .endTime(slot.getEndTime())
                         .price(slot.getPrice())
-                        .status(slot.getSlotStatus())
+                        .slotStatus(slot.getSlotStatus())
                         .build())
                 .toList();
 
@@ -423,7 +510,7 @@ public class BookingServiceImpl  implements BookingService {
     @Override
     @Transactional
     public BookingResponse updateBooking(UUID bookingId, UpdateBookingRequest request) {
-
+        System.err.println("zô day update");
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
@@ -441,12 +528,12 @@ public class BookingServiceImpl  implements BookingService {
         if (request.getNote() != null) {
             booking.setNote(request.getNote());
         }
-
+        System.err.println("zô day update staus nha em nhé");
 
         if (request.getBookingStatus() != null) {
 
             booking.setBookingStatus(request.getBookingStatus());
-
+            System.err.println("booking status update "+ request.getBookingStatus());
             if (request.getBookingStatus() == BookingStatus.CANCELLED) {
                 for (Slot slot : booking.getSlots()) {
                     slot.setSlotStatus(SlotStatus.CANCELLED);
@@ -458,6 +545,8 @@ public class BookingServiceImpl  implements BookingService {
                     slot.setSlotStatus(SlotStatus.COMPLETED);
                 }
             }
+        }else{
+            System.err.println("em ấy ko vô udpate status");
         }
 
 

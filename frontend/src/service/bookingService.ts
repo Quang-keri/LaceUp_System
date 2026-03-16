@@ -1,0 +1,65 @@
+import api from "../config/axios";
+import type { BookingListResponse, BookingResponse } from "../types/booking";
+import type { ApiResponse } from "../types/ApiResponse";
+
+class BookingService {
+  async createBooking(data: any) {
+    const res = await api.post("/bookings/intent", data);
+    return res.data;
+  }
+
+  async getBookingIntent(bookingIntentId: string) {
+    const res = await api.get(`/bookings/intent/${bookingIntentId}`);
+    return res.data.result;
+  }
+
+  async getBookingsByRentalArea(
+    rentalAreaId: string,
+    page: number = 1,
+    size: number = 10,
+    status?: string,
+  ) {
+    const params = new URLSearchParams();
+
+    params.append("rentalId", rentalAreaId);
+    params.append("page", page.toString());
+    params.append("size", size.toString());
+
+    if (status) params.append("status", status);
+
+    const response = await api.get<ApiResponse<BookingListResponse>>(
+      `/bookings/my-rentals?${params.toString()}`,
+    );
+
+    return response.data;
+  }
+
+  async getMyBookings(page: number = 1, size: number = 10, status?: string) {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("size", size.toString());
+    if (status) params.append("status", status);
+
+    const response = await api.get<ApiResponse<BookingListResponse>>(
+      `/bookings/my-bookings?${params.toString()}`,
+    );
+    return response.data;
+  }
+
+  async updateBooking(bookingId: string, status: string) {
+    const response = await api.put<ApiResponse<BookingResponse>>(
+      `/bookings/${bookingId}`,
+      { status },
+    );
+    return response.data;
+  }
+
+  async cancelBooking(bookingId: string) {
+    const response = await api.delete<ApiResponse<void>>(
+      `/bookings/${bookingId}`,
+    );
+    return response.data;
+  }
+}
+
+export default new BookingService();

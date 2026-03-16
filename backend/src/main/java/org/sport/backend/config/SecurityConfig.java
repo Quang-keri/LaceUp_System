@@ -7,6 +7,7 @@ import org.sport.backend.security.JwtAuthenticationEntryPoint;
 import org.sport.backend.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -52,6 +53,10 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINT).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/posts").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/rental-areas/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/bookings").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/bookings/intent/**").permitAll()
                         .anyRequest().authenticated()
                 )
 

@@ -1,8 +1,10 @@
 package org.sport.backend.dto.response.court;
 
 import lombok.*;
+import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -18,5 +20,7 @@ public class CourtSummaryResponse {
     Integer totalCourts;
     String categoryName;
     String coverImage;
+    private List<CourtCopyResponse> courtCopies;
+
 }
 

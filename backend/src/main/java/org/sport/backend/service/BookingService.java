@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public interface BookingService {
     BookingIntentResponse createBookingIntent(BookingRequest request);
-
+    BookingIntentResponse getBookingIntentById(UUID bookingIntentId);
     BookingResponse confirmBooking(UUID bookingIntentId);
 
     BookingResponse getBookingById(UUID bookingId);

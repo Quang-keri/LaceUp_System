@@ -172,7 +172,32 @@ public class PostController {
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
+    }
+
+    @DeleteMapping("/{postId}")
+    public ApiResponse<Void> deleteMyPost(
+            @PathVariable UUID postId,
+            @AuthenticationPrincipal UserDetails principal
+    ) {
+        try {
+            UUID currentUserId = null;
+            if (principal instanceof CustomUserDetails customUserDetails) {
+                currentUserId = customUserDetails.getUserId();
+            }
+
+            if (currentUserId == null) {
+                throw new RuntimeException("User not authenticated");
+            }
 
 
+            postService.deleteMyPost(postId, currentUserId);
+
+            return ApiResponse.<Void>builder()
+                    .code(200)
+                    .message("Delete post successfully")
+                    .build();
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
     }
 }
