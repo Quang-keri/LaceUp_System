@@ -17,8 +17,8 @@ import { useState, useEffect } from "react";
 const { Header } = Layout;
 
 const AppHeader = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
+  const location = useLocation();
+  const navigate = useNavigate();
 
     const [token, setToken] = useState(localStorage.getItem("accessToken"));
 
@@ -36,38 +36,49 @@ const AppHeader = () => {
         navigate("/");
     };
 
-    // Menu chính giữa (Thêm icon và chuyển sang tiếng Việt cho thân thiện)
+    // Menu chính giữa
     const navItems = [
-        { key: "/", label: "Trang chủ", icon: <HomeOutlined /> },
-        { key: "/news", label: "Tin tức", icon: <ReadOutlined /> },
-        { key: "/my-bookings", label: "Sân của tôi", icon: <CalendarOutlined /> },
+        { key: "/", label: "Trang chủ" },
+        { key: "/danh-sach-san", label: "Sân" },
+        { key: "/cong-dong", label: "Cộng đồng" },
+        { key: "/tin-tuc", label: "Tin tức" },
+        { key: "/ve-chung-toi", label: "Về chúng tôi" },
     ];
 
     // Menu cho Avatar (Dropdown)
-    const userMenuItems = [
-        {
-            key: "/profile",
-            label: "Hồ sơ cá nhân",
-            icon: <SettingOutlined />,
-            onClick: () => navigate("/profile"),
-        },
-        {
-            key: "/wallet",
-            label: "Ví của tôi",
-            icon: <WalletOutlined />,
-            onClick: () => navigate("/wallet"),
-        },
-        {
-            type: "divider" as const,
-        },
-        {
-            key: "logout",
-            label: "Đăng xuất",
-            icon: <LogoutOutlined />,
-            danger: true,
-            onClick: handleLogout,
-        },
-    ];
+    const userMenuItems = isLoggedIn
+        ? [
+            {
+                key: "/profile",
+                label: "Quản lý cá nhân",
+                icon: <SettingOutlined />,
+                onClick: () => navigate("/profile"),
+            },
+            {
+                key: "/wallet",
+                label: "Ví của tôi",
+                icon: <WalletOutlined />,
+                onClick: () => navigate("/wallet"),
+            },
+            {
+                type: "divider" as const,
+            },
+            {
+                key: "logout",
+                label: "Đăng xuất",
+                icon: <LogoutOutlined />,
+                danger: true,
+                onClick: handleLogout,
+            },
+        ]
+        : [
+            {
+                key: "/login",
+                label: "Đăng nhập",
+                icon: <LoginOutlined />,
+                onClick: () => navigate("/login"),
+            },
+        ];
 
     return (
         <Header
@@ -77,17 +88,18 @@ const AppHeader = () => {
                 zIndex: 1000,
                 width: "100%",
                 background: "#ffffff",
-                padding: "0 50px",
+                padding: "0 40px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-                height: "70px", // Tăng chiều cao lên 70px cho thoáng
+                borderRadius: 20,
+                margin: 10,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
             }}
         >
             {/* Logo Section */}
             <div
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginRight: 40 }}
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
                 onClick={() => navigate("/")}
             >
                 {/* Khối icon thể thao */}

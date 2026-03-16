@@ -1,13 +1,11 @@
-import React, { useState } from "react";
-import { message } from "antd";
+import React, {useState} from "react";
+import {message} from "antd";
 import authService from "../../../service/authService.ts";
-import type { CreateUserRequest } from "../../../types/auth.ts";
+import type {CreateUserRequest} from "../../../types/auth.ts";
+import {useNavigate} from "react-router-dom";
 
-export interface RegisterPageProps {
-    onSwitchToLogin: () => void;
-}
-
-const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
+const RegisterPage: React.FC = ({}) => {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [values, setValues] = useState({
         userName: "",
@@ -20,8 +18,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
     });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setValues((prev) => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setValues((prev) => ({...prev, [name]: value}));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -40,7 +38,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
             const response = await authService.sendRegisterOtp(payload);
             if (response?.code === 200) {
                 message.success("Đăng ký thành công! Hãy kiểm tra Email.");
-                onSwitchToLogin();
+                navigate("/login");
             } else {
                 message.error(response?.message || "Đăng ký thất bại");
             }
@@ -157,12 +155,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
 
                 <div className="mt-6 text-center text-sm text-gray-600">
                     Đã có tài khoản?{" "}
-                    <button
-                        onClick={onSwitchToLogin}
-                        className="text-blue-600 font-semibold hover:underline"
-                    >
-                        Đăng nhập
-                    </button>
+                    <button onClick={() => navigate("/login")}>Đăng nhập</button>
                 </div>
             </div>
         </div>

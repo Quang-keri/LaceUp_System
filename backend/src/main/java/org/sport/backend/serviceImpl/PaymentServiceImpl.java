@@ -1,5 +1,6 @@
 package org.sport.backend.serviceImpl;
 
+import org.sport.backend.constant.PaymentMethod;
 import org.sport.backend.constant.PaymentStatus;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.booking.BookingResponse;
@@ -33,14 +34,18 @@ public class PaymentServiceImpl implements PaymentService {
 
 
         BookingResponse bookingResponse = bookingService.confirmBooking(bookingIntent.getBookingIntentId());
-
         Payment payment = Payment.builder()
                 .user(bookingIntent.getUser())
-                .paymentStatus(PaymentStatus.COMPLETED)
                 .amount(bookingIntent.getPreviewPrice())
                 .paymentMethod(checkoutRequest.getPaymentMethod())
                 .transactionDate(LocalDateTime.now())
                 .build();
+        if (checkoutRequest.getPaymentMethod() == PaymentMethod.CASH) {
+            payment.setPaymentStatus(PaymentStatus.BOOKED);
+        } else {
+            payment.setPaymentStatus(PaymentStatus.COMPLETED);
+        }
+
 
         paymentRepository.save(payment);
         return CheckoutResponse.builder()

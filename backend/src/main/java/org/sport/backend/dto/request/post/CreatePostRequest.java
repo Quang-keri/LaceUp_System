@@ -22,7 +22,5 @@ public class CreatePostRequest {
     @NotNull(message = "mã sân không bỏ trống")
     private UUID courtId;
 
-    @NotNull(message = "mã nhà không bỏ trống")
-    private UUID rentalAreaId;
 
 }

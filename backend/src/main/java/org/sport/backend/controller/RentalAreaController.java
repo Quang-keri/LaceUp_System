@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("rental-areas")
+@RequestMapping("/rental-areas")
 public class RentalAreaController {
 
     @Autowired
@@ -118,5 +118,18 @@ public class RentalAreaController {
         }
     }
 
+    @DeleteMapping("/{rentalAreaId}")
+    public ApiResponse<?> deleteRentalArea(@PathVariable UUID rentalAreaId) {
+        try {
+            rentalAreaService.deleteRentalArea(rentalAreaId);
+            return ApiResponse.success(
+                    200,
+                    "Delete rental area successfully",
+                    null
+            );
+        } catch (Exception e) {
+            return ApiResponse.success(500, "Delete rental failed", e.getMessage());
+        }
+    }
 
 }

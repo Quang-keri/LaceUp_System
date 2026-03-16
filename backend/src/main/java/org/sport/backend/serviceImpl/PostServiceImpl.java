@@ -61,7 +61,7 @@ public class PostServiceImpl implements PostService {
         Court court = courtRepository.findById(request.getCourtId())
                 .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
 
-        RentalArea rentalArea = rentalAreaRepository.findById(request.getRentalAreaId())
+        RentalArea rentalArea = rentalAreaRepository.findById(court.getRentalArea().getRentalAreaId())
                 .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
 
         Post post = Post.builder()
@@ -115,6 +115,25 @@ public class PostServiceImpl implements PostService {
                 .data(data)
                 .build();
     }
+
+    @Override
+    public PostDetailResponse getPostDetail(UUID postId) {
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+
+        return mapToDetail(post);
+    }
+
+    @Override
+    public List<PostSummaryResponse> getMyPosts(UUID userId, String status) {
+
+        List<Post> posts = postRepository.findByUser_UserId(userId);
+
+        return posts.stream()
+                .map(this::mapToSummary)
+                .toList();
+    }
     private PostSummaryResponse mapToSummary(Post post) {
 
         Court court = post.getCourt();
@@ -147,24 +166,6 @@ public class PostServiceImpl implements PostService {
                 .address(rentalArea.getAddress())
 
                 .build();
-    }
-    @Override
-    public PostDetailResponse getPostDetail(UUID postId) {
-
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
-
-        return mapToDetail(post);
-    }
-
-    @Override
-    public List<PostSummaryResponse> getMyPosts(UUID userId, String status) {
-
-        List<Post> posts = postRepository.findByUser_UserId(userId);
-
-        return posts.stream()
-                .map(this::mapToSummary)
-                .toList();
     }
     @Override
     public PostDetailResponse getMyPostDetail(UUID postId, UUID userId) {
@@ -233,6 +234,17 @@ public class PostServiceImpl implements PostService {
                 .userId(post.getUser().getUserId())
                 .createdAt(post.getCreatedAt())
                 .build();
+    }
+
+    public void deleteMyPost(UUID postId, UUID userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        if (!post.getUser().getUserId().equals(userId)) {
+            throw new RuntimeException("You don't have permission to delete this post");
+        }
+
+        postRepository.delete(post);
     }
 
 }
