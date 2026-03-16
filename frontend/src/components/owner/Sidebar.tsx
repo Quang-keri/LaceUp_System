@@ -67,26 +67,27 @@ const Sidebar: React.FC<SidebarProps> = ({
     getItem("Quản lý đặt lịch", "sub_booking", <CalendarOutlined />, [
       getItem(
         <Link to="/owner/bookings/management">Danh sách đơn đặt</Link>,
-        "/owner/bookings/management",
+        "/owner/bookings/list",
       ),
       getItem(
         <Link to="/owner/bookings/calendar">Lịch hẹn </Link>,
         "/owner/bookings/calendar",
       ),
-
+    ]),
+    getItem("Quản lý hàng hóa", "sub_product", <CalendarOutlined />, [
+      getItem(<Link to="/owner/product/list">Tất cả</Link>, "/owner/area/list"),
       getItem(
-        <Link to="/owner/bookings/check-in">Nhận/Trả</Link>,
-        "/owner/bookings/check-in",
+        <Link to="/owner/product/types">Loại hàng hóa</Link>,
+        "/owner/product/types",
       ),
     ]),
 
     //
-    getItem("Quản lý Cơ sở", "sub_area", <ShopOutlined />, [
+    getItem("Quản lý Cơ sở", "sub_area", <CalendarOutlined />, [
       getItem(
-        <Link to="/owner/buildings/list">Danh sách tòa nhà</Link>,
-        "/owner/buildings/list",
+        <Link to="/owner/buildings/list">Chi nhánh</Link>,
+        "/owner/area/list",
       ),
-      getItem(<Link to="/owner/area/list">Chi nhánh</Link>, "/owner/area/list"),
       getItem(
         <Link to="/owner/area/devices">Thiết bị và tiện ích </Link>,
         "/owner/area/list",
@@ -171,8 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
         }`}
       >
-        <Link to={"/"}>
-         <div className="flex items-center gap-2 overflow-hidden px-4">
+        <div className="flex items-center gap-2 overflow-hidden px-4">
           <div className="min-w-[32px] h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
             L
           </div>
@@ -186,8 +186,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
         </div>
-        </Link>
-       
       </div>
 
       <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">
