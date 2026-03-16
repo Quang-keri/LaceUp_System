@@ -1,10 +1,10 @@
-import { createBrowserRouter } from "react-router-dom";
+import {createBrowserRouter} from "react-router-dom";
 import DefaultLayout from "../layouts/DefaultLayout/DefaultLayout";
 import LoginPage from "../page/customer/login-page/LoginPage.tsx";
 import PostPage from "../page/customer/post/PostPage.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
-import { ProtectedRouter } from "./ProtectedRouter.tsx";
+import {ProtectedRouter} from "./ProtectedRouter.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
 import AdminLayout from "../layouts/AdminLayout/AdminLayout.tsx";
 import UserManagement from "../page/admin/user-management/UserManagement.tsx";
@@ -26,6 +26,9 @@ import OwnerProfilePage from "../page/owner/profile/OwnerProfilePage.tsx";
 import NotFound from "../page/NotFoundPage.tsx";
 import PaymentPage from "../page/customer/payment/PaymentPage.tsx";
 import PaymentSuccessPage from "../page/customer/payment/PaymentSuccessPage.tsx";
+import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
+import OwnerDashboard from "../page/owner/dashboard/OwnerDashboard.tsx";
+import LoginOwnerPage from "../page/owner/login-page/LoginOwnerPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -111,7 +114,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/owner",
-    element: <OwnerLayout />,
+    element: <OwnerDashboard />,
     children: [
       {
         path: "buildings/list",

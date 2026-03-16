@@ -17,8 +17,6 @@ const AdminLayout: React.FC<{}> = () => {
         return localStorage.getItem(THEME_KEY) === "dark";
     });
 
-
-
     const handleLogoutClick = async () => {
         await logout();
     };

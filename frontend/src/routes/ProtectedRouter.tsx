@@ -2,17 +2,19 @@ import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-interface ProtectedAdminRouteProps {
+interface ProtectedRouteProps {
     children: React.ReactNode;
+    allowedRoles: string[];
 }
 
-export const ProtectedRouter: React.FC<ProtectedAdminRouteProps> = ({
-                                                                            children,
-                                                                        }) => {
+export const ProtectedRouter: React.FC<ProtectedRouteProps> = ({
+                                                                   children,
+                                                                   allowedRoles,
+                                                               }) => {
     const { user, isLoading } = useAuth();
     const location = useLocation();
 
-    // 1. Nếu AuthProvider đang load -> Hiện Loading
+    // 1. Hiển thị Loading trong khi chờ AuthContext lấy dữ liệu user
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -21,16 +23,21 @@ export const ProtectedRouter: React.FC<ProtectedAdminRouteProps> = ({
         );
     }
 
-    // 2. Kiểm tra Role
-    // Lưu ý: Kiểm tra chính xác field trả về từ Backend (role hoặc roles)
-    const isAdmin =
-        user && (user.role === "ADMIN");
+    // 2. Kiểm tra quyền truy cập (Dùng includes để check trong mảng allowedRoles)
+    const hasPermission = user && allowedRoles.includes(user.role);
 
-    if (!isAdmin) {
-        // Nếu không phải Admin -> Đá về Login Admin
-        return <Navigate to="/admin/login" state={{ from: location }} replace />;
+    if (!hasPermission) {
+        // Tùy biến trang chuyển hướng dựa trên "Vùng" mà user đang cố truy cập
+        let redirectPath = "/login"; // Mặc định cho Customer
+
+        if (location.pathname.startsWith("/admin")) {
+            redirectPath = "/admin/login";
+        } else if (location.pathname.startsWith("/owner")) {
+            redirectPath = "/owner/login";
+        }
+
+        return <Navigate to={redirectPath} state={{ from: location }} replace />;
     }
 
-    // 3. Nếu OK -> Render trang Admin
     return <>{children}</>;
 };

@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,10 +22,10 @@ public class ReportServiceImpl implements ReportService {
     private final PaymentRepository paymentRepository;
 
     @Override
-    public Map<String, Object> getFullDashboardStats(String range) {
+    public Map<String, Object> getFullDashboardStats(String range, UUID ownerId) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate;
-        LocalDateTime endDate = now; // Mặc định đến thời điểm hiện tại
+        LocalDateTime endDate = now;
 
         // Logic xử lý mốc thời gian
         if ("last_month".equals(range)) {
@@ -44,9 +41,9 @@ public class ReportServiceImpl implements ReportService {
 
         Map<String, Object> fullDashboard = new HashMap<>();
         // Truyền cả startDate và endDate vào các hàm con
-        fullDashboard.put("bookingStats", getBookingStats(startDate, endDate));
-        fullDashboard.put("paymentStats", getPaymentStats(startDate, endDate));
-        fullDashboard.put("totalRevenue", getTotalRevenue(startDate, endDate));
+        fullDashboard.put("bookingStats", getBookingStats(startDate, endDate, ownerId));
+        fullDashboard.put("paymentStats", getPaymentStats(startDate, endDate, ownerId));
+        fullDashboard.put("totalRevenue", getTotalRevenue(startDate, endDate, ownerId));
 
         return fullDashboard;
     }
@@ -65,9 +62,18 @@ public class ReportServiceImpl implements ReportService {
         };
     }
 
-    private Map<BookingStatus, Long> getBookingStats(LocalDateTime startDate, LocalDateTime endDate) {
-        // Cần cập nhật Repository để nhận 2 tham số
-        List<Object[]> results = bookingRepository.countAllByStatus(startDate, endDate);
+    private Map<BookingStatus, Long> getBookingStats(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
+        // --- THÊM DÒNG NÀY ĐỂ DEBUG ---
+        System.out.println("=== DEBUG BOOKING STATS ===");
+        System.out.println("Range Start: " + startDate);
+        System.out.println("Range End:   " + endDate);
+        System.out.println("Owner ID:    " + (ownerId != null ? ownerId : "NULL (ADMIN)"));
+
+        List<Object[]> results = bookingRepository.countAllByStatus(startDate, endDate, ownerId);
+
+        System.out.println("Query Results Size: " + results.size());
+        // ------------------------------
+
         Map<BookingStatus, Long> actualCounts = results.stream()
                 .collect(Collectors.toMap(
                         res -> (BookingStatus) res[0],
@@ -81,9 +87,9 @@ public class ReportServiceImpl implements ReportService {
         return fullStats;
     }
 
-    private Map<PaymentStatus, Long> getPaymentStats(LocalDateTime startDate, LocalDateTime endDate) {
+    private Map<PaymentStatus, Long> getPaymentStats(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
         // Cần cập nhật Repository để nhận 2 tham số
-        List<Object[]> results = paymentRepository.countByPaymentStatus(startDate, endDate);
+        List<Object[]> results = paymentRepository.countByPaymentStatus(startDate, endDate, ownerId);
         Map<PaymentStatus, Long> pStats = results.stream()
                 .collect(Collectors.toMap(
                         res -> (PaymentStatus) res[0],
@@ -97,9 +103,8 @@ public class ReportServiceImpl implements ReportService {
         return fullPaymentStats;
     }
 
-    private BigDecimal getTotalRevenue(LocalDateTime startDate, LocalDateTime endDate) {
-        // Cần cập nhật Repository để nhận 2 tham số
-        BigDecimal revenue = paymentRepository.getTotalRevenue(startDate, endDate);
+    private BigDecimal getTotalRevenue(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
+        BigDecimal revenue = paymentRepository.getTotalRevenue(startDate, endDate, ownerId);
         return revenue != null ? revenue : BigDecimal.ZERO;
     }
 }

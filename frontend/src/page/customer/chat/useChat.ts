@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react";
 import websocketService from "../../../service/websocketService.ts";
 import chatService from "../../../service/chatService.ts";
 
-
 export const useChat = (
     currentUserId: string | null,
     isChatActiveRef: React.MutableRefObject<boolean>,

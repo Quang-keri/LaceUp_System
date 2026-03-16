@@ -29,7 +29,8 @@ public class UserController {
     @GetMapping("/my-info")
     public ResponseEntity<ApiResponse<UserResponse>> getMyInfo() {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy thông tin cá nhân thành công", userService.getMyInfo())
+                ApiResponse.
+                        success(200, "Lấy thông tin cá nhân thành công", userService.getMyInfo())
         );
     }
 
@@ -38,7 +39,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody @Valid CreateUserRequest request) {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.success("Tạo người dùng thành công", userService.createUser(request))
+                ApiResponse.success(201, "Tạo người dùng thành công", userService.createUser(request))
         );
     }
 

@@ -1,6 +1,6 @@
 export interface MessageRequest {
     conversationId?: string;
-    receiverId: string;
+    recipientId: string;
     content: string;
 }
 

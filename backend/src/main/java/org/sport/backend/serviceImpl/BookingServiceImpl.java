@@ -281,6 +281,7 @@ public class BookingServiceImpl  implements BookingService {
                 .endTime(intent.getEndTime())
                 .note(intent.getNote())
                 .rentalArea(intent.getRentalArea())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         bookingRepository.save(booking);
