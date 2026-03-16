@@ -6,6 +6,7 @@ import lombok.experimental.SuperBuilder;
 import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.CourtCopyStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,6 +34,7 @@ public class CourtCopy extends BaseEntity {
     private Court court;
 
     @OneToMany(mappedBy = "courtCopy", fetch = FetchType.LAZY)
-    private List<Slot> slots;
+
+    private List<Slot> slots = new ArrayList<>();
 }
 

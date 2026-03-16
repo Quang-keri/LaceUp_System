@@ -46,10 +46,17 @@ class BookingService {
     return response.data;
   }
 
-  async updateBooking(bookingId: string, status: string) {
+  async updateBooking(bookingId: string, payload: any) {
     const response = await api.put<ApiResponse<BookingResponse>>(
       `/bookings/${bookingId}`,
-      { status },
+      payload,
+    );
+    return response.data;
+  }
+
+  async getBookingById(bookingId: string) {
+    const response = await api.get<ApiResponse<BookingResponse>>(
+      `/bookings/${bookingId}`,
     );
     return response.data;
   }

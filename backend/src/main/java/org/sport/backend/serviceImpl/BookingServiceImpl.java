@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -511,113 +512,95 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse updateBooking(UUID bookingId, UpdateBookingRequest request) {
-        System.err.println("zô day update");
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new RuntimeException("Booking không tồn tại"));
 
 
-        if (request.getBookerName() != null) {
-            booking.setBookerName(request.getBookerName());
-        }
+        if (request.getBookerName() != null) booking.setBookerName(request.getBookerName());
+        if (request.getBookerPhone() != null) booking.setBookerPhone(request.getBookerPhone());
+        if (request.getNote() != null) booking.setNote(request.getNote());
 
-
-        if (request.getBookerPhone() != null) {
-            booking.setBookerPhone(request.getBookerPhone());
-        }
-
-
-        if (request.getNote() != null) {
-            booking.setNote(request.getNote());
-        }
-        System.err.println("zô day update staus nha em nhé");
 
         if (request.getBookingStatus() != null) {
-
             booking.setBookingStatus(request.getBookingStatus());
-            System.err.println("booking status update " + request.getBookingStatus());
-            if (request.getBookingStatus() == BookingStatus.CANCELLED) {
-                for (Slot slot : booking.getSlots()) {
-                    slot.setSlotStatus(SlotStatus.CANCELLED);
-                }
-            }
-
-            if (request.getBookingStatus() == BookingStatus.COMPLETED) {
-                for (Slot slot : booking.getSlots()) {
-                    slot.setSlotStatus(SlotStatus.COMPLETED);
-                }
-            }
-        } else {
-            System.err.println("em ấy ko vô udpate status");
+            syncSlotStatus(booking, request.getBookingStatus());
         }
 
 
         if (request.getSlots() != null && !request.getSlots().isEmpty()) {
-
             for (UpdateSlotRequest slotReq : request.getSlots()) {
-
                 Slot slot = slotRepository.findById(slotReq.getSlotId())
-                        .orElseThrow(() -> new RuntimeException("khung giờ không tìm thấy"));
+                        .orElseThrow(() -> new RuntimeException("Khung giờ " + slotReq.getSlotId() + " không tìm thấy"));
 
-                LocalDateTime newStart = slotReq.getStartTime();
-                LocalDateTime newEnd = slotReq.getEndTime();
+
+                validateSlotLogic(slotReq.getStartTime(), slotReq.getEndTime(), slot.getStartTime());
+
 
                 Court court = slot.getCourtCopy().getCourt();
+                List<CourtCopy> available = courtCopyRepository.findAvailableCourtCopy(
+                        court.getCourtId(), slotReq.getStartTime(), slotReq.getEndTime());
 
-                List<CourtCopy> availableCourtCopies =
-                        courtCopyRepository.findAvailableCourtCopy(
-                                court.getCourtId(),
-                                newStart,
-                                newEnd
-                        );
-
-                if (availableCourtCopies.isEmpty()) {
-                    throw new RuntimeException("Không có sân trống trong khung giờ này");
+                if (available.isEmpty()) {
+                    throw new RuntimeException("Sân đã bị đặt trong khung giờ: " + slotReq.getStartTime());
                 }
 
-                CourtCopy newCourtCopy = availableCourtCopies.get(0);
+                slot.setStartTime(slotReq.getStartTime());
+                slot.setEndTime(slotReq.getEndTime());
+                slot.setCourtCopy(available.get(0));
 
-                slot.setStartTime(newStart);
-                slot.setEndTime(newEnd);
-                slot.setCourtCopy(newCourtCopy);
 
-                long minutes = Duration.between(newStart, newEnd).toMinutes();
+                long minutes = Duration.between(slotReq.getStartTime(), slotReq.getEndTime()).toMinutes();
                 BigDecimal hours = BigDecimal.valueOf(minutes)
-                        .divide(BigDecimal.valueOf(60));
-
-                BigDecimal price = court.getPrice().multiply(hours);
-
-                slot.setPrice(price);
+                        .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+                slot.setPrice(court.getPrice().multiply(hours));
 
                 slotRepository.save(slot);
             }
         }
 
 
-        BigDecimal totalPrice = booking.getSlots()
-                .stream()
-                .map(Slot::getPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        recalculateBookingSummary(booking);
 
-        booking.setTotalPrice(totalPrice);
+        return mapToResponse(bookingRepository.save(booking));
+    }
 
 
-        LocalDateTime start = booking.getSlots()
-                .stream()
-                .map(Slot::getStartTime)
-                .min(LocalDateTime::compareTo)
-                .orElse(null);
+    private void validateSlotLogic(LocalDateTime start, LocalDateTime end, LocalDateTime oldStart) {
+        if (start == null || end == null) return;
 
-        LocalDateTime end = booking.getSlots()
-                .stream()
-                .map(Slot::getEndTime)
-                .max(LocalDateTime::compareTo)
-                .orElse(null);
 
-        booking.setStartTime(start);
-        booking.setEndTime(end);
+        if (!start.equals(oldStart) && start.isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Không thể dời lịch vào thời gian đã qua");
+        }
 
-        bookingRepository.save(booking);
 
-        return mapToResponse(booking);
+        if (start.getMinute() % 30 != 0 || end.getMinute() % 30 != 0 || start.getSecond() != 0 || end.getSecond() != 0) {
+            throw new RuntimeException("Thời gian phải là mốc 30 phút (VD: 14:00, 14:30) và không có giây lẻ");
+        }
+
+
+        if (Duration.between(start, end).toMinutes() < 60) {
+            throw new RuntimeException("Thời gian thuê tối thiểu là 1 giờ");
+        }
+    }
+
+    private void syncSlotStatus(Booking booking, BookingStatus status) {
+        SlotStatus slotStatus = null;
+        if (status == BookingStatus.CANCELLED) slotStatus = SlotStatus.CANCELLED;
+        else if (status == BookingStatus.COMPLETED) slotStatus = SlotStatus.COMPLETED;
+
+        if (slotStatus != null) {
+            for (Slot s : booking.getSlots()) s.setSlotStatus(slotStatus);
+        }
+    }
+
+    private void recalculateBookingSummary(Booking booking) {
+        BigDecimal total = booking.getSlots().stream().map(Slot::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+        LocalDateTime minStart = booking.getSlots().stream().map(Slot::getStartTime).min(LocalDateTime::compareTo).orElse(null);
+        LocalDateTime maxEnd = booking.getSlots().stream().map(Slot::getEndTime).max(LocalDateTime::compareTo).orElse(null);
+
+        booking.setTotalPrice(total);
+        booking.setStartTime(minStart);
+        booking.setEndTime(maxEnd);
     }
 }

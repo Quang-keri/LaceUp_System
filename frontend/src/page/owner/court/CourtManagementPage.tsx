@@ -50,7 +50,7 @@ export default function CourtManagementPage() {
 
     try {
       const res = await courtService.getMyCourts(1, 100);
-      // Lọc courts theo buildingId
+   
       const filtered = (res.result.data || []).filter(
         (court) => court.rentalAreaId === buildingId,
       );

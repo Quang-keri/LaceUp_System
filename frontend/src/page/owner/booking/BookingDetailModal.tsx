@@ -1,4 +1,4 @@
-import { Modal, Descriptions, Table } from "antd";
+import { Modal, Descriptions, Table, Tag } from "antd";
 import type { BookingResponse } from "../../../types/booking";
 
 interface Props {
@@ -9,6 +9,14 @@ interface Props {
 
 export default function BookingDetailModal({ open, booking, onClose }: Props) {
   if (!booking) return null;
+
+  const statusMap: Record<string, { label: string; color: string }> = {
+    BOOKED: { label: "Đã đặt", color: "blue" },
+    CONFIRMED: { label: "Đã xác nhận", color: "green" },
+    COMPLETED: { label: "Hoàn thành", color: "purple" },
+    CANCELLED: { label: "Đã hủy", color: "red" },
+    PENDING: { label: "Chờ xử lý", color: "orange" },
+  };
 
   const columns = [
     { title: "Sân", dataIndex: "courtCode" },
@@ -21,8 +29,18 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
     },
   ];
 
+  const status = statusMap[booking.bookingStatus] || {
+    label: booking.bookingStatus,
+    color: "default",
+  };
+
   return (
-    <Modal title="Chi tiết đơn đặt" open={open} onCancel={onClose} footer={null}>
+    <Modal
+      title="Chi tiết đơn đặt"
+      open={open}
+      onCancel={onClose}
+      footer={null}
+    >
       <Descriptions column={1}>
         <Descriptions.Item label="Khách hàng">
           {booking.userName}
@@ -32,13 +50,15 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
           {booking.phoneNumber}
         </Descriptions.Item>
 
+        <Descriptions.Item label="Trạng thái">
+          <Tag color={status.color}>{status.label}</Tag>
+        </Descriptions.Item>
+
         <Descriptions.Item label="Tổng tiền">
           {booking.totalPrice?.toLocaleString("vi-VN")} VND
         </Descriptions.Item>
 
-        <Descriptions.Item label="Ghi chú">
-          {booking.note}
-        </Descriptions.Item>
+        <Descriptions.Item label="Ghi chú">{booking.note}</Descriptions.Item>
       </Descriptions>
 
       <Table
