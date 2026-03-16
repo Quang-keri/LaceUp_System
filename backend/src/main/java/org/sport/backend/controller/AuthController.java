@@ -28,16 +28,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthGoogleService authGoogleService;
-    UserService userService;
-    EmailService emailService;
+    private final UserService userService;
+    private final EmailService emailService;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        System.out.println(request.getEmail());
         LoginResponse loginResponse = authService.login(request);
-        System.out.println(loginResponse);
         return ResponseEntity.ok(ApiResponse.<LoginResponse>builder()
                 .code(200)
                 .message("Login successfully")

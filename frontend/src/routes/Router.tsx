@@ -15,6 +15,8 @@ import ChatHome from "../page/customer/chat/ChatHome.tsx";
 import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
 import OwnerDashboard from "../page/owner/dashboard/OwnerDashboard.tsx";
 import LoginOwnerPage from "../page/owner/login-page/LoginOwnerPage.tsx";
+import RegisterPage from "../page/customer/login-page/RegisterPage.tsx";
+import ConfirmRegister from "../page/customer/login-page/ConfirmRegister.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -26,6 +28,14 @@ export const router = createBrowserRouter([
                 path: "/login",
                 element: <LoginPage/>,
                 handle: {breadcrumb: "Đăng nhập"},
+            },
+            {
+                path: "/register",
+                element: <RegisterPage/>,
+            },
+            {
+                path: "register/confirm",
+                element: <ConfirmRegister />,
             },
             {
                 path: "danh-sach-san",
