@@ -95,7 +95,27 @@ public class BookingController {
         }
     }
 
+    @PutMapping("/{bookingId}")
+    public ApiResponse<?> updateBooking(
+            @PathVariable UUID bookingId,
+            @RequestBody UpdateBookingRequest request
+    ) {
+        try {
 
+            return ApiResponse.builder()
+                    .code(200)
+                    .message("Update booking successfully")
+                    .result(bookingService.updateBooking(bookingId, request))
+                    .build();
+
+        } catch (Exception e) {
+
+            return ApiResponse.builder()
+                    .code(500)
+                    .message("Api system have some problems " + e.getMessage())
+                    .build();
+        }
+    }
     @GetMapping("/my-rentals")
     public ApiResponse<?> getMyRentals(@RequestParam UUID rentalId,
                                        @RequestParam(required = false) BookingStatus bookingStatus,
@@ -152,25 +172,5 @@ public class BookingController {
         }
     }
 
-    @PutMapping("/{bookingId}")
-    public ApiResponse<?> updateBooking(
-            @PathVariable UUID bookingId,
-            @RequestBody UpdateBookingRequest request
-    ) {
-        try {
 
-            return ApiResponse.builder()
-                    .code(200)
-                    .message("Update booking successfully")
-                    .result(bookingService.updateBooking(bookingId, request))
-                    .build();
-
-        } catch (Exception e) {
-
-            return ApiResponse.builder()
-                    .code(500)
-                    .message("Api system have some problems " + e.getMessage())
-                    .build();
-        }
-    }
 }

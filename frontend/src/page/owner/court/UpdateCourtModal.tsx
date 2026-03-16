@@ -17,7 +17,7 @@ export default function UpdateCourtModal({
       form.setFieldsValue({
         courtName: court.courtName,
         categoryId: court.categoryId,
-        price: court.price,
+        price: court.pricePerHour,
       });
     }
   }, [court]);
@@ -31,9 +31,9 @@ export default function UpdateCourtModal({
         {
           courtName: values.courtName,
           categoryId: values.categoryId,
-          price: values.price,
+          pricePerHour: values.price,
         },
-        []
+        [],
       );
 
       message.success("Cập nhật sân thành công");
@@ -56,11 +56,19 @@ export default function UpdateCourtModal({
       confirmLoading={loading}
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item label="Tên sân" name="courtName" rules={[{ required: true }]}>
+        <Form.Item
+          label="Tên sân"
+          name="courtName"
+          rules={[{ required: true }]}
+        >
           <Input />
         </Form.Item>
 
-        <Form.Item label="Loại sân" name="categoryId" rules={[{ required: true }]}>
+        <Form.Item
+          label="Loại sân"
+          name="categoryId"
+          rules={[{ required: true }]}
+        >
           <Select
             options={categories.map((c: any) => ({
               label: c.categoryName,

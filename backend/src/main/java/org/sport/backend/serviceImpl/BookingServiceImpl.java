@@ -509,7 +509,7 @@ public class BookingServiceImpl  implements BookingService {
     @Override
     @Transactional
     public BookingResponse updateBooking(UUID bookingId, UpdateBookingRequest request) {
-
+        System.err.println("zô day update");
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
@@ -527,12 +527,12 @@ public class BookingServiceImpl  implements BookingService {
         if (request.getNote() != null) {
             booking.setNote(request.getNote());
         }
-
+        System.err.println("zô day update staus nha em nhé");
 
         if (request.getBookingStatus() != null) {
 
             booking.setBookingStatus(request.getBookingStatus());
-
+            System.err.println("booking status update "+ request.getBookingStatus());
             if (request.getBookingStatus() == BookingStatus.CANCELLED) {
                 for (Slot slot : booking.getSlots()) {
                     slot.setSlotStatus(SlotStatus.CANCELLED);
@@ -544,6 +544,8 @@ public class BookingServiceImpl  implements BookingService {
                     slot.setSlotStatus(SlotStatus.COMPLETED);
                 }
             }
+        }else{
+            System.err.println("em ấy ko vô udpate status");
         }
 
 

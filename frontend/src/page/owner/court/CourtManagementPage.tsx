@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { Card, Button, Space, Skeleton, message } from "antd";
 import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
+import CourtCardList from "./CourtCardList";
+import rentalService from "../../../service/rental/rentalService";
+import courtService from "../../../service/courtService";
 
-import RentalService from "../../../service/rental/rentalService";
-import CourtService from "../../../service/courtService";
-
-import CourtTable from "./CourtTable";
+// import CourtTable from "./CourtTable";
 import CreateCourtModal from "./CreateCourtModal";
 import UpdateCourtModal from "./UpdateCourtModal";
 
@@ -36,7 +36,7 @@ export default function CourtManagementPage() {
 
   const loadBuilding = async () => {
     try {
-      const res = await RentalService.getRentalAreaById(buildingId!);
+      const res = await rentalService.getRentalAreaById(buildingId!);
       setBuilding(res.result);
     } catch {
       message.error("Không tải được thông tin tòa nhà");
@@ -49,8 +49,12 @@ export default function CourtManagementPage() {
     setLoading(true);
 
     try {
-      const res = await RentalService.getRentalAreaById(buildingId);
-      setCourts(res.result.courts || []);
+      const res = await courtService.getMyCourts(1, 100);
+      // Lọc courts theo buildingId
+      const filtered = (res.result.data || []).filter(
+        (court) => court.rentalAreaId === buildingId,
+      );
+      setCourts(filtered);
     } catch {
       message.error("Lỗi khi tải danh sách sân");
     } finally {
@@ -60,7 +64,7 @@ export default function CourtManagementPage() {
 
   const loadCategories = async () => {
     try {
-      const res = await CourtService.getCategories();
+      const res = await courtService.getCategories();
 
       setCategories(res.result.data);
     } catch {
@@ -70,7 +74,7 @@ export default function CourtManagementPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await CourtService.deleteCourt(id);
+      await courtService.deleteCourt(id);
       message.success("Xóa sân thành công");
       loadCourts();
     } catch {
@@ -108,18 +112,23 @@ export default function CourtManagementPage() {
           </Button>
         }
       >
-        <CourtTable
+        <CourtCardList
           courts={courts}
           loading={loading}
           onEdit={(court) => {
             setEditingCourt(court);
             setModalOpen(true);
           }}
-          onDelete={handleDelete}
+          onManage={(court) => {
+            navigate(`/owner/courts/${court.courtId}/copies`);
+          }}
+          onView={(court) => {
+            navigate(`/owner/courts/${court.courtId}`);
+          }}
+          onDelete={(courtId: string) => handleDelete(courtId)}
         />
       </Card>
 
-      {/* CREATE MODAL */}
       <CreateCourtModal
         open={modalOpen && !editingCourt}
         onClose={() => setModalOpen(false)}
@@ -128,7 +137,6 @@ export default function CourtManagementPage() {
         onSuccess={loadCourts}
       />
 
-      {/* UPDATE MODAL */}
       <UpdateCourtModal
         open={modalOpen && !!editingCourt}
         onClose={() => {

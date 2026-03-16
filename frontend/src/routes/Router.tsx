@@ -16,6 +16,16 @@ import BuildingListPage from "../page/owner/building/BuildingListPage.tsx";
 import BuildingFormPage from "../page/owner/building/BuildingFormPage.tsx";
 import CourtManagementPage from "../page/owner/court/CourtManagementPage.tsx";
 import BookingManagementPage from "../page/owner/booking/BookingManagementPage.tsx";
+import CourtDetailPage from "../page/owner/court/CourtDetailPage.tsx";
+import CourtCopyPage from "../page/owner/court/CourtCopyPage.tsx";
+import RentalAreaDetailPage from "../page/customer/rental/RentalAreaDetailPage.tsx";
+import ManageSchedulePage from "../page/owner/booking/ManageSchedule/ManageSchedulePage.tsx";
+import PostManagementPage from "../page/owner/post/PostManagementPage";
+import ProfilePage from "../page/owner/profile/OwnerProfilePage.tsx";
+import OwnerProfilePage from "../page/owner/profile/OwnerProfilePage.tsx";
+import NotFound from "../page/NotFoundPage.tsx";
+import PaymentPage from "../page/customer/payment/PaymentPage.tsx";
+import PaymentSuccessPage from "../page/customer/payment/PaymentSuccessPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -42,9 +52,29 @@ export const router = createBrowserRouter([
         element: <PostPage />,
       },
       {
+        path: "rental-area/:id",
+        element: <RentalAreaDetailPage />,
+      },
+      {
+        path: "payment/:bookingId",
+        element: <PaymentPage />,
+      },
+      {
+        path: "payment-success/:bookingId",
+        element: <PaymentSuccessPage />,
+      },
+      {
         path: "chat",
         element: <ChatHome />,
         handle: { breadcrumb: "Chat" },
+      },
+      {
+        path: "profile",
+        element: <ProfilePage />,
+      },
+      {
+        path: "*",
+        element: <NotFound />,
       },
     ],
   },
@@ -98,6 +128,30 @@ export const router = createBrowserRouter([
       {
         path: "bookings/management",
         element: <BookingManagementPage />,
+      },
+      {
+        path: "courts/:courtId",
+        element: <CourtDetailPage />,
+      },
+      {
+        path: "courts/:courtId/copies",
+        element: <CourtCopyPage />,
+      },
+      {
+        path: "bookings/calendar",
+        element: <ManageSchedulePage />,
+      },
+      {
+        path: "posts",
+        element: <PostManagementPage />,
+      },
+      {
+        path: "profile",
+        element: <OwnerProfilePage />,
+      },
+      {
+        path: "*",
+        element: <NotFound />,
       },
     ],
   },

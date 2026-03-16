@@ -79,13 +79,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/owner/bookings/check-in",
       ),
     ]),
-    getItem("Quản lý hàng hóa", "sub_product", <CalendarOutlined />, [
-      getItem(<Link to="/owner/product/list">Tất cả</Link>, "/owner/area/list"),
-      getItem(
-        <Link to="/owner/product/types">Loại hàng hóa</Link>,
-        "/owner/product/types",
-      ),
-    ]),
 
     //
     getItem("Quản lý Cơ sở", "sub_area", <ShopOutlined />, [
@@ -178,7 +171,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
         }`}
       >
-        <div className="flex items-center gap-2 overflow-hidden px-4">
+        <Link to={"/"}>
+         <div className="flex items-center gap-2 overflow-hidden px-4">
           <div className="min-w-[32px] h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
             L
           </div>
@@ -192,6 +186,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
         </div>
+        </Link>
+       
       </div>
 
       <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">

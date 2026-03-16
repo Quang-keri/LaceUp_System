@@ -14,7 +14,7 @@ export default function CourtList({ courts, onAddCourt }: any) {
             <p className="text-gray-500">{court.categoryName}</p>
 
             <p className="text-blue-600 font-semibold">
-              {court.price} VND / giờ
+              {court.pricePerHour} VND / giờ
             </p>
           </div>
 

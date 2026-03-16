@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import PostService from "../../../service/post/postService";
 import type { PostResponse } from "../../../types/post";
 import { useNavigate } from "react-router-dom";
+import CourtCard from "./CourtCard";
+import { Row, Col } from "antd";
+import FilterSidebar from "./FilterSidebar";
+import SearchBar from "./SearchBar";
 export default function PostPage() {
   const [posts, setPosts] = useState<PostResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,48 +31,27 @@ export default function PostPage() {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Posts</h1>
+    <>
+      <SearchBar />
+      <div className="w-[90%] mx-auto overflow-x-hidden">
+        <Row gutter={[20, 20]} className="p-4">
+          <Col xs={0} md={8} lg={6}>
+            <FilterSidebar />
+          </Col>
 
-      {posts.map((post) => (
-        <div
-          key={post.postId}
-          onClick={() => navigate(`/rental-area/${post.rentalAreaId}`)}
-          style={{
-            border: "1px solid #ddd",
-            marginBottom: "20px",
-            padding: "15px",
-            borderRadius: "8px",
-            cursor: "pointer",
-          }}
-        >
-          <img
-            src={post.courtCoverImageUrl}
-            alt={post.title}
-            style={{ width: "300px", borderRadius: "6px" }}
-          />
-
-          <h2>{post.title}</h2>
-
-          <p>{post.description}</p>
-
-          <p>
-            <b>Sân:</b> {post.courtName}
-          </p>
-
-          <p>
-            <b>Khu vực:</b> {post.rentalAreaName}
-          </p>
-
-          <p>
-            <b>Địa chỉ:</b> {post.address}
-          </p>
-
-          <p>
-            <b>Giá:</b> {post.price} VND
-          </p>
-        </div>
-      ))}
-    </div>
+          <Col xs={24} md={16} lg={18}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {posts.map((post) => (
+                <CourtCard
+                  key={post.postId}
+                  post={post}
+                  onClick={() => navigate(`/rental-area/${post.rentalAreaId}`)}
+                />
+              ))}
+            </div>
+          </Col>
+        </Row>
+      </div>
+    </>
   );
 }

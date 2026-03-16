@@ -46,7 +46,7 @@ class BookingService {
     return response.data;
   }
 
-  async updateBookingStatus(bookingId: string, status: string) {
+  async updateBooking(bookingId: string, status: string) {
     const response = await api.put<ApiResponse<BookingResponse>>(
       `/bookings/${bookingId}`,
       { status },

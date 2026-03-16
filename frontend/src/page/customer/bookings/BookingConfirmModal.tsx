@@ -9,7 +9,7 @@ export default function BookingConfirmModal({
   onConfirm,
 }: any) {
   const total = cart.reduce(
-    (sum: number, item: any) => sum + item.quantity * item.court.price,
+    (sum: number, item: any) => sum + item.quantity * item.court.pricePerHour,
     0,
   );
 
@@ -76,7 +76,7 @@ export default function BookingConfirmModal({
               </p>
 
               <span className="text-blue-600 font-medium">
-                {(item.court.price * item.quantity).toLocaleString()} VNĐ
+                {(item.court.pricePerHour * item.quantity).toLocaleString()} VNĐ
               </span>
             </div>
 

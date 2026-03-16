@@ -20,7 +20,7 @@ export default function BookingCart({
             {item.date} {item.startTime}-{item.endTime}
           </p>
 
-          <p className="text-blue-600">{item.court.price} VNĐ / giờ</p>
+          <p className="text-blue-600">{item.court.pricePerHour} VNĐ / giờ</p>
 
           <div className="flex gap-2 mt-2">
             <button

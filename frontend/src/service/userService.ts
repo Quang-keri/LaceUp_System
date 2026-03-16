@@ -10,13 +10,13 @@ const API_BASE_URL = '/users';
 
 export const userService = {
 
-    // --- GET ME API ---
+    
     getMyInfo: async (): Promise<ApiResponse<UserResponse>> => {
         const response = await api.get(`${API_BASE_URL}/my-info`);
         return response.data;
     },
 
-    // --- CRUD APIs ---
+   
     createUser: async (data: CreateUserRequest): Promise<ApiResponse<UserResponse>> => {
         const response = await api.post(API_BASE_URL, data);
         return response.data;

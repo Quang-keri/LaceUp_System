@@ -30,4 +30,6 @@ public interface PostService {
     PostDetailResponse getMyPostDetail(UUID postId, UUID userId);
 
     PostResponse updateMyPost(UUID postId, UpdatePostRequest request, UUID userId);
+
+    void deleteMyPost(UUID postId, UUID currentUserId);
 }

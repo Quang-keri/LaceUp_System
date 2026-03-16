@@ -34,11 +34,11 @@ public class Post extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private  User user;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "court_id", nullable = false)
     private Court court;
 
-    @OneToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id", nullable = false)
     private RentalArea rentalArea;
 

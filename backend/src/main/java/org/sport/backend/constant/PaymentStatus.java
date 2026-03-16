@@ -4,4 +4,5 @@ public enum PaymentStatus {
     BOOKED,
     COMPLETED,
     CANCELLED,
+    FAILED,
 }

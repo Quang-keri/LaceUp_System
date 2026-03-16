@@ -1,4 +1,4 @@
-import { Card, Row, Col, Select } from "antd";
+import { Card, Row, Col, Select, Input } from "antd";
 import type { RentalAreaResponse } from "../../../types/rental";
 
 interface Props {
@@ -7,6 +7,7 @@ interface Props {
   filterStatus?: string;
   onBuildingChange: (id: string) => void;
   onStatusChange: (status?: string) => void;
+  onSearch: (value: string) => void;
 }
 
 export default function RentalAreaFilter({
@@ -15,11 +16,12 @@ export default function RentalAreaFilter({
   filterStatus,
   onBuildingChange,
   onStatusChange,
+  onSearch,
 }: Props) {
   return (
-    <Card title="Lọc dữ liệu" size="small" style={{ marginBottom: 20 }}>
+    <Card title="Bộ lọc tìm kiếm" size="small" style={{ marginBottom: 5 }}>
       <Row gutter={16}>
-        <Col span={12}>
+        <Col span={8}>
           <Select
             placeholder="Chọn tòa nhà"
             value={selectedBuildingId}
@@ -31,10 +33,9 @@ export default function RentalAreaFilter({
             }))}
           />
         </Col>
-
-        <Col span={12}>
+        <Col span={8}>
           <Select
-            placeholder="Lọc trạng thái"
+            placeholder="Trạng thái"
             allowClear
             value={filterStatus}
             onChange={onStatusChange}
@@ -45,6 +46,14 @@ export default function RentalAreaFilter({
               { label: "Hoàn thành", value: "COMPLETED" },
               { label: "Hủy", value: "CANCELLED" },
             ]}
+          />
+        </Col>
+        <Col span={8}>
+          <Input.Search
+            placeholder="Tìm tên khách, SĐT..."
+            allowClear
+            onSearch={onSearch}
+            enterButton
           />
         </Col>
       </Row>

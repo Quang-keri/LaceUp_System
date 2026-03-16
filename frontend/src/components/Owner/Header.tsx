@@ -7,13 +7,12 @@ import {
   MenuUnfoldOutlined,
   MenuFoldOutlined,
 } from "@ant-design/icons";
-
+import { useNavigate } from "react-router-dom";
 const { Header } = Layout;
 
 interface AdminHeaderProps {
   collapsed: boolean;
   toggleCollapsed: () => void;
-  // 2. Sửa dòng này: Thay AdminUser bằng UserResponse
   adminUser: UserResponse | null;
   isDark: boolean;
   onThemeToggle: () => void;
@@ -27,12 +26,26 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
   onThemeToggle,
 }) => {
   const displayName = adminUser?.userName || "Admin";
-
+const navigate = useNavigate();
   const userMenu: MenuProps["items"] = [
-    { key: "1", label: "Hồ sơ cá nhân" },
-    { key: "2", label: "Cài đặt" },
+    {
+      key: "profile",
+      label: "Hồ sơ cá nhân",
+    },
+    {
+      key: "settings",
+      label: "Cài đặt",
+    },
   ];
+  const handleMenuClick: MenuProps["onClick"] = ({ key }) => {
+    if (key === "profile") {
+      navigate("/owner/profile");
+    }
 
+    if (key === "settings") {
+      navigate("/owner/settings");
+    }
+  };
   return (
     <Header
       className={`px-4 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md transition-colors duration-200 border-b ${
@@ -71,7 +84,13 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
           title={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
         />
 
-        <Dropdown menu={{ items: userMenu }} placement="bottomRight">
+        <Dropdown
+          menu={{
+            items: userMenu,
+            onClick: handleMenuClick,
+          }}
+          placement="bottomRight"
+        >
           <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
             <div
               className={`text-right hidden sm:block leading-tight ${

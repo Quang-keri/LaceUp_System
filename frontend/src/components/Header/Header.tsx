@@ -34,9 +34,11 @@ const AppHeader = () => {
 
     // Menu chính giữa
     const navItems = [
-        { key: "/", label: "Home" },
-        { key: "/news", label: "News" },
-        { key: "/my-bookings", label: "My Bookings" },
+        { key: "/", label: "Trang chủ" },
+        { key: "/danh-sach-san", label: "Sân" },
+        { key: "/cong-dong", label: "Cộng đồng" },
+        { key: "/tin-tuc", label: "Tin tức" },
+        { key: "/ve-chung-toi", label: "Về chúng tôi" },
     ];
 
     // Menu cho Avatar (Dropdown)

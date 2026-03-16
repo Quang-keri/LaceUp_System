@@ -8,6 +8,7 @@ import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.RentalAreaStatus;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,6 +45,16 @@ public class RentalArea extends BaseEntity {
 
     @Column(name = "deleted_at")
     LocalDateTime deletedAt;
+
+    private Double rating;
+
+    private Double latitude;
+
+    private Double longitude;
+
+    private LocalTime openTime;
+
+    private LocalTime closeTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "city_id", nullable = false)

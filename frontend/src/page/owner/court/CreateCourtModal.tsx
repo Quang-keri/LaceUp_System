@@ -1,12 +1,4 @@
-import {
-  Modal,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Upload,
-  message,
-} from "antd";
+import { Modal, Form, Input, InputNumber, Select, Upload, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import CourtService from "../../../service/courtService";
@@ -40,11 +32,11 @@ export default function CreateCourtModal({
         {
           courtName: values.courtName,
           categoryId: values.categoryId,
-          price: values.price,
+          pricePerHour: values.price,
           rentalAreaId: buildingId,
           courtCodes,
         },
-        images
+        images,
       );
 
       message.success("Tạo sân thành công");
@@ -90,11 +82,7 @@ export default function CreateCourtModal({
           />
         </Form.Item>
 
-        <Form.Item
-          label="Giá / giờ"
-          name="price"
-          rules={[{ required: true }]}
-        >
+        <Form.Item label="Giá / giờ" name="price" rules={[{ required: true }]}>
           <InputNumber style={{ width: "100%" }} min={0} />
         </Form.Item>
 

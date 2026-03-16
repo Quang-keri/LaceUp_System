@@ -191,12 +191,12 @@ export default function RentalAreaDetailPage() {
     <div className="max-w-[1150px] mx-auto px-4 mt-3">
       <RentalGallery rental={data} />
 
-      <div className="grid grid-cols-12 gap-8 mt-6">
-        <div className="col-span-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+        <div className="lg:col-span-8">
           <RentalInfo rental={data} />
         </div>
 
-        <div className="col-span-4">
+        <div className="lg:col-span-4">
           <HostCard rental={data} />
         </div>
       </div>
@@ -207,12 +207,12 @@ export default function RentalAreaDetailPage() {
         </Col>
       </Row>
 
-      <Row gutter={24} style={{ marginTop: 24 }}>
-        <Col span={16}>
+      <Row gutter={[24, 24]} className="mt-6">
+        <Col xs={24} md={24} lg={16}>
           <CourtList courts={data.courts} onAddCourt={addCourt} />
         </Col>
 
-        <Col span={8}>
+        <Col xs={24} md={24} lg={8}>
           <BookingCart
             cart={cart}
             increase={increase}

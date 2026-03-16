@@ -1,17 +1,19 @@
 import { Table, Space, Button, Popconfirm, Tag } from "antd";
-import { CheckOutlined, CloseOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  CheckOutlined,
+  CloseOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import type { BookingResponse } from "../../../types/booking";
 
 const statusColorMap: Record<string, string> = {
-  PENDING: "orange",
   CONFIRMED: "blue",
   COMPLETED: "green",
   CANCELLED: "red",
 };
 
 const statusLabelMap: Record<string, string> = {
-  PENDING: "Chờ xác nhận",
-  CONFIRMED: "Đã xác nhận",
+  BOOKED: "Đã xác nhận",
   COMPLETED: "Hoàn thành",
   CANCELLED: "Hủy",
 };
@@ -39,6 +41,15 @@ export default function BookingTable({
 }: Props) {
   const columns = [
     {
+      title: "STT",
+      key: "stt",
+      width: 70,
+      render: (_: any, __: any, index: number) => {
+        const { current, pageSize } = pagination;
+        return (current - 1) * pageSize + index + 1;
+      },
+    },
+    {
       title: "Mã đơn",
       dataIndex: "bookingId",
       render: (id: string) => id.substring(0, 8) + "...",
@@ -65,51 +76,20 @@ export default function BookingTable({
       title: "Trạng thái",
       dataIndex: "bookingStatus",
       render: (status: string) => (
-        <Tag color={statusColorMap[status]}>
-          {statusLabelMap[status]}
-        </Tag>
+        <Tag color={statusColorMap[status]}>{statusLabelMap[status]}</Tag>
       ),
     },
     {
       title: "Thao tác",
       render: (_: any, record: BookingResponse) => (
         <Space>
-          {record.bookingStatus === "PENDING" && (
-            <>
-              <Button
-                type="primary"
-                size="small"
-                icon={<CheckOutlined />}
-                onClick={() => onConfirm(record)}
-              >
-                Xác nhận
-              </Button>
-
-              <Popconfirm
-                title="Hủy đơn?"
-                onConfirm={() => onCancel(record)}
-              >
-                <Button danger size="small" icon={<CloseOutlined />}>
-                  Hủy
-                </Button>
-              </Popconfirm>
-            </>
-          )}
-
           <Button size="small" onClick={() => onViewDetail(record)}>
             Chi tiết
           </Button>
 
           <Button size="small" onClick={() => onUpdateStatus(record)}>
-            Update
+            Chỉnh sửa
           </Button>
-
-          <Popconfirm
-            title="Xóa đơn?"
-            onConfirm={() => onCancel(record)}
-          >
-            <Button danger size="small" icon={<DeleteOutlined />} />
-          </Popconfirm>
         </Space>
       ),
     },

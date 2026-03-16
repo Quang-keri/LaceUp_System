@@ -40,11 +40,9 @@ public class PaymentServiceImpl implements PaymentService {
                 .paymentMethod(checkoutRequest.getPaymentMethod())
                 .transactionDate(LocalDateTime.now())
                 .build();
-        if(checkoutRequest.getPaymentMethod() == PaymentMethod.CASH){
+        if (checkoutRequest.getPaymentMethod() == PaymentMethod.CASH) {
             payment.setPaymentStatus(PaymentStatus.BOOKED);
-        }
-        if(checkoutRequest.getPaymentMethod() == PaymentMethod.PAY_OS ||
-                checkoutRequest.getPaymentMethod() == PaymentMethod.BANK_TRANSFER){
+        } else {
             payment.setPaymentStatus(PaymentStatus.COMPLETED);
         }
 
