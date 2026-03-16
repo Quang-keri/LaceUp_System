@@ -1,16 +1,25 @@
 import { Card, Input } from "antd";
 
-interface Props {
-  formData: any;
-  setFormData: (data: any) => void;
+interface UserInfo {
+  userName: string;
+  userPhone: string;
+  note: string;
 }
 
-export default function BookingContactForm({ formData, setFormData }: Props) {
-  const handleChange = (field: string, value: string) => {
-    setFormData({
-      ...formData,
-      [field]: value,
-    });
+interface Props {
+  formData: UserInfo;
+  setFormData?: (data: UserInfo) => void;
+  readonly?: boolean;
+}
+
+export default function BookingContactForm({
+  formData,
+  setFormData,
+  readonly = false,
+}: Props) {
+  const handleChange = (field: keyof UserInfo, value: string) => {
+    if (readonly || !setFormData) return;
+    setFormData({ ...formData, [field]: value });
   };
 
   return (
@@ -18,16 +27,20 @@ export default function BookingContactForm({ formData, setFormData }: Props) {
       <div style={{ marginBottom: 12 }}>
         <label>Tên người đặt</label>
         <Input
-          value={formData.name}
-          onChange={(e) => handleChange("name", e.target.value)}
+          value={formData.userName}
+          readOnly={readonly}
+          variant={readonly ? "filled" : "outlined"}
+          onChange={(e) => handleChange("userName", e.target.value)}
         />
       </div>
 
       <div style={{ marginBottom: 12 }}>
         <label>Số điện thoại</label>
         <Input
-          value={formData.phone}
-          onChange={(e) => handleChange("phone", e.target.value)}
+          value={formData.userPhone}
+          readOnly={readonly}
+          variant={readonly ? "filled" : "outlined"}
+          onChange={(e) => handleChange("userPhone", e.target.value)}
         />
       </div>
 
@@ -36,6 +49,8 @@ export default function BookingContactForm({ formData, setFormData }: Props) {
         <Input.TextArea
           rows={3}
           value={formData.note}
+          readOnly={readonly}
+          variant={readonly ? "filled" : "outlined"}
           onChange={(e) => handleChange("note", e.target.value)}
         />
       </div>

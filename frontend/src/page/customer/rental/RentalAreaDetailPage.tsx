@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Row, Col } from "antd";
 import { toast } from "react-toastify";
 
+import { useAuth } from "../../../context/AuthContext"; // điều chỉnh path nếu cần
+
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
 
@@ -30,13 +32,12 @@ type CartItem = {
 };
 
 export default function RentalAreaDetailPage() {
+  const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [data, setData] = useState<any>(null);
-
   const [cart, setCart] = useState<CartItem[]>([]);
-
   const [openModal, setOpenModal] = useState(false);
 
   const [userInfo, setUserInfo] = useState({
@@ -51,9 +52,16 @@ export default function RentalAreaDetailPage() {
     end: "09:00",
   });
 
+  // Sync userName từ auth user khi login/logout
+  useEffect(() => {
+    setUserInfo((prev) => ({
+      ...prev,
+      userName: user?.userName ?? "",
+    }));
+  }, [user]);
+
   const fetchDetail = async () => {
     const res = await rentalService.getRentalAreaById(id!);
-
     if (res.code === 200) {
       setData(res.result);
     }
@@ -70,12 +78,10 @@ export default function RentalAreaDetailPage() {
       toast.warn("Vui lòng chọn ngày");
       return false;
     }
-
     if (filter.start >= filter.end) {
       toast.warn("Giờ kết thúc phải lớn hơn giờ bắt đầu");
       return false;
     }
-
     return true;
   };
 
@@ -99,14 +105,11 @@ export default function RentalAreaDetailPage() {
 
       if (index !== -1) {
         const copy = [...prev];
-
         const newQty = copy[index].quantity + 1;
-
         copy[index] = {
           ...copy[index],
           quantity: Math.min(newQty, maxCopies),
         };
-
         return copy;
       }
 
@@ -122,25 +125,23 @@ export default function RentalAreaDetailPage() {
       ];
     });
   };
+
   const handleOpenModal = () => {
     if (cart.length === 0) {
       toast.warn("Vui lòng chọn khung giờ và thêm sân vào giỏ");
       return;
     }
-
     setOpenModal(true);
   };
+
   const increase = (index: number) => {
     setCart((prev) => {
       const copy = [...prev];
-
       const maxCopies = getAvailableCopies(copy[index].court);
-
       copy[index] = {
         ...copy[index],
         quantity: Math.min(copy[index].quantity + 1, maxCopies),
       };
-
       return copy;
     });
   };
@@ -148,9 +149,7 @@ export default function RentalAreaDetailPage() {
   const decrease = (index: number) => {
     setCart((prev) => {
       const copy = [...prev];
-
       const newQty = copy[index].quantity - 1;
-
       if (newQty <= 0) {
         copy.splice(index, 1);
       } else {
@@ -159,12 +158,17 @@ export default function RentalAreaDetailPage() {
           quantity: newQty,
         };
       }
-
       return copy;
     });
   };
 
   const submitBooking = async () => {
+    // Safety-net validation (modal cũng validate rồi nhưng giữ lại cho chắc)
+    if (!userInfo.userName.trim() || !userInfo.userPhone.trim()) {
+      toast.warn("Vui lòng nhập tên và số điện thoại");
+      return;
+    }
+
     const slotRequests = cart.map((item) => ({
       courtId: item.court.courtId,
       quantity: item.quantity,
@@ -173,8 +177,8 @@ export default function RentalAreaDetailPage() {
     }));
 
     const payload = {
-      userName: userInfo.userName,
-      userPhone: userInfo.userPhone,
+      userName: userInfo.userName.trim(),
+      userPhone: userInfo.userPhone.trim(),
       note: userInfo.note,
       slotRequests,
     };
@@ -195,7 +199,6 @@ export default function RentalAreaDetailPage() {
         <div className="lg:col-span-8">
           <RentalInfo rental={data} />
         </div>
-
         <div className="lg:col-span-4">
           <HostCard rental={data} />
         </div>
@@ -211,7 +214,6 @@ export default function RentalAreaDetailPage() {
         <Col xs={24} md={24} lg={16}>
           <CourtList courts={data.courts} onAddCourt={addCourt} />
         </Col>
-
         <Col xs={24} md={24} lg={8}>
           <BookingCart
             cart={cart}
