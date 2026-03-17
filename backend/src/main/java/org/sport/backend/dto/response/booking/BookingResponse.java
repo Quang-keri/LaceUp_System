@@ -31,4 +31,5 @@ public class BookingResponse {
     private BookingStatus status;
     private String invoicePdfUrl;
     private String note;
+    private String paymentMethod;
 }

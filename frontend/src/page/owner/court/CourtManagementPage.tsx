@@ -12,6 +12,7 @@ import UpdateCourtModal from "./UpdateCourtModal";
 
 import type { CourtResponse, CategoryResponse } from "../../../types/court";
 import type { RentalAreaResponse } from "../../../types/rental";
+import UpdateCourtPriceModal from "../court-price/UpdateCourtPriceModal";
 
 export default function CourtManagementPage() {
   const { buildingId } = useParams();
@@ -25,6 +26,11 @@ export default function CourtManagementPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCourt, setEditingCourt] = useState<CourtResponse | null>(null);
+
+  const [priceModalOpen, setPriceModalOpen] = useState(false);
+  const [selectedCourt, setSelectedCourt] = useState<CourtResponse | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!buildingId) return;
@@ -50,7 +56,7 @@ export default function CourtManagementPage() {
 
     try {
       const res = await courtService.getMyCourts(1, 100);
-   
+
       const filtered = (res.result.data || []).filter(
         (court) => court.rentalAreaId === buildingId,
       );
@@ -119,6 +125,10 @@ export default function CourtManagementPage() {
             setEditingCourt(court);
             setModalOpen(true);
           }}
+          onUpdatePrice={(court) => {
+            setSelectedCourt(court);
+            setPriceModalOpen(true);
+          }}
           onManage={(court) => {
             navigate(`/owner/courts/${court.courtId}/copies`);
           }}
@@ -145,6 +155,13 @@ export default function CourtManagementPage() {
         }}
         categories={categories}
         court={editingCourt}
+        onSuccess={loadCourts}
+      />
+
+      <UpdateCourtPriceModal
+        open={priceModalOpen}
+        onClose={() => setPriceModalOpen(false)}
+        court={selectedCourt}
         onSuccess={loadCourts}
       />
     </div>
