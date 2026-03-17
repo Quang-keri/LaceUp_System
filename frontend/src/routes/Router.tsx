@@ -29,6 +29,7 @@ import PaymentSuccessPage from "../page/customer/payment/PaymentSuccessPage.tsx"
 import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
 import OwnerDashboard from "../page/owner/dashboard/OwnerDashboard.tsx";
 import LoginOwnerPage from "../page/owner/login-page/LoginOwnerPage.tsx";
+import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -89,6 +90,11 @@ export const router = createBrowserRouter([
       {
         path: "buildings/:buildingId/courts",
         element: <CourtManagementPage />,
+      },
+      
+      {
+        path: "/owner/courts/:courtId/prices",
+        element: <CourtPricePage />,
       },
 
       { path: "bookings/management", element: <BookingManagementPage /> },

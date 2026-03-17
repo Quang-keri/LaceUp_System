@@ -16,7 +16,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { CourtResponse } from "../../../types/court";
-
+import { useNavigate } from "react-router-dom";
 interface Props {
   courts: CourtResponse[];
   loading: boolean;
@@ -24,6 +24,7 @@ interface Props {
   onManage: (court: CourtResponse) => void;
   onView: (court: CourtResponse) => void;
   onDelete?: (courtId: string) => void;
+  onUpdatePrice: (court: CourtResponse) => void;
 }
 
 export default function CourtCardList({
@@ -33,7 +34,10 @@ export default function CourtCardList({
   onManage,
   onView,
   onDelete,
+  onUpdatePrice,
 }: Props) {
+  const navigate = useNavigate();
+
   if (loading) {
     return (
       <Row gutter={[16, 16]}>
@@ -126,6 +130,14 @@ export default function CourtCardList({
                   onClick={() => onEdit(court)}
                 >
                   Sửa
+                </Button>
+
+                <Button
+                  onClick={() =>
+                    navigate(`/owner/courts/${court.courtId}/prices`)
+                  }
+                >
+                  Quản lý giá
                 </Button>
                 <Popconfirm
                   title="Xóa sân"

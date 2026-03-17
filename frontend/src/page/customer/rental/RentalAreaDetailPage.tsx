@@ -72,7 +72,75 @@ export default function RentalAreaDetailPage() {
   }, [id]);
 
   if (!data) return <p>Loading...</p>;
+  const getPriceByTime = (
+    court: any,
+    dateStr: string,
+    start: string,
+    end: string,
+  ) => {
+    if (!court.priceRules || court.priceRules.length === 0) {
+      return (court.price || 0) * calculateDiffHours(start, end);
+    }
 
+    const timeToMinutes = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const isWeekend = (dStr: string) => {
+      const day = new Date(dStr).getDay();
+      return day === 0 || day === 6;
+    };
+
+    const weekend = isWeekend(dateStr);
+    let totalPrice = 0;
+    let currentMins = timeToMinutes(start);
+    const endMins = timeToMinutes(end);
+
+    while (currentMins < endMins) {
+      // 1. Tìm rule phù hợp nhất tại thời điểm currentMins
+      const applicableRules = court.priceRules.filter((r: any) => {
+        const rStart = timeToMinutes(r.startTime);
+        const rEnd = r.endTime === "00:00:00" ? 1440 : timeToMinutes(r.endTime);
+
+        const timeMatch = currentMins >= rStart && currentMins < rEnd;
+        if (!timeMatch) return false;
+
+        // Ưu tiên ngày cụ thể trước
+        if (r.specificDate) return r.specificDate === dateStr;
+
+        // Nếu không có ngày cụ thể, dùng loại ngày
+        if (weekend)
+          return r.priceType === "WEEKEND" || r.priceType === "NORMAL";
+        return r.priceType === "NORMAL" || r.priceType === "PEAK"; // Thêm logic ngày thường của bạn ở đây
+      });
+
+      // 2. Sắp xếp: SpecificDate -> Priority
+      applicableRules.sort((a: any, b: any) => {
+        if (a.specificDate && !b.specificDate) return -1;
+        if (!a.specificDate && b.specificDate) return 1;
+        return (b.priority || 0) - (a.priority || 0);
+      });
+
+      const rule = applicableRules[0];
+
+      if (!rule) {
+        // Nếu không có rule, dùng giá gốc của sân
+        const nextStep = endMins;
+        totalPrice += (court.price || 0) * ((nextStep - currentMins) / 60);
+        currentMins = nextStep;
+      } else {
+        const rEndMins =
+          rule.endTime === "00:00:00" ? 1440 : timeToMinutes(rule.endTime);
+        const nextStep = Math.min(rEndMins, endMins);
+        const hours = (nextStep - currentMins) / 60;
+        totalPrice += rule.pricePerHour * hours;
+        currentMins = nextStep;
+      }
+    }
+
+    return totalPrice;
+  };
   const validateFilter = () => {
     if (!filter.date) {
       toast.warn("Vui lòng chọn ngày");
@@ -163,7 +231,6 @@ export default function RentalAreaDetailPage() {
   };
 
   const submitBooking = async () => {
-    // Safety-net validation (modal cũng validate rồi nhưng giữ lại cho chắc)
     if (!userInfo.userName.trim() || !userInfo.userPhone.trim()) {
       toast.warn("Vui lòng nhập tên và số điện thoại");
       return;
@@ -212,7 +279,11 @@ export default function RentalAreaDetailPage() {
 
       <Row gutter={[24, 24]} className="mt-6">
         <Col xs={24} md={24} lg={16}>
-          <CourtList courts={data.courts} onAddCourt={addCourt} />
+          <CourtList
+            courts={data.courts}
+            onAddCourt={addCourt}
+            filter={filter}
+          />
         </Col>
         <Col xs={24} md={24} lg={8}>
           <BookingCart

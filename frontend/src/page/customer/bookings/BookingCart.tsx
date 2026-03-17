@@ -4,6 +4,15 @@ export default function BookingCart({
   decrease,
   onOpenModal,
 }: any) {
+  const getPrice = (court: any, start: string) => {
+    const startTime = start + ":00";
+
+    const rule = court.priceRules?.find(
+      (r: any) => startTime >= r.startTime && startTime < r.endTime,
+    );
+
+    return rule ? rule.pricePerHour : court.price;
+  };
   return (
     <div className="border rounded-xl p-4 sticky top-6">
       <h3 className="font-semibold mb-4">Giỏ đặt sân</h3>
@@ -20,7 +29,9 @@ export default function BookingCart({
             {item.date} {item.startTime}-{item.endTime}
           </p>
 
-          <p className="text-blue-600">{item.court.pricePerHour} VNĐ / giờ</p>
+          <p className="text-blue-600">
+            {getPrice(item.court, item.startTime)} VNĐ / giờ
+          </p>
 
           <div className="flex gap-2 mt-2">
             <button

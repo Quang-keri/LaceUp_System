@@ -3,6 +3,9 @@ package org.sport.backend.config;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.sport.backend.constant.AuthProvider;
+import org.sport.backend.constant.CourtCopyStatus;
+import org.sport.backend.constant.CourtStatus;
+import org.sport.backend.constant.PriceType;
 import org.sport.backend.entity.*;
 import org.sport.backend.repository.*;
 import org.springframework.boot.CommandLineRunner;
@@ -10,7 +13,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -29,12 +34,16 @@ public class DataInitializer implements CommandLineRunner {
     private final CityRepository cityRepository;
     private final CategoryRepository categoryRepository;
     private final AmenityRepository amenityRepository;
+    private final CourtRepository courtRepository;
+    private final CourtPriceRepository courtPriceRepository;
+    private final RentalAreaRepository rentalAreaRepository;
+    private final CourtCopyRepository courtCopyRepository;
 
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
 
-        // 1. Khởi tạo Permissions
+
         if (permissionRepository.count() == 0) {
             List<Permission> permissions = List.of(
                     // Quyền cho Admin (Hệ thống)
@@ -62,11 +71,11 @@ public class DataInitializer implements CommandLineRunner {
             permissionRepository.saveAll(permissions);
         }
 
-        // Lấy Map để dễ gán vào Role
+
         Map<String, Permission> permMap = permissionRepository.findAll().stream()
                 .collect(Collectors.toMap(Permission::getPermissionName, p -> p));
 
-        // 2. Khởi tạo Roles
+
         if (roleRepository.count() == 0) {
             // Role ADMIN có tất cả quyền
             Role adminRole = Role.builder()
@@ -216,7 +225,6 @@ public class DataInitializer implements CommandLineRunner {
 
         }
 
-
         if (categoryRepository.count() == 0) {
             seedCategories();
         }
@@ -224,8 +232,82 @@ public class DataInitializer implements CommandLineRunner {
         if (amenityRepository.count() == 0) {
             seedAmenities();
         }
+        if (courtRepository.count() == 0) {
+            seedCourtData(adminRole);
+        }
+
+    }
+
+    private void seedCourtData(Role adminRole) {
+
+        User admin = userRepository.findByEmail("admin@gmail.com")
+                .orElseThrow();
+
+        City city = cityRepository.findAll().get(0);
+        Category category = categoryRepository.findAll().get(0);
 
 
+        RentalArea area = RentalArea.builder()
+                .rentalAreaName("Sân cầu lông Quận 7")
+                .address("123 Nguyễn Văn Linh")
+                .city(city)
+                .owner(admin)
+                .isActive(true)
+                .build();
+
+        rentalAreaRepository.save(area);
+
+
+        Court court = Court.builder()
+                .courtName("Sân A")
+                .surfaceType("Thảm")
+                .price(BigDecimal.valueOf(50000))
+                .courtStatus(CourtStatus.ACTIVE)
+                .indoor(true)
+                .rentalArea(area)
+                .category(category)
+                .build();
+
+        courtRepository.save(court);
+
+
+        List<CourtCopy> copies = new ArrayList<>();
+
+        for (int i = 1; i <= 3; i++) {
+            CourtCopy copy = CourtCopy.builder()
+                    .court(court)
+                    .courtCode("A" + i)
+                    .courtCopyStatus(CourtCopyStatus.ACTIVE)
+                    .build();
+
+            copies.add(copy);
+        }
+
+        courtCopyRepository.saveAll(copies);
+
+
+        List<CourtPrice> prices = List.of(
+
+                CourtPrice.builder()
+                        .court(court)
+                        .startTime(LocalTime.of(7, 0))
+                        .endTime(LocalTime.of(17, 0))
+                        .pricePerHour(BigDecimal.valueOf(50000))
+                        .priceType(PriceType.NORMAL)
+                        .priority(1)
+                        .build(),
+
+                CourtPrice.builder()
+                        .court(court)
+                        .startTime(LocalTime.of(17, 0))
+                        .endTime(LocalTime.of(23, 0))
+                        .pricePerHour(BigDecimal.valueOf(70000))
+                        .priceType(PriceType.NORMAL)
+                        .priority(1)
+                        .build()
+        );
+
+        courtPriceRepository.saveAll(prices);
     }
 
     private void seedCategories() {
