@@ -8,6 +8,7 @@ import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
+import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
 import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
@@ -29,6 +30,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -65,6 +67,9 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
     @Autowired
     private RentalAreaImageRepository rentalAreaImageRepository;
+
+    @Autowired
+    private  CourtPriceRepository courtPriceRepository;
 
     @Override
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
@@ -318,6 +323,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                     .findFirst()
                     .map(CourtImage::getImageUrl)
                     .orElse(null);
+
             List<CourtCopyResponse> copies = courtCopyRepository
                     .findByCourt(court)
                     .stream()
@@ -327,10 +333,36 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                             .status(copy.getCourtCopyStatus())
                             .build())
                     .toList();
+
+
+            List<CourtPrice> prices =
+                    courtPriceRepository.findByCourt_CourtId(court.getCourtId());
+
+            List<CourtPriceResponse> priceResponses = prices.stream()
+                    .sorted(Comparator.comparing(CourtPrice::getStartTime))
+                    .map(this::mapToPriceResponse)
+                    .toList();
+
+
+            List<Object[]> result = courtPriceRepository.getPriceRange(court.getCourtId());
+
+            BigDecimal minPrice = null;
+            BigDecimal maxPrice = null;
+
+            if (result != null && !result.isEmpty()) {
+                Object[] range = result.get(0);
+
+                minPrice = range[0] != null ? (BigDecimal) range[0] : null;
+                maxPrice = range[1] != null ? (BigDecimal) range[1] : null;
+            }
+
             return CourtSummaryResponse.builder()
                     .courtId(court.getCourtId())
                     .courtName(court.getCourtName())
                     .price(court.getPrice())
+                    .minPrice(minPrice)
+                    .maxPrice(maxPrice)
+                    .priceRules(priceResponses)
                     .totalCourts(totalCopies)
                     .categoryName(court.getCategory().getCategoryName())
                     .coverImage(cover)
@@ -353,6 +385,19 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .city(cityResponse)
                 .images(images)
                 .courts(courtResponses)
+                .build();
+    }
+
+    private CourtPriceResponse mapToPriceResponse(CourtPrice p) {
+        return CourtPriceResponse.builder()
+                .courtPriceId(p.getCourtPriceId())
+                .courtId(p.getCourt().getCourtId())
+                .startTime(p.getStartTime())
+                .endTime(p.getEndTime())
+                .pricePerHour(p.getPricePerHour())
+                .specificDate(p.getSpecificDate())
+                .priceType(p.getPriceType())
+                .priority(p.getPriority())
                 .build();
     }
 

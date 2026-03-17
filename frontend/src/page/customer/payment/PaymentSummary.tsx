@@ -31,8 +31,8 @@ export default function PaymentSummary({
           onChange={(e) => setPaymentMethod(e.target.value)}
         >
           <Radio value="CASH">Thanh toán tại sân</Radio>
-          <Radio value="MOMO">Ví MoMo</Radio>
-          <Radio value="VNPAY">VNPay</Radio>
+          <Radio value="PAY_OS">PAY OS</Radio>
+          <Radio value="VN_PAY">VNPay</Radio>
         </Radio.Group>
       </Card>
 

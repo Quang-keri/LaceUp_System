@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.BookingStatus;
+import org.sport.backend.constant.BookingType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -66,7 +67,7 @@ public class Booking extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "booking_type")
-    private BookingStatus bookingType;
+    private BookingType bookingType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rental_area_id")
@@ -77,4 +78,10 @@ public class Booking extends BaseEntity {
 
     @Column(name = "invoice_url")
     private String invoiceUrl;
+
+    @Column(name = "deposit_amount")
+    private BigDecimal depositAmount;
+
+    @Column(name = "remaining_amount")
+    private BigDecimal remainingAmount;
 }

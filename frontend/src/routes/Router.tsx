@@ -1,10 +1,10 @@
-import {createBrowserRouter} from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import DefaultLayout from "../layouts/DefaultLayout/DefaultLayout";
 import LoginPage from "../page/customer/login-page/LoginPage.tsx";
 import PostPage from "../page/customer/post/PostPage.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
-import {ProtectedRouter} from "./ProtectedRouter.tsx";
+import { ProtectedRouter } from "./ProtectedRouter.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
 import AdminLayout from "../layouts/AdminLayout/AdminLayout.tsx";
 import UserManagement from "../page/admin/user-management/UserManagement.tsx";
@@ -33,15 +33,16 @@ import RegisterPage from "../page/customer/login-page/RegisterPage.tsx";
 import ConfirmRegister from "../page/customer/login-page/ConfirmRegister.tsx";
 import MatchPage from "../page/customer/match/MatchPage.tsx";
 import MatchManagement from "../page/owner/match/MatchManagement.tsx";
+import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 
 export const router = createBrowserRouter([
-    {
-        path: "/",
-        element: <DefaultLayout/>,
-        children: [
-            {index: true, element: <LandingPage/>},
+  {
+    path: "/",
+    element: <DefaultLayout />,
+    children: [
+      { index: true, element: <LandingPage /> },
 
-            {path: "login", element: <LoginPage/>},
+      { path: "login", element: <LoginPage /> },
 
             {
                 path: "/register",
@@ -58,11 +59,11 @@ export const router = createBrowserRouter([
 
             {path: "rental-area/:id", element: <RentalAreaDetailPage/>},
 
-            {path: "payment/:bookingId", element: <PaymentPage/>},
+      { path: "payment/:bookingId", element: <PaymentPage /> },
 
-            {path: "payment-success/:bookingId", element: <PaymentSuccessPage/>},
+      { path: "payment-success/:bookingId", element: <PaymentSuccessPage /> },
 
-            {path: "chat", element: <ChatHome/>},
+      { path: "chat", element: <ChatHome /> },
 
             {path: "profile", element: <ProfilePage/>},
         ],
@@ -99,20 +100,25 @@ export const router = createBrowserRouter([
         children: [
             {index: true, element: <OwnerDashboard/>},
 
-            {path: "buildings/list", element: <BuildingListPage/>},
+      { path: "buildings/list", element: <BuildingListPage /> },
 
-            {path: "buildings/edit/:buildingId", element: <BuildingFormPage/>},
+      { path: "buildings/edit/:buildingId", element: <BuildingFormPage /> },
 
-            {
-                path: "buildings/:buildingId/courts",
-                element: <CourtManagementPage/>,
-            },
+      {
+        path: "buildings/:buildingId/courts",
+        element: <CourtManagementPage />,
+      },
 
-            {path: "bookings/management", element: <BookingManagementPage/>},
+      {
+        path: "/owner/courts/:courtId/prices",
+        element: <CourtPricePage />,
+      },
 
-            {path: "bookings/calendar", element: <ManageSchedulePage/>},
+      { path: "bookings/management", element: <BookingManagementPage /> },
 
-            {path: "posts", element: <PostManagementPage/>},
+      { path: "bookings/calendar", element: <ManageSchedulePage /> },
+
+      { path: "posts", element: <PostManagementPage /> },
 
             {path: "matches", element: <MatchManagement/>},
 

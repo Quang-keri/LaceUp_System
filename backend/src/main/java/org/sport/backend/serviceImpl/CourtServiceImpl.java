@@ -10,6 +10,7 @@ import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.court.CourtImageResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
+import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.PageRequest;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -52,6 +54,8 @@ public class CourtServiceImpl implements CourtService {
     private UserService userService;
     @Autowired
     private CategoryRepository categoryRepository;
+    @Autowired
+    private CourtPriceRepository courtPriceRepository;
 
     @Override
     @Transactional
@@ -336,8 +340,8 @@ public class CourtServiceImpl implements CourtService {
 
         List<CourtCopyResponse> copyResponses = courtCopies.stream()
                 .map(copy -> {
-                             List<Slot> slots = copy.getSlots() == null ? List.of() : copy.getSlots();
-                            List<SlotResponse> slotResponses =slots.stream().map(
+                            List<Slot> slots = copy.getSlots() == null ? List.of() : copy.getSlots();
+                            List<SlotResponse> slotResponses = slots.stream().map(
                                     slot -> {
 
                                         BookingShortResponse bookingRes = null;
@@ -370,17 +374,53 @@ public class CourtServiceImpl implements CourtService {
                 )
                 .toList();
 
+        List<CourtPrice> prices =
+                courtPriceRepository.findByCourt_CourtId(court.getCourtId());
+
+        List<CourtPriceResponse> priceResponses = prices.stream()
+                .sorted(Comparator.comparing(CourtPrice::getStartTime))
+                .map(this::mapToPriceResponse)
+                .toList();
+
+
+        List<Object[]> result = courtPriceRepository.getPriceRange(court.getCourtId());
+
+        BigDecimal minPrice = null;
+        BigDecimal maxPrice = null;
+
+        if (result != null && !result.isEmpty()) {
+            Object[] range = result.get(0);
+
+            minPrice = range[0] != null ? (BigDecimal) range[0] : null;
+            maxPrice = range[1] != null ? (BigDecimal) range[1] : null;
+        }
+
+
         return CourtResponse.builder()
                 .courtId(court.getCourtId())
                 .courtName(court.getCourtName())
                 .pricePerHour(court.getPrice())
                 .status(court.getCourtStatus())
                 .rentalAreaId(court.getRentalArea().getRentalAreaId())
+                .minPrice(minPrice)
+                .maxPrice(maxPrice)
+                .priceRules(priceResponses)
                 .images(imageResponses)
                 .courtCopies(copyResponses)
                 .build();
     }
-
+    private CourtPriceResponse mapToPriceResponse(CourtPrice p) {
+        return CourtPriceResponse.builder()
+                .courtPriceId(p.getCourtPriceId())
+                .courtId(p.getCourt().getCourtId())
+                .startTime(p.getStartTime())
+                .endTime(p.getEndTime())
+                .pricePerHour(p.getPricePerHour())
+                .specificDate(p.getSpecificDate())
+                .priceType(p.getPriceType())
+                .priority(p.getPriority())
+                .build();
+    }
     @Override
     public CourtResponse getCourtById(UUID courtId) {
         Court court = courtRepository.findById(courtId)
@@ -420,4 +460,5 @@ public class CourtServiceImpl implements CourtService {
                 .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
         courtRepository.delete(court);
     }
+
 }

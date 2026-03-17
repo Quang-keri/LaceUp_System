@@ -20,28 +20,32 @@ export default function PaymentPage() {
   const [paymentMethod, setPaymentMethod] = useState("CASH");
 
   const [contact, setContact] = useState({
-    name: "",
-    phone: "",
+    userName: "",
+    userPhone: "",
     note: "",
   });
 
-  // load booking intent
   useEffect(() => {
     if (!bookingId) {
       message.error("Booking không hợp lệ");
       navigate("/");
       return;
     }
-
     loadIntent();
   }, [bookingId]);
 
   const loadIntent = async () => {
     try {
       setLoading(true);
-
       const data = await bookingService.getBookingIntent(bookingId);
       setIntent(data);
+
+      // ← Sync bookerName / bookerPhone từ intent vào form
+      setContact({
+        userName: data.bookerName ?? "",
+        userPhone: data.bookerPhone ?? "",
+        note: data.note ?? "",
+      });
     } catch (error) {
       message.error("Không tải được booking");
       navigate("/");
@@ -50,13 +54,11 @@ export default function PaymentPage() {
     }
   };
 
-  // confirm payment
   const handleConfirm = async () => {
     if (!intent) return;
 
     try {
       setConfirming(true);
-
       const res = await paymentService.checkout(
         intent.bookingIntentId,
         paymentMethod,
@@ -64,7 +66,6 @@ export default function PaymentPage() {
 
       if (res.code === 201) {
         message.success("Thanh toán thành công");
-
         navigate(`/payment-success/${res.result.bookingId}`);
       } else {
         message.error(res.message || "Thanh toán thất bại");
@@ -76,7 +77,6 @@ export default function PaymentPage() {
     }
   };
 
-  // loading screen
   if (loading || !intent) {
     return (
       <div className="flex justify-center mt-24">
@@ -88,16 +88,17 @@ export default function PaymentPage() {
   return (
     <div className="max-w-[1100px] mx-auto mt-6 px-4">
       <Row gutter={20}>
-        {/* LEFT */}
         <Col xs={24} lg={16}>
-          <BookingContactForm formData={contact} setFormData={setContact} />
-
+          <BookingContactForm
+            formData={contact}
+            setFormData={setContact}
+            readonly
+          />
           <div className="mt-4">
             <BookingInfoList intent={intent} />
           </div>
         </Col>
 
-        {/* RIGHT */}
         <Col xs={24} lg={8}>
           <PaymentSummary
             intent={intent}

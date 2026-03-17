@@ -5,7 +5,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { BookingResponse } from "../../../types/booking";
-
+import dayjs from "dayjs";
 const statusColorMap: Record<string, string> = {
   CONFIRMED: "blue",
   COMPLETED: "green",
@@ -28,7 +28,12 @@ interface Props {
   onViewDetail: (booking: BookingResponse) => void;
   onUpdateStatus: (booking: BookingResponse) => void;
 }
-
+const methodLabelMap: Record<string, string> = {
+  CASH: "Tiền mặt (Tại nơi)",
+  PAY_OS: "PAY OS",
+  VN_PAY: "Chuyển khoản (Online)",
+  BANKING: "Chuyển khoản (Online)",
+};
 export default function BookingTable({
   bookings,
   loading,
@@ -65,12 +70,28 @@ export default function BookingTable({
     {
       title: "Giờ",
       render: (_: any, record: BookingResponse) =>
-        `${record.startTime} - ${record.endTime}`,
+        `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - 
+         ${dayjs(record.endTime).format("HH:mm")}`,
     },
     {
       title: "Giá",
       dataIndex: "totalPrice",
       render: (price: number) => price?.toLocaleString("vi-VN") + " VND",
+    },
+    {
+      title: "Hình thức trả",
+      dataIndex: "paymentMethod",
+      render: (method: string) => {
+        // 2. Cập nhật màu sắc linh hoạt hơn
+        let color = "default";
+        if (method === "CASH") color = "orange";
+        else if (["VNPAY", "BANKING", "PAY_OS"].includes(method))
+          color = "cyan";
+
+        return (
+          <Tag color={color}>{methodLabelMap[method] || "Chưa xác định"}</Tag>
+        );
+      },
     },
     {
       title: "Trạng thái",

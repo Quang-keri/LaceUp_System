@@ -95,9 +95,19 @@ public class BookingController {
     @PutMapping("/{bookingId}")
     public ApiResponse<?> updateBooking(
             @PathVariable UUID bookingId,
-            @RequestBody UpdateBookingRequest request
+            @Valid @RequestBody UpdateBookingRequest request
     ) {
         try {
+
+            
+            if (request.getSlots() != null && !request.getSlots().isEmpty()) {
+                System.out.println("📍 Slot Times Received:");
+                for (int i = 0; i < request.getSlots().size(); i++) {
+                    var slot = request.getSlots().get(i);
+                    System.out.println("   Slot " + i + ": " + slot.getStartTime() + " → " + slot.getEndTime());
+                }
+            }
+
 
             return ApiResponse.builder()
                     .code(200)
@@ -106,6 +116,8 @@ public class BookingController {
                     .build();
 
         } catch (Exception e) {
+            System.err.println("ERROR in updateBooking: " + e.getMessage());
+            e.printStackTrace();
 
             return ApiResponse.builder()
                     .code(500)

@@ -12,6 +12,8 @@ import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.repository.CourtCopyRepository;
 import org.sport.backend.repository.CourtRepository;
+import org.sport.backend.repository.SlotRepository;
+import org.sport.backend.entity.Slot;
 import org.sport.backend.service.CourtCopyService;
 import org.sport.backend.specification.CourtCopySpecification;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,8 @@ public class CourCopyServiceImpl implements CourtCopyService {
     private CourtRepository courtRepository;
     @Autowired
     private CourtCopyRepository courtCopyRepository;
+        @Autowired
+        private SlotRepository slotRepository;
 
     @Override
     public CourtCopyResponse createCourt(CourtCopyRequest copyRequest) {
@@ -54,6 +58,7 @@ public class CourCopyServiceImpl implements CourtCopyService {
                 .status(courtCopy.getCourtCopyStatus())
                 .build();
     }
+
     @Override
     public PageResponse<CourtCopyResponse> getCourtCopies(
             int page,
@@ -124,6 +129,15 @@ public class CourCopyServiceImpl implements CourtCopyService {
         return mapToResponse(courtCopy);
     }
 
+        @Override
+        public boolean checkAvailability(UUID courtCopyId, LocalDateTime start, LocalDateTime end, UUID excludeSlotId) {
+                List<Slot> conflicts = slotRepository.findConflictSlot(courtCopyId, start, end);
+                if (excludeSlotId != null) {
+                        conflicts = conflicts.stream().filter(s -> !s.getSlotId().equals(excludeSlotId)).toList();
+                }
+                return conflicts.isEmpty();
+        }
+
     @Override
     public CourtCopyResponse updateCourtCopy(UUID courtCopyId, CourtCopyUpdateRequest request) {
 
@@ -138,7 +152,7 @@ public class CourCopyServiceImpl implements CourtCopyService {
         return mapToResponse(courtCopy);
     }
 
-    private CourtCopyResponse mapToResponse(CourtCopy courtCopy){
+    private CourtCopyResponse mapToResponse(CourtCopy courtCopy) {
 
         List<SlotResponse> slots = courtCopy.getSlots()
                 .stream()
@@ -159,5 +173,16 @@ public class CourCopyServiceImpl implements CourtCopyService {
                 .status(courtCopy.getCourtCopyStatus())
                 .slots(slots)
                 .build();
+    }
+
+    @Override
+    public List<CourtCopyResponse> getCourtCopiesByRentalArea(UUID rentalAreaId) {
+
+        List<CourtCopy> courtCopies =
+                courtCopyRepository.findByRentalAreaId(rentalAreaId);
+
+        return courtCopies.stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 }

@@ -56,6 +56,10 @@ public class RentalArea extends BaseEntity {
 
     private LocalTime closeTime;
 
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "city_id", nullable = false)
     City city;

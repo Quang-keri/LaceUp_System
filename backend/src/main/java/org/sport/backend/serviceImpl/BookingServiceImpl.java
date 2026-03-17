@@ -1,10 +1,7 @@
 package org.sport.backend.serviceImpl;
 
 import org.sport.backend.base.PageResponse;
-import org.sport.backend.constant.BookingIntentStatus;
-import org.sport.backend.constant.BookingStatus;
-import org.sport.backend.constant.CourtCopyStatus;
-import org.sport.backend.constant.SlotStatus;
+import org.sport.backend.constant.*;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
@@ -19,6 +16,8 @@ import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.BookingService;
+import org.sport.backend.service.CourtCopyService;
+import org.sport.backend.service.CourtService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.BookingSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,12 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.time.*;
+import java.util.*;
 
 @Service
 public class BookingServiceImpl implements BookingService {
@@ -49,7 +44,6 @@ public class BookingServiceImpl implements BookingService {
     private BookingIntentRepository bookingIntentRepository;
     @Autowired
     private CourtRepository courtRepository;
-
     @Autowired
     private CourtCopyRepository courtCopyRepository;
     @Autowired
@@ -58,6 +52,12 @@ public class BookingServiceImpl implements BookingService {
     private BookingRepository bookingRepository;
     @Autowired
     private UserService userService;
+    @Autowired
+    private CourtCopyService courtCopyService;
+    @Autowired
+    private CourtPriceRepository courtPriceRepository;
+     @Autowired
+     private PaymentRepository paymentRepository;
 
     @Override
     @Transactional
@@ -130,9 +130,6 @@ public class BookingServiceImpl implements BookingService {
                 throw new RuntimeException("Phải cung cấp courtId hoặc courtCopyId");
             }
 
-            /**
-             * tạo slot cho từng courtCopy
-             */
             for (CourtCopy courtCopy : selectedCopies) {
 
                 if (rentalArea == null) {
@@ -142,18 +139,11 @@ public class BookingServiceImpl implements BookingService {
                     throw new RuntimeException("Tất cả sân phải thuộc cùng một khu vực");
                 }
 
-                long minutes = Duration
-                        .between(slotReq.getStartTime(), slotReq.getEndTime())
-                        .toMinutes();
-
-                BigDecimal hours = BigDecimal
-                        .valueOf(minutes)
-                        .divide(BigDecimal.valueOf(60));
-
-                BigDecimal price = courtCopy
-                        .getCourt()
-                        .getPrice()
-                        .multiply(hours);
+                BigDecimal price = calculateSlotPrice(
+                        courtCopy.getCourt(),
+                        slotReq.getStartTime(),
+                        slotReq.getEndTime()
+                );
 
                 totalPrice = totalPrice.add(price);
 
@@ -206,6 +196,88 @@ public class BookingServiceImpl implements BookingService {
                 .build();
     }
 
+    private BigDecimal calculateSlotPrice(Court court, LocalDateTime start, LocalDateTime end) {
+
+        BigDecimal total = BigDecimal.ZERO;
+        LocalDateTime cursor = start;
+
+        while (cursor.isBefore(end)) {
+
+            List<CourtPrice> rules = courtPriceRepository.findAllMatchingRules(
+                    court.getCourtId(),
+                    cursor.toLocalTime(),
+                    cursor.toLocalDate()
+            );
+
+            CourtPrice rule = pickBestRule(rules, cursor);
+
+            // Tính điểm kết thúc của rule hiện tại
+            LocalDateTime ruleEnd = LocalDateTime.of(cursor.toLocalDate(), rule.getEndTime());
+
+            if (rule.getEndTime().equals(LocalTime.MIN)) {
+                ruleEnd = ruleEnd.plusDays(1);
+            }
+
+            LocalDateTime stepEnd = ruleEnd.isAfter(end) ? end : ruleEnd;
+
+            long minutes = Duration.between(cursor, stepEnd).toMinutes();
+
+            if (minutes > 0) {
+                BigDecimal hours = BigDecimal.valueOf(minutes)
+                        .divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
+
+                BigDecimal price = hours.multiply(rule.getPricePerHour());
+                total = total.add(price);
+            }
+
+            // DEBUG (rất nên giữ)
+            System.out.println(
+                    "[PRICE] " + cursor +
+                            " -> " + stepEnd +
+                            " | " + rule.getPriceType() +
+                            " | " + rule.getPricePerHour()
+            );
+
+            cursor = stepEnd;
+        }
+
+        return total;
+    }
+
+    private CourtPrice pickBestRule(List<CourtPrice> rules, LocalDateTime time) {
+
+        boolean isWeekend = time.getDayOfWeek() == DayOfWeek.SATURDAY
+                || time.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+        return rules.stream()
+                .filter(r -> getPriorityScore(r, isWeekend) > 0)
+                .max(Comparator
+                        .comparing((CourtPrice r) -> getPriorityScore(r, isWeekend))
+                        .thenComparing(
+                                CourtPrice::getPriority,
+                                Comparator.nullsLast(Integer::compareTo)
+                        )
+                        .thenComparing(
+                                CourtPrice::getStartTime,
+                                Comparator.reverseOrder()
+                        )
+                )
+                .orElseThrow(() -> new RuntimeException("Không có rule phù hợp"));
+    }
+    private int getPriorityScore(CourtPrice p, boolean isWeekend) {
+
+        // specific date luôn cao nhất
+        if (p.getSpecificDate() != null) return 1000;
+
+        return switch (p.getPriceType()) {
+            case EVENT -> 900;
+            case HOLIDAY -> 800;
+            case WEEKEND -> isWeekend ? 700 : -1;
+            case PEAK -> 600;
+            case NORMAL -> 500;
+            default -> 0;
+        };
+    }
     @Override
     public BookingIntentResponse getBookingIntentById(UUID bookingIntentId) {
 
@@ -495,7 +567,7 @@ public class BookingServiceImpl implements BookingService {
                         .build())
                 .toList();
 
-        return BookingResponse.builder()
+        BookingResponse bookingResponse = BookingResponse.builder()
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice())
                 .bookingStatus(booking.getBookingStatus())
@@ -507,81 +579,178 @@ public class BookingServiceImpl implements BookingService {
                 .phoneNumber(booking.getBookerPhone())
                 .note(booking.getNote())
                 .build();
+        Optional<Payment> payment = paymentRepository.findFirstByBookingOrderByTransactionDateDesc(booking);
+
+        if (payment.isPresent()) {
+            bookingResponse.setPaymentMethod(payment.get().getPaymentMethod().toString());
+        } else {
+            bookingResponse.setPaymentMethod("NONE");
+        }
+
+        return bookingResponse;
     }
 
     @Override
     @Transactional
     public BookingResponse updateBooking(UUID bookingId, UpdateBookingRequest request) {
+
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking không tồn tại"));
 
+        updateBookingInfo(booking, request);
 
-        if (request.getBookerName() != null) booking.setBookerName(request.getBookerName());
-        if (request.getBookerPhone() != null) booking.setBookerPhone(request.getBookerPhone());
-        if (request.getNote() != null) booking.setNote(request.getNote());
+        if (request.getSlots() != null && !request.getSlots().isEmpty()) {
+            updateSlots(request.getSlots());
+        }
 
+        recalculateBookingSummary(booking);
+
+        bookingRepository.save(booking);
+
+        System.out.println("✅ Booking saved successfully");
+        System.out.println("════════════════════════════════════════════");
+
+        return mapToResponse(booking);
+    }
+    private void updateBookingInfo(Booking booking, UpdateBookingRequest request) {
+
+        if (request.getBookerName() != null) {
+            booking.setBookerName(request.getBookerName());
+        }
+
+        if (request.getBookerPhone() != null) {
+            booking.setBookerPhone(request.getBookerPhone());
+        }
+
+        if (request.getNote() != null) {
+            booking.setNote(request.getNote());
+        }
 
         if (request.getBookingStatus() != null) {
             booking.setBookingStatus(request.getBookingStatus());
             syncSlotStatus(booking, request.getBookingStatus());
         }
+    }
+    private void updateSlots(List<UpdateSlotRequest> slotRequests) {
+        System.out.println("🔄 [SLOTS] Updating " + slotRequests.size() + " slots");
 
+        for (int i = 0; i < slotRequests.size(); i++) {
+            UpdateSlotRequest slotReq = slotRequests.get(i);
 
-        if (request.getSlots() != null && !request.getSlots().isEmpty()) {
-            for (UpdateSlotRequest slotReq : request.getSlots()) {
-                Slot slot = slotRepository.findById(slotReq.getSlotId())
-                        .orElseThrow(() -> new RuntimeException("Khung giờ " + slotReq.getSlotId() + " không tìm thấy"));
+            System.out.println("  📍 Slot " + i + ":");
+            System.out.println("     SlotId: " + slotReq.getSlotId());
+            System.out.println("     StartTime (received): " + slotReq.getStartTime());
+            System.out.println("     EndTime (received): " + slotReq.getEndTime());
 
+            Slot slot = slotRepository.findById(slotReq.getSlotId())
+                    .orElseThrow(() -> new RuntimeException("Slot không tồn tại"));
 
-                validateSlotLogic(slotReq.getStartTime(), slotReq.getEndTime(), slot.getStartTime());
+            LocalDateTime newStart = slotReq.getStartTime() != null
+                    ? slotReq.getStartTime()
+                    : slot.getStartTime();
 
+            LocalDateTime newEnd = slotReq.getEndTime() != null
+                    ? slotReq.getEndTime()
+                    : slot.getEndTime();
 
-                Court court = slot.getCourtCopy().getCourt();
-                List<CourtCopy> available = courtCopyRepository.findAvailableCourtCopy(
-                        court.getCourtId(), slotReq.getStartTime(), slotReq.getEndTime());
+            System.out.println("     StartTime (to save): " + newStart);
+            System.out.println("     EndTime (to save): " + newEnd);
 
-                if (available.isEmpty()) {
-                    throw new RuntimeException("Sân đã bị đặt trong khung giờ: " + slotReq.getStartTime());
-                }
+            validateSlotLogic(newStart, newEnd, slot.getStartTime());
 
-                slot.setStartTime(slotReq.getStartTime());
-                slot.setEndTime(slotReq.getEndTime());
-                slot.setCourtCopy(available.get(0));
+            CourtCopy targetCopy = resolveCourtCopy(slot, slotReq, newStart, newEnd);
 
+            slot.setStartTime(newStart);
+            slot.setEndTime(newEnd);
+            slot.setCourtCopy(targetCopy);
 
-                long minutes = Duration.between(slotReq.getStartTime(), slotReq.getEndTime()).toMinutes();
-                BigDecimal hours = BigDecimal.valueOf(minutes)
-                        .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-                slot.setPrice(court.getPrice().multiply(hours));
+            updateSlotPrice(slot, targetCopy, newStart, newEnd);
 
-                slotRepository.save(slot);
-            }
+            slotRepository.save(slot);
+            System.out.println("     ✅ Slot " + i + " saved");
+        }
+    }
+    private CourtCopy resolveCourtCopy(
+            Slot slot,
+            UpdateSlotRequest slotReq,
+            LocalDateTime newStart,
+            LocalDateTime newEnd) {
+
+        CourtCopy targetCopy;
+
+        if (slotReq.getCourtCopyId() != null) {
+
+            targetCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
+                    .orElseThrow(() -> new RuntimeException("Court copy không tồn tại"));
+
+        } else {
+            targetCopy = slot.getCourtCopy();
         }
 
+        boolean available = courtCopyService.checkAvailability(
+                targetCopy.getCourtCopyId(),
+                newStart,
+                newEnd,
+                slot.getSlotId()
+        );
 
-        recalculateBookingSummary(booking);
+        if (available) return targetCopy;
 
-        return mapToResponse(bookingRepository.save(booking));
+        Court court = targetCopy.getCourt();
+
+        List<CourtCopy> availableCopies =
+                courtCopyRepository.findAvailableCourtCopy(
+                        court.getCourtId(),
+                        newStart,
+                        newEnd
+                );
+
+        if (availableCopies.isEmpty()) {
+            throw new RuntimeException("Không có sân trống trong khung giờ này");
+        }
+
+        return availableCopies.get(0);
     }
 
+    private void updateSlotPrice(
+            Slot slot,
+            CourtCopy courtCopy,
+            LocalDateTime start,
+            LocalDateTime end) {
 
+        BigDecimal hours = BigDecimal.valueOf(
+                Duration.between(start, end).toMinutes()
+        ).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+
+        slot.setPrice(
+                courtCopy.getCourt().getPrice().multiply(hours)
+        );
+    }
     private void validateSlotLogic(LocalDateTime start, LocalDateTime end, LocalDateTime oldStart) {
-        if (start == null || end == null) return;
+        System.out.println("  🔍 [VALIDATION] Validating slot times:");
+        System.out.println("     Input Start: " + start);
+        System.out.println("     Input End: " + end);
+        System.out.println("     Current Server Time: " + LocalDateTime.now());
 
+        if (start == null || end == null)
+            throw new RuntimeException("Thời gian không hợp lệ");
+
+        if (start.isAfter(end))
+            throw new RuntimeException("Start phải trước end");
 
         if (!start.equals(oldStart) && start.isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Không thể dời lịch vào thời gian đã qua");
+            System.out.println("     ❌ PAST TIME ERROR: " + start + " is before " + LocalDateTime.now());
+            throw new RuntimeException("Không thể đặt thời gian trong quá khứ");
         }
 
+        if (start.getMinute() % 30 != 0 || end.getMinute() % 30 != 0)
+            throw new RuntimeException("Thời gian phải theo mốc 30 phút");
 
-        if (start.getMinute() % 30 != 0 || end.getMinute() % 30 != 0 || start.getSecond() != 0 || end.getSecond() != 0) {
-            throw new RuntimeException("Thời gian phải là mốc 30 phút (VD: 14:00, 14:30) và không có giây lẻ");
-        }
+        long durationMinutes = Duration.between(start, end).toMinutes();
+        if (durationMinutes < 60)
+            throw new RuntimeException("Thời gian thuê ít nhất là hơn 1 tiếng");
 
-
-        if (Duration.between(start, end).toMinutes() < 60) {
-            throw new RuntimeException("Thời gian thuê tối thiểu là 1 giờ");
-        }
+        System.out.println("     ✅ All validations passed. Duration: " + durationMinutes + " minutes");
     }
 
     private void syncSlotStatus(Booking booking, BookingStatus status) {
