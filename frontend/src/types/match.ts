@@ -1,7 +1,9 @@
 import type {UserResponse} from "./user.ts";
 
 export interface MatchRequest {
-    courtId: string;
+    courtId: string | null;
+    categoryId: string;
+    address: string;
     startTime: string;
     endTime: string;
     maxPlayers: number;
@@ -14,6 +16,7 @@ export interface MatchResponse {
     title: string;
     description: string;
     courtName: string;
+    address: string;
     categoryName: string;
     startTime: string;
     endTime: string;
@@ -25,5 +28,6 @@ export interface MatchResponse {
     hostName: string;
     hostRating: number;
     level: string;
+    hasCourt: boolean;
     participants: UserResponse[];
 }

@@ -8,6 +8,8 @@ import java.util.UUID;
 @Data
 public class MatchRequest {
     private UUID courtId;
+    private Integer categoryId;
+    private String address;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Integer maxPlayers;

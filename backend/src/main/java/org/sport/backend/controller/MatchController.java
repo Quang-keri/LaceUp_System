@@ -74,4 +74,13 @@ public class MatchController {
 
         return ResponseEntity.ok(ApiResponse.success(result));
     }
+
+    @GetMapping("/owner")
+    public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getOwnerMatches(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User owner = userService.getCurrentUserEntity();
+        return ResponseEntity.ok(
+                ApiResponse.success(matchService.getOwnerMatchesPaged(owner, page, size)));
+    }
 }

@@ -20,8 +20,9 @@ public class MatchMapper {
 
         return MatchResponse.builder()
                 .matchId(match.getMatchId())
-                .courtName(match.getCourt().getCourtName())
-                .categoryName(match.getCourt().getCategory().getCategoryName())
+                .courtName(match.getCourt() != null ? match.getCourt().getCourtName() : "Sân tự thỏa thuận")
+                .address(match.getCourt() != null ? match.getCourt().getRentalArea().getAddress() : match.getAddress())
+                .categoryName(match.getCategory() != null ? match.getCategory().getCategoryName() : "Chưa xác định")
                 .startTime(match.getStartTime())
                 .endTime(match.getEndTime())
                 .maxPlayers(match.getMaxPlayers())
@@ -30,6 +31,7 @@ public class MatchMapper {
                 .status(match.getStatus().name())
                 .hostName(match.getHost().getUserName())
                 .isFull(match.getCurrentPlayers() >= match.getMaxPlayers())
+                .hasCourt(match.getCourt() != null) // Thêm flag để FE dễ xử lý badge
                 .participants(match.getRegistrations() == null ? Collections.emptyList() :
                         match.getRegistrations().stream()
                                 .map(reg -> userMapper.toUserResponse(reg.getUser()))

@@ -54,25 +54,23 @@ const MatchManagement: React.FC = () => {
     const fetchMatches = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await matchService.getAllMatches(
+            const res = await matchService.getOwnerMatches(
                 params.page,
-                params.size,
-                params.status,
-                params.category,
-                params.keyword,
-                params.startDate,
-                params.endDate
+                params.size
             );
+
             if (res.code === 1000 || res.code === 0) {
+                // Kiểm tra cấu trúc trả về của PageResponse
                 setData(res.result.data);
                 setTotalElements(res.result.totalElements);
             }
         } catch (error) {
-            message.error("Không thể tải danh sách trận đấu");
+            console.error("Lỗi fetch matches:", error);
+            message.error("Không thể tải danh sách trận đấu của bạn");
         } finally {
             setLoading(false);
         }
-    }, [params]);
+    }, [params.page, params.size]);
 
     const handleViewDetail = async (matchId: string) => {
         try {
@@ -121,7 +119,8 @@ const MatchManagement: React.FC = () => {
             render: (record: MatchResponse) => (
                 <div className="text-xs">
                     <div><CalendarOutlined/> {dayjs(record.startTime).format("DD/MM/YYYY")}</div>
-                    <div className="text-gray-500">{dayjs(record.startTime).format("HH:mm")} - {dayjs(record.endTime).format("HH:mm")}</div>
+                    <div
+                        className="text-gray-500">{dayjs(record.startTime).format("HH:mm")} - {dayjs(record.endTime).format("HH:mm")}</div>
                 </div>
             ),
         },

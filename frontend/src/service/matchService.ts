@@ -60,7 +60,14 @@ export const matchService = {
 
         const response = await api.get(API_BASE_URL, { params });
         return response.data;
-    }
+    },
+
+    getOwnerMatches: async (page: number, size: number): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
+        const response = await api.get(`${API_BASE_URL}/owner`, {
+            params: { page, size }
+        });
+        return response.data;
+    },
 };
 
 export default matchService;

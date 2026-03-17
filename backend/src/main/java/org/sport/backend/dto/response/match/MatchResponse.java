@@ -13,6 +13,7 @@ import java.util.UUID;
 public class MatchResponse {
     private UUID matchId;
     private String courtName;
+    private String address;
     private String categoryName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -22,5 +23,6 @@ public class MatchResponse {
     private String status;
     private String hostName;
     private boolean isFull;
+    private boolean hasCourt;
     private List<UserResponse> participants;
 }

@@ -6,11 +6,9 @@ import org.sport.backend.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
-import org.sport.backend.entity.Court;
-import org.sport.backend.entity.Match;
-import org.sport.backend.entity.MatchRegistration;
-import org.sport.backend.entity.User;
+import org.sport.backend.entity.*;
 import org.sport.backend.mapper.MatchMapper;
+import org.sport.backend.repository.CategoryRepository;
 import org.sport.backend.repository.CourtRepository;
 import org.sport.backend.repository.MatchRegistrationRepository;
 import org.sport.backend.repository.MatchRepository;
@@ -34,17 +32,13 @@ public class MatchServiceImpl implements MatchService {
     private final MatchRepository matchRepository;
     private final MatchRegistrationRepository registrationRepository;
     private final CourtRepository courtRepository;
+    private final CategoryRepository categoryRepository;
     private final MatchMapper matchMapper;
 
     @Override
     @Transactional
     public MatchResponse createMatch(MatchRequest request, User host) {
-
-        Court court = courtRepository.findById(request.getCourtId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy sân này"));
-
-        Match match = Match.builder()
-                .court(court)
+        Match.MatchBuilder<?, ?> matchBuilder = Match.builder()
                 .host(host)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
@@ -52,10 +46,26 @@ public class MatchServiceImpl implements MatchService {
                 .minPlayersToStart(request.getMinPlayersToStart())
                 .currentPlayers(0)
                 .status(MatchStatus.OPEN)
-                .isRecurring(request.isRecurring())
-                .build();
+                .isRecurring(request.isRecurring());
 
-        Match savedMatch = matchRepository.save(match);
+        // Nếu có courtId (Owner tạo hoặc Renter chọn sân cụ thể)
+        if (request.getCourtId() != null) {
+            Court court = courtRepository.findById(request.getCourtId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sân này"));
+            matchBuilder.court(court);
+            matchBuilder.category(court.getCategory()); // Lấy loại sân từ Court
+        } else {
+            // Renter tạo kèo tìm người (Court = null)
+            if (request.getCategoryId() == null) {
+                throw new RuntimeException("Vui lòng chọn loại môn thể thao");
+            }
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy loại môn thể thao này"));
+            matchBuilder.category(category);
+            matchBuilder.address(request.getAddress()); // Khu vực mong muốn (Quận 1, Quận 7...)
+        }
+
+        Match savedMatch = matchRepository.save(matchBuilder.build());
         return matchMapper.toResponse(savedMatch);
     }
 
@@ -132,6 +142,22 @@ public class MatchServiceImpl implements MatchService {
                 .totalPages(matchPage.getTotalPages())
                 .totalElements(matchPage.getTotalElements())
                 .data(dtoList)
+                .build();
+    }
+
+    @Override
+    public PageResponse<MatchResponse> getOwnerMatchesPaged(User owner, int page, int size) {
+        // Page trong Spring Data bắt đầu từ 0, nên lấy page - 1
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+
+        Page<Match> matchPage = matchRepository.findByHost(owner, pageable);
+
+        return PageResponse.<MatchResponse>builder()
+                .currentPage(page)
+                .pageSize(size)
+                .totalPages(matchPage.getTotalPages())
+                .totalElements(matchPage.getTotalElements())
+                .data(matchMapper.toResponseList(matchPage.getContent()))
                 .build();
     }
 }

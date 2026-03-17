@@ -11,12 +11,18 @@ import java.util.List;
 import java.util.UUID;
 
 public interface MatchService {
+
     MatchResponse createMatch(MatchRequest request, User host);
+
     void joinMatch(UUID matchId, User user);
+
     List<MatchResponse> getOpenMatches();
+
     MatchResponse getMatchDetail(UUID matchId);
 
     PageResponse<MatchResponse> getAllMatches(
             int page, int size, MatchStatus status, String category,
             String keyword, LocalDateTime start, LocalDateTime end);
+
+    PageResponse<MatchResponse> getOwnerMatchesPaged(User owner, int page, int size);
 }

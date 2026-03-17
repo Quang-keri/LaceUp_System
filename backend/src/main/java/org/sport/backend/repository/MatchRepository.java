@@ -3,6 +3,9 @@ package org.sport.backend.repository;
 import jakarta.persistence.LockModeType;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.entity.Match;
+import org.sport.backend.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -21,4 +24,6 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
     Optional<Match> findByIdWithLock(UUID id);
 
     List<Match> findByStatusIn(List<MatchStatus> statuses);
+
+    Page<Match> findByHost(User host, Pageable pageable);
 }
