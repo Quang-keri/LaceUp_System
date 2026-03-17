@@ -36,13 +36,12 @@ const AdminDashboard: React.FC = () => {
         BOOKED: '#1890ff',
         COMPLETED: '#52c41a',
         CANCELLED: '#f5222d',
-        PENDING: '#faad14',
     };
 
     const translate = (key: string) => {
         const map: Record<string, string> = {
             BOOKED: 'Đã đặt', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy',
-            PENDING: 'Chờ xử lý', SUCCESS: 'Thành công', FAILED: 'Thất bại'
+            SUCCESS: 'Thành công', FAILED: 'Thất bại'
         };
         return map[key] || key;
     };

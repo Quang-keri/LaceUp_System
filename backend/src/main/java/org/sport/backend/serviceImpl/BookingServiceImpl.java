@@ -130,7 +130,6 @@ public class BookingServiceImpl implements BookingService {
                 throw new RuntimeException("Phải cung cấp courtId hoặc courtCopyId");
             }
 
-
             for (CourtCopy courtCopy : selectedCopies) {
 
                 if (rentalArea == null) {
@@ -139,7 +138,6 @@ public class BookingServiceImpl implements BookingService {
                         .equals(courtCopy.getCourt().getRentalArea().getRentalAreaId())) {
                     throw new RuntimeException("Tất cả sân phải thuộc cùng một khu vực");
                 }
-
 
                 BigDecimal price = calculateSlotPrice(
                         courtCopy.getCourt(),
@@ -596,7 +594,6 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse updateBooking(UUID bookingId, UpdateBookingRequest request) {
 
-
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking không tồn tại"));
 
@@ -609,7 +606,7 @@ public class BookingServiceImpl implements BookingService {
         recalculateBookingSummary(booking);
 
         bookingRepository.save(booking);
-        
+
         System.out.println("✅ Booking saved successfully");
         System.out.println("════════════════════════════════════════════");
 
@@ -639,7 +636,7 @@ public class BookingServiceImpl implements BookingService {
 
         for (int i = 0; i < slotRequests.size(); i++) {
             UpdateSlotRequest slotReq = slotRequests.get(i);
-            
+
             System.out.println("  📍 Slot " + i + ":");
             System.out.println("     SlotId: " + slotReq.getSlotId());
             System.out.println("     StartTime (received): " + slotReq.getStartTime());
@@ -655,7 +652,7 @@ public class BookingServiceImpl implements BookingService {
             LocalDateTime newEnd = slotReq.getEndTime() != null
                     ? slotReq.getEndTime()
                     : slot.getEndTime();
-            
+
             System.out.println("     StartTime (to save): " + newStart);
             System.out.println("     EndTime (to save): " + newEnd);
 
@@ -752,7 +749,7 @@ public class BookingServiceImpl implements BookingService {
         long durationMinutes = Duration.between(start, end).toMinutes();
         if (durationMinutes < 60)
             throw new RuntimeException("Thời gian thuê ít nhất là hơn 1 tiếng");
-        
+
         System.out.println("     ✅ All validations passed. Duration: " + durationMinutes + " minutes");
     }
 

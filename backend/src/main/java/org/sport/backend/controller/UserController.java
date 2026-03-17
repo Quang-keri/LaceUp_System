@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.base.ApiResponse;
@@ -11,20 +12,18 @@ import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Tag(name = "2. User")
 public class UserController {
 
     private final UserService userService;
-
 
     @GetMapping("/my-info")
     public ResponseEntity<ApiResponse<UserResponse>> getMyInfo() {
@@ -33,7 +32,6 @@ public class UserController {
                         success(200, "Lấy thông tin cá nhân thành công", userService.getMyInfo())
         );
     }
-
 
     @PostMapping
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody @Valid CreateUserRequest request) {
@@ -89,7 +87,6 @@ public class UserController {
         );
     }
 
-
     @PutMapping("/{userId}/role/{roleId}")
     public ResponseEntity<ApiResponse<UserResponse>> assignRoleToUser(
             @PathVariable UUID userId,
@@ -123,4 +120,5 @@ public class UserController {
                 ApiResponse.success("Lấy danh sách quyền thành công", userService.getUserAuthorities(userId))
         );
     }
+
 }

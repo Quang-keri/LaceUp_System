@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.repository.UserRepository;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/reports")
 @RequiredArgsConstructor
+@Tag(name = "17. Report")
 public class ReportController {
 
     private final ReportService reportService;
@@ -40,8 +42,6 @@ public class ReportController {
                     .orElseThrow(() -> new RuntimeException("User not found"));
             ownerId = user.getUserId();
         }
-
-        System.err.println("Dashboard check - Role: " + (isOwner ? "OWNER" : "ADMIN") + " | ID: " + ownerId);
 
         return ResponseEntity.ok(
                 ApiResponse.<Map<String, Object>>builder()

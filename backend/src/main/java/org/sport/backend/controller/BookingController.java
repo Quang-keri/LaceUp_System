@@ -1,12 +1,11 @@
 package org.sport.backend.controller;
 
-
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
-import org.sport.backend.dto.response.post.PostResponse;
 import org.sport.backend.service.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -17,11 +16,11 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/bookings")
-
+@Tag(name = "10. Booking")
 public class BookingController {
 
     @Autowired
-    private  BookingService bookingService;
+    private BookingService bookingService;
 
     @PostMapping("/intent")
     public ApiResponse<?> createIntent(
@@ -55,31 +54,29 @@ public class BookingController {
 
     @GetMapping("/{bookingId}")
     public ApiResponse<?> getBooking(@PathVariable UUID bookingId) {
-        try{
-            return  ApiResponse.success(200,
+        try {
+            return ApiResponse.success(200,
                     "Get booking by id successfully",
                     bookingService.getBookingById(bookingId));
 
         } catch (Exception e) {
-            return  ApiResponse.error(500,e.getMessage());
+            return ApiResponse.error(500, e.getMessage());
         }
-
-
     }
 
     @GetMapping
-    public ApiResponse<?> getAllBooking(@RequestParam(required = false) BookingStatus bookingStatus,
-                                        @RequestParam(required = false) String keyword,
-                                        @RequestParam(required = false)
-                                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                        LocalDate from,
-                                        @RequestParam(required = false)
-                                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                        LocalDate to,
-                                        @RequestParam(defaultValue = "1", required = false) int page,
-                                        @RequestParam(defaultValue = "10", required = false) int size) {
+    public ApiResponse<?> getAllBooking(
+            @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate to,
+            @RequestParam(defaultValue = "1", required = false) int page,
+            @RequestParam(defaultValue = "10", required = false) int size) {
         try {
-
 
             return ApiResponse.builder()
                     .code(200)
@@ -128,18 +125,20 @@ public class BookingController {
                     .build();
         }
     }
+
     @GetMapping("/my-rentals")
-    public ApiResponse<?> getMyRentals(@RequestParam UUID rentalId,
-                                       @RequestParam(required = false) BookingStatus bookingStatus,
-                                       @RequestParam(required = false) String keyword,
-                                       @RequestParam(required = false)
-                                       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                       LocalDate from,
-                                       @RequestParam(required = false)
-                                       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                       LocalDate to,
-                                       @RequestParam(defaultValue = "1", required = false) int page,
-                                       @RequestParam(defaultValue = "10", required = false) int size) {
+    public ApiResponse<?> getMyRentals(
+            @RequestParam UUID rentalId,
+            @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate to,
+            @RequestParam(defaultValue = "1", required = false) int page,
+            @RequestParam(defaultValue = "10", required = false) int size) {
         try {
 
             return ApiResponse.builder()
@@ -157,17 +156,18 @@ public class BookingController {
     }
 
     @GetMapping("/my-bookings")
-    public ApiResponse<?> getMyBookings(@RequestParam UUID userId,
-                                        @RequestParam(required = false) BookingStatus bookingStatus,
-                                        @RequestParam(required = false) String keyword,
-                                        @RequestParam(required = false)
-                                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                        LocalDate from,
-                                        @RequestParam(required = false)
-                                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                        LocalDate to,
-                                        @RequestParam(defaultValue = "1", required = false) int page,
-                                        @RequestParam(defaultValue = "10", required = false) int size) {
+    public ApiResponse<?> getMyBookings(
+            @RequestParam UUID userId,
+            @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate to,
+            @RequestParam(defaultValue = "1", required = false) int page,
+            @RequestParam(defaultValue = "10", required = false) int size) {
         try {
 
             return ApiResponse.builder()
@@ -183,6 +183,5 @@ public class BookingController {
                     .build();
         }
     }
-
 
 }

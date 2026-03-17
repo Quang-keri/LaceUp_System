@@ -29,6 +29,10 @@ import PaymentSuccessPage from "../page/customer/payment/PaymentSuccessPage.tsx"
 import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
 import OwnerDashboard from "../page/owner/dashboard/OwnerDashboard.tsx";
 import LoginOwnerPage from "../page/owner/login-page/LoginOwnerPage.tsx";
+import RegisterPage from "../page/customer/login-page/RegisterPage.tsx";
+import ConfirmRegister from "../page/customer/login-page/ConfirmRegister.tsx";
+import MatchPage from "../page/customer/match/MatchPage.tsx";
+import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 
 export const router = createBrowserRouter([
@@ -40,9 +44,20 @@ export const router = createBrowserRouter([
 
       { path: "login", element: <LoginPage /> },
 
-      { path: "danh-sach-san", element: <PostPage /> },
+            {
+                path: "/register",
+                element: <RegisterPage/>,
+            },
+            {
+                path: "register/confirm",
+                element: <ConfirmRegister/>,
+            },
 
-      { path: "rental-area/:id", element: <RentalAreaDetailPage /> },
+            {path: "danh-sach-san", element: <PostPage/>},
+
+            {path: "cong-dong", element: <MatchPage/>},
+
+            {path: "rental-area/:id", element: <RentalAreaDetailPage/>},
 
       { path: "payment/:bookingId", element: <PaymentPage /> },
 
@@ -50,38 +65,40 @@ export const router = createBrowserRouter([
 
       { path: "chat", element: <ChatHome /> },
 
-      { path: "profile", element: <ProfilePage /> },
-    ],
-  },
-
-  {
-    path: "/admin/login",
-    element: <LoginAdminPage />,
-  },
-  {
-    path: "/admin",
-    element: (
-      <ProtectedRouter>
-        <AdminLayout />
-      </ProtectedRouter>
-    ),
-    children: [
-      { index: true, element: <AdminDashboard /> },
-      { path: "users", element: <UserManagement /> },
-      { path: "roles", element: <RoleManagement /> },
-      { path: "permissions", element: <PermissionManagement /> },
-    ],
-  },
-
-  {
-    path: "/owner/login",
-    element: <LoginOwnerPage />,
-  },
-  {
-    path: "/owner",
-    element: <OwnerLayout />,
-    children: [
-      { index: true, element: <OwnerDashboard /> },
+            {path: "profile", element: <ProfilePage/>},
+        ],
+    },
+    {
+        path: "/admin/login",
+        element: <LoginAdminPage/>,
+    },
+    {
+        path: "/admin",
+        element: (
+            <ProtectedRouter allowedRoles={['ADMIN']}>
+                <AdminLayout/>
+            </ProtectedRouter>
+        ),
+        children: [
+            {index: true, element: <AdminDashboard/>},
+            {path: "users", element: <UserManagement/>},
+            {path: "roles", element: <RoleManagement/>},
+            {path: "permissions", element: <PermissionManagement/>},
+        ],
+    },
+    {
+        path: "/owner/login",
+        element: <LoginOwnerPage/>,
+    },
+    {
+        path: "/owner",
+        element: (
+            <ProtectedRouter allowedRoles={['OWNER']}>
+                <OwnerLayout/>
+            </ProtectedRouter>
+        ),
+        children: [
+            {index: true, element: <OwnerDashboard/>},
 
       { path: "buildings/list", element: <BuildingListPage /> },
 
@@ -91,7 +108,7 @@ export const router = createBrowserRouter([
         path: "buildings/:buildingId/courts",
         element: <CourtManagementPage />,
       },
-      
+
       {
         path: "/owner/courts/:courtId/prices",
         element: <CourtPricePage />,
@@ -103,28 +120,29 @@ export const router = createBrowserRouter([
 
       { path: "posts", element: <PostManagementPage /> },
 
-      {
-        path: "courts/:courtId",
-        element: <CourtDetailPage />,
-      },
-      {
-        path: "courts/:courtId/copies",
-        element: <CourtCopyPage />,
-      },
+            {path: "matches", element: <MatchManagement/>},
 
-      {
-        path: "profile",
-        element: <OwnerProfilePage />,
-      },
-      {
+            {
+                path: "courts/:courtId",
+                element: <CourtDetailPage/>,
+            },
+            {
+                path: "courts/:courtId/copies",
+                element: <CourtCopyPage/>,
+            },
+
+            {
+                path: "profile",
+                element: <OwnerProfilePage/>,
+            },
+            {
+                path: "*",
+                element: <NotFound/>,
+            },
+        ],
+    },
+    {
         path: "*",
-        element: <NotFound />,
-      },
-    ],
-  },
-
-  {
-    path: "*",
-    element: <NotFound />,
-  },
+        element: <NotFound/>,
+    },
 ]);

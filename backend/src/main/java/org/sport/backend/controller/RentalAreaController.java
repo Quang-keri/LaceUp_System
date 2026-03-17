@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.constant.RentalAreaStatus;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/rental-areas")
+@Tag(name = "9. Rental Area")
 public class RentalAreaController {
 
     @Autowired
@@ -26,7 +28,7 @@ public class RentalAreaController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> createRentalArea(
             @Valid @ModelAttribute RentalAreaRequest request
-            ) {
+    ) {
         try {
             List<MultipartFile> images = request.getImages();
             System.err.println("images length = " + (images == null ? 0 : images.size()));

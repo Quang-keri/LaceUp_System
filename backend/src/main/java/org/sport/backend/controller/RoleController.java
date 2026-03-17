@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.base.ApiResponse;
@@ -16,30 +17,37 @@ import java.util.Set;
 @RestController
 @RequestMapping("/roles")
 @RequiredArgsConstructor
+@Tag(name = "3. Role")
 public class RoleController {
 
     private final RoleService roleService;
 
-    // --- CRUD APIs ---
-
     @GetMapping
     public ResponseEntity<ApiResponse<List<RoleResponse>>> getAllRoles() {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy danh sách Role thành công", roleService.getAllRoles())
+                ApiResponse.success(
+                        "Lấy danh sách Role thành công",
+                        roleService.getAllRoles())
         );
     }
 
     @GetMapping("/{roleId}")
-    public ResponseEntity<ApiResponse<RoleResponse>> getRoleById(@PathVariable Long roleId) {
+    public ResponseEntity<ApiResponse<RoleResponse>> getRoleById(
+            @PathVariable Long roleId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy thông tin Role thành công", roleService.getRoleById(roleId))
+                ApiResponse.success(
+                        "Lấy thông tin Role thành công",
+                        roleService.getRoleById(roleId))
         );
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<RoleResponse>> createRole(@RequestBody @Valid RoleRequest request) {
+    public ResponseEntity<ApiResponse<RoleResponse>> createRole(
+            @RequestBody @Valid RoleRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.success("Tạo Role thành công", roleService.createRole(request))
+                ApiResponse.success(
+                        "Tạo Role thành công",
+                        roleService.createRole(request))
         );
     }
 
@@ -48,7 +56,9 @@ public class RoleController {
             @PathVariable Long roleId,
             @RequestBody @Valid RoleRequest request) {
         return ResponseEntity.ok(
-                ApiResponse.success("Cập nhật Role thành công", roleService.updateRole(roleId, request))
+                ApiResponse.success(
+                        "Cập nhật Role thành công",
+                        roleService.updateRole(roleId, request))
         );
     }
 
@@ -57,17 +67,19 @@ public class RoleController {
             @PathVariable Long roleId,
             @RequestBody boolean active) {
         roleService.updateStatus(roleId, active);
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái thành công", null));
+        return ResponseEntity.ok(ApiResponse.success(
+                "Cập nhật trạng thái thành công",
+                null));
     }
-
-    // --- Role-Permission APIs ---
 
     @PostMapping("/{roleId}/permissions")
     public ResponseEntity<ApiResponse<RoleResponse>> addPermissionsToRole(
             @PathVariable Long roleId,
             @RequestBody Set<Integer> permissionIds) {
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.success("Thêm quyền vào Role thành công", roleService.addPermissionsToRole(roleId, permissionIds))
+                ApiResponse.success(
+                        "Thêm quyền vào Role thành công",
+                        roleService.addPermissionsToRole(roleId, permissionIds))
         );
     }
 
@@ -76,7 +88,9 @@ public class RoleController {
             @PathVariable Long roleId,
             @RequestBody Set<Integer> permissionIds) {
         return ResponseEntity.ok(
-                ApiResponse.success("Xóa quyền khỏi Role thành công", roleService.removePermissionsFromRole(roleId, permissionIds))
+                ApiResponse.success(
+                        "Xóa quyền khỏi Role thành công",
+                        roleService.removePermissionsFromRole(roleId, permissionIds))
         );
     }
 }

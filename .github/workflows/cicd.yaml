@@ -2,7 +2,7 @@ name: CICD
 
 on:
   push:
-    branches: ["feature/permission"]
+    branches: ["develop", "feature/*"]
 
 jobs:
   build-and-push:

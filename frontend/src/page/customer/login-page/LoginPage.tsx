@@ -2,8 +2,8 @@ import React, {useState} from 'react';
 import authService from '../../../service/authService';
 import {useNavigate} from 'react-router-dom';
 import {message} from 'antd';
-import './style.css';
 import {useAuth} from '../../../context/AuthContext';
+import './style.css';
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -23,7 +23,6 @@ const LoginPage: React.FC = () => {
                 navigate('/');
             }
         } catch (error: any) {
-            // Hiển thị thông báo lỗi màu đỏ
             message.error('Đăng nhập thất bại: ' + (error.response?.data?.message || 'Lỗi kết nối'));
         } finally {
             setLoading(false);
@@ -34,29 +33,30 @@ const LoginPage: React.FC = () => {
         <div className="login-container">
             <div className="login-card">
                 <h2 className="login-title">ĐĂNG NHẬP</h2>
+
                 <form onSubmit={handleLogin} className="login-form">
                     <div className="input-group">
-                        <label>Email:</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
+                            placeholder="Email của bạn"
                             className="login-input"
-                            placeholder="example@gmail.com"
                         />
                     </div>
+
                     <div className="input-group">
-                        <label>Mật khẩu:</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                            placeholder="Mật khẩu"
                             className="login-input"
-                            placeholder="********"
                         />
                     </div>
+
                     <button type="submit" disabled={loading} className="login-button">
                         {loading ? 'Đang xử lý...' : 'Đăng nhập'}
                     </button>
@@ -65,15 +65,26 @@ const LoginPage: React.FC = () => {
                 <div className="divider">HOẶC</div>
 
                 <button
-                    // Hiển thị thông báo dạng thông tin (màu xanh dương)
-                    onClick={() => message.info('Chức năng đăng nhập Google đang được cập nhật')}
-                    className="login-button google"
+                    type="button"
+                    onClick={() => message.info('Tính năng đang phát triển')}
+                    className="google-btn"
                 >
-                    Đăng nhập với Google
+                    Tiếp tục với Google
                 </button>
+
+                <div className="footer-link">
+                    <span>Chưa có tài khoản? </span>
+                    <button
+                        type="button"
+                        className="link-btn"
+                        onClick={() => navigate('/register')}
+                    >
+                        Tạo tài khoản mới
+                    </button>
+                </div>
             </div>
         </div>
     );
-};
+}
 
 export default LoginPage;

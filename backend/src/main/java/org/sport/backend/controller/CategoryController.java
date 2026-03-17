@@ -1,6 +1,6 @@
 package org.sport.backend.controller;
 
-
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 import org.sport.backend.base.ApiResponse;
@@ -15,12 +15,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
-
 @RestController
 @RequestMapping("/categories")
+@Tag(name = "7. Category")
 public class CategoryController {
-   @Autowired
-   private CategoryService categoryService;
+
+    @Autowired
+    private CategoryService categoryService;
+
     @GetMapping
     public ApiResponse<?> getAllCategories(
 
@@ -61,6 +63,7 @@ public class CategoryController {
         }
 
     }
+
     @PostMapping
     public ApiResponse<?> createCategory(
             @Valid @RequestBody CategoryRequest request
@@ -132,6 +135,5 @@ public class CategoryController {
         }
 
     }
-
 
 }

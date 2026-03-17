@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.dto.request.chat.MessageRequest;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/chat")
+@Tag(name = "15. Chat")
 public class ChatController {
 
     private final ChatService chatService;
@@ -33,7 +35,8 @@ public class ChatController {
     }
 
     @GetMapping("/conversations/{userId}")
-    public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversations(@PathVariable UUID userId) {
+    public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversations(
+            @PathVariable UUID userId) {
         return ResponseEntity.ok(ApiResponse.<List<ConversationResponse>>builder()
                 .result(chatService.getUserConversations(userId))
                 .build());
@@ -52,7 +55,8 @@ public class ChatController {
     }
 
     @GetMapping("/conversation/{conversationId}")
-    public ResponseEntity<ApiResponse<ConversationResponse>> getConversation(@PathVariable UUID conversationId) {
+    public ResponseEntity<ApiResponse<ConversationResponse>> getConversation(
+            @PathVariable UUID conversationId) {
         return ResponseEntity.ok(ApiResponse.<ConversationResponse>builder()
                 .result(chatService.getConversationById(conversationId))
                 .build());
@@ -78,4 +82,5 @@ public class ChatController {
         MessageResponse response = chatService.saveMessageWithFile(request, principal.getName(), file);
         return ResponseEntity.ok(ApiResponse.<MessageResponse>builder().result(response).build());
     }
+
 }

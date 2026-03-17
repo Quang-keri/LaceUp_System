@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.sport.backend.base.ApiResponse;
 
@@ -18,13 +19,15 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/court_copies")
+@Tag(name = "6. Court Copy")
 public class CourtCopyController {
- @Autowired
+
+    @Autowired
     private CourtCopyService courtCopyService;
 
     @PostMapping
     public ApiResponse<?> createCourtCopy(
-           @Valid @RequestBody CourtCopyRequest request) {
+            @Valid @RequestBody CourtCopyRequest request) {
         try {
             return ApiResponse.success(
                     201,
@@ -45,12 +48,12 @@ public class CourtCopyController {
             @RequestParam(required = false) LocalDateTime fromDate,
             @RequestParam(required = false) LocalDateTime toDate
 
-    ){
+    ) {
         try {
             return ApiResponse.success(
                     200,
                     "Gall court copy successfully",
-                    courtCopyService.getCourtCopies(page,size,keyword,status,fromDate,toDate)
+                    courtCopyService.getCourtCopies(page, size, keyword, status, fromDate, toDate)
             );
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
@@ -58,7 +61,7 @@ public class CourtCopyController {
     }
 
     @GetMapping("{courtCopyId}")
-    public ApiResponse<?> getCourtCopyById(@PathVariable UUID courtCopyId){
+    public ApiResponse<?> getCourtCopyById(@PathVariable UUID courtCopyId) {
         try {
             return ApiResponse.success(
                     200,
@@ -69,7 +72,6 @@ public class CourtCopyController {
             return ApiResponse.error(500, e.getMessage());
         }
     }
-
 
     @GetMapping("{courtCopyId}/availability")
     public ApiResponse<?> checkAvailability(
@@ -104,12 +106,13 @@ public class CourtCopyController {
             return ApiResponse.success(
                     200,
                     "Update court copy by id successfully",
-                    courtCopyService.updateCourtCopy(courtCopyId,request)
+                    courtCopyService.updateCourtCopy(courtCopyId, request)
             );
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
     }
+
     @GetMapping("/my-rental-area/{rentalAreaId}")
     public ApiResponse<?> getCourtCopiesByRentalArea(
             @PathVariable UUID rentalAreaId

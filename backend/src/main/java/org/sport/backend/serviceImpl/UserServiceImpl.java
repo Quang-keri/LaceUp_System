@@ -55,8 +55,6 @@ public class UserServiceImpl implements UserService {
     @Value("${token_reset_password_expire_seconds}")
     private long EXPIRATION_SEC;
 
-    // --- CRUD OPERATIONS ---
-
     @Transactional
     @Override
     public UserResponse createUser(CreateUserRequest request) {
