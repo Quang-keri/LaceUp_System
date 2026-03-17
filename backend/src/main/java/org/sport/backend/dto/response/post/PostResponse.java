@@ -3,7 +3,6 @@ package org.sport.backend.dto.response.post;
 import lombok.*;
 import org.sport.backend.constant.PostStatus;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 

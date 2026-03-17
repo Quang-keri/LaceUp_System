@@ -10,13 +10,11 @@ const API_BASE_URL = '/users';
 
 export const userService = {
 
-    
     getMyInfo: async (): Promise<ApiResponse<UserResponse>> => {
         const response = await api.get(`${API_BASE_URL}/my-info`);
         return response.data;
     },
 
-   
     createUser: async (data: CreateUserRequest): Promise<ApiResponse<UserResponse>> => {
         const response = await api.post(API_BASE_URL, data);
         return response.data;
@@ -53,7 +51,6 @@ export const userService = {
         });
     },
 
-    // --- RBAC APIs (Role-Based Access Control) ---
     assignRoleToUser: async (userId: string, roleId: number): Promise<ApiResponse<UserResponse>> => {
         const response = await api.put(`${API_BASE_URL}/${userId}/role/${roleId}`);
         return response.data;

@@ -15,13 +15,12 @@ import java.util.List;
 @Setter
 @SuperBuilder
 @Table(name = "categories")
-
 public class Category extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "category_id")
-    private   Integer categoryId;
+    private Integer categoryId;
 
     @Column(name = "category_name", length = 50, nullable = false, unique = true)
     String categoryName;

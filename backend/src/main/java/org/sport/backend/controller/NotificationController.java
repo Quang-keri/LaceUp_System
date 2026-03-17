@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.dto.response.notification.NotificationResponse;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/notifications")
+@Tag(name = "16. Notification")
 public class NotificationController {
 
     private final NotificationService notificationService;
@@ -29,4 +31,5 @@ public class NotificationController {
                 .message("Get my notification successful")
                 .build());
     }
+
 }

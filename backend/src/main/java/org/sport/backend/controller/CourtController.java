@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.constant.CourtStatus;
@@ -20,6 +21,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/courts")
+@Tag(name = "5. Court")
 public class CourtController {
 
     @Autowired

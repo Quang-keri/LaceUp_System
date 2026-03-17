@@ -1,58 +1,77 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.sport.backend.entity.Match;
+import org.sport.backend.base.ApiResponse;
+import org.sport.backend.base.PageResponse;
+import org.sport.backend.constant.MatchStatus;
+import org.sport.backend.dto.request.match.MatchRequest;
+import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.entity.User;
 import org.sport.backend.service.MatchService;
+import org.sport.backend.service.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/matches")
+@RequestMapping("/matches")
 @RequiredArgsConstructor
+@Tag(name = "13. Match")
 public class MatchController {
 
     private final MatchService matchService;
-    private final MatchMapper matchMapper;
+    private final UserService userService;
 
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<MatchResponse>> createMatch(@RequestBody MatchRequest request) {
-        User host = getCurrentUser();
-        Match match = matchService.createMatch(request, host);
-
-        ApiResponse<MatchResponse> response = ApiResponse.success("Tạo trận vãng lai thành công", matchMapper.toResponse(match));
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponse<MatchResponse>> createMatch(
+            @RequestBody MatchRequest request) {
+        User host = userService.getCurrentUserEntity();
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Tạo trận vãng lai thành công",
+                        matchService.createMatch(request, host)));
     }
 
     @PostMapping("/{matchId}/join")
-    public ResponseEntity<ApiResponse<String>> joinMatch(@PathVariable UUID matchId) {
-        User user = getCurrentUser();
+    public ResponseEntity<ApiResponse<String>> joinMatch(
+            @PathVariable UUID matchId) {
+        User user = userService.getCurrentUserEntity();
         matchService.joinMatch(matchId, user);
 
-        ApiResponse<String> response = ApiResponse.success("Bạn đã tham gia trận đấu thành công!", null);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Bạn đã tham gia trận đấu thành công!", null));
     }
 
     @GetMapping("/open")
     public ResponseEntity<ApiResponse<List<MatchResponse>>> getOpenMatches() {
-        List<Match> matches = matchService.getOpenMatches();
-        List<MatchResponse> responses = matchMapper.toResponseList(matches);
-
-        return ResponseEntity.ok(ApiResponse.success(responses));
+        return ResponseEntity.ok(
+                ApiResponse.success(matchService.getOpenMatches()));
     }
 
     @GetMapping("/{matchId}")
-    public ResponseEntity<ApiResponse<MatchResponse>> getMatchDetail(@PathVariable UUID matchId) {
-        Match match = matchService.getMatchDetail(matchId);
-
-        return ResponseEntity.ok(ApiResponse.success(matchMapper.toResponse(match));
+    public ResponseEntity<ApiResponse<MatchResponse>> getMatchDetail(
+            @PathVariable UUID matchId) {
+        return ResponseEntity.ok(
+                ApiResponse.success(matchService.getMatchDetail(matchId)));
     }
 
-    private User getCurrentUser() {
-        // Logic lấy User hiện tại từ SecurityContext
-        return new User();
+    @GetMapping
+    public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getAllMatches(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) MatchStatus status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) LocalDateTime startDate,
+            @RequestParam(required = false) LocalDateTime endDate
+    ) {
+        PageResponse<MatchResponse> result = matchService.getAllMatches(
+                page, size, status, category, keyword, startDate, endDate);
+
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

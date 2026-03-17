@@ -31,6 +31,8 @@ import OwnerDashboard from "../page/owner/dashboard/OwnerDashboard.tsx";
 import LoginOwnerPage from "../page/owner/login-page/LoginOwnerPage.tsx";
 import RegisterPage from "../page/customer/login-page/RegisterPage.tsx";
 import ConfirmRegister from "../page/customer/login-page/ConfirmRegister.tsx";
+import MatchPage from "../page/customer/match/MatchPage.tsx";
+import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -51,6 +53,8 @@ export const router = createBrowserRouter([
             },
 
             {path: "danh-sach-san", element: <PostPage/>},
+
+            {path: "cong-dong", element: <MatchPage/>},
 
             {path: "rental-area/:id", element: <RentalAreaDetailPage/>},
 
@@ -109,6 +113,8 @@ export const router = createBrowserRouter([
             {path: "bookings/calendar", element: <ManageSchedulePage/>},
 
             {path: "posts", element: <PostManagementPage/>},
+
+            {path: "matches", element: <MatchManagement/>},
 
             {
                 path: "courts/:courtId",

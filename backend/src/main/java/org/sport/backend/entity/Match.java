@@ -7,6 +7,7 @@ import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.MatchStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -41,4 +42,7 @@ public class Match extends BaseEntity {
 
     private boolean isRecurring; // Có tự động lặp lại không
     private String recurringType; // WEEKLY, MONTHLY
+
+    @OneToMany(mappedBy = "match", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<MatchRegistration> registrations;
 }

@@ -1,6 +1,6 @@
 package org.sport.backend.controller;
 
-
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.base.PageResponse;
@@ -25,7 +25,9 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/posts")
+@Tag(name = "14. Post")
 public class PostController {
+
     @Autowired
     private PostService postService;
 
@@ -46,18 +48,18 @@ public class PostController {
         }
     }
 
-
     @GetMapping
-    public ApiResponse<?> getAllPosts(@RequestParam(required = false) String title,
-                                      @RequestParam(required = false) String content,
-                                      @RequestParam(required = false)
-                                      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                      LocalDate fromDate,
-                                      @RequestParam(required = false)
-                                      @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-                                      LocalDate toDate,
-                                      @RequestParam(defaultValue = "1", required = false) int page,
-                                      @RequestParam(defaultValue = "10", required = false) int size) {
+    public ApiResponse<?> getAllPosts(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String content,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate fromDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDate toDate,
+            @RequestParam(defaultValue = "1", required = false) int page,
+            @RequestParam(defaultValue = "10", required = false) int size) {
         PageResponse<PostSummaryResponse> result = postService.getAllPosts(title, content, fromDate, toDate, page, size);
 
         try {
@@ -66,9 +68,7 @@ public class PostController {
             return ApiResponse.error(500, e.getMessage());
         }
 
-
     }
-
 
     @GetMapping("/{postId}")
     public ApiResponse<PostDetailResponse> getPostDetail(
@@ -86,9 +86,7 @@ public class PostController {
             return ApiResponse.error(500, e.getMessage());
         }
 
-
     }
-
 
     @GetMapping("/me")
     public ApiResponse<List<PostSummaryResponse>> getMyPosts(
@@ -134,7 +132,6 @@ public class PostController {
             }
 
             PostDetailResponse result = postService.getMyPostDetail(postId, currentUserId);
-
 
             return ApiResponse.<PostDetailResponse>builder()
                     .code(200)
@@ -189,7 +186,6 @@ public class PostController {
                 throw new RuntimeException("User not authenticated");
             }
 
-
             postService.deleteMyPost(postId, currentUserId);
 
             return ApiResponse.<Void>builder()
@@ -200,4 +196,5 @@ public class PostController {
             return ApiResponse.error(500, e.getMessage());
         }
     }
+
 }

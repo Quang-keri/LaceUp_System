@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.base.ApiResponse;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/permissions")
 @RequiredArgsConstructor
+@Tag(name = "4. Permission")
 public class PermissionController {
 
     private final PermissionService permissionService;
@@ -22,21 +24,29 @@ public class PermissionController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<PermissionResponse>>> getAllPermissions() {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy danh sách quyền thành công", permissionService.getAllPermissions())
+                ApiResponse.success(
+                        "Lấy danh sách quyền thành công",
+                        permissionService.getAllPermissions())
         );
     }
 
     @GetMapping("/{permissionId}")
-    public ResponseEntity<ApiResponse<PermissionResponse>> getPermissionById(@PathVariable Integer permissionId) {
+    public ResponseEntity<ApiResponse<PermissionResponse>> getPermissionById(
+            @PathVariable Integer permissionId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy thông tin quyền thành công", permissionService.getPermissionById(permissionId))
+                ApiResponse.success(
+                        "Lấy thông tin quyền thành công",
+                        permissionService.getPermissionById(permissionId))
         );
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<PermissionResponse>> createPermission(@RequestBody @Valid PermissionRequest request) {
+    public ResponseEntity<ApiResponse<PermissionResponse>> createPermission(
+            @RequestBody @Valid PermissionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.success("Tạo quyền thành công", permissionService.createPermission(request))
+                ApiResponse.success(
+                        "Tạo quyền thành công",
+                        permissionService.createPermission(request))
         );
     }
 
@@ -45,15 +55,20 @@ public class PermissionController {
             @PathVariable Integer permissionId,
             @RequestBody @Valid PermissionRequest request) {
         return ResponseEntity.ok(
-                ApiResponse.success("Cập nhật quyền thành công", permissionService.updatePermission(permissionId, request))
+                ApiResponse.success(
+                        "Cập nhật quyền thành công",
+                        permissionService.updatePermission(permissionId, request))
         );
     }
 
     @DeleteMapping("/{permissionId}")
-    public ResponseEntity<ApiResponse<Void>> deletePermission(@PathVariable Integer permissionId) {
+    public ResponseEntity<ApiResponse<Void>> deletePermission(
+            @PathVariable Integer permissionId) {
         permissionService.deletePermission(permissionId);
         return ResponseEntity.ok(
-                ApiResponse.success("Xóa quyền thành công", null)
+                ApiResponse.success(
+                        "Xóa quyền thành công",
+                        null)
         );
     }
 }
