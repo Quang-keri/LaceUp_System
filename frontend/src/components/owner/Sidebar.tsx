@@ -172,20 +172,22 @@ const Sidebar: React.FC<SidebarProps> = ({
           isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
         }`}
       >
-        <div className="flex items-center gap-2 overflow-hidden px-4">
-          <div className="min-w-[32px] h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-            L
-          </div>
-          {!collapsed && (
-            <div
-              className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
-                isDark ? "text-white" : "text-gray-800"
-              }`}
-            >
-              Lace Up
+        <Link to={"/"}>
+          <div className="flex items-center gap-2 overflow-hidden px-4">
+            <div className="min-w-[32px] h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              L
             </div>
-          )}
-        </div>
+            {!collapsed && (
+              <div
+                className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
+                  isDark ? "text-white" : "text-gray-800"
+                }`}
+              >
+                Lace Up
+              </div>
+            )}
+          </div>
+        </Link>
       </div>
 
       <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">

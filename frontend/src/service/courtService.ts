@@ -141,6 +141,28 @@ class CourtService {
     );
     return response.data;
   }
+
+  async checkCourtCopyAvailability(
+    courtCopyId: string,
+    start: string,
+    end: string,
+    excludeSlotId?: string,
+  ) {
+    const params = new URLSearchParams();
+
+    params.append("start", start);
+    params.append("end", end);
+
+    if (excludeSlotId) {
+      params.append("excludeSlotId", excludeSlotId);
+    }
+
+    const response = await api.get<ApiResponse<boolean>>(
+      `/court_copies/${courtCopyId}/availability?${params.toString()}`,
+    );
+
+    return response.data.result;
+  }
 }
 
 export default new CourtService();

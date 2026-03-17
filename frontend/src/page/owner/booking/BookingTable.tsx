@@ -5,7 +5,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { BookingResponse } from "../../../types/booking";
-
+import dayjs from "dayjs";
 const statusColorMap: Record<string, string> = {
   CONFIRMED: "blue",
   COMPLETED: "green",
@@ -65,7 +65,8 @@ export default function BookingTable({
     {
       title: "Giờ",
       render: (_: any, record: BookingResponse) =>
-        `${record.startTime} - ${record.endTime}`,
+        `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - 
+         ${dayjs(record.endTime).format("HH:mm")}`,
     },
     {
       title: "Giá",

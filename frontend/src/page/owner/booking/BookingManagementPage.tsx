@@ -170,6 +170,7 @@ export default function BookingManagementPage() {
       <BookingEditModal
         open={editOpen}
         booking={selectedBooking}
+        rentalAreaId={selectedBuildingId}
         onCancel={() => setEditOpen(false)}
         onSubmit={handleUpdateBookingSubmit}
       />

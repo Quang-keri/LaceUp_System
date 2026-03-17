@@ -3,7 +3,7 @@ import axios from "axios";
 export const AXIOS_AUTH_ERROR_EVENT = "axios-auth-error";
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 api.interceptors.request.use(
@@ -44,10 +44,13 @@ api.interceptors.response.use(
     if (originalRequest._retry) return Promise.reject(error);
     originalRequest._retry = true;
 
-    try {
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (!refreshToken) throw new Error("No refresh token");
+    const refreshToken = localStorage.getItem("refreshToken");
 
+    if (!refreshToken) {
+      return Promise.reject(error);
+    }
+
+    try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/auth/refresh`,
         null,
@@ -62,28 +65,12 @@ api.interceptors.response.use(
 
       originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
 
-      const isFormData =
-        typeof FormData !== "undefined" &&
-        originalRequest.data instanceof FormData;
-
-      if (isFormData) {
-        delete originalRequest.headers["Content-Type"];
-        delete originalRequest.headers["content-type"];
-      }
-
       return axios(originalRequest);
     } catch (refreshError: any) {
-      console.log("❌ REFRESH TOKEN FAIL:", refreshError.response?.status);
-      console.log("❌ REFRESH RESPONSE:", refreshError.response?.data);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      window.dispatchEvent(new CustomEvent(AXIOS_AUTH_ERROR_EVENT));
 
-      if (
-        refreshError.response?.status === 401 ||
-        refreshError.response?.status === 400
-      ) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        window.dispatchEvent(new CustomEvent(AXIOS_AUTH_ERROR_EVENT));
-      }
       return Promise.reject(refreshError);
     }
   },

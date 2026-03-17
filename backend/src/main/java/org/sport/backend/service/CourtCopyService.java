@@ -31,4 +31,8 @@ public interface CourtCopyService {
     CourtCopyResponse getCourtCopyById(UUID courtCopyId);
 
     CourtCopyResponse updateCourtCopy(UUID courtCopyId, CourtCopyUpdateRequest request);
+
+    Object getCourtCopiesByRentalArea(UUID rentalAreaId);
+
+        boolean checkAvailability(UUID courtCopyId, LocalDateTime start, LocalDateTime end, UUID excludeSlotId);
 }

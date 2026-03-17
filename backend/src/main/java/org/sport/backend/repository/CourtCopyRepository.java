@@ -39,4 +39,12 @@ public interface CourtCopyRepository extends JpaRepository<CourtCopy, UUID>, Jpa
 
     List<CourtCopy> findByCourt_CourtIdAndCourtCopyStatus(UUID courtId, CourtCopyStatus status);
 
+    @Query("""
+        SELECT cc
+        FROM CourtCopy cc
+        WHERE cc.court.rentalArea.rentalAreaId = :rentalAreaId
+        AND cc.courtCopyStatus = 'AVAILABLE'
+    """)
+    List<CourtCopy> findByRentalAreaId(UUID rentalAreaId);
+
 }

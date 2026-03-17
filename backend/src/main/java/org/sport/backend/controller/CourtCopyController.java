@@ -10,6 +10,7 @@ import org.sport.backend.dto.request.court_copy.CourtCopyUpdateRequest;
 import org.sport.backend.service.CourtCopyService;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -69,6 +70,34 @@ public class CourtCopyController {
         }
     }
 
+
+    @GetMapping("{courtCopyId}/availability")
+    public ApiResponse<?> checkAvailability(
+            @PathVariable UUID courtCopyId,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime start,
+
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime end,
+
+            @RequestParam(required = false) UUID excludeSlotId
+    ) {
+        try {
+
+            boolean available = courtCopyService.checkAvailability(
+                    courtCopyId, start, end, excludeSlotId
+            );
+
+            return ApiResponse.success(200, "Check availability", available);
+
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
+    }
+
     @PutMapping("{courtCopyId}")
     public ApiResponse<?> updateCourtCopy(@PathVariable UUID courtCopyId, CourtCopyUpdateRequest request) {
         try {
@@ -81,6 +110,19 @@ public class CourtCopyController {
             return ApiResponse.error(500, e.getMessage());
         }
     }
-
+    @GetMapping("/my-rental-area/{rentalAreaId}")
+    public ApiResponse<?> getCourtCopiesByRentalArea(
+            @PathVariable UUID rentalAreaId
+    ) {
+        try {
+            return ApiResponse.success(
+                    200,
+                    "Get court copies by rental area successfully",
+                    courtCopyService.getCourtCopiesByRentalArea(rentalAreaId)
+            );
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
+    }
 
 }
