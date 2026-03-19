@@ -12,9 +12,9 @@ import java.util.UUID;
 
 public interface MatchService {
 
-    MatchResponse createMatch(MatchRequest request, User host);
+    MatchResponse createMatch(MatchRequest request);
 
-    void joinMatch(UUID matchId, User user);
+    void joinMatch(UUID matchId);
 
     List<MatchResponse> getOpenMatches();
 
@@ -24,5 +24,5 @@ public interface MatchService {
             int page, int size, MatchStatus status, String category,
             String keyword, LocalDateTime start, LocalDateTime end);
 
-    PageResponse<MatchResponse> getOwnerMatchesPaged(User owner, int page, int size);
+    PageResponse<MatchResponse> getOwnerMatchesPaged(int page, int size);
 }

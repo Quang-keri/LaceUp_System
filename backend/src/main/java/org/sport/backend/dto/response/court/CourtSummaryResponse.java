@@ -19,6 +19,7 @@ public class CourtSummaryResponse {
     private String courtName;
     private BigDecimal price;
     private Integer totalCourts;
+    private Integer categoryId;
     private String categoryName;
     private String coverImage;
     private List<CourtCopyResponse> courtCopies;

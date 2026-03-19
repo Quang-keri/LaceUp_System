@@ -34,6 +34,7 @@ import ConfirmRegister from "../page/customer/login-page/ConfirmRegister.tsx";
 import MatchPage from "../page/customer/match/MatchPage.tsx";
 import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
+import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -41,108 +42,71 @@ export const router = createBrowserRouter([
     element: <DefaultLayout />,
     children: [
       { index: true, element: <LandingPage /> },
-
       { path: "login", element: <LoginPage /> },
-
-            {
-                path: "/register",
-                element: <RegisterPage/>,
-            },
-            {
-                path: "register/confirm",
-                element: <ConfirmRegister/>,
-            },
-
-            {path: "danh-sach-san", element: <PostPage/>},
-
-            {path: "cong-dong", element: <MatchPage/>},
-
-            {path: "rental-area/:id", element: <RentalAreaDetailPage/>},
-
-      { path: "payment/:bookingId", element: <PaymentPage /> },
-
-      { path: "payment-success/:bookingId", element: <PaymentSuccessPage /> },
-
-      { path: "chat", element: <ChatHome /> },
-
-            {path: "profile", element: <ProfilePage/>},
-        ],
-    },
-    {
-        path: "/admin/login",
-        element: <LoginAdminPage/>,
-    },
-    {
-        path: "/admin",
-        element: (
-            <ProtectedRouter allowedRoles={['ADMIN']}>
-                <AdminLayout/>
-            </ProtectedRouter>
-        ),
-        children: [
-            {index: true, element: <AdminDashboard/>},
-            {path: "users", element: <UserManagement/>},
-            {path: "roles", element: <RoleManagement/>},
-            {path: "permissions", element: <PermissionManagement/>},
-        ],
-    },
-    {
-        path: "/owner/login",
-        element: <LoginOwnerPage/>,
-    },
-    {
-        path: "/owner",
-        element: (
-            <ProtectedRouter allowedRoles={['OWNER']}>
-                <OwnerLayout/>
-            </ProtectedRouter>
-        ),
-        children: [
-            {index: true, element: <OwnerDashboard/>},
-
+      { path: "/register", element: <RegisterPage /> },
+      { path: "register/confirm", element: <ConfirmRegister /> },
+      { path: "danh-sach-san", element: <PostPage /> },
+      { path: "cong-dong", element: <MatchPage /> },
+      { path: "rental-area/:id", element: <RentalAreaDetailPage /> },
+      // {
+      //   element: <ProtectedRouter allowedRoles={["RENTER"]} />,
+      //   children: [
+          { path: "profile", element: <ProfilePage /> },
+          { path: "chat", element: <ChatHome /> },
+          { path: "payment/:bookingId", element: <PaymentPage /> },
+          {
+            path: "payment-success/:bookingId",
+            element: <PaymentSuccessPage />,
+          },
+      //   ],
+      // },
+    ],
+  },
+  { path: "/admin/login", element: <LoginAdminPage /> },
+  {
+    path: "/admin",
+    element: (
+      <ProtectedRouter allowedRoles={["ADMIN"]}>
+        <AdminLayout />
+      </ProtectedRouter>
+    ),
+    children: [
+      { index: true, element: <AdminDashboard /> },
+      { path: "users", element: <UserManagement /> },
+      { path: "roles", element: <RoleManagement /> },
+      { path: "permissions", element: <PermissionManagement /> },
+      { path: "bookings/list", element: <BookingManagement /> },
+    ],
+  },
+  { path: "/owner/login", element: <LoginOwnerPage /> },
+  {
+    path: "/owner",
+    element: (
+      <ProtectedRouter allowedRoles={["OWNER"]}>
+        <OwnerLayout />
+      </ProtectedRouter>
+    ),
+    children: [
+      { index: true, element: <OwnerDashboard /> },
       { path: "buildings/list", element: <BuildingListPage /> },
-
       { path: "buildings/edit/:buildingId", element: <BuildingFormPage /> },
-
       {
         path: "buildings/:buildingId/courts",
         element: <CourtManagementPage />,
       },
-
-      {
-        path: "/owner/courts/:courtId/prices",
-        element: <CourtPricePage />,
-      },
-
+      { path: "/owner/courts/:courtId/prices", element: <CourtPricePage /> },
       { path: "bookings/management", element: <BookingManagementPage /> },
-
       { path: "bookings/calendar", element: <ManageSchedulePage /> },
-
       { path: "posts", element: <PostManagementPage /> },
-
-            {path: "matches", element: <MatchManagement/>},
-
-            {
-                path: "courts/:courtId",
-                element: <CourtDetailPage/>,
-            },
-            {
-                path: "courts/:courtId/copies",
-                element: <CourtCopyPage/>,
-            },
-
-            {
-                path: "profile",
-                element: <OwnerProfilePage/>,
-            },
-            {
-                path: "*",
-                element: <NotFound/>,
-            },
-        ],
-    },
-    {
-        path: "*",
-        element: <NotFound/>,
-    },
+      { path: "matches", element: <MatchManagement /> },
+      { path: "courts/:courtId", element: <CourtDetailPage /> },
+      { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
+      { path: "profile", element: <OwnerProfilePage /> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
+  {
+    path: "*",
+    element: <NotFound />,
+  },
 ]);

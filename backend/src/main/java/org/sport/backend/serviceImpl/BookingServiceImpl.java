@@ -578,6 +578,12 @@ public class BookingServiceImpl implements BookingService {
                 .userName(booking.getBookerName())
                 .phoneNumber(booking.getBookerPhone())
                 .note(booking.getNote())
+                .rentalArea(booking.getRentalArea() != null ?
+                        RentalAreaResponse.builder()
+                                .rentalAreaId(booking.getRentalArea().getRentalAreaId())
+                                .rentalAreaName(booking.getRentalArea().getRentalAreaName())
+                                .address(booking.getRentalArea().getAddress())
+                                .build() : null)
                 .build();
         Optional<Payment> payment = paymentRepository.findFirstByBookingOrderByTransactionDateDesc(booking);
 

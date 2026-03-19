@@ -9,6 +9,9 @@ export interface MatchRequest {
     maxPlayers: number;
     minPlayersToStart: number;
     isRecurring: boolean;
+    recurringType?: 'DAILY' | 'WEEKLY' | null;
+    dayOfWeek?: string | null;
+    endDate?: string | null;
 }
 
 export interface MatchResponse {
@@ -16,6 +19,7 @@ export interface MatchResponse {
     title: string;
     description: string;
     courtName: string;
+    courtPrice: number;
     address: string;
     categoryName: string;
     startTime: string;
@@ -30,4 +34,8 @@ export interface MatchResponse {
     level: string;
     hasCourt: boolean;
     participants: UserResponse[];
+    isRecurring: boolean;
+    recurringType: string;
+    dayOfWeek: string;
+    endDate: string;
 }

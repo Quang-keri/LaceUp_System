@@ -37,6 +37,7 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/auth/**",
             "/ws/**",
+            "/matches/**",
     };
 
     JwtAuthenticationFilter jwtAuthenticationFilter;
