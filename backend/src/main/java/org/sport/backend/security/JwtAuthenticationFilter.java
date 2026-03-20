@@ -63,8 +63,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String email = jwt.getClaim("email");
 
-            System.out.println("email:" + email);
-
             UserDetails userDetails =
                     userDetailsService.loadUserByUsername(email);
 

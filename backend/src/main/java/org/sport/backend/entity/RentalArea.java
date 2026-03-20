@@ -68,10 +68,10 @@ public class RentalArea extends BaseEntity {
     @JoinColumn(name = "owner_id")
     User owner;
 
-    @OneToMany(mappedBy = "rentalArea",fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     List<Court> courts;
 
-    @OneToMany(mappedBy = "rentalArea",fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     List<Booking> bookings;
 
 

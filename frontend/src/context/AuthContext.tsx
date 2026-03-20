@@ -1,8 +1,8 @@
 import React, {createContext, useContext, useState, useEffect} from "react";
 import type {UserResponse} from "../types/user.ts";
 import userService from "../service/userService.ts";
-// import {tokenService} from "../service/tokenService.ts";
-// import websocketService from "../services/websocketService";
+import {tokenService} from "../service/tokenService.ts";
+import websocketService from "../service/websocketService";
 
 interface AuthContextType {
     user: UserResponse | null;
@@ -21,24 +21,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const [user, setUser] = useState<UserResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
-    // useEffect(() => {
-    //     if (user && user.userId) {
-    //         const token = tokenService.getAccessToken();
-    //         const wsUrl =
-    //             import.meta.env.VITE_WS_URL ||
-    //             "http://localhost:8080/api/v1/rent-room/ws";
-    //
-    //         if (!websocketService.isConnected()) {
-    //             websocketService.connect(wsUrl, token);
-    //         }
-    //     }
-    //
-    //     return () => {
-    //         if (!user && websocketService.isConnected()) {
-    //             websocketService.disconnect();
-    //         }
-    //     };
-    // }, [user]);
+    useEffect(() => {
+        if (user && user.userId) {
+            const token = tokenService.getAccessToken();
+            const wsUrl =
+                import.meta.env.VITE_WS_URL ||
+                "http://localhost:8080/api/v1/lace-up/ws";
+    
+            if (!websocketService.isConnected()) {
+                websocketService.connect(wsUrl, token);
+            }
+        }
+    
+        return () => {
+            if (!user && websocketService.isConnected()) {
+                websocketService.disconnect();
+            }
+        };
+    }, [user]);
 
     const fetchCurrentUser = async () => {
         const token = localStorage.getItem("accessToken");

@@ -14,16 +14,15 @@ import java.util.UUID;
 @NoArgsConstructor
 public class RentalAreaDetailResponse {
 
-    UUID rentalAreaId;
-    String rentalAreaName;
-    String address;
-    String contactName;
-    String contactPhone;
+    private UUID rentalAreaId;
+    private String rentalAreaName;
+    private String address;
+    private String contactName;
+    private String contactPhone;
+    private UUID ownerId;
+    private CityResponse city;
+    private List<RentalAreaImageResponse> images;
 
-    CityResponse city;
-
-    List<RentalAreaImageResponse> images;
-
-    List<CourtSummaryResponse> courts;
+    private List<CourtSummaryResponse> courts;
 
 }

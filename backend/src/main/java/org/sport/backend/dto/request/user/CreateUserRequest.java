@@ -31,7 +31,7 @@ public class CreateUserRequest {
     private String email;
 
     @NotBlank(message = "PASSWORD_REQUIRED")
-    @Size(min = 8, message = "PASSWORD_MIN_LENGTH")
+    @Size(min = 6, message = "PASSWORD_MIN_LENGTH")
     private String password;
 
     @Pattern(regexp = "^0\\d{9}$", message = "PHONE_INVALID_FORMAT")

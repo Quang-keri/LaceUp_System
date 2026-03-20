@@ -67,6 +67,31 @@ class BookingService {
     );
     return response.data;
   }
+
+  async getAllBookings(
+    page: number = 1,
+    size: number = 10,
+    status?: string,
+    keyword?: string,
+    from?: string,
+    to?: string,
+  ) {
+    const params = new URLSearchParams();
+
+    params.append("page", page.toString());
+    params.append("size", size.toString());
+
+    if (status) params.append("bookingStatus", status);
+    if (keyword) params.append("keyword", keyword);
+    if (from) params.append("from", from);
+    if (to) params.append("to", to);
+
+    const response = await api.get<ApiResponse<BookingListResponse>>(
+      `/bookings?${params.toString()}`,
+    );
+
+    return response.data;
+  }
 }
 
 export default new BookingService();

@@ -6,7 +6,7 @@ interface UseUnreadMessagesReturn {
 }
 
 // @ts-ignore - Will be implemented later
-import chatService from '../services/chats/chatService';
+import chatService from "../service/chatService";
 
 export const useUnreadMessages = (pollInterval: number = 10000): UseUnreadMessagesReturn => {
     const [unreadCount, setUnreadCount] = useState<number>(0);

@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import {useAuth} from "../../../context/AuthContext.tsx";
 import userService from "../../../service/userService.ts";
+import {useNavigate} from "react-router-dom";
 
 const {Title, Text} = Typography;
 
@@ -18,6 +19,7 @@ const ProfilePage: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [loadingSave, setLoadingSave] = useState(false);
     const [form] = Form.useForm();
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (user) {
@@ -56,6 +58,7 @@ const ProfilePage: React.FC = () => {
 
     const handleLogout = () => {
         logout();
+        navigate('/');
     };
 
     if (isLoading) {

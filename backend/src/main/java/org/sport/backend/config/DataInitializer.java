@@ -2,10 +2,7 @@ package org.sport.backend.config;
 
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
-import org.sport.backend.constant.AuthProvider;
-import org.sport.backend.constant.CourtCopyStatus;
-import org.sport.backend.constant.CourtStatus;
-import org.sport.backend.constant.PriceType;
+import org.sport.backend.constant.*;
 import org.sport.backend.entity.*;
 import org.sport.backend.repository.*;
 import org.springframework.boot.CommandLineRunner;
@@ -14,13 +11,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -38,95 +31,43 @@ public class DataInitializer implements CommandLineRunner {
     private final CourtPriceRepository courtPriceRepository;
     private final RentalAreaRepository rentalAreaRepository;
     private final CourtCopyRepository courtCopyRepository;
+    private final BookingRepository bookingRepository;
+    private final PaymentRepository paymentRepository;
+    private final SlotRepository slotRepository;
 
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
-
-
+        // 1. Seed Permissions
         if (permissionRepository.count() == 0) {
             List<Permission> permissions = List.of(
-                    // Quyền cho Admin (Hệ thống)
                     Permission.builder().permissionName("VIEW_DASHBOARD").description("Xem bảng điều khiển").build(),
                     Permission.builder().permissionName("MANAGE_USERS").description("Quản lý người dùng").build(),
                     Permission.builder().permissionName("MANAGE_ROLES").description("Quản lý vai trò & quyền hạn").build(),
-
-                    // Quyền cho Staff (Nhân viên vận hành) - MỚI
-                    Permission.builder().permissionName("APPROVE_POST").description("Duyệt tin đăng sân/phòng").build(),
+                    Permission.builder().permissionName("APPROVE_POST").description("Duyệt tin đăng sân").build(),
                     Permission.builder().permissionName("SUPPORT_CUSTOMER").description("Hỗ trợ giải quyết khiếu nại").build(),
                     Permission.builder().permissionName("VIEW_REPORT").description("Xem báo cáo hệ thống").build(),
-
-                    // Quyền cho Owner (Chủ sân/trọ)
                     Permission.builder().permissionName("POST_ROOM").description("Đăng tin cho thuê").build(),
-                    Permission.builder().permissionName("UPDATE_ROOM").description("Cập nhật thông tin phòng").build(),
-                    Permission.builder().permissionName("VIEW_BOOKINGS").description("Xem danh sách đặt phòng").build(),
+                    Permission.builder().permissionName("UPDATE_ROOM").description("Cập nhật thông tin sân").build(),
+                    Permission.builder().permissionName("VIEW_BOOKINGS").description("Xem danh sách đặt sân").build(),
                     Permission.builder().permissionName("MANAGE_FINANCE").description("Quản lý tài chính/doanh thu").build(),
-
-                    // Quyền cho Renter (Người thuê)
-                    Permission.builder().permissionName("SEARCH_ROOM").description("Tìm kiếm phòng trọ").build(),
-                    Permission.builder().permissionName("BOOK_ROOM").description("Thực hiện đặt phòng").build(),
+                    Permission.builder().permissionName("SEARCH_ROOM").description("Tìm kiếm sân").build(),
+                    Permission.builder().permissionName("BOOK_ROOM").description("Thực hiện đặt sân").build(),
                     Permission.builder().permissionName("CHAT_WITH_OWNER").description("Nhắn tin trao đổi").build(),
                     Permission.builder().permissionName("WRITE_REVIEW").description("Viết đánh giá phản hồi").build()
             );
             permissionRepository.saveAll(permissions);
         }
 
-
         Map<String, Permission> permMap = permissionRepository.findAll().stream()
                 .collect(Collectors.toMap(Permission::getPermissionName, p -> p));
 
-
+        // 2. Seed Roles
         if (roleRepository.count() == 0) {
-            // Role ADMIN có tất cả quyền
-            Role adminRole = Role.builder()
-                    .roleName("ADMIN")
-                    .description("Quản trị hệ thống toàn diện")
-                    .active(true)
-                    .permissions(new HashSet<>(permMap.values()))
-                    .build();
-
-            // STAFF: Quản lý nội dung và hỗ trợ, xem dashboard chung
-            Role staffRole = Role.builder()
-                    .roleName("STAFF")
-                    .description("Nhân viên vận hành hệ thống")
-                    .active(true)
-                    .permissions(Set.of(
-                            permMap.get("VIEW_DASHBOARD"),
-                            permMap.get("APPROVE_POST"),
-                            permMap.get("SUPPORT_CUSTOMER"),
-                            permMap.get("VIEW_REPORT"),
-                            permMap.get("SEARCH_ROOM")
-                    ))
-                    .build();
-
-            // OWNER
-            Role ownerRole = Role.builder()
-                    .roleName("OWNER")
-                    .description("Chủ sở hữu cơ sở kinh doanh")
-                    .active(true)
-                    .permissions(Set.of(
-                            permMap.get("VIEW_DASHBOARD"),
-                            permMap.get("POST_ROOM"),
-                            permMap.get("UPDATE_ROOM"),
-                            permMap.get("VIEW_BOOKINGS"),
-                            permMap.get("MANAGE_FINANCE"),
-                            permMap.get("CHAT_WITH_OWNER")
-                    ))
-                    .build();
-
-            // RENTER
-            Role renterRole = Role.builder()
-                    .roleName("RENTER")
-                    .description("Khách hàng/Người thuê")
-                    .active(true)
-                    .permissions(Set.of(
-                            permMap.get("SEARCH_ROOM"),
-                            permMap.get("BOOK_ROOM"),
-                            permMap.get("CHAT_WITH_OWNER"),
-                            permMap.get("WRITE_REVIEW")
-                    ))
-                    .build();
-
+            Role adminRole = Role.builder().roleName("ADMIN").description("Quản trị hệ thống").active(true).permissions(new HashSet<>(permMap.values())).build();
+            Role staffRole = Role.builder().roleName("STAFF").description("Nhân viên vận hành").active(true).permissions(Set.of(permMap.get("VIEW_DASHBOARD"), permMap.get("APPROVE_POST"), permMap.get("SUPPORT_CUSTOMER"), permMap.get("SEARCH_ROOM"))).build();
+            Role ownerRole = Role.builder().roleName("OWNER").description("Chủ sân").active(true).permissions(Set.of(permMap.get("VIEW_DASHBOARD"), permMap.get("POST_ROOM"), permMap.get("UPDATE_ROOM"), permMap.get("VIEW_BOOKINGS"), permMap.get("MANAGE_FINANCE"))).build();
+            Role renterRole = Role.builder().roleName("RENTER").description("Người thuê").active(true).permissions(Set.of(permMap.get("SEARCH_ROOM"), permMap.get("BOOK_ROOM"), permMap.get("CHAT_WITH_OWNER"), permMap.get("WRITE_REVIEW"))).build();
             roleRepository.saveAll(List.of(adminRole, staffRole, ownerRole, renterRole));
         }
 
@@ -135,207 +76,254 @@ public class DataInitializer implements CommandLineRunner {
         Role staffRole = roleRepository.findByRoleName("STAFF").orElse(null);
         Role renterRole = roleRepository.findByRoleName("RENTER").orElse(null);
 
+        // 3. Seed Users
         if (userRepository.count() == 0) {
-
             String commonPass = passwordEncoder.encode("123456");
-
             List<User> users = new ArrayList<>();
 
-            // Admin
             users.add(User.builder()
-                    .userName("System Admin")
+                    .userName("Admin main")
                     .email("admin@gmail.com")
                     .passwordHash(commonPass)
                     .gender("Male")
-                    .phone("0901112223")
-                    .dateOfBirth(LocalDate.of(1990, 5, 20))
+                    .phone("0901000011")
                     .provider(AuthProvider.LOCAL)
                     .role(adminRole)
+                    .createdAt(LocalDateTime.now().minusYears(5))
                     .active(true)
                     .build());
 
-            // Staff
             users.add(User.builder()
-                    .userName("Staff Nguyen")
-                    .email("staff@gmail.com")
-                    .passwordHash(commonPass)
-                    .gender("Female")
-                    .phone("0904445556")
-                    .dateOfBirth(LocalDate.of(1995, 10, 15))
-                    .provider(AuthProvider.LOCAL)
-                    .role(staffRole)
-                    .active(true)
-                    .build());
-
-            // Owner
-            users.add(User.builder()
-                    .userName("Pro Owner")
+                    .userName("Owner main")
                     .email("owner@gmail.com")
                     .passwordHash(commonPass)
                     .gender("Male")
-                    .phone("0907778889")
-                    .dateOfBirth(LocalDate.of(1985, 2, 10))
+                    .phone("0911000011")
                     .provider(AuthProvider.LOCAL)
                     .role(ownerRole)
+                    .createdAt(LocalDateTime.now().minusYears(1))
                     .active(true)
                     .build());
 
             users.add(User.builder()
-                    .userName("Renter Best")
-                    .email("renter@gmail.com")
+                    .userName("Staff main")
+                    .email("staff@gmail.com")
                     .passwordHash(commonPass)
                     .gender("Male")
-                    .phone("0907778811")
-                    .dateOfBirth(LocalDate.of(1989, 6, 18))
+                    .phone("0921000011")
                     .provider(AuthProvider.LOCAL)
-                    .role(ownerRole)
+                    .role(staffRole)
+                    .createdAt(LocalDateTime.now().minusYears(1))
                     .active(true)
                     .build());
 
-            // Renter Test Users
-            for (int i = 1; i <= 3; i++) {
+            users.add(User.builder()
+                    .userName("Renter main")
+                    .email("renter@gmail.com")
+                    .passwordHash(commonPass)
+                    .gender("Male")
+                    .phone("0931000011")
+                    .provider(AuthProvider.LOCAL)
+                    .role(renterRole)
+                    .createdAt(LocalDateTime.now().minusYears(1))
+                    .active(true)
+                    .build());
+
+            // Tạo 2 Admins
+            for (int i = 1; i <= 2; i++) {
                 users.add(User.builder()
-                        .userName("Renter " + i)
-                        .email("user" + i + "@gmail.com")
+                        .userName("Admin " + i)
+                        .email("admin" + i + "@gmail.com")
                         .passwordHash(commonPass)
-                        .gender(i % 2 == 0 ? "Female" : "Male")
-                        .phone("091200000" + i)
-                        .dateOfBirth(LocalDate.of(2000, i, 1))
+                        .gender("Male")
+                        .phone("090100000" + i)
                         .provider(AuthProvider.LOCAL)
-                        .role(renterRole)
+                        .role(adminRole)
                         .active(true)
+                        .createdAt(LocalDateTime.now().minusYears(i))
                         .build());
             }
 
+            // Tạo 3 Staffs
+            for (int i = 1; i <= 3; i++) {
+                users.add(User.builder()
+                        .userName("Staff " + i)
+                        .email("staff" + i + "@gmail.com")
+                        .passwordHash(commonPass)
+                        .gender("Female")
+                        .phone("090200000" + i)
+                        .provider(AuthProvider.LOCAL)
+                        .role(staffRole)
+                        .active(true)
+                        .createdAt(LocalDateTime.now().minusMonths(i))
+                        .build());
+            }
+
+            // Tạo 5 Owners
+            for (int i = 1; i <= 5; i++) {
+                users.add(User.builder()
+                        .userName("Owner " + i)
+                        .email("owner" + i + "@gmail.com")
+                        .passwordHash(commonPass)
+                        .gender("Male")
+                        .phone("090300000" + i)
+                        .provider(AuthProvider.LOCAL)
+                        .role(ownerRole)
+                        .active(true)
+                        .createdAt(LocalDateTime.now().minusWeeks(i))
+                        .build());
+            }
+
+            // Tạo 11 Renters
+            for (int i = 1; i <= 11; i++) {
+                users.add(User.builder()
+                        .userName("Renter " + i)
+                        .email("renter" + i + "@gmail.com")
+                        .passwordHash(commonPass)
+                        .gender(i % 2 == 0 ? "Female" : "Male")
+                        .phone("090400000" + i)
+                        .provider(AuthProvider.LOCAL)
+                        .role(renterRole)
+                        .active(true)
+                        .createdAt(LocalDateTime.now().minusDays(i))
+                        .build());
+            }
             userRepository.saveAll(users);
         }
 
+        // 4. Seed Cities, Categories, Amenities
         if (cityRepository.count() == 0) {
-            List<City> cities = new ArrayList<>();
-
-            City city1 = City.builder()
-                    .cityName("Thành Phố Hồ Chí Minh")
-                    .build();
-            City city2 = City.builder()
-                    .cityName("Bình Dương")
-                    .build();
-            cities.add(city1);
-            cities.add(city2);
-            cityRepository.saveAll(cities);
-
+            cityRepository.saveAll(List.of(City.builder().cityName("Thành Phố Hồ Chí Minh").build(), City.builder().cityName("Bình Dương").build()));
         }
+        if (categoryRepository.count() == 0) seedCategories();
+        if (amenityRepository.count() == 0) seedAmenities();
 
-        if (categoryRepository.count() == 0) {
-            seedCategories();
-        }
-
-        if (amenityRepository.count() == 0) {
-            seedAmenities();
-        }
+        // 5. Seed Court Data (Sân bãi)
         if (courtRepository.count() == 0) {
-            seedCourtData(adminRole);
+            seedCourtData();
         }
 
+        // 6. Seed Booking & Payment (Dữ liệu giao dịch)
+        if (bookingRepository.count() == 0) {
+            seedBookingAndPaymentData();
+        }
     }
 
-    private void seedCourtData(Role adminRole) {
-
-        User admin = userRepository.findByEmail("admin@gmail.com")
-                .orElseThrow();
-
+    private void seedCourtData() {
+        User owner = userRepository.findByEmail("owner@gmail.com").orElseThrow();
         City city = cityRepository.findAll().get(0);
-        Category category = categoryRepository.findAll().get(0);
-
+        Category category = categoryRepository.findAll().stream()
+                .filter(c -> c.getCategoryName().equals("Sân cầu lông"))
+                .findFirst().orElseThrow();
 
         RentalArea area = RentalArea.builder()
-                .rentalAreaName("Sân cầu lông Quận 7")
-                .address("123 Nguyễn Văn Linh")
+                .rentalAreaName("Hệ thống Sân Cầu Lông Pro - Owner Management")
+                .address("456 Lê Văn Việt, Quận 9")
                 .city(city)
-                .owner(admin)
+                .owner(owner) // Gán cho owner
                 .isActive(true)
+                .status(RentalAreaStatus.ACTIVE)
+                .createdAt(LocalDateTime.now().minusMonths(2))
                 .build();
-
         rentalAreaRepository.save(area);
 
-
         Court court = Court.builder()
-                .courtName("Sân A")
-                .surfaceType("Thảm")
+                .courtName("Sân VIP 01")
+                .surfaceType("Thảm PVC")
+                .price(BigDecimal.valueOf(80000))
                 .courtStatus(CourtStatus.ACTIVE)
                 .indoor(true)
                 .rentalArea(area)
                 .category(category)
                 .build();
-
         courtRepository.save(court);
 
-
-        List<CourtCopy> copies = new ArrayList<>();
-
-        for (int i = 1; i <= 3; i++) {
-            CourtCopy copy = CourtCopy.builder()
+        for (int i = 1; i <= 2; i++) {
+            courtCopyRepository.save(CourtCopy.builder()
                     .court(court)
-                    .courtCode("A" + i)
+                    .courtCode("VIP01-" + i)
                     .courtCopyStatus(CourtCopyStatus.ACTIVE)
-                    .build();
-
-            copies.add(copy);
+                    .build());
         }
 
-        courtCopyRepository.saveAll(copies);
+        courtPriceRepository.saveAll(List.of(
+                CourtPrice.builder().court(court).startTime(LocalTime.of(5, 0)).endTime(LocalTime.of(22, 0))
+                        .pricePerHour(BigDecimal.valueOf(80000)).priceType(PriceType.NORMAL).priority(1).build()
+        ));
+    }
 
+    private void seedBookingAndPaymentData() {
+        User renter = userRepository.findByEmail("renter@gmail.com").orElseThrow();
+        RentalArea area = rentalAreaRepository.findAll().stream()
+                .filter(a -> a.getRentalAreaName().contains("Owner Management"))
+                .findFirst().orElseThrow();
+        CourtCopy courtCopy = courtCopyRepository.findAll().stream()
+                .filter(cc -> cc.getCourt().getRentalArea().equals(area))
+                .findFirst().orElseThrow();
 
-        List<CourtPrice> prices = List.of(
+        Random random = new Random();
 
-                CourtPrice.builder()
-                        .court(court)
-                        .startTime(LocalTime.of(7, 0))
-                        .endTime(LocalTime.of(17, 0))
-                        .pricePerHour(BigDecimal.valueOf(50000))
-                        .priceType(PriceType.NORMAL)
-                        .priority(1)
-                        .build(),
+        for (int i = 1; i <= 20; i++) {
+            LocalDateTime createdAt = LocalDateTime.now().minusDays(random.nextInt(30)).minusHours(i);
+            LocalDateTime startTime = createdAt.plusDays(1).withHour(9 + (i % 10)).withMinute(0);
+            LocalDateTime endTime = startTime.plusHours(2);
 
-                CourtPrice.builder()
-                        .court(court)
-                        .startTime(LocalTime.of(17, 0))
-                        .endTime(LocalTime.of(23, 0))
-                        .pricePerHour(BigDecimal.valueOf(70000))
-                        .priceType(PriceType.NORMAL)
-                        .priority(1)
-                        .build()
-        );
+            BigDecimal totalPrice = BigDecimal.valueOf(160000); // 80k * 2h
 
-        courtPriceRepository.saveAll(prices);
+            Booking booking = Booking.builder()
+                    .bookingTitle("Booking by Renter " + i)
+                    .bookingStatus(BookingStatus.COMPLETED)
+                    .bookingType(BookingType.ONLINE)
+                    .totalPrice(totalPrice)
+                    .depositAmount(totalPrice.divide(BigDecimal.valueOf(2)))
+                    .remainingAmount(totalPrice.divide(BigDecimal.valueOf(2)))
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .bookerName(renter.getUserName())
+                    .bookerPhone(renter.getPhone())
+                    .rentalArea(area)
+                    .renter(renter)
+                    .createdAt(createdAt)
+                    .build();
+
+            booking = bookingRepository.save(booking);
+
+            slotRepository.save(Slot.builder()
+                    .booking(booking)
+                    .courtCopy(courtCopy)
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .build());
+
+            paymentRepository.save(Payment.builder()
+                    .booking(booking)
+                    .user(renter)
+                    .amount(totalPrice)
+                    .transactionDate(createdAt.plusMinutes(15))
+                    .paymentMethod(PaymentMethod.VN_PAY)
+                    .paymentStatus(PaymentStatus.COMPLETED)
+                    .paymentType(PaymentType.FINAL)
+                    .transactionCode("OWNER_PAY_" + System.currentTimeMillis() + i)
+                    .build());
+        }
     }
 
     private void seedCategories() {
-        List<String> categories = List.of(
-                "Sân cầu lông",
-                "Sân bóng đá",
-                "Sân pickleball"
-        );
-
-        for (String name : categories) {
+        List.of("Sân cầu lông", "Sân bóng đá", "Sân pickleball").forEach(name -> {
             if (!categoryRepository.existsByCategoryName(name)) {
-                categoryRepository.save(Category.builder()
-                        .categoryName(name)
-                        .build());
+                categoryRepository.save(Category.builder().categoryName(name).build());
             }
-        }
+        });
     }
 
     private void seedAmenities() {
-
-        List<Amenity> amenities = List.of(
+        List.of(
                 Amenity.builder().amenityName("Wifi tốc độ cao").iconKey("FaWifi").build(),
                 Amenity.builder().amenityName("Ổ điện").iconKey("FaPlug").build()
-        );
-
-        for (Amenity a : amenities) {
+        ).forEach(a -> {
             if (!amenityRepository.existsByAmenityName(a.getAmenityName())) {
                 amenityRepository.save(a);
             }
-        }
+        });
     }
 }
