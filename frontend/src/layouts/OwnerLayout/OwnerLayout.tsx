@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../../components/owner/Sidebar";
 import OwnerHeader from "../../components/owner/Header";
 import { useAuth } from "../../context/AuthContext";
+import ChatBubble from "../../page/customer/chat/ChatBubble";
 
 const { Content } = Layout;
 const THEME_KEY = "adminTheme";
@@ -67,6 +68,8 @@ export default function OwnerLayout() {
           </Content>
         </Layout>
       </Layout>
+
+      <ChatBubble />
     </ConfigProvider>
   );
 }

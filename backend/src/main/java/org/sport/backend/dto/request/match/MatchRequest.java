@@ -1,7 +1,9 @@
 package org.sport.backend.dto.request.match;
 
 import lombok.Data;
+import org.sport.backend.constant.RecurringType;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -15,4 +17,7 @@ public class MatchRequest {
     private Integer maxPlayers;
     private Integer minPlayersToStart;
     private boolean isRecurring;
+    private RecurringType recurringType;
+    private String dayOfWeek;
+    private LocalDate endDate;
 }

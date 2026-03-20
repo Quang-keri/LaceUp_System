@@ -2,6 +2,7 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
@@ -21,26 +22,26 @@ import java.util.UUID;
 @RequestMapping("/matches")
 @RequiredArgsConstructor
 @Tag(name = "13. Match")
+@Slf4j
 public class MatchController {
 
     private final MatchService matchService;
-    private final UserService userService;
 
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<MatchResponse>> createMatch(
             @RequestBody MatchRequest request) {
-        User host = userService.getCurrentUserEntity();
+        log.info("Request nhận được: isRecurring={}, type={}, days={}",
+                request.isRecurring(), request.getRecurringType(), request.getDayOfWeek());
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Tạo trận vãng lai thành công",
-                        matchService.createMatch(request, host)));
+                        matchService.createMatch(request)));
     }
 
     @PostMapping("/{matchId}/join")
     public ResponseEntity<ApiResponse<String>> joinMatch(
             @PathVariable UUID matchId) {
-        User user = userService.getCurrentUserEntity();
-        matchService.joinMatch(matchId, user);
+        matchService.joinMatch(matchId);
 
         return ResponseEntity.ok(ApiResponse.success(
                 "Bạn đã tham gia trận đấu thành công!", null));
@@ -79,8 +80,7 @@ public class MatchController {
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getOwnerMatches(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        User owner = userService.getCurrentUserEntity();
         return ResponseEntity.ok(
-                ApiResponse.success(matchService.getOwnerMatchesPaged(owner, page, size)));
+                ApiResponse.success(matchService.getOwnerMatchesPaged(page, size)));
     }
 }

@@ -23,56 +23,88 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public Map<String, Object> getFullDashboardStats(String range, UUID ownerId) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startDate;
-        LocalDateTime endDate = now;
-
-        // Logic xử lý mốc thời gian
-        if ("last_month".equals(range)) {
-            // Lấy dữ liệu trọn vẹn tháng trước theo lịch
-            LocalDateTime firstDayOfLastMonth = now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth());
-            startDate = firstDayOfLastMonth.withHour(0).withMinute(0).withSecond(0).withNano(0);
-
-            endDate = firstDayOfLastMonth.with(TemporalAdjusters.lastDayOfMonth()).withHour(23).withMinute(59).withSecond(59);
-        } else {
-            startDate = calculateStartDate(range);
-            // Với các mốc khác như "all" hoặc "this_year", endDate vẫn là 'now'
-        }
+        // Gọi hàm xử lý mốc thời gian trả về mảng 2 phần tử [startDate, endDate]
+        LocalDateTime[] dates = calculateDateRange(range);
+        LocalDateTime startDate = dates[0];
+        LocalDateTime endDate = dates[1];
 
         Map<String, Object> fullDashboard = new HashMap<>();
-        // Truyền cả startDate và endDate vào các hàm con
         fullDashboard.put("bookingStats", getBookingStats(startDate, endDate, ownerId));
         fullDashboard.put("paymentStats", getPaymentStats(startDate, endDate, ownerId));
         fullDashboard.put("totalRevenue", getTotalRevenue(startDate, endDate, ownerId));
 
+        fullDashboard.put("monthlyRevenue", getMonthlyRevenue(ownerId));
+
         return fullDashboard;
     }
 
-    private LocalDateTime calculateStartDate(String range) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime todayStart = now.withHour(0).withMinute(0).withSecond(0).withNano(0);
+    private List<Map<String, Object>> getMonthlyRevenue(UUID ownerId) {
+        List<Map<String, Object>> monthlyData = new ArrayList<>();
+        int currentYear = LocalDateTime.now().getYear();
 
-        return switch (range) {
-            case "24h" -> now.minusHours(24);
-            case "7d" -> todayStart.minusDays(7);
-            case "30d" -> todayStart.minusDays(30);
-            case "this_year" -> now.with(TemporalAdjusters.firstDayOfYear()).withHour(0).withMinute(0);
-            case "all" -> LocalDateTime.of(2020, 1, 1, 0, 0);
-            default -> LocalDateTime.of(2020, 1, 1, 0, 0);
-        };
+        for (int month = 1; month <= 12; month++) {
+            LocalDateTime startOfMonth = LocalDateTime.of(currentYear, month, 1, 0, 0);
+            LocalDateTime endOfMonth = startOfMonth.with(TemporalAdjusters.lastDayOfMonth()).withHour(23).withMinute(59);
+
+            BigDecimal revenue = paymentRepository.getTotalRevenue(startOfMonth, endOfMonth, ownerId);
+
+            Map<String, Object> dataPoint = new HashMap<>();
+            dataPoint.put("month", "Tháng " + month);
+            dataPoint.put("revenue", revenue != null ? revenue : BigDecimal.ZERO);
+            monthlyData.add(dataPoint);
+        }
+        return monthlyData;
+    }
+
+    private LocalDateTime[] calculateDateRange(String range) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate;
+        LocalDateTime endDate = now; // Mặc định kết thúc là hiện tại
+
+        // Các mốc thời gian dùng chung
+        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        LocalDateTime endOfToday = now.toLocalDate().atTime(23, 59, 59);
+
+        switch (range) {
+            case "today" -> {
+                startDate = startOfToday;
+                endDate = endOfToday;
+            }
+            case "yesterday" -> {
+                startDate = startOfToday.minusDays(1);
+                endDate = startOfToday.minusSeconds(1); // Cuối ngày hôm qua
+            }
+            case "this_week" -> {
+                // Giả định tuần bắt đầu từ Thứ 2 (theo chuẩn ISO)
+                startDate = now.with(java.time.DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
+            }
+            case "7d" -> startDate = now.minusDays(7);
+            case "this_month" -> {
+                startDate = now.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
+            }
+            case "30d" -> startDate = now.minusDays(30);
+            case "last_month" -> {
+                startDate = now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
+                endDate = now.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59);
+            }
+            case "this_year" -> {
+                startDate = now.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
+            }
+            case "last_year" -> {
+                startDate = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
+                endDate = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59);
+            }
+            case "1y" -> startDate = now.minusYears(1);
+            case "all" -> startDate = LocalDateTime.of(2020, 1, 1, 0, 0);
+            default -> startDate = LocalDateTime.of(2020, 1, 1, 0, 0);
+        }
+
+        return new LocalDateTime[]{startDate, endDate};
     }
 
     private Map<BookingStatus, Long> getBookingStats(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
-        // --- THÊM DÒNG NÀY ĐỂ DEBUG ---
-        System.out.println("=== DEBUG BOOKING STATS ===");
-        System.out.println("Range Start: " + startDate);
-        System.out.println("Range End:   " + endDate);
-        System.out.println("Owner ID:    " + (ownerId != null ? ownerId : "NULL (ADMIN)"));
 
         List<Object[]> results = bookingRepository.countAllByStatus(startDate, endDate, ownerId);
-
-        System.out.println("Query Results Size: " + results.size());
-        // ------------------------------
 
         Map<BookingStatus, Long> actualCounts = results.stream()
                 .collect(Collectors.toMap(
@@ -88,7 +120,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private Map<PaymentStatus, Long> getPaymentStats(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
-        // Cần cập nhật Repository để nhận 2 tham số
+
         List<Object[]> results = paymentRepository.countByPaymentStatus(startDate, endDate, ownerId);
         Map<PaymentStatus, Long> pStats = results.stream()
                 .collect(Collectors.toMap(

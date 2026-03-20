@@ -364,6 +364,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                     .maxPrice(maxPrice)
                     .priceRules(priceResponses)
                     .totalCourts(totalCopies)
+                    .categoryId(court.getCategory().getCategoryId())
                     .categoryName(court.getCategory().getCategoryName())
                     .coverImage(cover)
                     .courtCopies(copies)
@@ -385,6 +386,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .city(cityResponse)
                 .images(images)
                 .courts(courtResponses)
+                .ownerId(rentalArea.getOwner().getUserId())
                 .build();
     }
 

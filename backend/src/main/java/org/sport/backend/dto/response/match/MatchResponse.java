@@ -13,6 +13,7 @@ import java.util.UUID;
 public class MatchResponse {
     private UUID matchId;
     private String courtName;
+    private String courtPrice;
     private String address;
     private String categoryName;
     private LocalDateTime startTime;
