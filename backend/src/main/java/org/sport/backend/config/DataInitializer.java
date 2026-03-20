@@ -261,7 +261,6 @@ public class DataInitializer implements CommandLineRunner {
         Court court = Court.builder()
                 .courtName("Sân A")
                 .surfaceType("Thảm")
-                .price(BigDecimal.valueOf(50000))
                 .courtStatus(CourtStatus.ACTIVE)
                 .indoor(true)
                 .rentalArea(area)

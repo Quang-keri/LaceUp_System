@@ -20,7 +20,7 @@ public class CourtResponse {
 
     private String courtName;
 
-    private String courtCode;
+//    private String courtCode;
 
     private BigDecimal pricePerHour;
 

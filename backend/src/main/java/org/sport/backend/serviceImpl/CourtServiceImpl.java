@@ -78,7 +78,6 @@ public class CourtServiceImpl implements CourtService {
 
         Court court = Court.builder()
                 .courtName(request.getCourtName())
-                .price(request.getPricePerHour())
                 .courtStatus(CourtStatus.ACTIVE)
                 .category(category)
                 .rentalArea(rentalArea)
@@ -148,7 +147,6 @@ public class CourtServiceImpl implements CourtService {
 
         court.setCourtName(request.getCourtName().trim());
         court.setCategory(category);
-        court.setPrice(request.getPricePerHour());
         court.setRentalArea(rentalArea);
         court.setCourtStatus(request.getStatus());
 
@@ -399,7 +397,7 @@ public class CourtServiceImpl implements CourtService {
         return CourtResponse.builder()
                 .courtId(court.getCourtId())
                 .courtName(court.getCourtName())
-                .pricePerHour(court.getPrice())
+
                 .status(court.getCourtStatus())
                 .rentalAreaId(court.getRentalArea().getRentalAreaId())
                 .minPrice(minPrice)

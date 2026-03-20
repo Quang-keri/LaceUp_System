@@ -42,6 +42,9 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
       footer={null}
     >
       <Descriptions column={1}>
+        <Descriptions.Item label="Mã đơn đặt">
+          {booking.bookingId}
+        </Descriptions.Item>
         <Descriptions.Item label="Khách hàng">
           {booking.userName}
         </Descriptions.Item>

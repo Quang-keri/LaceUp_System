@@ -722,15 +722,12 @@ public class BookingServiceImpl implements BookingService {
                 Duration.between(start, end).toMinutes()
         ).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
-        slot.setPrice(
-                courtCopy.getCourt().getPrice().multiply(hours)
-        );
+//        slot.setPrice(
+//                courtCopy.getCourt().getPrice().multiply(hours)
+//        );
     }
     private void validateSlotLogic(LocalDateTime start, LocalDateTime end, LocalDateTime oldStart) {
-        System.out.println("  🔍 [VALIDATION] Validating slot times:");
-        System.out.println("     Input Start: " + start);
-        System.out.println("     Input End: " + end);
-        System.out.println("     Current Server Time: " + LocalDateTime.now());
+
 
         if (start == null || end == null)
             throw new RuntimeException("Thời gian không hợp lệ");
