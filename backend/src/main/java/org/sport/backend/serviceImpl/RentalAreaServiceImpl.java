@@ -386,6 +386,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .city(cityResponse)
                 .images(images)
                 .courts(courtResponses)
+                .ownerId(rentalArea.getOwner().getUserId())
                 .build();
     }
 

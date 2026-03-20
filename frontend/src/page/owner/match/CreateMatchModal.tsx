@@ -82,9 +82,6 @@ const CreateMatchModal: React.FC<Props> = ({
             : null,
       };
 
-      // Log ra để bạn kiểm tra trong F12 Console xem key đã đổi chưa
-      console.log("Dữ liệu gửi đi:", requestData);
-
       const res = await matchService.createMatch(requestData);
 
       if (res.code === 1000 || res.code === 0) {

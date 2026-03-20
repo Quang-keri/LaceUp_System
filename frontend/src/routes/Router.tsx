@@ -35,6 +35,7 @@ import MatchPage from "../page/customer/match/MatchPage.tsx";
 import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
+import NotificationPage from "../page/customer/notification/NotificationPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -58,6 +59,12 @@ export const router = createBrowserRouter([
             path: "payment-success/:bookingId",
             element: <PaymentSuccessPage />,
           },
+          
+      {
+        path: "notifications",
+        element: <NotificationPage />,
+        handle: { breadcrumb: "Thông báo mới" },
+      }
       //   ],
       // },
     ],
@@ -102,6 +109,11 @@ export const router = createBrowserRouter([
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
       { path: "profile", element: <OwnerProfilePage /> },
+      {
+        path: "notifications",
+        element: <NotificationPage />,
+        handle: { breadcrumb: "Thông báo mới" },
+      },
       { path: "*", element: <NotFound /> },
     ],
   },

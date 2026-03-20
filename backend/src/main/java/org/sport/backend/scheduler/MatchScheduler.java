@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 public class MatchScheduler {
     private final MatchServiceImpl recurringService;
 
-    // Chạy vào 00:05 mỗi ngày để chuẩn bị kèo cho các ngày tới
-//    @Scheduled(cron = "0 5 0 * * ?")
-    @Scheduled(cron = "0 */1 * * * ?")
+    @Scheduled(cron = "0 5 0 * * ?")
     public void scheduleMatchGeneration() {
         recurringService.generateNextMatches();
     }

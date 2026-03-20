@@ -38,6 +38,7 @@ public class SecurityConfig {
             "/auth/**",
             "/ws/**",
             "/matches/**",
+            "/chat/**",
     };
 
     JwtAuthenticationFilter jwtAuthenticationFilter;

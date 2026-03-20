@@ -239,7 +239,7 @@ public class MatchServiceImpl implements MatchService {
                 .status(MatchStatus.OPEN)
                 .currentPlayers(0)
                 .maxPlayers(config.getMaxPlayers())
-                .isRecurring(false) // Trận con sinh ra không cần lặp lại nữa
+                .isRecurring(false)
                 .build();
         matchRepository.save(newMatch);
     }

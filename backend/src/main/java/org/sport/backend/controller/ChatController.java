@@ -28,6 +28,7 @@ public class ChatController {
 
     @MessageMapping("/chat")
     public void processMessage(@Payload MessageRequest messageRequest, Principal principal) {
+        System.err.println("Received message: " + messageRequest + " from user: " + principal.getName());
         if (principal == null) {
             throw new RuntimeException("User not authenticated in WebSocket");
         }
