@@ -11,4 +11,14 @@ class PaymentService {
   }
 }
 
+export async function handleBookingPaymentResult(data: {
+  orderCode: string;
+  status: string;
+}) {
+  const res = await api.get("/payments/result", {
+    params: data,
+  });
+  return res;
+}
+
 export default new PaymentService();
