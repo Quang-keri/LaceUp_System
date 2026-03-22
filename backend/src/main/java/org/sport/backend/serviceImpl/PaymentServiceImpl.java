@@ -1,6 +1,7 @@
 package org.sport.backend.serviceImpl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.constant.BookingIntentStatus;
@@ -26,6 +27,7 @@ import org.sport.backend.repository.PaymentRepository;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.PaymentService;
 import org.sport.backend.service.UserService;
+
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -64,12 +66,13 @@ public class PaymentServiceImpl implements PaymentService {
     @Autowired
     private ObjectProvider<PayOS> payOSProvider;
 
+
     @Override
     public CheckoutResponse checkout(CheckoutRequest checkoutRequest) {
         BookingIntent bookingIntent = bookingIntentRepository.findById(checkoutRequest.getBookingIntentId())
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
-        BookingResponse bookingResponse = bookingService.confirmBooking(bookingIntent.getBookingIntentId(),null);
+        BookingResponse bookingResponse = bookingService.confirmBooking(bookingIntent.getBookingIntentId(), null);
         Booking booking = bookingRepository.findById(bookingResponse.getBookingId()).orElse(null);
 
         Payment payment = Payment.builder()
@@ -106,7 +109,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         PaymentMethod method = checkoutRequest.getPaymentMethod();
 
-      // ví đang để tạm
+        // ví đang để tạm
         // if (method == PaymentMethod.WALLET) {
         //     return handleWalletCheckout(intent, currentUser);
         // }
