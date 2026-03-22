@@ -37,4 +37,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     );
 
     Optional<Payment> findFirstByBookingOrderByTransactionDateDesc(Booking booking);
+    Optional<Payment> findByPayosOrderCode(Long payosOrderCode);
+    Optional<Payment> findFirstByBookingIdOrderByTransactionDateDesc(UUID bookingId);
 }

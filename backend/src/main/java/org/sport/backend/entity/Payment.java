@@ -60,4 +60,14 @@ public class Payment extends BaseEntity {
     @Column(name = "transaction_code")
     private String transactionCode;
 
+    @Column(name = "payos_order_code", unique = true)
+    Long payosOrderCode;
+
+    @Column(name = "payos_payment_link_id")
+    String payosPaymentLinkId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_intent_id")
+    private BookingIntent bookingIntent;
+
 }

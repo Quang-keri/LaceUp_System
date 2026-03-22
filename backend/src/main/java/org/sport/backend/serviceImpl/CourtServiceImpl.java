@@ -6,6 +6,7 @@ import org.sport.backend.constant.CourtStatus;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.court.CourtRequest;
 import org.sport.backend.dto.request.court.CourtUpdateRequest;
+import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.court.CourtImageResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
@@ -33,10 +34,7 @@ import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class CourtServiceImpl implements CourtService {
@@ -56,6 +54,8 @@ public class CourtServiceImpl implements CourtService {
     private CategoryRepository categoryRepository;
     @Autowired
     private CourtPriceRepository courtPriceRepository;
+    @Autowired
+    private AmenityRepository amenityRepository;
 
     @Override
     @Transactional
@@ -75,12 +75,22 @@ public class CourtServiceImpl implements CourtService {
 
         Category category = categoryRepository.findById(request.getCategoryId()).orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
+        Set<Amenity> amenities = new HashSet<>();
+        if (request.getAmenityIds() != null && !request.getAmenityIds().isEmpty()) {
+            List<Amenity> found = amenityRepository.findAllById(request.getAmenityIds());
+            if (found.size() != request.getAmenityIds().size()) {
+                throw new IllegalArgumentException("Some amenities not found");
+            }
+            amenities.addAll(found);
+        }
+
 
         Court court = Court.builder()
                 .courtName(request.getCourtName())
                 .courtStatus(CourtStatus.ACTIVE)
                 .category(category)
                 .rentalArea(rentalArea)
+                .amenities(amenities)
                 .build();
 
 
@@ -143,6 +153,21 @@ public class CourtServiceImpl implements CourtService {
 
         RentalArea rentalArea = rentalAreaRepository.findById(request.getRentalAreaId())
                 .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
+
+
+        Set<Amenity> amenities = new HashSet<>();
+
+        if (request.getAmenityIds() != null && !request.getAmenityIds().isEmpty()) {
+            List<Amenity> found = amenityRepository.findAllById(request.getAmenityIds());
+
+            if (found.size() != request.getAmenityIds().size()) {
+                throw new IllegalArgumentException("Some amenities not found");
+            }
+
+            amenities.addAll(found);
+        }
+
+        court.setAmenities(amenities);
 
 
         court.setCourtName(request.getCourtName().trim());
@@ -331,7 +356,13 @@ public class CourtServiceImpl implements CourtService {
                         .sortOrder(img.getSortOrder())
                         .build())
                 .toList();
-
+        List<AmenityResponse> amenityResponses = court.getAmenities()
+                .stream()
+                .map(a -> AmenityResponse.builder()
+                        .amenityId(a.getAmenityId())
+                        .amenityName(a.getAmenityName())
+                        .build())
+                .toList();
 
         List<CourtCopy> courtCopies =
                 courtCopyRepository.findByCourt_CourtId(court.getCourtId());
@@ -405,8 +436,10 @@ public class CourtServiceImpl implements CourtService {
                 .priceRules(priceResponses)
                 .images(imageResponses)
                 .courtCopies(copyResponses)
+                .amenities(amenityResponses)
                 .build();
     }
+
     private CourtPriceResponse mapToPriceResponse(CourtPrice p) {
         return CourtPriceResponse.builder()
                 .courtPriceId(p.getCourtPriceId())
@@ -419,6 +452,7 @@ public class CourtServiceImpl implements CourtService {
                 .priority(p.getPriority())
                 .build();
     }
+
     @Override
     public CourtResponse getCourtById(UUID courtId) {
         Court court = courtRepository.findById(courtId)

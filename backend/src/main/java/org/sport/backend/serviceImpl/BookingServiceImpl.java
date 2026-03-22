@@ -332,7 +332,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse confirmBooking(UUID bookingIntentId) {
+    public BookingResponse confirmBooking(UUID bookingIntentId,Payment payment) {
 
         BookingIntent intent = bookingIntentRepository
                 .findById(bookingIntentId)
@@ -341,12 +341,16 @@ public class BookingServiceImpl implements BookingService {
         if (intent.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Hold expired");
         }
-
+        BigDecimal totalPrice = intent.getPreviewPrice();
+        BigDecimal paidAmount = payment.getAmount(); // Lấy số tiền thực tế từ Payment (có thể là 30% cọc hoặc 100%)
+        BigDecimal remainingAmount = totalPrice.subtract(paidAmount);
         Booking booking = Booking.builder()
                 .bookingStatus(BookingStatus.BOOKED)
                 .renter(intent.getUser() != null ? intent.getUser() : null)
                 .bookerName(intent.getBookerName())
                 .bookerPhone(intent.getBookerPhone())
+                .depositAmount(paidAmount)           //  Lưu tiền cọc
+                .remainingAmount(remainingAmount)// Lưu tiền còn nợ
                 .totalPrice(intent.getPreviewPrice())
                 .startTime(intent.getStartTime())
                 .endTime(intent.getEndTime())
@@ -386,11 +390,13 @@ public class BookingServiceImpl implements BookingService {
         }
 
         intent.setStatus(BookingIntentStatus.CONFIRMED);
-
+        bookingIntentRepository.save(intent);
         return BookingResponse.builder()
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice())
                 .bookingStatus(booking.getBookingStatus())
+                 .depositAmount(booking.getDepositAmount())
+                 .remainingAmount(booking.getRemainingAmount())
                 .slots(slotResponses)
                 .createdAt(booking.getCreatedAt())
                 .build();
@@ -613,9 +619,6 @@ public class BookingServiceImpl implements BookingService {
 
         bookingRepository.save(booking);
 
-        System.out.println("✅ Booking saved successfully");
-        System.out.println("════════════════════════════════════════════");
-
         return mapToResponse(booking);
     }
     private void updateBookingInfo(Booking booking, UpdateBookingRequest request) {
@@ -638,15 +641,10 @@ public class BookingServiceImpl implements BookingService {
         }
     }
     private void updateSlots(List<UpdateSlotRequest> slotRequests) {
-        System.out.println("🔄 [SLOTS] Updating " + slotRequests.size() + " slots");
 
         for (int i = 0; i < slotRequests.size(); i++) {
             UpdateSlotRequest slotReq = slotRequests.get(i);
 
-            System.out.println("  📍 Slot " + i + ":");
-            System.out.println("     SlotId: " + slotReq.getSlotId());
-            System.out.println("     StartTime (received): " + slotReq.getStartTime());
-            System.out.println("     EndTime (received): " + slotReq.getEndTime());
 
             Slot slot = slotRepository.findById(slotReq.getSlotId())
                     .orElseThrow(() -> new RuntimeException("Slot không tồn tại"));
@@ -659,8 +657,6 @@ public class BookingServiceImpl implements BookingService {
                     ? slotReq.getEndTime()
                     : slot.getEndTime();
 
-            System.out.println("     StartTime (to save): " + newStart);
-            System.out.println("     EndTime (to save): " + newEnd);
 
             validateSlotLogic(newStart, newEnd, slot.getStartTime());
 
@@ -673,7 +669,7 @@ public class BookingServiceImpl implements BookingService {
             updateSlotPrice(slot, targetCopy, newStart, newEnd);
 
             slotRepository.save(slot);
-            System.out.println("     ✅ Slot " + i + " saved");
+
         }
     }
     private CourtCopy resolveCourtCopy(
