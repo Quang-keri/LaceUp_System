@@ -16,6 +16,7 @@ export interface UserResponse {
     active: boolean;
     permissions?: string[];
     extraPermissions?: PermissionResponse[];
+    rankPoint?: number;
 }
 
 export interface CreateUserRequest {

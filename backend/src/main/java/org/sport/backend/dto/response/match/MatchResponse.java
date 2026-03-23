@@ -3,6 +3,7 @@ package org.sport.backend.dto.response.match;
 import lombok.Builder;
 import lombok.Data;
 import org.sport.backend.dto.response.user.UserResponse;
+import org.sport.backend.constant.MatchType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,4 +27,9 @@ public class MatchResponse {
     private boolean isFull;
     private boolean hasCourt;
     private List<UserResponse> participants;
+
+    private MatchType matchType;
+    private Double winnerPercent;
+    private Integer minRank;
+    private Integer maxRank;
 }

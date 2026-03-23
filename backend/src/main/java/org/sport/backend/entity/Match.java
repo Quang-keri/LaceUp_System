@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.MatchStatus;
+import org.sport.backend.constant.MatchType;
 import org.sport.backend.constant.RecurringType;
 
 import java.time.LocalDate;
@@ -58,4 +59,13 @@ public class Match extends BaseEntity {
     private List<MatchRegistration> registrations;
 
     private String address;
+
+    @Enumerated(EnumType.STRING)
+    private MatchType matchType;
+
+    private Double winnerPercent;
+    private Double betAmount;
+
+    private Integer minRank;
+    private Integer maxRank;
 }

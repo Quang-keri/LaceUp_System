@@ -31,4 +31,5 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean active;
+    private Integer rankPoint;
 }

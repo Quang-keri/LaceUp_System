@@ -15,6 +15,7 @@ import {
   Space,
   Spin,
   message,
+  Select,
 } from "antd";
 import {
   UserOutlined,
@@ -31,14 +32,15 @@ import userService from "../../../service/userService.ts";
 import { useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
+const { Option } = Select;
 
 const ProfilePage: React.FC = () => {
   const { user, logout, isLoading, refreshProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loadingSave, setLoadingSave] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState("1");
   const [form] = Form.useForm();
   const navigate = useNavigate();
-  const [selectedMenu, setSelectedMenu] = useState("1");
 
   useEffect(() => {
     if (user) {
@@ -47,6 +49,7 @@ const ProfilePage: React.FC = () => {
         email: user.email,
         phone: user.phone || "",
         dob: user.dateOfBirth || "",
+        gender: user.gender || "",
       });
     }
   }, [user, form]);
@@ -60,6 +63,7 @@ const ProfilePage: React.FC = () => {
         userName: values.userName,
         phone: values.phone,
         dateOfBirth: values.dob,
+        gender: values.gender,
       });
 
       message.success("Cập nhật thông tin thành công!");
@@ -77,27 +81,29 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
   const handleMenuClick = (key: string) => {
     setSelectedMenu(key);
     if (key === "2") {
+      navigate("/my-matches");
+    } else if (key === "3") {
       navigate("/booking-history");
     } else if (key === "1") {
       // Stay on profile page
-    } else if (key === "3") {
+    } else if (key === "4") {
       // Navigate to settings
       message.info("Cài đặt chưa được phát triển");
-    } else if (key === "4") {
+    } else if (key === "5") {
       // Navigate to security
       message.info("Bảo mật tài khoản chưa được phát triển");
-    } else if (key === "5") {
+    } else if (key === "6") {
       // Navigate to linked accounts
       message.info("Liên kết tài khoản chưa được phát triển");
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
   if (isLoading) {
@@ -111,14 +117,19 @@ const ProfilePage: React.FC = () => {
   // Menu Sidebar Trái
   const menuItems = [
     { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
-    { key: "2", icon: <HistoryOutlined />, label: "Lịch sử đặt sân" },
-    { key: "3", icon: <SettingOutlined />, label: "Cài đặt" },
+    { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
     {
-      key: "4",
+      key: "3",
+      icon: <HistoryOutlined />,
+      label: "Lịch sử đặt sân",
+    },
+    { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
+    {
+      key: "5",
       icon: <SafetyCertificateOutlined />,
       label: "Bảo mật tài khoản",
     },
-    { key: "5", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
+    { key: "6", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
     { type: "divider" as const },
     {
       key: "logout",
@@ -175,6 +186,24 @@ const ProfilePage: React.FC = () => {
             </Title>
             <Text type="secondary">Thành viên thân thiết</Text>
 
+            {/* HIỂN THỊ ĐIỂM RANK Ở ĐÂY */}
+            {user?.rankPoint !== undefined && (
+              <div style={{ marginTop: "12px" }}>
+                <Tag
+                  color="gold"
+                  style={{
+                    padding: "4px 16px",
+                    fontSize: "14px",
+                    borderRadius: "12px",
+                    fontWeight: "bold",
+                    border: "1px solid #ffe58f",
+                  }}
+                >
+                  🏆 Điểm Rank: {user.rankPoint}
+                </Tag>
+              </div>
+            )}
+
             <Divider style={{ margin: "16px 0" }} />
 
             <Menu
@@ -222,8 +251,28 @@ const ProfilePage: React.FC = () => {
               <Form.Item label="Số điện thoại" name="phone">
                 <Input size="large" />
               </Form.Item>
+
+              {/* THÊM GIỚI TÍNH VÀ TUỔI */}
+              <Form.Item label="Giới tính" name="gender">
+                <Select size="large" placeholder="Chọn giới tính">
+                  <Option value="Male">Nam</Option>
+                  <Option value="Female">Nữ</Option>
+                  <Option value="Other">Khác</Option>
+                </Select>
+              </Form.Item>
               <Form.Item label="Ngày sinh" name="dob">
                 <Input size="large" placeholder="YYYY-MM-DD" />
+              </Form.Item>
+              <Form.Item label="Tuổi">
+                <Input
+                  size="large"
+                  value={
+                    user?.age !== undefined && user.age > 0
+                      ? `${user.age} tuổi`
+                      : "Chưa cập nhật"
+                  }
+                  disabled={true}
+                />
               </Form.Item>
 
               {/* Section checkbox giữ nguyên logic của bạn */}

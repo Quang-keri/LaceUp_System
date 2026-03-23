@@ -77,4 +77,7 @@ public class User extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     List<Permission> extraPermissions;
+
+    @Builder.Default
+    private Integer rankPoint = 3000;
 }

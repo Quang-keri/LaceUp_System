@@ -26,7 +26,6 @@ import OwnerProfilePage from "../page/owner/profile/OwnerProfilePage.tsx";
 import NotFound from "../page/NotFoundPage.tsx";
 import PaymentPage from "../page/customer/payment/PaymentPage.tsx";
 import PaymentSuccessPage from "../page/customer/payment/PaymentSuccessPage.tsx";
-import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
 import OwnerDashboard from "../page/owner/dashboard/OwnerDashboard.tsx";
 import LoginOwnerPage from "../page/owner/login-page/LoginOwnerPage.tsx";
 import RegisterPage from "../page/customer/login-page/RegisterPage.tsx";
@@ -36,9 +35,11 @@ import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
 import NotificationPage from "../page/customer/notification/NotificationPage.tsx";
+import MyMatchPage from "../page/customer/profile-page/MyMatchPage.tsx";
 import BookingPaymentResultPage from "../page/customer/payment/BookingPaymentResultPage.tsx";
 import CategoryManagement from "../page/admin/court-type/CategoryManagement.tsx";
 import BookingHistoryPage from "../page/customer/bookings/BookingHistoryPage.tsx";
+import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -61,14 +62,14 @@ export const router = createBrowserRouter([
       //   element: <ProtectedRouter allowedRoles={["RENTER"]} />,
       //   children: [
       { path: "profile", element: <ProfilePage /> },
-      { path: "booking-history", element: <BookingHistoryPage /> },
+      { path: "my-matches", element: <MyMatchPage /> },
       { path: "chat", element: <ChatHome /> },
       { path: "payment/:bookingId", element: <PaymentPage /> },
       {
         path: "payment-success/:bookingId",
         element: <PaymentSuccessPage />,
       },
-
+      { path: "booking-history", element: <BookingHistoryPage /> },
       {
         path: "notifications",
         element: <NotificationPage />,
