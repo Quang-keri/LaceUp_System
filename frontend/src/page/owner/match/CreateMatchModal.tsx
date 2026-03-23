@@ -9,7 +9,7 @@ import {
   message,
   Checkbox,
 } from "antd";
-import matchService from "../../../service/matchService.ts";
+import matchService from "../../../service/match/matchService.ts";
 import courtService from "../../../service/courtService.ts";
 
 // Khai báo danh sách các thứ trong tuần

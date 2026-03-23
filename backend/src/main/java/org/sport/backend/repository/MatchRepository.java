@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -31,6 +32,9 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             "WHERE m.court.rentalArea.owner = :owner " +
             "OR m.host = :owner")
     Page<Match> findByOwnerSystem(User owner, Pageable pageable);
+
+    @Query("SELECT DISTINCT m FROM Match m LEFT JOIN m.registrations r WHERE m.host = :user OR r.user = :user")
+    Page<Match> findMatchesByParticipantOrHost(@Param("user") User user, Pageable pageable);
 
     List<Match> findByIsRecurringTrue();
 

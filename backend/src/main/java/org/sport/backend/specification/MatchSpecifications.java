@@ -1,9 +1,9 @@
 package org.sport.backend.specification;
 
 import jakarta.persistence.criteria.Fetch;
-import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import org.sport.backend.constant.MatchStatus;
+import org.sport.backend.constant.MatchType;
 import org.sport.backend.entity.Match;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -53,6 +53,15 @@ public class MatchSpecifications {
                 query.distinct(true); // Đảm bảo không bị lặp bản ghi do fetch join OneToMany
             }
             return null;
+        };
+    }
+
+    public static Specification<Match> hasMatchType(MatchType matchType) {
+        return (root, query, criteriaBuilder) -> {
+            if (matchType == null) {
+                return null;
+            }
+            return criteriaBuilder.equal(root.get("matchType"), matchType);
         };
     }
 }

@@ -19,7 +19,7 @@ import {
     PlusOutlined // Import thêm icon dấu cộng
 } from "@ant-design/icons";
 import type {ColumnsType} from "antd/es/table";
-import matchService from "../../../service/matchService.ts";
+import matchService from "../../../service/match/matchService.ts";
 import type {MatchResponse} from "../../../types/match.ts";
 import dayjs from "dayjs";
 import MatchDetailModal from "./MatchDetailModal.tsx";

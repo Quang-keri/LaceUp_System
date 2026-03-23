@@ -5,8 +5,11 @@ import org.sport.backend.entity.MatchRegistration;
 import org.sport.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface MatchRegistrationRepository extends JpaRepository<MatchRegistration, UUID> {
     boolean existsByMatchAndUser(Match match, User user);
+
+    List<MatchRegistration> findByMatch(Match match);
 }

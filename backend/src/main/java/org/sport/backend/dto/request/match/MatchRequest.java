@@ -2,6 +2,7 @@ package org.sport.backend.dto.request.match;
 
 import lombok.Data;
 import org.sport.backend.constant.RecurringType;
+import org.sport.backend.constant.MatchType;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,4 +21,9 @@ public class MatchRequest {
     private RecurringType recurringType;
     private String dayOfWeek;
     private LocalDate endDate;
+
+    private MatchType matchType;
+    private Double winnerPercent;
+    private Integer minRank;
+    private Integer maxRank;
 }
