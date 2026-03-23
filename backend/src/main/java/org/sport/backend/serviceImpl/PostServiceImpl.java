@@ -3,14 +3,12 @@ package org.sport.backend.serviceImpl;
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.constant.PostStatus;
 import org.sport.backend.dto.request.post.CreatePostRequest;
+import org.sport.backend.dto.request.post.PostFilterRequest;
 import org.sport.backend.dto.request.post.UpdatePostRequest;
 import org.sport.backend.dto.response.post.PostDetailResponse;
 import org.sport.backend.dto.response.post.PostResponse;
 import org.sport.backend.dto.response.post.PostSummaryResponse;
-import org.sport.backend.entity.Court;
-import org.sport.backend.entity.Post;
-import org.sport.backend.entity.RentalArea;
-import org.sport.backend.entity.User;
+import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.repository.CourtRepository;
@@ -28,6 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -79,29 +78,26 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public PageResponse<PostSummaryResponse> getAllPosts(
-            String title,
-            String content,
-            LocalDate fromDate,
-            LocalDate toDate,
-            int page,
-            int size
-    ) {
+    public PageResponse<PostSummaryResponse> getAllPosts(PostFilterRequest filterRequest) {
 
-        Pageable pageable = PageRequest.of(
-                page -1 ,
-                size,
-                Sort.by("createdAt").descending()
-        );
 
-        Specification<Post> spec = Specification
-                .where(PostSpecification.hasTitle(title))
-                .and(PostSpecification.hasContent(content))
-                .and(PostSpecification.fromDate(fromDate))
-                .and(PostSpecification.toDate(toDate));
+        Sort sort = Sort.by("createdAt").descending();
 
+        if ("price_low".equals(filterRequest.getSortBy())) {
+
+            sort = Sort.by("court.courtPrices.pricePerHour").ascending();
+        } else if ("price_high".equals(filterRequest.getSortBy())) {
+            sort = Sort.by("court.courtPrices.pricePerHour").descending();
+        }
+
+        Pageable pageable = PageRequest.of(filterRequest.getPage() - 1, filterRequest.getSize(), sort);
+
+        Specification<Post> spec = PostSpecification.filterByCriteria(filterRequest);
+
+        // 3. Query
         Page<Post> postPage = postRepository.findAll(spec, pageable);
-        System.err.println( "data"+ postPage.getContent());
+
+        // 4. Map to DTO
         List<PostSummaryResponse> data = postPage.getContent()
                 .stream()
                 .map(this::mapToSummary)
@@ -135,20 +131,30 @@ public class PostServiceImpl implements PostService {
                 .toList();
     }
     private PostSummaryResponse mapToSummary(Post post) {
-
         Court court = post.getCourt();
         RentalArea rentalArea = post.getRentalArea();
 
-        String coverImage = null;
+        // 1. Tìm giá thấp nhất của sân này để hiển thị lên Card
+        // Thêm check null cho courtPrices đề phòng dữ liệu bị thiếu
+        BigDecimal minPrice = BigDecimal.ZERO;
+        if (court.getCourtPrices() != null && !court.getCourtPrices().isEmpty()) {
+            minPrice = court.getCourtPrices().stream()
+                    .map(CourtPrice::getPricePerHour)
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+        }
 
+        // 2. Lấy ảnh bìa
+        String coverImage = null;
         if (court.getImages() != null && !court.getImages().isEmpty()) {
             coverImage = court.getImages().stream()
                     .filter(img -> Boolean.TRUE.equals(img.getIsCover()))
                     .findFirst()
-                    .map(img -> img.getImageUrl())
+                    .map(CourtImage::getImageUrl)
                     .orElse(null);
         }
 
+        // 3. Build DTO trả về đầy đủ các trường
         return PostSummaryResponse.builder()
                 .postId(post.getPostId())
                 .title(post.getTitle())
@@ -158,12 +164,12 @@ public class PostServiceImpl implements PostService {
 
                 .courtId(court.getCourtId())
                 .courtName(court.getCourtName())
+                .minPrice(minPrice) // Gắn giá trị minPrice đã tìm được
                 .courtCoverImageUrl(coverImage)
 
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
                 .address(rentalArea.getAddress())
-
                 .build();
     }
     @Override
