@@ -94,7 +94,6 @@ public class SlotServiceImpl implements SlotService {
 
         LocalDateTime newEnd = computeNewEnd(slot.getEndTime(), req);
 
-
         boolean conflict = slotRepository.existsConflictSlot(
                 slot.getCourtCopy().getCourtCopyId(),
                 slot.getEndTime(),
@@ -109,9 +108,6 @@ public class SlotServiceImpl implements SlotService {
                     .build();
         }
 
-
-        long addedMinutes = req.getUnit().equals("hour")
-                ? req.getAmount() * 60L : req.getAmount();
         BigDecimal extraPrice = courtPriceService.calculatePrice(
                 slot.getCourtCopy(), slot.getEndTime(), newEnd);
 
@@ -126,23 +122,55 @@ public class SlotServiceImpl implements SlotService {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
 
-        LocalDateTime newEnd = computeNewEnd(slot.getEndTime(), req);
-
+        LocalDateTime oldEnd = slot.getEndTime();
+        LocalDateTime newEnd = computeNewEnd(oldEnd, req);
 
         boolean conflict = slotRepository.existsConflictSlot(
                 slot.getCourtCopy().getCourtCopyId(),
-                slot.getEndTime(), newEnd, slotId);
+                oldEnd,
+                newEnd,
+                slotId
+        );
+
         if (conflict) throw new AppException(ErrorCode.SLOT_CONFLICT);
 
+
         BigDecimal extraPrice = courtPriceService.calculatePrice(
-                slot.getCourtCopy(), slot.getEndTime(), newEnd);
+                slot.getCourtCopy(), oldEnd, newEnd);
 
         slot.setEndTime(newEnd);
         slot.setPrice(slot.getPrice().add(extraPrice));
         slotRepository.save(slot);
 
 
-        updateBookingTotal(slot.getBooking());
+        Booking booking = slot.getBooking();
+
+        BigDecimal oldTotal = booking.getTotalPrice() != null
+                ? booking.getTotalPrice()
+                : BigDecimal.ZERO;
+
+        BigDecimal newTotal = oldTotal.add(extraPrice);
+        booking.setTotalPrice(newTotal);
+
+        BigDecimal deposit = booking.getDepositAmount() != null
+                ? booking.getDepositAmount()
+                : BigDecimal.ZERO;
+
+        BigDecimal currentRemaining = booking.getRemainingAmount();
+
+        BigDecimal paid;
+
+        if (currentRemaining != null) {
+            paid = oldTotal.subtract(currentRemaining);
+        } else {
+            paid = deposit;
+        }
+
+        BigDecimal newRemaining = newTotal.subtract(paid);
+
+        booking.setRemainingAmount(newRemaining.max(BigDecimal.ZERO));
+
+        bookingRepository.save(booking);
     }
 
     public SwapCheckResponse checkSwap(UUID slotId, SwapRequest req) {

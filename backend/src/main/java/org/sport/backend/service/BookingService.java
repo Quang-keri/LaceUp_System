@@ -32,4 +32,7 @@ public interface BookingService {
     PageResponse<BookingResponse> getMyBookings(UUID userId, BookingStatus bookingStatus, String keyword, LocalDate from, LocalDate to, int page, int size);
 
     BookingResponse updateBooking(UUID bookingId, UpdateBookingRequest request);
+
+    String generateInvoiceUrl(UUID bookingId, String invoiceViewUrl);
+    void collectRemainingPayment(UUID bookingId);
 }

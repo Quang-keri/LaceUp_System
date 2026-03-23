@@ -18,10 +18,31 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
     PENDING: { label: "Chờ xử lý", color: "orange" },
   };
 
+  const status = statusMap[booking.bookingStatus] || {
+    label: booking.bookingStatus,
+    color: "default",
+  };
+
+  // ✅ PAYMENT LOGIC CHUẨN (fix gia hạn)
+  const total = booking.totalPrice || 0;
+  const deposit = booking.depositAmount || 0;
+  const remaining = booking.remainingAmount ?? Math.max(total - deposit, 0);
+  const paid = total - remaining;
+
+  const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+
   const columns = [
     { title: "Sân", dataIndex: "courtCode" },
-    { title: "Giờ bắt đầu", dataIndex: "startTime" },
-    { title: "Giờ kết thúc", dataIndex: "endTime" },
+    {
+      title: "Giờ bắt đầu",
+      dataIndex: "startTime",
+      render: (v: string) => new Date(v).toLocaleString("vi-VN"),
+    },
+    {
+      title: "Giờ kết thúc",
+      dataIndex: "endTime",
+      render: (v: string) => new Date(v).toLocaleString("vi-VN"),
+    },
     {
       title: "Giá",
       dataIndex: "price",
@@ -29,22 +50,20 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
     },
   ];
 
-  const status = statusMap[booking.bookingStatus] || {
-    label: booking.bookingStatus,
-    color: "default",
-  };
-
   return (
     <Modal
       title="Chi tiết đơn đặt"
       open={open}
       onCancel={onClose}
       footer={null}
+      width={700}
     >
-      <Descriptions column={1}>
-        <Descriptions.Item label="Mã đơn đặt">
+      {/* 🧾 INFO */}
+      <Descriptions column={1} bordered size="small">
+        <Descriptions.Item label="Mã đơn">
           {booking.bookingId}
         </Descriptions.Item>
+
         <Descriptions.Item label="Khách hàng">
           {booking.userName}
         </Descriptions.Item>
@@ -57,12 +76,38 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
           <Tag color={status.color}>{status.label}</Tag>
         </Descriptions.Item>
 
+        {/* 💰 Tổng */}
         <Descriptions.Item label="Tổng tiền">
-          {booking.totalPrice?.toLocaleString("vi-VN")} VND
+          <b style={{ color: "#1677ff", fontSize: 16 }}>
+            {total.toLocaleString("vi-VN")} VND
+          </b>
         </Descriptions.Item>
 
-        <Descriptions.Item label="Ghi chú">{booking.note}</Descriptions.Item>
+        {/* 💵 Đã trả */}
+        <Descriptions.Item label="Đã thanh toán">
+          <span style={{ color: "#52c41a", fontWeight: 500 }}>
+            {paid.toLocaleString("vi-VN")} VND
+          </span>
+        </Descriptions.Item>
+
+        {/* 💸 Còn lại */}
+        <Descriptions.Item label="Còn lại cần thu">
+          <b style={{ color: "#ff4d4f", fontSize: 16 }}>
+            {remaining.toLocaleString("vi-VN")} VND
+          </b>
+        </Descriptions.Item>
       </Descriptions>
+
+      {/* 📊 PROGRESS BAR */}
+      <div style={{ marginTop: 12 }}>
+        <div
+          style={{
+            height: 8,
+            background: "#f0f0f0",
+            borderRadius: 4,
+          }}
+        ></div>
+      </div>
 
       <Table
         style={{ marginTop: 20 }}
