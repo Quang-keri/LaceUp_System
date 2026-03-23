@@ -1,7 +1,9 @@
 import { Table, Space, Button, Tag } from "antd";
 import type { BookingResponse } from "../../../types/booking";
 import dayjs from "dayjs";
-
+import { Dropdown } from "antd";
+import { MoreOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 // Đã bổ sung cả BOOKED và CONFIRMED để tránh lỗi miss data từ API
 const statusColorMap: Record<string, string> = {
   BOOKED: "blue",
@@ -31,6 +33,7 @@ interface Props {
   onChange: (pageInfo: any) => void;
   onViewDetail: (booking: BookingResponse) => void;
   onEditSlot: (slot: any) => void;
+  onUpdateStatus: (booking: BookingResponse) => void;
 }
 
 export default function BookingTable({
@@ -40,6 +43,7 @@ export default function BookingTable({
   onChange,
   onViewDetail,
   onEditSlot,
+  onUpdateStatus,
 }: Props) {
   const columns = [
     {
@@ -89,18 +93,68 @@ export default function BookingTable({
 
         // Fallback lại giờ của booking nếu không có slots
         return record.startTime && record.endTime
-          ? `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - ${dayjs(record.endTime).format("HH:mm")}`
+          ? `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - ${dayjs(
+              record.endTime,
+            ).format("HH:mm")}`
           : "Chưa rõ thời gian";
       },
     },
     {
-      title: "Giá",
-      dataIndex: "totalPrice",
-      render: (price: number) =>
-        price ? price.toLocaleString("vi-VN") + " VND" : "0 VND",
-    },
-    {
       title: "Thanh toán",
+      render: (_: any, record: BookingResponse) => {
+        const total = record.totalPrice || 0;
+        const deposit = record.depositAmount || 0;
+        const remaining = record.remainingAmount ?? total - deposit;
+
+        const paid = total - remaining;
+        const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+
+        return (
+          <div style={{ minWidth: 180 }}>
+            <div>
+              <b>{paid.toLocaleString("vi-VN")}đ</b> /{" "}
+              {total.toLocaleString("vi-VN")}đ
+            </div>
+
+            <div
+              style={{
+                height: 6,
+                background: "#f0f0f0",
+                borderRadius: 4,
+                marginTop: 4,
+              }}
+            >
+              <div
+                style={{
+                  width: `${percent}%`,
+                  height: "100%",
+                  background:
+                    percent === 100
+                      ? "#52c41a"
+                      : percent > 0
+                      ? "#faad14"
+                      : "#ff4d4f",
+                  borderRadius: 4,
+                }}
+              />
+            </div>
+
+            <div style={{ fontSize: 12, marginTop: 4 }}>
+              {percent === 100 ? (
+                <Tag color="green">Đã thanh toán đủ</Tag>
+              ) : percent > 0 ? (
+                <Tag color="orange">Đã cọc {percent}%</Tag>
+              ) : (
+                <Tag color="red">Chưa thanh toán</Tag>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+
+    {
+      title: "Phương thức trả",
       dataIndex: "paymentMethod",
       render: (method: string) => (
         <Tag>{methodLabelMap[method] || method || "Không rõ"}</Tag>
@@ -117,21 +171,31 @@ export default function BookingTable({
     },
     {
       title: "Thao tác",
-      render: (_: any, record: BookingResponse) => (
-        <Space>
-          <Button size="small" onClick={() => onViewDetail(record)}>
-            Chi tiết
-          </Button>
-          <Button
-            size="small"
-            type="primary"
-            ghost
-            onClick={() => onEditSlot(record)}
-          >
-            Sửa Slot
-          </Button>
-        </Space>
-      ),
+      render: (_: any, record: BookingResponse) => {
+        const items: MenuProps["items"] = [
+          {
+            key: "view",
+            label: "Chi tiết",
+            onClick: () => onViewDetail(record),
+          },
+          {
+            key: "edit",
+            label: "Sửa Slot",
+            onClick: () => onEditSlot(record),
+          },
+          {
+            key: "status",
+            label: "Cập nhật trạng thái",
+            onClick: () => onUpdateStatus(record),
+          },
+        ];
+
+        return (
+          <Dropdown menu={{ items }} trigger={["click"]}>
+            <Button icon={<MoreOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 

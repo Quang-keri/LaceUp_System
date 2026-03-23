@@ -17,8 +17,9 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
 
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
-
+  // Thêm state isDeposit
+  const [isDeposit, setIsDeposit] = useState(false); // Mặc định là trả full
+  const [paymentMethod, setPaymentMethod] = useState("PAY_OS");
   const [contact, setContact] = useState({
     userName: "",
     userPhone: "",
@@ -40,7 +41,6 @@ export default function PaymentPage() {
       const data = await bookingService.getBookingIntent(bookingId);
       setIntent(data);
 
-      // ← Sync bookerName / bookerPhone từ intent vào form
       setContact({
         userName: data.bookerName ?? "",
         userPhone: data.bookerPhone ?? "",
@@ -59,14 +59,30 @@ export default function PaymentPage() {
 
     try {
       setConfirming(true);
-      const res = await paymentService.checkout(
+      const res = await paymentService.checkoutPayment(
         intent.bookingIntentId,
         paymentMethod,
+        isDeposit,
       );
 
-      if (res.code === 201) {
-        message.success("Thanh toán thành công");
-        navigate(`/payment-success/${res.result.bookingId}`);
+      const result = res?.result;
+
+      if (res.code === 201 && result) {
+        if (result.mode === "REDIRECT" && result.paymentUrl) {
+          window.location.href = result.paymentUrl;
+          return;
+        }
+
+        if (result.mode === "PENDING") {
+          message.info(result.message || "Đang chờ xác nhận thanh toán");
+          return;
+        }
+
+        if (result.mode === "BOOKED" && result.bookingId) {
+          message.success("Thanh toán thành công");
+          navigate(`/payment-success/${result.bookingId}`);
+          return;
+        }
       } else {
         message.error(res.message || "Thanh toán thất bại");
       }
@@ -76,7 +92,6 @@ export default function PaymentPage() {
       setConfirming(false);
     }
   };
-
   if (loading || !intent) {
     return (
       <div className="flex justify-center mt-24">
@@ -105,6 +120,8 @@ export default function PaymentPage() {
             contact={contact}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
+            isDeposit={isDeposit} // Truyền props mới
+            setIsDeposit={setIsDeposit}
             onConfirm={handleConfirm}
             loading={confirming}
           />

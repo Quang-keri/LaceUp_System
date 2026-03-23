@@ -40,6 +40,7 @@ import vn.payos.model.webhooks.WebhookData;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -115,18 +116,23 @@ public class PaymentServiceImpl implements PaymentService {
         // }
 
         if (method == PaymentMethod.BANK_TRANSFER || method == PaymentMethod.PAY_OS) {
+            boolean isDeposit = Boolean.TRUE.equals(checkoutRequest.getIsDeposit());
+            BigDecimal amountToPay;
+            PaymentType paymentType;
 
-            // TODO: Bổ sung logic lấy isDeposit từ CheckoutRequest (nếu bạn gửi cờ này từ Frontend)
-            // Ví dụ: boolean isDeposit = checkoutRequest.isDeposit();
-            boolean isDeposit = false; // Tạm hardcode để code không lỗi, bạn hãy map với request thực tế.
+            if (isDeposit) {
 
-            // Tính số tiền cần thanh toán
-            // Nếu đặt cọc (ví dụ cọc 30%), ngược lại trả full 100%
-            BigDecimal amountToPay = isDeposit
-                    ? intent.getPreviewPrice().multiply(new BigDecimal("0.30"))
-                    : intent.getPreviewPrice();
+                amountToPay = intent.getPreviewPrice()
+                        .multiply(new BigDecimal("0.50"))
+                        .setScale(0, RoundingMode.HALF_UP);
+                paymentType = PaymentType.DEPOSIT;
+            } else {
+                amountToPay = intent.getPreviewPrice();
+                paymentType = PaymentType.FULL;
+            }
 
-            PaymentType paymentType = isDeposit ? PaymentType.DEPOSIT : PaymentType.FULL;
+            log.info("Bắt đầu checkout PayOS: BookingIntent={}, Amount={}, Type={}",
+                    intent.getBookingIntentId(), amountToPay, paymentType);
 
             return handlePayOsCheckout(intent, currentUser, method, amountToPay, paymentType);
         }
@@ -234,6 +240,8 @@ public class PaymentServiceImpl implements PaymentService {
     }
     */
 
+
+    //2
     private CheckoutResponse handlePayOsCheckout(BookingIntent intent, User user, PaymentMethod method, BigDecimal amountToPay, PaymentType paymentType) {
         PayOS payOS = requirePayOsClient();
         long orderCode = generateUniqueOrderCode();

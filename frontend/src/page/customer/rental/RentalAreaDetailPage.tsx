@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Row, Col } from "antd";
 import { toast } from "react-toastify";
 
-import { useAuth } from "../../../context/AuthContext"; // điều chỉnh path nếu cần
+import { useAuth } from "../../../context/AuthContext";
 
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
@@ -52,18 +52,26 @@ export default function RentalAreaDetailPage() {
     end: "09:00",
   });
 
-  // Sync userName từ auth user khi login/logout
+  // Sync thông tin từ context khi user login/logout
   useEffect(() => {
-    setUserInfo((prev) => ({
-      ...prev,
-      userName: user?.userName ?? "",
-    }));
+    if (user) {
+      setUserInfo((prev) => ({
+        ...prev,
+        // Ưu tiên lấy từ user context, nếu không có thì giữ nguyên giá trị cũ hoặc rỗng
+        userName: user.userName || user.fullName || prev.userName,
+        userPhone: user.phone || user.phoneNumber || prev.userPhone,
+      }));
+    }
   }, [user]);
 
   const fetchDetail = async () => {
-    const res = await rentalService.getRentalAreaById(id!);
-    if (res.code === 200) {
-      setData(res.result);
+    try {
+      const res = await rentalService.getRentalAreaById(id!);
+      if (res.code === 200) {
+        setData(res.result);
+      }
+    } catch (error) {
+      toast.error("Không thể tải thông tin sân");
     }
   };
 
@@ -71,7 +79,9 @@ export default function RentalAreaDetailPage() {
     fetchDetail();
   }, [id]);
 
-  if (!data) return <p>Loading...</p>;
+  if (!data) return <p className="p-10 text-center">Đang tải dữ liệu...</p>;
+
+  // Hàm tính toán giá dựa trên Rule (Giữ nguyên logic của bạn)
   const getPriceByTime = (
     court: any,
     dateStr: string,
@@ -81,12 +91,10 @@ export default function RentalAreaDetailPage() {
     if (!court.priceRules || court.priceRules.length === 0) {
       return (court.price || 0) * calculateDiffHours(start, end);
     }
-
     const timeToMinutes = (t: string) => {
       const [h, m] = t.split(":").map(Number);
       return h * 60 + m;
     };
-
     const isWeekend = (dStr: string) => {
       const day = new Date(dStr).getDay();
       return day === 0 || day === 6;
@@ -98,24 +106,17 @@ export default function RentalAreaDetailPage() {
     const endMins = timeToMinutes(end);
 
     while (currentMins < endMins) {
-      // 1. Tìm rule phù hợp nhất tại thời điểm currentMins
       const applicableRules = court.priceRules.filter((r: any) => {
         const rStart = timeToMinutes(r.startTime);
         const rEnd = r.endTime === "00:00:00" ? 1440 : timeToMinutes(r.endTime);
-
         const timeMatch = currentMins >= rStart && currentMins < rEnd;
         if (!timeMatch) return false;
-
-        // Ưu tiên ngày cụ thể trước
         if (r.specificDate) return r.specificDate === dateStr;
-
-        // Nếu không có ngày cụ thể, dùng loại ngày
         if (weekend)
           return r.priceType === "WEEKEND" || r.priceType === "NORMAL";
-        return r.priceType === "NORMAL" || r.priceType === "PEAK"; // Thêm logic ngày thường của bạn ở đây
+        return r.priceType === "NORMAL" || r.priceType === "PEAK";
       });
 
-      // 2. Sắp xếp: SpecificDate -> Priority
       applicableRules.sort((a: any, b: any) => {
         if (a.specificDate && !b.specificDate) return -1;
         if (!a.specificDate && b.specificDate) return 1;
@@ -123,9 +124,7 @@ export default function RentalAreaDetailPage() {
       });
 
       const rule = applicableRules[0];
-
       if (!rule) {
-        // Nếu không có rule, dùng giá gốc của sân
         const nextStep = endMins;
         totalPrice += (court.price || 0) * ((nextStep - currentMins) / 60);
         currentMins = nextStep;
@@ -133,14 +132,19 @@ export default function RentalAreaDetailPage() {
         const rEndMins =
           rule.endTime === "00:00:00" ? 1440 : timeToMinutes(rule.endTime);
         const nextStep = Math.min(rEndMins, endMins);
-        const hours = (nextStep - currentMins) / 60;
-        totalPrice += rule.pricePerHour * hours;
+        totalPrice += rule.pricePerHour * ((nextStep - currentMins) / 60);
         currentMins = nextStep;
       }
     }
-
     return totalPrice;
   };
+
+  const calculateDiffHours = (s: string, e: string) => {
+    const [h1, m1] = s.split(":").map(Number);
+    const [h2, m2] = e.split(":").map(Number);
+    return (h2 * 60 + m2 - (h1 * 60 + m1)) / 60;
+  };
+
   const validateFilter = () => {
     if (!filter.date) {
       toast.warn("Vui lòng chọn ngày");
@@ -154,12 +158,13 @@ export default function RentalAreaDetailPage() {
   };
 
   const getAvailableCopies = (court: any) => {
-    return court.courtCopies.filter((c: any) => c.status === "ACTIVE").length;
+    return (
+      court.courtCopies?.filter((c: any) => c.status === "ACTIVE").length || 0
+    );
   };
 
   const addCourt = (court: any) => {
     if (!validateFilter()) return;
-
     const maxCopies = getAvailableCopies(court);
 
     setCart((prev) => {
@@ -174,10 +179,7 @@ export default function RentalAreaDetailPage() {
       if (index !== -1) {
         const copy = [...prev];
         const newQty = copy[index].quantity + 1;
-        copy[index] = {
-          ...copy[index],
-          quantity: Math.min(newQty, maxCopies),
-        };
+        copy[index] = { ...copy[index], quantity: Math.min(newQty, maxCopies) };
         return copy;
       }
 
@@ -196,7 +198,7 @@ export default function RentalAreaDetailPage() {
 
   const handleOpenModal = () => {
     if (cart.length === 0) {
-      toast.warn("Vui lòng chọn khung giờ và thêm sân vào giỏ");
+      toast.warn("Vui lòng thêm sân vào danh sách");
       return;
     }
     setOpenModal(true);
@@ -206,10 +208,7 @@ export default function RentalAreaDetailPage() {
     setCart((prev) => {
       const copy = [...prev];
       const maxCopies = getAvailableCopies(copy[index].court);
-      copy[index] = {
-        ...copy[index],
-        quantity: Math.min(copy[index].quantity + 1, maxCopies),
-      };
+      copy[index].quantity = Math.min(copy[index].quantity + 1, maxCopies);
       return copy;
     });
   };
@@ -217,14 +216,10 @@ export default function RentalAreaDetailPage() {
   const decrease = (index: number) => {
     setCart((prev) => {
       const copy = [...prev];
-      const newQty = copy[index].quantity - 1;
-      if (newQty <= 0) {
+      if (copy[index].quantity <= 1) {
         copy.splice(index, 1);
       } else {
-        copy[index] = {
-          ...copy[index],
-          quantity: newQty,
-        };
+        copy[index].quantity -= 1;
       }
       return copy;
     });
@@ -232,7 +227,7 @@ export default function RentalAreaDetailPage() {
 
   const submitBooking = async () => {
     if (!userInfo.userName.trim() || !userInfo.userPhone.trim()) {
-      toast.warn("Vui lòng nhập tên và số điện thoại");
+      toast.warn("Vui lòng nhập tên và số điện thoại liên hệ");
       return;
     }
 
@@ -244,17 +239,24 @@ export default function RentalAreaDetailPage() {
     }));
 
     const payload = {
+      // Nếu có user login thì gửi ID, không thì là null (Guest)
+      userId: user?.id || user?.userId || null,
       userName: userInfo.userName.trim(),
       userPhone: userInfo.userPhone.trim(),
       note: userInfo.note,
       slotRequests,
     };
 
-    const res = await bookingService.createBooking(payload);
-    console.log("Response từ server:", res);
-
-    if (res.code === 201 || res.code === 200) {
-      navigate(`/payment/${res.result.bookingIntentId}`);
+    try {
+      const res = await bookingService.createBooking(payload);
+      if (res.code === 201 || res.code === 200) {
+        toast.success("Đặt sân thành công! Đang chuyển hướng thanh toán...");
+        navigate(`/payment/${res.result.bookingIntentId}`);
+      } else {
+        toast.error(res.message || "Đặt sân thất bại");
+      }
+    } catch (error) {
+      toast.error("Hệ thống đang bận, vui lòng thử lại sau");
     }
   };
 
@@ -271,21 +273,19 @@ export default function RentalAreaDetailPage() {
         </div>
       </div>
 
-      <Row gutter={24} style={{ marginTop: 32 }}>
-        <Col span={24}>
-          <BookingSearchBar filter={filter} setFilter={setFilter} />
-        </Col>
-      </Row>
+      <div className="mt-8">
+        <BookingSearchBar filter={filter} setFilter={setFilter} />
+      </div>
 
       <Row gutter={[24, 24]} className="mt-6">
-        <Col xs={24} md={24} lg={16}>
+        <Col xs={24} lg={16}>
           <CourtList
             courts={data.courts}
             onAddCourt={addCourt}
             filter={filter}
           />
         </Col>
-        <Col xs={24} md={24} lg={8}>
+        <Col xs={24} lg={8}>
           <BookingCart
             cart={cart}
             increase={increase}

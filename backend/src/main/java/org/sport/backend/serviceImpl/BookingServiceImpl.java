@@ -68,7 +68,7 @@ public class BookingServiceImpl implements BookingService {
             user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         }
-
+        System.err.println("User name " + user.getUserName());
         BookingIntent intent = BookingIntent.builder()
                 .user(user)
                 .bookerName(request.getUserName())
@@ -407,7 +407,13 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
+        Optional<Payment> payment = paymentRepository
+                .findFirstByBookingOrderByTransactionDateDesc(booking);
 
+        String paymentMethod = null;
+        if(payment.isPresent()) {
+            paymentMethod = payment.get().getPaymentMethod().toString();
+        }
         List<Slot> slots = booking.getSlots();
 
         List<SlotResponse> slotResponses = slots.stream()
@@ -441,6 +447,9 @@ public class BookingServiceImpl implements BookingService {
                                 .address(booking.getRentalArea().getAddress())
                                 .build()
                 )
+                .depositAmount(booking.getDepositAmount())
+                .remainingAmount(booking.getRemainingAmount())
+                .paymentMethod(paymentMethod)
                 .build();
     }
 
@@ -455,7 +464,10 @@ public class BookingServiceImpl implements BookingService {
             int size
     ) {
 
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(
+                Sort.Order.desc("updatedAt"),
+                Sort.Order.desc("createdAt")
+        ).descending());
 
         Specification<Booking> spec = BookingSpecification.filterBooking(
                 rentalId,
@@ -559,6 +571,15 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingResponse mapToResponse(Booking booking) {
+        Optional<Payment> payment = paymentRepository
+                .findFirstByBookingOrderByTransactionDateDesc(booking);
+
+        String paymentMethod = null;
+        if(payment.isPresent()) {
+            paymentMethod = payment.get().getPaymentMethod().toString();
+        }else{
+            paymentMethod = "không có";
+        }
 
         List<SlotResponse> slots = booking.getSlots()
                 .stream()
@@ -590,14 +611,13 @@ public class BookingServiceImpl implements BookingService {
                                 .rentalAreaName(booking.getRentalArea().getRentalAreaName())
                                 .address(booking.getRentalArea().getAddress())
                                 .build() : null)
+                .depositAmount(booking.getDepositAmount())
+                .remainingAmount(booking.getRemainingAmount())
+                .paymentMethod(paymentMethod)
                 .build();
-        Optional<Payment> payment = paymentRepository.findFirstByBookingOrderByTransactionDateDesc(booking);
 
-        if (payment.isPresent()) {
-            bookingResponse.setPaymentMethod(payment.get().getPaymentMethod().toString());
-        } else {
-            bookingResponse.setPaymentMethod("NONE");
-        }
+
+
 
         return bookingResponse;
     }
