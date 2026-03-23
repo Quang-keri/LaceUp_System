@@ -1,7 +1,7 @@
-import api from "../config/axios.ts";
-import type { ApiResponse } from "../types/ApiResponse.ts";
-import type { MatchResponse, MatchRequest } from "../types/match";
-import type { PageResponse } from "../types/post.ts";
+import api from "../../config/axios.ts";
+import type { ApiResponse } from "../../types/ApiResponse.ts";
+import type { MatchResponse, MatchRequest } from "../../types/match.ts";
+import type { PageResponse } from "../../types/post.ts";
 
 const API_BASE_URL = "/matches";
 
@@ -53,15 +53,13 @@ export const matchService = {
     keyword?: string,
     startDate?: string,
     endDate?: string,
+    matchType?: string,
   ): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
     const params: any = { page, size };
-
     if (status) params.status = status;
-    if (category) params.category = category;
-    if (keyword) params.keyword = keyword;
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-
+    if (category && category !== "Tất cả") params.category = category;
+    if (matchType && matchType !== "ALL") params.matchType = matchType;
+    // ...
     const response = await api.get(API_BASE_URL, { params });
     return response.data;
   },
@@ -71,6 +69,16 @@ export const matchService = {
     size: number,
   ): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
     const response = await api.get(`${API_BASE_URL}/owner`, {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  getMyMatches: async (
+    page: number,
+    size: number,
+  ): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
+    const response = await api.get(`${API_BASE_URL}/my-matches`, {
       params: { page, size },
     });
     return response.data;

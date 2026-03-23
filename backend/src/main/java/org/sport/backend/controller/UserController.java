@@ -29,15 +29,20 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> getMyInfo() {
         return ResponseEntity.ok(
                 ApiResponse.
-                        success(200, "Lấy thông tin cá nhân thành công", userService.getMyInfo())
+                        success(200,
+                                "Lấy thông tin cá nhân thành công",
+                                userService.getMyInfo())
         );
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody @Valid CreateUserRequest request) {
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(
+            @RequestBody @Valid CreateUserRequest request) {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.success(201, "Tạo người dùng thành công", userService.createUser(request))
+                ApiResponse.success(201,
+                        "Tạo người dùng thành công",
+                        userService.createUser(request))
         );
     }
 
@@ -59,7 +64,8 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable UUID userId) {
+    public ResponseEntity<ApiResponse<UserResponse>> getUserById(
+            @PathVariable UUID userId) {
         return ResponseEntity.ok(
                 ApiResponse.success(userService.getUserById(userId))
         );
@@ -70,7 +76,8 @@ public class UserController {
             @PathVariable UUID userId,
             @RequestBody @Valid UpdateUserRequest request) {
         return ResponseEntity.ok(
-                ApiResponse.success("Cập nhật thành công", userService.updateUser(userId, request))
+                ApiResponse.success("Cập nhật thành công",
+                        userService.updateUser(userId, request))
         );
     }
 
@@ -92,7 +99,8 @@ public class UserController {
             @PathVariable UUID userId,
             @PathVariable Long roleId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Gán Role thành công", userService.assignRole(userId, roleId))
+                ApiResponse.success("Gán Role thành công",
+                        userService.assignRole(userId, roleId))
         );
     }
 
@@ -101,7 +109,8 @@ public class UserController {
             @PathVariable UUID userId,
             @RequestBody Set<Integer> permissionIds) {
         return ResponseEntity.ok(
-                ApiResponse.success("Thêm quyền riêng thành công", userService.addExtraPermissions(userId, permissionIds))
+                ApiResponse.success("Thêm quyền riêng thành công",
+                        userService.addExtraPermissions(userId, permissionIds))
         );
     }
 
@@ -110,14 +119,17 @@ public class UserController {
             @PathVariable UUID userId,
             @RequestBody Set<Integer> permissionIds) {
         return ResponseEntity.ok(
-                ApiResponse.success("Xóa quyền riêng thành công", userService.removeExtraPermissions(userId, permissionIds))
+                ApiResponse.success("Xóa quyền riêng thành công",
+                        userService.removeExtraPermissions(userId, permissionIds))
         );
     }
 
     @GetMapping("/{userId}/authorities")
-    public ResponseEntity<ApiResponse<Set<String>>> getUserAuthorities(@PathVariable UUID userId) {
+    public ResponseEntity<ApiResponse<Set<String>>> getUserAuthorities(
+            @PathVariable UUID userId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy danh sách quyền thành công", userService.getUserAuthorities(userId))
+                ApiResponse.success("Lấy danh sách quyền thành công",
+                        userService.getUserAuthorities(userId))
         );
     }
 

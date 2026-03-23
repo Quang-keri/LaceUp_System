@@ -36,6 +36,7 @@ import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
 import NotificationPage from "../page/customer/notification/NotificationPage.tsx";
+import MyMatchPage from "../page/customer/profile-page/MyMatchPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
       //   element: <ProtectedRouter allowedRoles={["RENTER"]} />,
       //   children: [
           { path: "profile", element: <ProfilePage /> },
+          { path: "my-matches", element: <MyMatchPage /> },
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {

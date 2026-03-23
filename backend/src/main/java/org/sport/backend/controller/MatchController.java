@@ -6,11 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
+import org.sport.backend.constant.MatchType;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
-import org.sport.backend.entity.User;
 import org.sport.backend.service.MatchService;
-import org.sport.backend.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -68,10 +67,11 @@ public class MatchController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) LocalDateTime startDate,
-            @RequestParam(required = false) LocalDateTime endDate
+            @RequestParam(required = false) LocalDateTime endDate,
+            @RequestParam(required = false) MatchType matchType
     ) {
         PageResponse<MatchResponse> result = matchService.getAllMatches(
-                page, size, status, category, keyword, startDate, endDate);
+                page, size, status, category, keyword, startDate, endDate, matchType);
 
         return ResponseEntity.ok(ApiResponse.success(result));
     }
@@ -82,5 +82,15 @@ public class MatchController {
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(
                 ApiResponse.success(matchService.getOwnerMatchesPaged(page, size)));
+    }
+
+    @GetMapping("/my-matches")
+    public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getMyMatches(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                ApiResponse.success(matchService.getMyMatches(page, size))
+        );
     }
 }

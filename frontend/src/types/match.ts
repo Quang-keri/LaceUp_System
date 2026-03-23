@@ -1,4 +1,4 @@
-import type {UserResponse} from "./user.ts";
+import type { UserResponse } from "./user.ts";
 
 export interface MatchRequest {
     courtId: string | null;
@@ -12,6 +12,10 @@ export interface MatchRequest {
     recurringType?: 'DAILY' | 'WEEKLY' | null;
     dayOfWeek?: string | null;
     endDate?: string | null;
+    matchType: 'NORMAL' | 'BET' | 'RANKED';
+    winnerPercent?: number;
+    minRank?: number;
+    maxRank?: number;
 }
 
 export interface MatchResponse {
@@ -38,4 +42,8 @@ export interface MatchResponse {
     recurringType: string;
     dayOfWeek: string;
     endDate: string;
+        matchType: 'NORMAL' | 'BET' | 'RANKED';
+    winnerPercent?: number;
+    minRank?: number;
+    maxRank?: number;
 }

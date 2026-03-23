@@ -1,15 +1,17 @@
 import AppHeader from "../../components/Header/Header";
 import { Outlet } from "react-router-dom";
 import Footer from "../../components/Footer/Footer";
-import ChatBubble from "../../page/customer/chat/ChatBubble"
+import ChatBubble from "../../page/customer/chat/ChatBubble";
 
 export default function DefaultLayout() {
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <AppHeader />
-      
-      <Outlet />
-      
+
+      <main className="flex-1">
+        <Outlet />
+      </main>
+
       <Footer />
 
       <ChatBubble />
