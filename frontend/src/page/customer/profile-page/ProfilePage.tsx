@@ -85,15 +85,17 @@ const ProfilePage: React.FC = () => {
     setSelectedMenu(key);
     if (key === "2") {
       navigate("/my-matches");
+    } else if (key === "3") {
+      navigate("/booking-history");
     } else if (key === "1") {
       // Stay on profile page
-    } else if (key === "3") {
+    } else if (key === "4") {
       // Navigate to settings
       message.info("Cài đặt chưa được phát triển");
-    } else if (key === "4") {
+    } else if (key === "5") {
       // Navigate to security
       message.info("Bảo mật tài khoản chưa được phát triển");
-    } else if (key === "5") {
+    } else if (key === "6") {
       // Navigate to linked accounts
       message.info("Liên kết tài khoản chưa được phát triển");
     }
@@ -116,13 +118,18 @@ const ProfilePage: React.FC = () => {
   const menuItems = [
     { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
     { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
-    { key: "3", icon: <SettingOutlined />, label: "Cài đặt" },
     {
-      key: "4",
+      key: "3",
+      icon: <HistoryOutlined />,
+      label: "Lịch sử đặt sân",
+    },
+    { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
+    {
+      key: "5",
       icon: <SafetyCertificateOutlined />,
       label: "Bảo mật tài khoản",
     },
-    { key: "5", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
+    { key: "6", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
     { type: "divider" as const },
     {
       key: "logout",

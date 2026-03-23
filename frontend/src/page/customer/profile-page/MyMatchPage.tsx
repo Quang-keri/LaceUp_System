@@ -39,6 +39,7 @@ const { Title, Text } = Typography;
 const MyMatchPage: React.FC = () => {
   const { user, logout, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [selectedMenu, setSelectedMenu] = useState("2");
 
   const [matches, setMatches] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -75,6 +76,26 @@ const MyMatchPage: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const handleMenuClick = (key: string) => {
+    setSelectedMenu(key);
+    if (key === "2") {
+      // Stay on my-matches page
+    } else if (key === "1") {
+      navigate("/profile");
+    } else if (key === "3") {
+      navigate("/booking-history");
+    } else if (key === "4") {
+      // Navigate to settings
+      toast.info("Cài đặt chưa được phát triển");
+    } else if (key === "5") {
+      // Navigate to security
+      toast.info("Bảo mật tài khoản chưa được phát triển");
+    } else if (key === "6") {
+      // Navigate to linked accounts
+      toast.info("Liên kết tài khoản chưa được phát triển");
+    }
   };
 
   // ---------------- XỬ LÝ CHỐT KẾT QUẢ (HOST) ----------------
@@ -167,25 +188,20 @@ const MyMatchPage: React.FC = () => {
   }
 
   const menuItems = [
+    { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
+    { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
     {
-      key: "/profile",
-      icon: <UserOutlined />,
-      label: "Thông tin cá nhân",
-      onClick: () => navigate("/profile"),
-    },
-    {
-      key: "/my-matches",
+      key: "3",
       icon: <HistoryOutlined />,
-      label: "Trận đấu của tôi",
-      onClick: () => navigate("/my-matches"),
+      label: "Lịch sử đặt sân",
     },
-    { key: "3", icon: <SettingOutlined />, label: "Cài đặt" },
+    { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
     {
-      key: "4",
+      key: "5",
       icon: <SafetyCertificateOutlined />,
       label: "Bảo mật tài khoản",
     },
-    { key: "5", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
+    { key: "6", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
     { type: "divider" as const },
     {
       key: "logout",
@@ -416,8 +432,9 @@ const MyMatchPage: React.FC = () => {
             <Divider style={{ margin: "16px 0" }} />
             <Menu
               mode="inline"
-              selectedKeys={["/my-matches"]}
+              selectedKeys={[selectedMenu]}
               items={menuItems}
+              onClick={(e) => handleMenuClick(e.key)}
               style={{ borderRight: "none", textAlign: "left" }}
             />
           </Card>
