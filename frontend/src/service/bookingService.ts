@@ -67,6 +67,20 @@ class BookingService {
     return response.data;
   }
 
+  async downloadInvoice(bookingId: string) {
+    const response = await api.get(`/bookings/${bookingId}/invoice/download`, {
+      responseType: "blob",
+    });
+    return response;
+  }
+
+  async collectRemainingPayment(bookingId: string) {
+  
+    const response = await api.put<ApiResponse<any>>(
+      `/bookings/${bookingId}/collect-payment`
+    );
+    return response.data;
+  }
   async cancelBooking(bookingId: string) {
     const response = await api.delete<ApiResponse<void>>(
       `/bookings/${bookingId}`,

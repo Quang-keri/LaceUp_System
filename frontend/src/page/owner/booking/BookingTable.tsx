@@ -34,6 +34,8 @@ interface Props {
   onViewDetail: (booking: BookingResponse) => void;
   onEditSlot: (slot: any) => void;
   onUpdateStatus: (booking: BookingResponse) => void;
+  onCollectPayment: (booking: BookingResponse) => void;
+  onPrintInvoice: (booking: BookingResponse) => void;
 }
 
 export default function BookingTable({
@@ -44,6 +46,8 @@ export default function BookingTable({
   onViewDetail,
   onEditSlot,
   onUpdateStatus,
+  onCollectPayment,
+  onPrintInvoice,
 }: Props) {
   const columns = [
     {
@@ -172,6 +176,13 @@ export default function BookingTable({
     {
       title: "Thao tác",
       render: (_: any, record: BookingResponse) => {
+        // Tính toán số tiền còn lại để quyết định disable nút thanh toán hay không
+        const total = record.totalPrice || 0;
+        const deposit = record.depositAmount || 0;
+        const remaining = record.remainingAmount ?? total - deposit;
+        const isFullyPaid = remaining <= 0;
+
+        // Định nghĩa menu dropdown
         const items: MenuProps["items"] = [
           {
             key: "view",
@@ -187,6 +198,22 @@ export default function BookingTable({
             key: "status",
             label: "Cập nhật trạng thái",
             onClick: () => onUpdateStatus(record),
+          },
+          {
+            type: "divider", // Đường kẻ ngang phân cách
+          },
+          {
+            key: "payment",
+            label: `Thanh toán nốt (${remaining.toLocaleString("vi-VN")}đ)`,
+            danger: true,
+
+            onClick: () => onCollectPayment(record),
+          },
+          {
+            key: "invoice",
+            label: "In hóa đơn (PDF)",
+
+            onClick: () => onPrintInvoice(record),
           },
         ];
 

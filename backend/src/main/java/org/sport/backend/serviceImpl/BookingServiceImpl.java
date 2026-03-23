@@ -130,6 +130,7 @@ public class BookingServiceImpl implements BookingService {
                 throw new RuntimeException("Phải cung cấp courtId hoặc courtCopyId");
             }
 
+
             for (CourtCopy courtCopy : selectedCopies) {
 
                 if (rentalArea == null) {
@@ -138,6 +139,7 @@ public class BookingServiceImpl implements BookingService {
                         .equals(courtCopy.getCourt().getRentalArea().getRentalAreaId())) {
                     throw new RuntimeException("Tất cả sân phải thuộc cùng một khu vực");
                 }
+
 
                 BigDecimal price = calculateSlotPrice(
                         courtCopy.getCourt(),
@@ -439,7 +441,7 @@ public class BookingServiceImpl implements BookingService {
                 .userName(booking.getBookerName())
                 .phoneNumber(booking.getBookerPhone())
                 .note(booking.getNote())
-                .invoicePdfUrl(null)
+                .invoicePdfUrl(booking.getInvoiceUrl())
                 .rentalArea(
                         RentalAreaResponse.builder()
                                 .rentalAreaId(booking.getRentalArea().getRentalAreaId())
@@ -662,9 +664,7 @@ public class BookingServiceImpl implements BookingService {
     }
     private void updateSlots(List<UpdateSlotRequest> slotRequests) {
 
-        for (int i = 0; i < slotRequests.size(); i++) {
-            UpdateSlotRequest slotReq = slotRequests.get(i);
-
+        for (UpdateSlotRequest slotReq : slotRequests) {
 
             Slot slot = slotRepository.findById(slotReq.getSlotId())
                     .orElseThrow(() -> new RuntimeException("Slot không tồn tại"));
@@ -677,7 +677,6 @@ public class BookingServiceImpl implements BookingService {
                     ? slotReq.getEndTime()
                     : slot.getEndTime();
 
-
             validateSlotLogic(newStart, newEnd, slot.getStartTime());
 
             CourtCopy targetCopy = resolveCourtCopy(slot, slotReq, newStart, newEnd);
@@ -689,7 +688,6 @@ public class BookingServiceImpl implements BookingService {
             updateSlotPrice(slot, targetCopy, newStart, newEnd);
 
             slotRepository.save(slot);
-
         }
     }
     private CourtCopy resolveCourtCopy(
@@ -750,26 +748,20 @@ public class BookingServiceImpl implements BookingService {
     }
     private void validateSlotLogic(LocalDateTime start, LocalDateTime end, LocalDateTime oldStart) {
 
-
         if (start == null || end == null)
             throw new RuntimeException("Thời gian không hợp lệ");
 
         if (start.isAfter(end))
             throw new RuntimeException("Start phải trước end");
 
-        if (!start.equals(oldStart) && start.isBefore(LocalDateTime.now())) {
-            System.out.println("     ❌ PAST TIME ERROR: " + start + " is before " + LocalDateTime.now());
+        if (!start.equals(oldStart) && start.isBefore(LocalDateTime.now()))
             throw new RuntimeException("Không thể đặt thời gian trong quá khứ");
-        }
 
         if (start.getMinute() % 30 != 0 || end.getMinute() % 30 != 0)
             throw new RuntimeException("Thời gian phải theo mốc 30 phút");
 
-        long durationMinutes = Duration.between(start, end).toMinutes();
-        if (durationMinutes < 60)
+        if (Duration.between(start, end).toMinutes() < 60)
             throw new RuntimeException("Thời gian thuê ít nhất là hơn 1 tiếng");
-
-        System.out.println("     ✅ All validations passed. Duration: " + durationMinutes + " minutes");
     }
 
     private void syncSlotStatus(Booking booking, BookingStatus status) {
@@ -790,5 +782,37 @@ public class BookingServiceImpl implements BookingService {
         booking.setTotalPrice(total);
         booking.setStartTime(minStart);
         booking.setEndTime(maxEnd);
+                // Recalculate remaining amount based on existing deposit
+                BigDecimal deposit = booking.getDepositAmount() == null ? BigDecimal.ZERO : booking.getDepositAmount();
+                booking.setRemainingAmount(total.subtract(deposit));
+    }
+
+        @Override
+        public String generateInvoiceUrl(UUID bookingId, String invoiceViewUrl) {
+                Booking booking = bookingRepository.findById(bookingId)
+                                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+                booking.setInvoiceUrl(invoiceViewUrl);
+                bookingRepository.save(booking);
+                return invoiceViewUrl;
+        }
+        @Override
+    @Transactional
+    public void collectRemainingPayment(UUID bookingId) {
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Booking với ID: " + bookingId));
+
+        if (booking.getRemainingAmount() != null && booking.getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Đơn hàng này đã được thanh toán đủ!");
+        }
+        booking.setRemainingAmount(BigDecimal.ZERO);
+        booking.setDepositAmount(booking.getTotalPrice());;
+
+         if (booking.getBookingStatus() == BookingStatus.BOOKED) {
+             booking.setBookingStatus(BookingStatus.COMPLETED);
+         }
+
+        bookingRepository.save(booking);
     }
 }

@@ -7,9 +7,16 @@ import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.service.BookingService;
+import org.sport.backend.service.InvoiceService;
+import org.sport.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -21,6 +28,8 @@ public class BookingController {
 
     @Autowired
     private BookingService bookingService;
+    @Autowired
+    private InvoiceService invoiceService;
 
     @PostMapping("/intent")
     public ApiResponse<?> createIntent(
@@ -48,7 +57,7 @@ public class BookingController {
     ) {
 
         return ApiResponse.success(
-                bookingService.confirmBooking(intentId,null)
+                bookingService.confirmBooking(intentId, null)
         );
     }
 
@@ -61,6 +70,59 @@ public class BookingController {
 
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
+        }
+    }
+
+
+    @GetMapping(value = "/{bookingId}/invoice/view", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> viewInvoice(@PathVariable UUID bookingId) {
+        try {
+            var booking = bookingService.getBookingById(bookingId);
+            // Build a minimal HTML invoice for printing
+            StringBuilder html = new StringBuilder();
+            html.append("<html><head><meta charset=\"utf-8\"><title>Invoice</title>");
+            html.append("<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}</style>");
+            html.append("</head><body>");
+            html.append("<h2>Hóa đơn dịch vụ</h2>");
+            html.append("<p>Mã booking: " + booking.getBookingId() + "</p>");
+            html.append("<p>Khách hàng: " + booking.getUserName() + " - " + booking.getPhoneNumber() + "</p>");
+            html.append("<table><thead><tr><th>Sân</th><th>Giờ bắt đầu</th><th>Giờ kết thúc</th><th>Giá</th></tr></thead><tbody>");
+            booking.getSlots().forEach(s -> {
+                html.append("<tr>");
+                html.append("<td>" + s.getCourtCode() + "</td>");
+                html.append("<td>" + s.getStartTime() + "</td>");
+                html.append("<td>" + s.getEndTime() + "</td>");
+                html.append("<td>" + (s.getPrice() != null ? s.getPrice().toString() : "0") + "</td>");
+                html.append("</tr>");
+            });
+            html.append("</tbody></table>");
+            html.append("<p>Tổng: " + (booking.getTotalPrice() != null ? booking.getTotalPrice() : "0") + "</p>");
+            html.append("</body></html>");
+
+            return ResponseEntity.ok(html.toString());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error rendering invoice: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{bookingId}/invoice/download")
+    public ResponseEntity<byte[]> downloadInvoice(@PathVariable UUID bookingId) {
+        var booking = bookingService.getBookingById(bookingId);
+        byte[] pdf = invoiceService.generateInvoicePdf(booking);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=invoice_" + bookingId + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @PutMapping("/{bookingId}/collect-payment")
+    public ResponseEntity<?> collectRemainingPayment(@PathVariable UUID bookingId) {
+        try {
+            bookingService.collectRemainingPayment(bookingId);
+            return ResponseEntity.ok(ApiResponse.success(200,"Payment successfully",null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Error when payment"));
         }
     }
 
@@ -99,7 +161,7 @@ public class BookingController {
     ) {
         try {
 
-            
+
             if (request.getSlots() != null && !request.getSlots().isEmpty()) {
                 System.out.println("📍 Slot Times Received:");
                 for (int i = 0; i < request.getSlots().size(); i++) {
