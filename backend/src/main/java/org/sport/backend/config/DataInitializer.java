@@ -230,7 +230,7 @@ public class DataInitializer implements CommandLineRunner {
         Court court = Court.builder()
                 .courtName("Sân VIP 01")
                 .surfaceType("Thảm PVC")
-                .price(BigDecimal.valueOf(80000))
+//                .price(BigDecimal.valueOf(80000))
                 .courtStatus(CourtStatus.ACTIVE)
                 .indoor(true)
                 .rentalArea(area)
@@ -302,7 +302,7 @@ public class DataInitializer implements CommandLineRunner {
                     .transactionDate(createdAt.plusMinutes(15))
                     .paymentMethod(PaymentMethod.VN_PAY)
                     .paymentStatus(PaymentStatus.COMPLETED)
-                    .paymentType(PaymentType.FINAL)
+                    .paymentType(PaymentType.FULL)
                     .transactionCode("OWNER_PAY_" + System.currentTimeMillis() + i)
                     .build());
         }

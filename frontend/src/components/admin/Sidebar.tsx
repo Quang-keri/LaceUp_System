@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     getItem("Quản lý sân bãi", "sub_courts", <ShopOutlined />, [
       getItem(<Link to="/admin/courts">Danh sách sân</Link>, "/admin/courts"),
       getItem(
-        <Link to="/admin/court-types">Loại sân (5-7-9, Cầu lông...)</Link>,
+        <Link to="/admin/court-types">Loại sân</Link>,
         "/admin/court-types",
       ),
       getItem(

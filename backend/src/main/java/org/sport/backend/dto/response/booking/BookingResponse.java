@@ -1,6 +1,7 @@
 package org.sport.backend.dto.response.booking;
 
 
+import jakarta.persistence.Column;
 import lombok.*;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
@@ -32,4 +33,7 @@ public class BookingResponse {
     private String invoicePdfUrl;
     private String note;
     private String paymentMethod;
+    private BigDecimal depositAmount;
+    private BigDecimal remainingAmount;
+
 }

@@ -5,6 +5,7 @@ import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
+import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
@@ -313,6 +314,14 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         List<CourtSummaryResponse> courtResponses = courts.stream().map(court -> {
 
+
+            List<AmenityResponse> amenityResponses = court.getAmenities().stream().map(
+                    amenity -> AmenityResponse.builder()
+                            .amenityId(amenity.getAmenityId())
+                            .amenityName(amenity.getAmenityName())
+                            .iconKey(amenity.getIconKey())
+                            .build()
+            ).toList();
             int totalCopies = courtCopyRepository
                     .countByCourt(court);
 
@@ -359,7 +368,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             return CourtSummaryResponse.builder()
                     .courtId(court.getCourtId())
                     .courtName(court.getCourtName())
-                    .price(court.getPrice())
                     .minPrice(minPrice)
                     .maxPrice(maxPrice)
                     .priceRules(priceResponses)
@@ -368,6 +376,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                     .categoryName(court.getCategory().getCategoryName())
                     .coverImage(cover)
                     .courtCopies(copies)
+                    .amenities(amenityResponses)
                     .build();
 
         }).toList();

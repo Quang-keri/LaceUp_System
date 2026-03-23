@@ -6,22 +6,33 @@ import bookingService from "../../../service/bookingService";
 import RentalAreaFilter from "./RentalAreaFilter";
 import BookingTable from "./BookingTable";
 import BookingDetailModal from "./BookingDetailModal";
-import BookingEditModal from "./BookingEditModal";
+import SlotEditorModal from "./SlotEditorModal";
+import BookingStatusUpdateModal from "./BookingStatusUpdateModal";
 
 export default function BookingManagementPage() {
-  // 1. States cho dữ liệu và lọc
-  const [buildings, setBuildings] = useState([]);
+  const [buildings, setBuildings] = useState<any[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(
     null,
   );
-  const [bookings, setBookings] = useState([]);
+
+  const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
   const [keyword, setKeyword] = useState("");
 
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
+
+  // modal detail
   const [detailOpen, setDetailOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
+
+  // 🔥 EDIT MODAL (Quản lý chung cả danh sách slot & sửa từng slot)
+  const [slotEditOpen, setSlotEditOpen] = useState(false);
+
+  // Status update modal
+  const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
+  const [bookingForStatusUpdate, setBookingForStatusUpdate] =
+    useState<any>(null);
 
   const [pagination, setPagination] = useState({
     current: 1,
@@ -29,27 +40,22 @@ export default function BookingManagementPage() {
     total: 0,
   });
 
-  // --- LOGIC CALL API ---
-
+  // ===== API =====
   const fetchBuildings = async () => {
     try {
-      const res = await rentalService.getMyRentalAreas(1, 100); // Lấy danh sách tòa nhà
+      const res = await rentalService.getMyRentalAreas(1, 100);
       setBuildings(res.result.data);
       if (res.result.data.length > 0) {
         setSelectedBuildingId(res.result.data[0].rentalAreaId);
       }
     } catch {
-      message.error("Lỗi tải danh sách tòa nhà");
+      message.error("Lỗi tải sân");
     }
   };
 
-  const fetchBookings = async (
-    page = 1,
-    size = 10,
-    currentKeyword = keyword,
-    status = filterStatus,
-  ) => {
+  const fetchBookings = async (page = 1, size = 10, status = filterStatus) => {
     if (!selectedBuildingId) return;
+
     setLoading(true);
     try {
       const res = await bookingService.getBookingsByRentalArea(
@@ -57,7 +63,6 @@ export default function BookingManagementPage() {
         page,
         size,
         status,
-        currentKeyword,
       );
 
       setBookings(res.result.data);
@@ -67,58 +72,68 @@ export default function BookingManagementPage() {
         total: res.result.totalElements,
       });
     } catch {
-      message.error("Lỗi tải danh sách booking");
+      message.error("Lỗi tải booking");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = (value: string) => {
-    setKeyword(value);
-    fetchBookings(1, pagination.pageSize, value, filterStatus);
-  };
-
-  const handleStatusChange = (status?: string) => {
-    setFilterStatus(status);
-    fetchBookings(1, pagination.pageSize, keyword, status);
-  };
-
-  const handleEditClick = (booking: any) => {
-    setSelectedBooking(booking);
-    setEditOpen(true);
-  };
-
-  const handleViewDetail = async (booking: any) => {
-    if (!booking?.bookingId) return;
+  // ===== ACTION =====
+  const handleEditSlot = async (record: any) => {
     try {
-      setLoading(true);
-      const res = await bookingService.getBookingById(booking.bookingId);
+      const res = await bookingService.getBookingById(record.bookingId);
       setSelectedBooking(res.result);
-      setDetailOpen(true);
-    } catch (error) {
-      message.error("Lỗi tải chi tiết booking");
-    } finally {
-      setLoading(false);
+      setSlotEditOpen(true);
+    } catch {
+      message.error("Không load được thông tin đơn");
     }
   };
 
-  const handleUpdateBookingSubmit = async (payload: any) => {
-    if (!selectedBooking) return;
-    try {
-      setLoading(true);
-      await bookingService.updateBooking(selectedBooking.bookingId, payload);
-      message.success("Cập nhật booking thành công!");
-      setEditOpen(false);
+  // Hàm này dùng để refresh lại data sau khi sửa 1 slot thành công
+  const handleRefreshAfterEdit = async () => {
+    // Refresh bảng tổng
+    fetchBookings(pagination.current, pagination.pageSize);
+    // Refresh lại data của booking đang mở để update danh sách slot
+    if (selectedBooking?.bookingId) {
+      try {
+        const res = await bookingService.getBookingById(
+          selectedBooking.bookingId,
+        );
+        setSelectedBooking(res.result);
+      } catch (e) {
+        console.error("Lỗi refresh booking detail");
+      }
+    }
+  };
 
+  const handleUpdateStatus = (booking: any) => {
+    setBookingForStatusUpdate(booking);
+    setStatusUpdateOpen(true);
+  };
+
+  const handleStatusUpdateSubmit = async (values: any) => {
+    if (!bookingForStatusUpdate) return;
+
+    setLoading(true);
+    try {
+      await bookingService.updateBooking(bookingForStatusUpdate.bookingId, {
+        bookingStatus: values.bookingStatus,
+        note: values.note,
+      });
+
+      message.success("Cập nhật trạng thái booking thành công");
+      setStatusUpdateOpen(false);
+      setBookingForStatusUpdate(null);
       fetchBookings(pagination.current, pagination.pageSize);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || "Cập nhật thất bại";
-      message.error(errorMsg);
+      console.error("Update status error:", error);
+      message.error(error.response?.data?.message || "Lỗi cập nhật trạng thái");
     } finally {
       setLoading(false);
     }
   };
 
+  // ===== EFFECT =====
   useEffect(() => {
     fetchBuildings();
   }, []);
@@ -135,29 +150,31 @@ export default function BookingManagementPage() {
         buildings={buildings}
         selectedBuildingId={selectedBuildingId}
         filterStatus={filterStatus}
-        onBuildingChange={(id) => setSelectedBuildingId(id)}
-        onStatusChange={handleStatusChange}
-        onSearch={handleSearch}
+        onBuildingChange={(id: string) => setSelectedBuildingId(id)}
+        onStatusChange={(status?: string) => {
+          setFilterStatus(status);
+          fetchBookings(1, pagination.pageSize, keyword, status);
+        }}
+        onSearch={(value: string) => {
+          setKeyword(value);
+          fetchBookings(1, pagination.pageSize, value, filterStatus);
+        }}
       />
 
-      <Card title="Quản lý danh sách Booking">
+      <Card title="Quản lý Booking">
         <BookingTable
           bookings={bookings}
           loading={loading}
           pagination={pagination}
-          onChange={(pageInfo) =>
+          onChange={(pageInfo: any) =>
             fetchBookings(pageInfo.current, pageInfo.pageSize)
           }
-          onViewDetail={handleViewDetail}
-          onUpdateStatus={handleEditClick}
-          onConfirm={async (record) => {
-            message.info(`Xác nhận đơn ${record.bookingId.substring(0, 8)}`);
+          onViewDetail={(b: any) => {
+            setSelectedBooking(b);
+            setDetailOpen(true);
           }}
-          onCancel={async (record) => {
-            message.warning(
-              `Yêu cầu hủy đơn ${record.bookingId.substring(0, 8)}`,
-            );
-          }}
+          onEditSlot={handleEditSlot}
+          onUpdateStatus={handleUpdateStatus}
         />
       </Card>
 
@@ -167,12 +184,22 @@ export default function BookingManagementPage() {
         onClose={() => setDetailOpen(false)}
       />
 
-      <BookingEditModal
-        open={editOpen}
+      <SlotEditorModal
+        open={slotEditOpen}
         booking={selectedBooking}
-        rentalAreaId={selectedBuildingId}
-        onCancel={() => setEditOpen(false)}
-        onSubmit={handleUpdateBookingSubmit}
+        onClose={() => setSlotEditOpen(false)}
+        onSuccess={handleRefreshAfterEdit}
+      />
+
+      <BookingStatusUpdateModal
+        open={statusUpdateOpen}
+        loading={loading}
+        booking={bookingForStatusUpdate}
+        onCancel={() => {
+          setStatusUpdateOpen(false);
+          setBookingForStatusUpdate(null);
+        }}
+        onSubmit={handleStatusUpdateSubmit}
       />
     </div>
   );

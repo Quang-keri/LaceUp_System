@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -28,6 +29,6 @@ public class CourtRequest {
     @NotNull(message = "mã phòng không bỏ trống")
     @Size(min = 1, message = "phải có ít nhất 1 mã phòng")
     private List<String> courtCodes;
-
+    private Set<Long> amenityIds;
     private List<MultipartFile> images;
 }

@@ -1,12 +1,12 @@
-import { Table, Space, Button, Popconfirm, Tag } from "antd";
-import {
-  CheckOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+import { Table, Space, Button, Tag } from "antd";
 import type { BookingResponse } from "../../../types/booking";
 import dayjs from "dayjs";
+import { Dropdown } from "antd";
+import { MoreOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
+// Đã bổ sung cả BOOKED và CONFIRMED để tránh lỗi miss data từ API
 const statusColorMap: Record<string, string> = {
+  BOOKED: "blue",
   CONFIRMED: "blue",
   COMPLETED: "green",
   CANCELLED: "red",
@@ -14,8 +14,16 @@ const statusColorMap: Record<string, string> = {
 
 const statusLabelMap: Record<string, string> = {
   BOOKED: "Đã xác nhận",
+  CONFIRMED: "Đã xác nhận",
   COMPLETED: "Hoàn thành",
   CANCELLED: "Hủy",
+};
+
+const methodLabelMap: Record<string, string> = {
+  CASH: "Tiền mặt",
+  PAY_OS: "PAY OS",
+  VN_PAY: "Chuyển khoản",
+  BANKING: "Chuyển khoản",
 };
 
 interface Props {
@@ -23,96 +31,171 @@ interface Props {
   loading: boolean;
   pagination: any;
   onChange: (pageInfo: any) => void;
-  onConfirm: (booking: BookingResponse) => void;
-  onCancel: (booking: BookingResponse) => void;
   onViewDetail: (booking: BookingResponse) => void;
+  onEditSlot: (slot: any) => void;
   onUpdateStatus: (booking: BookingResponse) => void;
 }
-const methodLabelMap: Record<string, string> = {
-  CASH: "Tiền mặt (Tại nơi)",
-  PAY_OS: "PAY OS",
-  VN_PAY: "Chuyển khoản (Online)",
-  BANKING: "Chuyển khoản (Online)",
-};
+
 export default function BookingTable({
   bookings,
   loading,
   pagination,
   onChange,
-  onConfirm,
-  onCancel,
   onViewDetail,
+  onEditSlot,
   onUpdateStatus,
 }: Props) {
   const columns = [
     {
       title: "STT",
       key: "stt",
-      width: 70,
       render: (_: any, __: any, index: number) => {
-        const { current, pageSize } = pagination;
+        // Đảm bảo không bị crash nếu pagination chưa kịp load
+        const current = pagination?.current || 1;
+        const pageSize = pagination?.pageSize || 10;
         return (current - 1) * pageSize + index + 1;
       },
     },
     {
       title: "Mã đơn",
       dataIndex: "bookingId",
-      render: (id: string) => id.substring(0, 8) + "...",
+      // Dùng id?.substring để tránh lỗi nếu id bị null/undefined
+      render: (id: string) => (id ? id.substring(0, 8) + "..." : "---"),
     },
     {
       title: "Khách hàng",
       dataIndex: "userName",
+      render: (name: string) => name || "Chưa cập nhật",
     },
     {
       title: "Điện thoại",
       dataIndex: "phoneNumber",
+      render: (phone: string) => phone || "---",
     },
     {
-      title: "Giờ",
-      render: (_: any, record: BookingResponse) =>
-        `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - 
-         ${dayjs(record.endTime).format("HH:mm")}`,
+      title: "Khung Giờ",
+      render: (_: any, record: BookingResponse) => {
+        // Ưu tiên render giờ từ mảng slots để luôn lấy data mới nhất và chi tiết nhất
+        if (record.slots && record.slots.length > 0) {
+          return (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
+            >
+              {record.slots.map((slot) => (
+                <div key={slot.slotId}>
+                  {dayjs(slot.startTime).format("DD/MM/YYYY HH:mm")} -{" "}
+                  {dayjs(slot.endTime).format("HH:mm")}
+                </div>
+              ))}
+            </div>
+          );
+        }
+
+        // Fallback lại giờ của booking nếu không có slots
+        return record.startTime && record.endTime
+          ? `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - ${dayjs(
+              record.endTime,
+            ).format("HH:mm")}`
+          : "Chưa rõ thời gian";
+      },
     },
     {
-      title: "Giá",
-      dataIndex: "totalPrice",
-      render: (price: number) => price?.toLocaleString("vi-VN") + " VND",
-    },
-    {
-      title: "Hình thức trả",
-      dataIndex: "paymentMethod",
-      render: (method: string) => {
-        // 2. Cập nhật màu sắc linh hoạt hơn
-        let color = "default";
-        if (method === "CASH") color = "orange";
-        else if (["VNPAY", "BANKING", "PAY_OS"].includes(method))
-          color = "cyan";
+      title: "Thanh toán",
+      render: (_: any, record: BookingResponse) => {
+        const total = record.totalPrice || 0;
+        const deposit = record.depositAmount || 0;
+        const remaining = record.remainingAmount ?? total - deposit;
+
+        const paid = total - remaining;
+        const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
 
         return (
-          <Tag color={color}>{methodLabelMap[method] || "Chưa xác định"}</Tag>
+          <div style={{ minWidth: 180 }}>
+            <div>
+              <b>{paid.toLocaleString("vi-VN")}đ</b> /{" "}
+              {total.toLocaleString("vi-VN")}đ
+            </div>
+
+            <div
+              style={{
+                height: 6,
+                background: "#f0f0f0",
+                borderRadius: 4,
+                marginTop: 4,
+              }}
+            >
+              <div
+                style={{
+                  width: `${percent}%`,
+                  height: "100%",
+                  background:
+                    percent === 100
+                      ? "#52c41a"
+                      : percent > 0
+                      ? "#faad14"
+                      : "#ff4d4f",
+                  borderRadius: 4,
+                }}
+              />
+            </div>
+
+            <div style={{ fontSize: 12, marginTop: 4 }}>
+              {percent === 100 ? (
+                <Tag color="green">Đã thanh toán đủ</Tag>
+              ) : percent > 0 ? (
+                <Tag color="orange">Đã cọc {percent}%</Tag>
+              ) : (
+                <Tag color="red">Chưa thanh toán</Tag>
+              )}
+            </div>
+          </div>
         );
       },
+    },
+
+    {
+      title: "Phương thức trả",
+      dataIndex: "paymentMethod",
+      render: (method: string) => (
+        <Tag>{methodLabelMap[method] || method || "Không rõ"}</Tag>
+      ),
     },
     {
       title: "Trạng thái",
       dataIndex: "bookingStatus",
       render: (status: string) => (
-        <Tag color={statusColorMap[status]}>{statusLabelMap[status]}</Tag>
+        <Tag color={statusColorMap[status] || "default"}>
+          {statusLabelMap[status] || status || "Không rõ"}
+        </Tag>
       ),
     },
     {
       title: "Thao tác",
-      render: (_: any, record: BookingResponse) => (
-        <Space>
-          <Button size="small" onClick={() => onViewDetail(record)}>
-            Chi tiết
-          </Button>
+      render: (_: any, record: BookingResponse) => {
+        const items: MenuProps["items"] = [
+          {
+            key: "view",
+            label: "Chi tiết",
+            onClick: () => onViewDetail(record),
+          },
+          {
+            key: "edit",
+            label: "Sửa Slot",
+            onClick: () => onEditSlot(record),
+          },
+          {
+            key: "status",
+            label: "Cập nhật trạng thái",
+            onClick: () => onUpdateStatus(record),
+          },
+        ];
 
-          <Button size="small" onClick={() => onUpdateStatus(record)}>
-            Chỉnh sửa
-          </Button>
-        </Space>
-      ),
+        return (
+          <Dropdown menu={{ items }} trigger={["click"]}>
+            <Button icon={<MoreOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -121,7 +204,7 @@ export default function BookingTable({
       columns={columns}
       dataSource={bookings}
       loading={loading}
-      rowKey="bookingId"
+      rowKey={(record) => record.bookingId || Math.random().toString()} // Fallback rowKey
       pagination={pagination}
       onChange={onChange}
     />

@@ -60,4 +60,11 @@ public interface CourtPriceRepository extends JpaRepository<CourtPrice, UUID>, J
             LocalTime time,
             LocalDate date
     );
+
+    @Query("""
+        SELECT cp FROM CourtPrice cp
+        WHERE cp.court.courtId = :courtId
+        ORDER BY cp.priority DESC NULLS LAST
+    """)
+    List<CourtPrice> findByCourtIdOrderByPriorityDesc(@Param("courtId") UUID courtId);
 }

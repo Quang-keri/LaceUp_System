@@ -101,7 +101,7 @@ public class MatchResultServiceImpl implements MatchResultService {
             if (match.getMatchType() == MatchType.RANKED) {
                 processRankedMatch(result);
             } else if (match.getMatchType() == MatchType.BET) {
-                processBetMatch(result);
+//                processBetMatch(result);
             }
         } else {
             result.setStatus(ResultStatus.REJECTED);
@@ -136,36 +136,36 @@ public class MatchResultServiceImpl implements MatchResultService {
         }
     }
 
-    private void processBetMatch(MatchResult result) {
-        Match match = result.getMatch();
-        if (match.getCourt() == null || match.getCourt().getPrice() == null) return;
-
-        BigDecimal totalPrice = match.getCourt().getPrice();
-
-        double winnerPercentVal = match.getWinnerPercent() != null ? match.getWinnerPercent() : 50.0;
-
-        BigDecimal winnerRatio = BigDecimal.valueOf(winnerPercentVal)
-                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
-        BigDecimal loserRatio = BigDecimal.ONE.subtract(winnerRatio);
-
-        List<UUID> winners = result.getWinnerIds();
-        List<UUID> losers = result.getLoserIds();
-
-        BigDecimal payPerWinner = BigDecimal.ZERO;
-        if (winners != null && !winners.isEmpty()) {
-            BigDecimal totalWinnerPay = totalPrice.multiply(winnerRatio);
-            payPerWinner = totalWinnerPay.divide(BigDecimal.valueOf(winners.size()), 2, RoundingMode.HALF_UP);
-        }
-
-        BigDecimal payPerLoser = BigDecimal.ZERO;
-        if (losers != null && !losers.isEmpty()) {
-            BigDecimal totalLoserPay = totalPrice.multiply(loserRatio);
-            payPerLoser = totalLoserPay.divide(BigDecimal.valueOf(losers.size()), 2, RoundingMode.HALF_UP);
-        }
-
-        log.info("=== KẾT QUẢ KÈO TRẬN {} ===", match.getMatchId());
-        log.info("Phe Thắng trả: {} VNĐ/người", payPerWinner);
-        log.info("Phe Thua trả: {} VNĐ/người", payPerLoser);
-
-    }
+//    private void processBetMatch(MatchResult result) {
+//        Match match = result.getMatch();
+//        if (match.getCourt() == null || match.getCourt().getCourtPrices().get() == null) return;
+//
+//        BigDecimal totalPrice = match.getCourt().getPrice();
+//
+//        double winnerPercentVal = match.getWinnerPercent() != null ? match.getWinnerPercent() : 50.0;
+//
+//        BigDecimal winnerRatio = BigDecimal.valueOf(winnerPercentVal)
+//                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+//        BigDecimal loserRatio = BigDecimal.ONE.subtract(winnerRatio);
+//
+//        List<UUID> winners = result.getWinnerIds();
+//        List<UUID> losers = result.getLoserIds();
+//
+//        BigDecimal payPerWinner = BigDecimal.ZERO;
+//        if (winners != null && !winners.isEmpty()) {
+//            BigDecimal totalWinnerPay = totalPrice.multiply(winnerRatio);
+//            payPerWinner = totalWinnerPay.divide(BigDecimal.valueOf(winners.size()), 2, RoundingMode.HALF_UP);
+//        }
+//
+//        BigDecimal payPerLoser = BigDecimal.ZERO;
+//        if (losers != null && !losers.isEmpty()) {
+//            BigDecimal totalLoserPay = totalPrice.multiply(loserRatio);
+//            payPerLoser = totalLoserPay.divide(BigDecimal.valueOf(losers.size()), 2, RoundingMode.HALF_UP);
+//        }
+//
+//        log.info("=== KẾT QUẢ KÈO TRẬN {} ===", match.getMatchId());
+//        log.info("Phe Thắng trả: {} VNĐ/người", payPerWinner);
+//        log.info("Phe Thua trả: {} VNĐ/người", payPerLoser);
+//
+//    }
 }

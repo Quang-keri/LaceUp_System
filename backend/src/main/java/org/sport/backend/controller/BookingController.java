@@ -48,7 +48,7 @@ public class BookingController {
     ) {
 
         return ApiResponse.success(
-                bookingService.confirmBooking(intentId)
+                bookingService.confirmBooking(intentId,null)
         );
     }
 

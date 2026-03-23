@@ -31,10 +31,10 @@ public class CourtCopy extends BaseEntity {
     private CourtCopyStatus courtCopyStatus;
 
     @ManyToOne
+    @JoinColumn(name = "court_court_id")
     private Court court;
 
     @OneToMany(mappedBy = "courtCopy", fetch = FetchType.LAZY)
-
     private List<Slot> slots = new ArrayList<>();
 }
 

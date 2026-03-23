@@ -73,13 +73,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/owner/bookings/calendar",
       ),
     ]),
-    getItem("Quản lý hàng hóa", "sub_product", <CalendarOutlined />, [
-      getItem(<Link to="/owner/product/list">Tất cả</Link>, "/owner/area/list"),
-      getItem(
-        <Link to="/owner/product/types">Loại hàng hóa</Link>,
-        "/owner/product/types",
-      ),
-    ]),
 
     //
     getItem("Quản lý Cơ sở", "sub_area", <CalendarOutlined />, [

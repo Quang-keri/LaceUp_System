@@ -43,7 +43,7 @@ public interface CourtCopyRepository extends JpaRepository<CourtCopy, UUID>, Jpa
         SELECT cc
         FROM CourtCopy cc
         WHERE cc.court.rentalArea.rentalAreaId = :rentalAreaId
-        AND cc.courtCopyStatus = 'AVAILABLE'
+        AND cc.courtCopyStatus = 'ACTIVE'
     """)
     List<CourtCopy> findByRentalAreaId(UUID rentalAreaId);
 

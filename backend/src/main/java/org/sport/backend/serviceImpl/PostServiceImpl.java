@@ -158,7 +158,6 @@ public class PostServiceImpl implements PostService {
 
                 .courtId(court.getCourtId())
                 .courtName(court.getCourtName())
-                .price(court.getPrice())
                 .courtCoverImageUrl(coverImage)
 
                 .rentalAreaId(rentalArea.getRentalAreaId())

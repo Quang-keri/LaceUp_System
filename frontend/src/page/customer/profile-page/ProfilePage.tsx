@@ -38,6 +38,7 @@ const ProfilePage: React.FC = () => {
   const { user, logout, isLoading, refreshProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loadingSave, setLoadingSave] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState("1");
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
@@ -80,6 +81,24 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleMenuClick = (key: string) => {
+    setSelectedMenu(key);
+    if (key === "2") {
+      navigate("/my-matches");
+    } else if (key === "1") {
+      // Stay on profile page
+    } else if (key === "3") {
+      // Navigate to settings
+      message.info("Cài đặt chưa được phát triển");
+    } else if (key === "4") {
+      // Navigate to security
+      message.info("Bảo mật tài khoản chưa được phát triển");
+    } else if (key === "5") {
+      // Navigate to linked accounts
+      message.info("Liên kết tài khoản chưa được phát triển");
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate("/");
@@ -95,18 +114,8 @@ const ProfilePage: React.FC = () => {
 
   // Menu Sidebar Trái
   const menuItems = [
-    {
-      key: "/profile",
-      icon: <UserOutlined />,
-      label: "Thông tin cá nhân",
-      onClick: () => navigate("/profile"),
-    },
-    {
-      key: "/my-matches",
-      icon: <HistoryOutlined />,
-      label: "Trận đấu của tôi",
-      onClick: () => navigate("/my-matches"),
-    },
+    { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
+    { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
     { key: "3", icon: <SettingOutlined />, label: "Cài đặt" },
     {
       key: "4",
@@ -157,6 +166,14 @@ const ProfilePage: React.FC = () => {
             style={{ borderRadius: "12px", textAlign: "center" }}
             bordered={false}
           >
+            {/*<Avatar*/}
+            {/*    size={80}*/}
+            {/*    src={user?.avatar}*/}
+            {/*    style={{ backgroundColor: '#e6f4ff', color: '#1677ff', fontSize: '32px', marginBottom: '16px' }}*/}
+            {/*>*/}
+            {/*    /!* Nếu không có avatar thì hiện chữ cái đầu của tên *!/*/}
+            {/*    {user?.userName}*/}
+            {/*</Avatar>*/}
             <Title level={4} style={{ margin: 0 }}>
               {user ? `${user.userName}` : "N/A"}
             </Title>
@@ -184,8 +201,9 @@ const ProfilePage: React.FC = () => {
 
             <Menu
               mode="inline"
-              defaultSelectedKeys={["/profile"]}
+              selectedKeys={[selectedMenu]}
               items={menuItems}
+              onClick={(e) => handleMenuClick(e.key)}
               style={{ borderRight: "none", textAlign: "left" }}
             />
           </Card>
@@ -250,11 +268,13 @@ const ProfilePage: React.FC = () => {
                 />
               </Form.Item>
 
+              {/* Section checkbox giữ nguyên logic của bạn */}
               <Form.Item label="Môn thể thao" name="sports">
                 <Checkbox.Group>
                   <Space direction="horizontal" wrap>
                     <Checkbox value="football">Bóng đá</Checkbox>
                     <Checkbox value="badminton">Cầu lông</Checkbox>
+                    {/* ... */}
                   </Space>
                 </Checkbox.Group>
               </Form.Item>
@@ -288,6 +308,7 @@ const ProfilePage: React.FC = () => {
 
         {/* Cột 3: Thống kê & Hoạt động */}
         <Col xs={24} md={24} lg={6}>
+          {/* Card Thể thao */}
           <Card
             title="Các môn đang chơi"
             bordered={false}
@@ -331,6 +352,7 @@ const ProfilePage: React.FC = () => {
             </Row>
           </Card>
 
+          {/* Card Hoạt động gần đây */}
           <Card
             title="Hoạt động gần đây"
             bordered={false}

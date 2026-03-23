@@ -1,452 +1,392 @@
-import {
-  Modal,
-  Form,
-  Select,
-  Input,
-  Divider,
-  DatePicker,
-  Typography,
-  message,
-  Button,
-  Space,
-  Tag,
-} from "antd";
-import { CheckCircleOutlined } from "@ant-design/icons";
-import { useEffect, useState } from "react";
-import dayjs from "dayjs";
-import courtService from "../../../service/courtService";
-
-const { Text } = Typography;
-
-interface Props {
-  open: boolean;
-  booking: any;
-  rentalAreaId?: string | null;
-  onCancel: () => void;
-  onSubmit: (values: any) => void;
-}
-
-export default function BookingEditModal({
-  open,
-  booking,
-  rentalAreaId,
-  onCancel,
-  onSubmit,
-}: Props) {
-  const [form] = Form.useForm();
-  const [courtCopyOptions, setCourtCopyOptions] = useState<any[]>([]);
-  const [checking, setChecking] = useState(false);
-
-  useEffect(() => {
-    if (!open || !booking) return;
-
-    form.setFieldsValue({
-      bookerName: booking.userName,
-      bookerPhone: booking.phoneNumber,
-      status: booking.bookingStatus,
-      notes: booking.note,
-
-      slots: booking.slots?.map((slot: any) => ({
-        slotId: slot.slotId,
-
-        currentStart: dayjs(slot.startTime),
-        currentEnd: dayjs(slot.endTime),
-
-        timeRange: null,
-
-        courtCode: slot.courtCode,
-        courtCopyId: slot.courtCopyId,
-        originalCourtCopyId: slot.courtCopyId,
-      })),
-    });
-  }, [open, booking]);
-
-  useEffect(() => {
-    const fetchCourtCopies = async () => {
-      try {
-        const rentalId = rentalAreaId || booking?.rentalAreaId;
-        if (!rentalId) return;
-
-        const res = await courtService.getCourtsByRentalArea(rentalId, 1, 200);
-
-        const courts = res.result?.data || [];
-
-        const options: any[] = [];
-
-        courts.forEach((c: any) => {
-          (c.courtCopies || []).forEach((copy: any) => {
-            options.push({
-              label: `${c.courtName} - ${copy.courtCode}`,
-              value: copy.courtCopyId,
-            });
-          });
-        });
-
-        setCourtCopyOptions(options);
-      } catch {
-        message.error("Không thể tải danh sách sân");
-      }
-    };
-
-    if (open) fetchCourtCopies();
-  }, [open]);
-
-  const getSlotTime = (slot: any) => {
-    const startMoment = slot.timeRange?.[0] ?? slot.currentStart;
-    const endMoment = slot.timeRange?.[1] ?? slot.currentEnd;
-
-    return {
-      start: dayjs(startMoment).format("YYYY-MM-DDTHH:mm:ss"),
-      end: dayjs(endMoment).format("YYYY-MM-DDTHH:mm:ss"),
-    };
-  };
-
-  const checkSlotsAvailability = async (slots: any[]) => {
-    setChecking(true);
-
-    try {
-      for (const s of slots) {
-        const changed = s.timeRange || s.courtCopyId !== s.originalCourtCopyId;
-
-        if (!changed) continue;
-
-        const { start, end } = getSlotTime(s);
-
-        const available = await courtService.checkCourtCopyAvailability(
-          s.courtCopyId,
-          start,
-          end,
-          s.slotId,
-        );
-
-        if (!available) {
-          message.error(`Sân ${s.courtCode} đã bị đặt`);
-          return false;
-        }
-      }
-
-      return true;
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  const handleAutoFind = async (index: number) => {
-    const slots = form.getFieldValue("slots") || [];
-    const s = slots[index];
-
-    const startMoment = s?.timeRange?.[0] ?? s?.currentStart;
-    const endMoment = s?.timeRange?.[1] ?? s?.currentEnd;
-
-    if (!startMoment || !endMoment) {
-      message.warning("Vui lòng chọn thời gian");
-      return;
-    }
-
-    const start = dayjs(startMoment).format("YYYY-MM-DDTHH:mm:ss");
-    const end = dayjs(endMoment).format("YYYY-MM-DDTHH:mm:ss");
-
-    setChecking(true);
-
-    try {
-      for (const opt of courtCopyOptions) {
-        const available = await courtService.checkCourtCopyAvailability(
-          opt.value,
-          start,
-          end,
-          s.slotId,
-        );
-
-        if (available) {
-          const code = String(opt.label).split("-").pop()?.trim() || "";
-
-          const newSlots = [...slots];
-
-          newSlots[index] = {
-            ...newSlots[index],
-            courtCopyId: opt.value,
-            courtCode: code,
-          };
-
-          form.setFieldsValue({ slots: newSlots });
-
-          message.success(`Tìm được sân: ${opt.label}`);
-          return;
-        }
-      }
-
-      message.error("Không tìm thấy sân trống");
-    } finally {
-      setChecking(false);
-    }
-  };
-
-
-  const handleOk = async () => {
-    try {
-      const values = await form.validateFields();
-
-      const slots = values.slots || [];
-
-      if (slots.length === 0) {
-        message.error("Booking phải có ít nhất 1 slot");
-        return;
-      }
-
-      const ok = await checkSlotsAvailability(slots);
-      if (!ok) return;
-
-      const changedSlots = slots
-        .filter(
-          (s: any) => s.timeRange || s.courtCopyId !== s.originalCourtCopyId,
-        )
-        .map((s: any) => {
-          const { start, end } = getSlotTime(s);
-
-          return {
-            slotId: s.slotId,
-            courtCopyId: s.courtCopyId, 
-            startTime: start,
-            endTime: end,
-          };
-        });
-
-      const payload: any = {};
-
-     
-      if (values.bookerName?.trim() !== booking.userName?.trim()) {
-        payload.bookerName = values.bookerName;
-      }
-
-      if (values.bookerPhone?.trim() !== booking.phoneNumber?.trim()) {
-        payload.bookerPhone = values.bookerPhone;
-      }
-
-      if (values.notes?.trim() !== (booking.note?.trim() || "")) {
-        payload.note = values.notes;
-      }
-
-      if (values.status !== booking.bookingStatus) {
-        payload.bookingStatus = values.status;
-      }
-
-      if (changedSlots.length > 0) {
-        payload.slots = changedSlots;
-      }
-
-      if (Object.keys(payload).length === 0) {
-        message.info("Không có thay đổi nào");
-        return;
-      }
-
-      
-      if (payload.slots) {
-        console.log("📍 Slot Times Sent:");
-        payload.slots.forEach((slot: any, idx: number) => {
-          console.log(`   Slot ${idx}: ${slot.startTime} → ${slot.endTime}`);
-        });
-      }
- 
-
-    
-
-      onSubmit(payload);
-    } catch (error: any) {
-      message.error(error?.message || "Vui lòng kiểm tra lại dữ liệu");
-    }
-  };
-
-  return (
-    <Modal
-      title="Cập nhật Booking"
-      open={open}
-      onCancel={onCancel}
-      onOk={handleOk}
-      confirmLoading={checking}
-      width={700}
-      okText="Lưu thay đổi"
-    >
-      <Form form={form} layout="vertical">
-        <Form.Item
-          label="Tên khách hàng"
-          name="bookerName"
-          rules={[
-            { required: true, message: "Vui lòng nhập tên khách hàng" },
-            { min: 2, message: "Tên phải có ít nhất 2 ký tự" },
-            { max: 100, message: "Tên không quá 100 ký tự" },
-          ]}
-        >
-          <Input placeholder="VD: Nguyễn Văn A" />
-        </Form.Item>
-
-        <Form.Item
-          label="Số điện thoại"
-          name="bookerPhone"
-          rules={[
-            { required: true, message: "Vui lòng nhập số điện thoại" },
-            {
-              pattern: /^[0-9]{10,11}$/,
-              message: "SĐT phải 10-11 chữ số",
-            },
-          ]}
-        >
-          <Input placeholder="VD: 0912345678" />
-        </Form.Item>
-
-        <Form.Item label="Trạng thái" name="status">
-          <Select
-            placeholder="Chọn trạng thái"
-            options={[
-              { label: "Đã xác nhận", value: "BOOKED" },
-              { label: "Hoàn thành", value: "COMPLETED" },
-              { label: "Hủy", value: "CANCELLED" },
-            ]}
-          />
-        </Form.Item>
-
-        <Form.Item label="Ghi chú" name="notes">
-          <Input.TextArea
-            rows={2}
-            placeholder="Ghi chú hoặc yêu cầu đặc biệt..."
-          />
-        </Form.Item>
-
-        <Divider>Danh sách Slots</Divider>
-
-        <Form.List name="slots">
-          {(fields) => (
-            <>
-              {fields.map(({ key, name, ...rest }) => {
-                const hasTimeChange = form.getFieldValue([
-                  "slots",
-                  name,
-                  "timeRange",
-                ]);
-                const hasCourtChange =
-                  form.getFieldValue(["slots", name, "courtCopyId"]) !==
-                  form.getFieldValue(["slots", name, "originalCourtCopyId"]);
-
-                return (
-                  <div
-                    key={key}
-                    style={{
-                      background:
-                        hasTimeChange || hasCourtChange ? "#e6f7ff" : "#f5f5f5",
-                      padding: 12,
-                      marginBottom: 10,
-                      borderRadius: 8,
-                      border:
-                        hasTimeChange || hasCourtChange
-                          ? "1px solid #1890ff"
-                          : "none",
-                    }}
-                  >
-                    <Space style={{ marginBottom: 12 }} wrap>
-                      <Text strong>
-                        Sân: {form.getFieldValue(["slots", name, "courtCode"])}
-                      </Text>
-                      {(hasTimeChange || hasCourtChange) && (
-                        <Tag color="blue" icon={<CheckCircleOutlined />}>
-                          Có thay đổi
-                        </Tag>
-                      )}
-                    </Space>
-
-                    <div style={{ marginTop: 6 }}>
-                      <Text type="secondary"> Thời gian hiện tại</Text>
-                      <div>
-                        {form
-                          .getFieldValue(["slots", name, "currentStart"])
-                          ?.format("YYYY-MM-DD HH:mm")}{" "}
-                        -{" "}
-                        {form
-                          .getFieldValue(["slots", name, "currentEnd"])
-                          ?.format("YYYY-MM-DD HH:mm")}
-                      </div>
-                    </div>
-
-                    <Form.Item
-                      {...rest}
-                      name={[name, "timeRange"]}
-                      label=" Thời gian mới (nếu cần đổi)"
-                      rules={[
-                        {
-                          validator(_, value) {
-                            if (!value) return Promise.resolve();
-
-                            const [start, end] = value;
-
-                            if (
-                              start.minute() % 30 !== 0 ||
-                              end.minute() % 30 !== 0
-                            ) {
-                              return Promise.reject(
-                                new Error(
-                                  "Phải chọn mốc 30 phút (XX:00 hoặc XX:30)",
-                                ),
-                              );
-                            }
-
-                            if (end.diff(start, "minute") < 60) {
-                              return Promise.reject(
-                                new Error("Tối thiểu 1 giờ thuê"),
-                              );
-                            }
-
-                            return Promise.resolve();
-                          },
-                        },
-                      ]}
-                    >
-                      <DatePicker.RangePicker
-                        showTime={{
-                          format: "HH:mm",
-                          minuteStep: 30,
-                        }}
-                        format="YYYY-MM-DD HH:mm"
-                        placeholder={["Từ giờ", "Đến giờ"]}
-                      />
-                    </Form.Item>
-
-                    <Form.Item
-                      {...rest}
-                      name={[name, "courtCopyId"]}
-                      label=" Chuyển sân (nếu cần đổi)"
-                    >
-                      <Select
-                        placeholder="Chọn sân"
-                        options={courtCopyOptions}
-                        allowClear
-                      />
-                    </Form.Item>
-
-                    <Form.Item>
-                      <Space>
-                        <Button
-                          size="small"
-                          type="dashed"
-                          loading={checking}
-                          onClick={() => handleAutoFind(name)}
-                        >
-                          Tìm sân trống tự động
-                        </Button>
-                      </Space>
-                    </Form.Item>
-
-                    <Form.Item name={[name, "slotId"]} hidden>
-                      <Input />
-                    </Form.Item>
-
-                    <Form.Item name={[name, "originalCourtCopyId"]} hidden>
-                      <Input />
-                    </Form.Item>
-                  </div>
-                );
-              })}
-            </>
-          )}
-        </Form.List>
-      </Form>
-    </Modal>
-  );
-}
+// import React, { useState, useMemo, useEffect } from "react";
+// import {
+//   Modal,
+//   InputNumber,
+//   Radio,
+//   Button,
+//   Typography,
+//   Space,
+//   Alert,
+//   Select,
+//   message,
+//   DatePicker,
+//   List,
+// } from "antd";
+// import dayjs from "dayjs";
+// import {
+//   ClockCircleOutlined,
+//   SwapOutlined,
+//   SearchOutlined,
+//   CheckCircleOutlined,
+//   ArrowLeftOutlined,
+//   EditOutlined,
+// } from "@ant-design/icons";
+// import { bookingSlotService } from "../../../service/bookingSlotService";
+
+// const { Text } = Typography;
+
+// export default function BookingEditModal({
+//   open,
+//   booking,
+//   onClose,
+//   onRefresh,
+// }: any) {
+//   const [activeSlot, setActiveSlot] = useState<any>(null);
+
+//   useEffect(() => {
+//     if (open) {
+//       setActiveSlot(null);
+//     }
+//   }, [open, booking]);
+
+//   const handleClose = () => {
+//     setActiveSlot(null);
+//     onClose();
+//   };
+
+//   const handleSuccess = () => {
+//     setActiveSlot(null);
+//     onRefresh();
+//   };
+
+//   const slots = booking?.slots || [];
+
+//   return (
+//     <Modal
+//       open={open}
+//       onCancel={handleClose}
+//       footer={null}
+//       width={520}
+//       title={
+//         <Space>
+//           {activeSlot && (
+//             <Button
+//               type="text"
+//               icon={<ArrowLeftOutlined />}
+//               onClick={() => setActiveSlot(null)}
+//             />
+//           )}
+//           <span style={{ fontWeight: 600 }}>
+//             {activeSlot
+//               ? `Chỉnh sửa slot — Sân ${activeSlot.courtName}`
+//               : `Chọn Slot cần xử lý (Đơn ${booking?.bookingId?.substring(0, 8) || ""})`}
+//           </span>
+//         </Space>
+//       }
+//     >
+//       {!activeSlot ? (
+//         <List
+//           dataSource={slots}
+//           locale={{ emptyText: "Đơn này không có slot nào" }}
+//           renderItem={(s: any) => (
+//             <List.Item
+//               style={{ padding: "12px 0" }}
+//               actions={[
+//                 <Button
+//                   size="small"
+//                   type="primary"
+//                   ghost
+//                   icon={<EditOutlined />}
+//                   onClick={() => setActiveSlot(s)}
+//                 >
+//                   Thao tác
+//                 </Button>,
+//               ]}
+//             >
+//               <List.Item.Meta
+//                 title={`Sân: ${s.courtName || "Chưa rõ"}`}
+//                 description={`${dayjs(s.startTime).format("DD/MM/YYYY HH:mm")} → ${dayjs(s.endTime).format("HH:mm")}`}
+//               />
+//             </List.Item>
+//           )}
+//         />
+//       ) : (
+//         <SlotEditForm
+//           slot={activeSlot}
+//           bookingId={booking?.bookingId}
+//           onSuccess={handleSuccess}
+//         />
+//       )}
+//     </Modal>
+//   );
+// }
+
+// function SlotEditForm({ slot, bookingId, onSuccess }: any) {
+//   const [mode, setMode] = useState("extend");
+
+//   const [amount, setAmount] = useState(30);
+//   const [unit, setUnit] = useState("minute");
+//   const [checkExtend, setCheckExtend] = useState<any>(null);
+//   const [loadingExtend, setLoadingExtend] = useState(false);
+
+//   const [targetCourt, setTargetCourt] = useState<any>(null);
+//   const [targetTime, setTargetTime] = useState<any>(null);
+//   const [checkSwap, setCheckSwap] = useState<any>(null);
+//   const [loadingSwap, setLoadingSwap] = useState(false);
+
+//   const start = dayjs(slot?.startTime);
+//   const end = dayjs(slot?.endTime);
+//   const duration = end.diff(start, "minute");
+
+//   const newEnd = useMemo(
+//     () => end.add(amount, unit as any),
+//     [amount, unit, end],
+//   );
+//   const addedMinutes = unit === "hour" ? amount * 60 : amount;
+
+//   // ===== ACTION EXTEND =====
+//   const handleCheckExtend = async () => {
+//     try {
+//       setLoadingExtend(true);
+//       const res = await bookingSlotService.checkExtend(bookingId, slot.slotId, {
+//         amount,
+//         unit,
+//       });
+//       setCheckExtend(res);
+//     } catch {
+//       message.error("Lỗi kiểm tra gia hạn");
+//     } finally {
+//       setLoadingExtend(false);
+//     }
+//   };
+
+//   const handleConfirmExtend = async () => {
+//     try {
+//       await bookingSlotService.confirmExtend(bookingId, slot.slotId, {
+//         amount,
+//         unit,
+//       });
+//       message.success("Gia hạn thành công");
+//       onSuccess();
+//     } catch {
+//       message.error("Lỗi xác nhận gia hạn");
+//     }
+//   };
+
+//   // ===== ACTION SWAP =====
+//   const handleCheckSwap = async () => {
+//     if (!targetCourt || !targetTime) {
+//       return message.warning("Chọn sân và thời gian");
+//     }
+
+//     try {
+//       setLoadingSwap(true);
+//       const res = await bookingSlotService.checkSwap(bookingId, slot.slotId, {
+//         courtId: targetCourt,
+//         startTime: targetTime,
+//         duration,
+//       });
+//       setCheckSwap(res);
+//     } catch {
+//       message.error("Lỗi kiểm tra swap");
+//     } finally {
+//       setLoadingSwap(false);
+//     }
+//   };
+
+//   const handleConfirmSwap = async () => {
+//     try {
+//       await bookingSlotService.confirmSwap(bookingId, slot.slotId, {
+//         courtId: targetCourt,
+//         startTime: targetTime,
+//         duration,
+//       });
+//       message.success("Đổi slot thành công");
+//       onSuccess();
+//     } catch {
+//       message.error("Lỗi xác nhận swap");
+//     }
+//   };
+
+//   return (
+//     <div>
+//       {/* CURRENT SLOT INFO */}
+//       <div
+//         style={{
+//           background: "#f0f5ff",
+//           border: "1px solid #d6e4ff",
+//           padding: 16,
+//           borderRadius: 8,
+//           marginBottom: 20,
+//         }}
+//       >
+//         <Text type="secondary" style={{ fontSize: 12 }}>
+//           THỜI GIAN HIỆN TẠI
+//         </Text>
+//         <div style={{ fontSize: 16, fontWeight: 500 }}>
+//           {start.format("DD/MM/YYYY HH:mm")} → {end.format("HH:mm")}
+//           <Text type="secondary" style={{ marginLeft: 8 }}>
+//             ({duration / 60} giờ)
+//           </Text>
+//         </div>
+//       </div>
+
+//       {/* MODE SWITCH */}
+//       <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+//         <div
+//           onClick={() => setMode("extend")}
+//           style={{
+//             flex: 1,
+//             padding: 12,
+//             border:
+//               mode === "extend" ? "1px solid #1890ff" : "1px solid #d9d9d9",
+//             borderRadius: 8,
+//             cursor: "pointer",
+//             textAlign: "center",
+//             background: mode === "extend" ? "#e6f7ff" : "#fff",
+//           }}
+//         >
+//           <ClockCircleOutlined
+//             style={{ color: mode === "extend" ? "#1890ff" : "inherit" }}
+//           />
+//           <div style={{ fontWeight: 500, marginTop: 4 }}>Gia hạn thêm</div>
+//           <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+//             Kéo dài thời gian
+//           </div>
+//         </div>
+
+//         <div
+//           onClick={() => setMode("swap")}
+//           style={{
+//             flex: 1,
+//             padding: 12,
+//             border: mode === "swap" ? "1px solid #1890ff" : "1px solid #d9d9d9",
+//             borderRadius: 8,
+//             cursor: "pointer",
+//             textAlign: "center",
+//             background: mode === "swap" ? "#e6f7ff" : "#fff",
+//           }}
+//         >
+//           <SwapOutlined
+//             style={{ color: mode === "swap" ? "#1890ff" : "inherit" }}
+//           />
+//           <div style={{ fontWeight: 500, marginTop: 4 }}>Chuyển slot</div>
+//           <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+//             Đổi sang giờ/sân khác
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* EXTEND UI */}
+//       {mode === "extend" && (
+//         <>
+//           <Text strong>Gia hạn thêm bao lâu?</Text>
+//           <Space style={{ marginTop: 8, display: "flex" }}>
+//             <InputNumber
+//               min={1}
+//               value={amount}
+//               onChange={(v) => setAmount(v || 1)}
+//             />
+//             <Radio.Group
+//               value={unit}
+//               onChange={(e) => setUnit(e.target.value)}
+//               buttonStyle="solid"
+//             >
+//               <Radio.Button value="hour">Giờ</Radio.Button>
+//               <Radio.Button value="minute">Phút</Radio.Button>
+//             </Radio.Group>
+//           </Space>
+
+//           <div
+//             style={{
+//               background: "#f6ffed",
+//               border: "1px solid #b7eb8f",
+//               padding: 16,
+//               borderRadius: 8,
+//               marginTop: 20,
+//             }}
+//           >
+//             <Text type="secondary" style={{ fontSize: 12, color: "#389e0d" }}>
+//               THỜI GIAN DỰ KIẾN SAU GIA HẠN
+//             </Text>
+//             <div style={{ fontSize: 16, fontWeight: 500 }}>
+//               {start.format("HH:mm")} →
+//               <span style={{ color: "#52c41a", marginLeft: 4 }}>
+//                 {newEnd.format("HH:mm")}
+//               </span>
+//               <Text style={{ marginLeft: 8, color: "#52c41a" }}>
+//                 (+{addedMinutes} phút)
+//               </Text>
+//             </div>
+//           </div>
+
+//           {checkExtend?.available && (
+//             <Alert
+//               type="success"
+//               message={`Phí phát sinh thêm: ${checkExtend.extraPrice?.toLocaleString()}đ`}
+//               style={{ marginTop: 16 }}
+//             />
+//           )}
+
+//           <Space style={{ marginTop: 16 }}>
+//             <Button
+//               icon={<SearchOutlined />}
+//               onClick={handleCheckExtend}
+//               loading={loadingExtend}
+//             >
+//               Kiểm tra xung đột
+//             </Button>
+
+//             {checkExtend?.available && (
+//               <Button
+//                 type="primary"
+//                 icon={<CheckCircleOutlined />}
+//                 onClick={handleConfirmExtend}
+//               >
+//                 Xác nhận gia hạn
+//               </Button>
+//             )}
+//           </Space>
+//         </>
+//       )}
+
+//       {/* SWAP UI */}
+//       {mode === "swap" && (
+//         <>
+//           <Space direction="vertical" style={{ width: "100%" }}>
+//             <Select
+//               placeholder="Chọn sân muốn đổi sang"
+//               style={{ width: "100%" }}
+//               onChange={setTargetCourt}
+//               options={[]} /* TRUYỀN DANH SÁCH SÂN VÀO ĐÂY NHÉ */
+//             />
+//             <DatePicker
+//               showTime
+//               placeholder="Chọn thời gian bắt đầu mới"
+//               style={{ width: "100%" }}
+//               onChange={(v) => setTargetTime(v?.toISOString())}
+//             />
+//           </Space>
+
+//           {checkSwap?.available && (
+//             <Alert
+//               type="success"
+//               message={`Giữ nguyên giá: ${slot.price?.toLocaleString()}đ`}
+//               style={{ marginTop: 16 }}
+//             />
+//           )}
+
+//           <Space style={{ marginTop: 16 }}>
+//             <Button
+//               icon={<SearchOutlined />}
+//               onClick={handleCheckSwap}
+//               loading={loadingSwap}
+//             >
+//               Kiểm tra slot trống
+//             </Button>
+
+//             {checkSwap?.available && (
+//               <Button
+//                 type="primary"
+//                 icon={<CheckCircleOutlined />}
+//                 onClick={handleConfirmSwap}
+//               >
+//                 Xác nhận đổi
+//               </Button>
+//             )}
+//           </Space>
+//         </>
+//       )}
+//     </div>
+//   );
+// }

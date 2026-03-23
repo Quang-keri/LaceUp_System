@@ -7,6 +7,7 @@ import org.sport.backend.constant.CourtStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -29,6 +30,6 @@ public class CourtUpdateRequest {
     private UUID rentalAreaId;
     @NotNull(message = "trạng thái không bỏ trống")
     private CourtStatus status;
-
+    private Set<Long> amenityIds;
 
 }

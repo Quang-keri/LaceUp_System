@@ -68,7 +68,7 @@ public class BookingServiceImpl implements BookingService {
             user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         }
-
+        System.err.println("User name " + user.getUserName());
         BookingIntent intent = BookingIntent.builder()
                 .user(user)
                 .bookerName(request.getUserName())
@@ -332,7 +332,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse confirmBooking(UUID bookingIntentId) {
+    public BookingResponse confirmBooking(UUID bookingIntentId,Payment payment) {
 
         BookingIntent intent = bookingIntentRepository
                 .findById(bookingIntentId)
@@ -341,12 +341,16 @@ public class BookingServiceImpl implements BookingService {
         if (intent.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Hold expired");
         }
-
+        BigDecimal totalPrice = intent.getPreviewPrice();
+        BigDecimal paidAmount = payment.getAmount(); // Lấy số tiền thực tế từ Payment (có thể là 30% cọc hoặc 100%)
+        BigDecimal remainingAmount = totalPrice.subtract(paidAmount);
         Booking booking = Booking.builder()
                 .bookingStatus(BookingStatus.BOOKED)
                 .renter(intent.getUser() != null ? intent.getUser() : null)
                 .bookerName(intent.getBookerName())
                 .bookerPhone(intent.getBookerPhone())
+                .depositAmount(paidAmount)           //  Lưu tiền cọc
+                .remainingAmount(remainingAmount)// Lưu tiền còn nợ
                 .totalPrice(intent.getPreviewPrice())
                 .startTime(intent.getStartTime())
                 .endTime(intent.getEndTime())
@@ -386,11 +390,13 @@ public class BookingServiceImpl implements BookingService {
         }
 
         intent.setStatus(BookingIntentStatus.CONFIRMED);
-
+        bookingIntentRepository.save(intent);
         return BookingResponse.builder()
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice())
                 .bookingStatus(booking.getBookingStatus())
+                 .depositAmount(booking.getDepositAmount())
+                 .remainingAmount(booking.getRemainingAmount())
                 .slots(slotResponses)
                 .createdAt(booking.getCreatedAt())
                 .build();
@@ -401,7 +407,13 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
+        Optional<Payment> payment = paymentRepository
+                .findFirstByBookingOrderByTransactionDateDesc(booking);
 
+        String paymentMethod = null;
+        if(payment.isPresent()) {
+            paymentMethod = payment.get().getPaymentMethod().toString();
+        }
         List<Slot> slots = booking.getSlots();
 
         List<SlotResponse> slotResponses = slots.stream()
@@ -435,6 +447,9 @@ public class BookingServiceImpl implements BookingService {
                                 .address(booking.getRentalArea().getAddress())
                                 .build()
                 )
+                .depositAmount(booking.getDepositAmount())
+                .remainingAmount(booking.getRemainingAmount())
+                .paymentMethod(paymentMethod)
                 .build();
     }
 
@@ -449,7 +464,10 @@ public class BookingServiceImpl implements BookingService {
             int size
     ) {
 
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(
+                Sort.Order.desc("updatedAt"),
+                Sort.Order.desc("createdAt")
+        ).descending());
 
         Specification<Booking> spec = BookingSpecification.filterBooking(
                 rentalId,
@@ -553,6 +571,15 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingResponse mapToResponse(Booking booking) {
+        Optional<Payment> payment = paymentRepository
+                .findFirstByBookingOrderByTransactionDateDesc(booking);
+
+        String paymentMethod = null;
+        if(payment.isPresent()) {
+            paymentMethod = payment.get().getPaymentMethod().toString();
+        }else{
+            paymentMethod = "không có";
+        }
 
         List<SlotResponse> slots = booking.getSlots()
                 .stream()
@@ -584,14 +611,13 @@ public class BookingServiceImpl implements BookingService {
                                 .rentalAreaName(booking.getRentalArea().getRentalAreaName())
                                 .address(booking.getRentalArea().getAddress())
                                 .build() : null)
+                .depositAmount(booking.getDepositAmount())
+                .remainingAmount(booking.getRemainingAmount())
+                .paymentMethod(paymentMethod)
                 .build();
-        Optional<Payment> payment = paymentRepository.findFirstByBookingOrderByTransactionDateDesc(booking);
 
-        if (payment.isPresent()) {
-            bookingResponse.setPaymentMethod(payment.get().getPaymentMethod().toString());
-        } else {
-            bookingResponse.setPaymentMethod("NONE");
-        }
+
+
 
         return bookingResponse;
     }
@@ -612,9 +638,6 @@ public class BookingServiceImpl implements BookingService {
         recalculateBookingSummary(booking);
 
         bookingRepository.save(booking);
-
-        System.out.println("✅ Booking saved successfully");
-        System.out.println("════════════════════════════════════════════");
 
         return mapToResponse(booking);
     }
@@ -638,15 +661,10 @@ public class BookingServiceImpl implements BookingService {
         }
     }
     private void updateSlots(List<UpdateSlotRequest> slotRequests) {
-        System.out.println("🔄 [SLOTS] Updating " + slotRequests.size() + " slots");
 
         for (int i = 0; i < slotRequests.size(); i++) {
             UpdateSlotRequest slotReq = slotRequests.get(i);
 
-            System.out.println("  📍 Slot " + i + ":");
-            System.out.println("     SlotId: " + slotReq.getSlotId());
-            System.out.println("     StartTime (received): " + slotReq.getStartTime());
-            System.out.println("     EndTime (received): " + slotReq.getEndTime());
 
             Slot slot = slotRepository.findById(slotReq.getSlotId())
                     .orElseThrow(() -> new RuntimeException("Slot không tồn tại"));
@@ -659,8 +677,6 @@ public class BookingServiceImpl implements BookingService {
                     ? slotReq.getEndTime()
                     : slot.getEndTime();
 
-            System.out.println("     StartTime (to save): " + newStart);
-            System.out.println("     EndTime (to save): " + newEnd);
 
             validateSlotLogic(newStart, newEnd, slot.getStartTime());
 
@@ -673,7 +689,7 @@ public class BookingServiceImpl implements BookingService {
             updateSlotPrice(slot, targetCopy, newStart, newEnd);
 
             slotRepository.save(slot);
-            System.out.println("     ✅ Slot " + i + " saved");
+
         }
     }
     private CourtCopy resolveCourtCopy(
@@ -728,15 +744,12 @@ public class BookingServiceImpl implements BookingService {
                 Duration.between(start, end).toMinutes()
         ).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
-        slot.setPrice(
-                courtCopy.getCourt().getPrice().multiply(hours)
-        );
+//        slot.setPrice(
+//                courtCopy.getCourt().getPrice().multiply(hours)
+//        );
     }
     private void validateSlotLogic(LocalDateTime start, LocalDateTime end, LocalDateTime oldStart) {
-        System.out.println("  🔍 [VALIDATION] Validating slot times:");
-        System.out.println("     Input Start: " + start);
-        System.out.println("     Input End: " + end);
-        System.out.println("     Current Server Time: " + LocalDateTime.now());
+
 
         if (start == null || end == null)
             throw new RuntimeException("Thời gian không hợp lệ");
