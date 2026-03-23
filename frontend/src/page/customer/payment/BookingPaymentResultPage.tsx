@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { handleBookingPaymentResult } from "../../../services/payment/paymentService";
+import paymentService from "../../../service/payment/paymentService";
 
 type ResultState = {
   loading: boolean;
@@ -18,8 +18,14 @@ export default function BookingPaymentResultPage() {
     message: "Đang xác nhận thanh toán...",
   });
 
-  const orderCode = useMemo(() => searchParams.get("orderCode") || "", [searchParams]);
-  const status = useMemo(() => searchParams.get("status") || "", [searchParams]);
+  const orderCode = useMemo(
+    () => searchParams.get("orderCode") || "",
+    [searchParams],
+  );
+  const status = useMemo(
+    () => searchParams.get("status") || "",
+    [searchParams],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -35,7 +41,7 @@ export default function BookingPaymentResultPage() {
       }
 
       try {
-        const res = await handleBookingPaymentResult({ orderCode, status });
+        const res = await paymentService.handleBookingPaymentResult({ orderCode, status });
         const result = res?.data?.result;
         if (!mounted) return;
         setState({
@@ -76,14 +82,23 @@ export default function BookingPaymentResultPage() {
     <div className="max-w-2xl mx-auto py-10">
       <Card title="Kết quả thanh toán booking">
         <Alert
-          type={state.mode === "BOOKED" ? "success" : state.mode === "PENDING" ? "info" : "error"}
+          type={
+            state.mode === "BOOKED"
+              ? "success"
+              : state.mode === "PENDING"
+              ? "info"
+              : "error"
+          }
           message={state.message}
           showIcon
         />
 
         <div className="mt-5 flex gap-3">
           {state.bookingId ? (
-            <Button type="primary" onClick={() => navigate(`/payment/success/${state.bookingId}`)}>
+            <Button
+              type="primary"
+              onClick={() => navigate(`/payment/success/${state.bookingId}`)}
+            >
               Xem chi tiết booking
             </Button>
           ) : (
