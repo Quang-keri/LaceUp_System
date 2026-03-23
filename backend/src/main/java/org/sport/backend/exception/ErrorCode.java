@@ -56,8 +56,9 @@ COURT_NOT_FOUND(4004,"Court not found",HttpStatus.NOT_FOUND),
     BOOKING_INTENT_NOT_FOUND(4004, "Không tìm thấy booking intent",HttpStatus.NOT_FOUND),
     BOOKING_ALREADY_CHECKED_IN(4000, "Đã check-in rồi",HttpStatus.BAD_REQUEST),
     CANNOT_CHECKOUT_BEFORE_CHECKIN(4000, "Chưa check-in thì không thể check-out",HttpStatus.BAD_REQUEST),
-
-
+//Slot SLOT_NOT_FOUND SLOT_CONFLICT
+SLOT_NOT_FOUND(4000, "Slot không tìm thấy", HttpStatus.NOT_FOUND),
+    SLOT_CONFLICT(4000, "Slot không tìm thấy", HttpStatus.NOT_FOUND),
     //City
     CITY_NOT_FOUND(4000, "City không tìm thấy", HttpStatus.NOT_FOUND),
     ;

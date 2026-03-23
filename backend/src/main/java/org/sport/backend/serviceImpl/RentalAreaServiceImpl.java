@@ -359,7 +359,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             return CourtSummaryResponse.builder()
                     .courtId(court.getCourtId())
                     .courtName(court.getCourtName())
-                    .price(court.getPrice())
                     .minPrice(minPrice)
                     .maxPrice(maxPrice)
                     .priceRules(priceResponses)

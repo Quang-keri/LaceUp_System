@@ -21,7 +21,7 @@ public class MatchMapper {
         return MatchResponse.builder()
                 .matchId(match.getMatchId())
                 .courtName(match.getCourt() != null ? match.getCourt().getCourtName() : "Sân tự thỏa thuận")
-                .courtPrice(String.valueOf(match.getCourt() != null ? match.getCourt().getPrice() : null))
+//                .courtPrice(String.valueOf(match.getCourt() != null ? match.getCourt().getPrice() : null))
                 .address(match.getCourt() != null ? match.getCourt().getRentalArea().getAddress() : match.getAddress())
                 .categoryName(match.getCategory() != null ? match.getCategory().getCategoryName() : "Chưa xác định")
                 .startTime(match.getStartTime())

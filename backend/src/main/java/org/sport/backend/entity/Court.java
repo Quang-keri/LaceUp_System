@@ -28,8 +28,8 @@ public class Court extends BaseEntity {
     @Column(name = "surface_type")
     private String surfaceType;
 
-    @Column(name = "price")
-    private BigDecimal price;
+//    @Column(name = "price")
+//    private BigDecimal price;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "court_status")
