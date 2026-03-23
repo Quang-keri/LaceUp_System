@@ -302,7 +302,7 @@ public class DataInitializer implements CommandLineRunner {
                     .transactionDate(createdAt.plusMinutes(15))
                     .paymentMethod(PaymentMethod.VN_PAY)
                     .paymentStatus(PaymentStatus.COMPLETED)
-                    .paymentType(PaymentType.FINAL)
+                    .paymentType(PaymentType.FULL)
                     .transactionCode("OWNER_PAY_" + System.currentTimeMillis() + i)
                     .build());
         }

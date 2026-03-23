@@ -65,6 +65,12 @@ const AppHeader = () => {
           onClick: () => navigate("/profile"),
         },
         {
+          key: "/booking-history",
+          label: "Lịch sử đặt sân",
+          icon: <SettingOutlined />,
+          onClick: () => navigate("/booking-history"),
+        },
+        {
           key: "/wallet",
           label: "Ví của tôi",
           icon: <WalletOutlined />,

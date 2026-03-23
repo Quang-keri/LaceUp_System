@@ -34,8 +34,14 @@ class BookingService {
     return response.data;
   }
 
-  async getMyBookings(page: number = 1, size: number = 10, status?: string) {
+  async getMyBookings(
+    userId: string,
+    page: number = 1,
+    size: number = 10,
+    status?: string,
+  ) {
     const params = new URLSearchParams();
+    params.append("userId", userId);
     params.append("page", page.toString());
     params.append("size", size.toString());
     if (status) params.append("status", status);

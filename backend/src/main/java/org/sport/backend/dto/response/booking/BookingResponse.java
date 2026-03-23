@@ -35,4 +35,5 @@ public class BookingResponse {
     private String paymentMethod;
     private BigDecimal depositAmount;
     private BigDecimal remainingAmount;
+
 }

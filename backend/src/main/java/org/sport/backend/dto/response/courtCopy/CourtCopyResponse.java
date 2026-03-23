@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.courtCopy;
 
 import lombok.*;
 import org.sport.backend.constant.CourtCopyStatus;
+import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 
 import java.util.List;
@@ -17,4 +18,5 @@ public class CourtCopyResponse {
     private String courtCode;
     private CourtCopyStatus status;
     private List<SlotResponse> slots;
+    private List<AmenityResponse> amenities;
 }

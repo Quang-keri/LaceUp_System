@@ -1,0 +1,20 @@
+.booking-status-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.booking-id-small {
+  font-size: 12px;
+  color: #999;
+  font-weight: normal;
+}
+
+.booking-status-modal {
+  padding: 0;
+}
+
+.current-status-info {
+  border-left: 4px solid #1890ff;
+}

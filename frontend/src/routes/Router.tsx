@@ -36,6 +36,9 @@ import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
 import NotificationPage from "../page/customer/notification/NotificationPage.tsx";
+import BookingPaymentResultPage from "../page/customer/payment/BookingPaymentResultPage.tsx";
+import CategoryManagement from "../page/admin/court-type/CategoryManagement.tsx";
+import BookingHistoryPage from "../page/customer/bookings/BookingHistoryPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -49,22 +52,28 @@ export const router = createBrowserRouter([
       { path: "danh-sach-san", element: <PostPage /> },
       { path: "cong-dong", element: <MatchPage /> },
       { path: "rental-area/:id", element: <RentalAreaDetailPage /> },
+      {
+        path: "payment/booking-result",
+        element: <BookingPaymentResultPage />,
+        handle: { breadcrumb: "Kết quả thanh toán booking" },
+      },
       // {
       //   element: <ProtectedRouter allowedRoles={["RENTER"]} />,
       //   children: [
-          { path: "profile", element: <ProfilePage /> },
-          { path: "chat", element: <ChatHome /> },
-          { path: "payment/:bookingId", element: <PaymentPage /> },
-          {
-            path: "payment-success/:bookingId",
-            element: <PaymentSuccessPage />,
-          },
-          
+      { path: "profile", element: <ProfilePage /> },
+      { path: "booking-history", element: <BookingHistoryPage /> },
+      { path: "chat", element: <ChatHome /> },
+      { path: "payment/:bookingId", element: <PaymentPage /> },
+      {
+        path: "payment-success/:bookingId",
+        element: <PaymentSuccessPage />,
+      },
+
       {
         path: "notifications",
         element: <NotificationPage />,
         handle: { breadcrumb: "Thông báo mới" },
-      }
+      },
       //   ],
       // },
     ],
@@ -82,6 +91,7 @@ export const router = createBrowserRouter([
       { path: "users", element: <UserManagement /> },
       { path: "roles", element: <RoleManagement /> },
       { path: "permissions", element: <PermissionManagement /> },
+      { path: "court-types", element: <CategoryManagement /> },
       { path: "bookings/list", element: <BookingManagement /> },
     ],
   },

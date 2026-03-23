@@ -1,6 +1,7 @@
 package org.sport.backend.dto.response.court;
 
 import lombok.*;
+import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
 import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 
@@ -27,5 +28,6 @@ public class CourtSummaryResponse {
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
     private List<CourtPriceResponse> priceRules;
+    private List<AmenityResponse> amenities;
 }
 
