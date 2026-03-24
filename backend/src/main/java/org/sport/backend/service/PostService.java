@@ -2,6 +2,7 @@ package org.sport.backend.service;
 
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.post.CreatePostRequest;
+import org.sport.backend.dto.request.post.PostFilterRequest;
 import org.sport.backend.dto.request.post.UpdatePostRequest;
 import org.sport.backend.dto.response.post.PostDetailResponse;
 import org.sport.backend.dto.response.post.PostResponse;
@@ -14,14 +15,7 @@ import java.util.UUID;
 public interface PostService {
     PostResponse createPost(CreatePostRequest request);
 
-    PageResponse<PostSummaryResponse> getAllPosts(
-            String title,
-            String content,
-            LocalDate fromDate,
-            LocalDate toDate,
-            int page,
-            int size
-    );
+    PageResponse<PostSummaryResponse> getAllPosts(PostFilterRequest filterRequest);
 
     PostDetailResponse getPostDetail(UUID postId);
 

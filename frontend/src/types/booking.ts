@@ -23,6 +23,10 @@ export interface BookingResponse {
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
+  invoicePdfUrl?: string;
+  depositAmount?: number;
+  remainingAmount?: number;
+  isFullyPaid?: boolean;
 }
 
 export interface BookingListResponse {

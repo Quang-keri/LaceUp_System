@@ -1,16 +1,30 @@
 import api from "../../config/axios";
 import type { ApiResponse } from "../../types/ApiResponse";
 import type { PageResponse, PostResponse } from "../../types/post";
+// Nhớ import FilterState từ đúng đường dẫn nhé, ví dụ:
+// import type { FilterState } from "../../pages/PostPage";
 
 class PostService {
-  async getPosts(page = 1, size = 10) {
-    const response = await api.get<ApiResponse<PageResponse<PostResponse>>>(
-      "/posts",
-      {
-        params: { page, size },
-      },
-    );
+  async getPosts(filters: any) {
+    // Hoặc thay 'any' bằng 'FilterState' nếu bạn đã import
+    // Ép kiểu các array thành string (vd: [1,2] -> "1,2") để Spring Boot dễ đọc
+    const params: any = { ...filters };
 
+    if (params.cityIds?.length) params.cityIds = params.cityIds.join(",");
+    if (params.categoryIds?.length)
+      params.categoryIds = params.categoryIds.join(",");
+    if (params.amenityIds?.length)
+      params.amenityIds = params.amenityIds.join(",");
+
+    // Xóa các key bị undefined để URL gọn đẹp hơn
+    Object.keys(params).forEach((key) => {
+      if (params[key] === undefined || params[key] === "") {
+        delete params[key];
+      }
+    });
+
+    // Gọi API thông qua 'api' instance đã config, đồng bộ endpoint là "/posts"
+    const response = await api.get("/posts", { params });
     return response.data;
   }
 
@@ -45,6 +59,7 @@ class PostService {
     );
     return response.data;
   }
+
   async deletePost(postId: string) {
     const response = await api.delete<ApiResponse<any>>(`/posts/${postId}`);
     return response.data;

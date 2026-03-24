@@ -326,6 +326,15 @@ public class PaymentServiceImpl implements PaymentService {
 
             bookingRepository.save(booking);
 
+            // auto-generate invoice view URL and persist it
+            try {
+                String invoiceViewUrl = buildInvoiceViewUrl(booking.getBookingId());
+                booking.setInvoiceUrl(invoiceViewUrl);
+                bookingRepository.save(booking);
+            } catch (Exception e) {
+                log.warn("Cannot build invoice view URL for booking {}", booking.getBookingId(), e);
+            }
+
             payment.setBooking(booking);
             payment.setPaymentStatus(PaymentStatus.SUCCESS);
             paymentRepository.save(payment);
@@ -455,6 +464,21 @@ public class PaymentServiceImpl implements PaymentService {
             return hostBase + "/payment/booking-result?orderCode=" + orderCode + "&status=" + status;
         } catch (Exception e) {
             return fallback + "?orderCode=" + orderCode + "&status=" + status;
+        }
+    }
+
+    private String buildInvoiceViewUrl(java.util.UUID bookingId) {
+        String fallback = "http://localhost:9999/bookings/" + bookingId + "/invoice/view";
+        String base = payOsProperties.getReturnUrl();
+        if (base == null || base.isBlank()) {
+            return fallback;
+        }
+        try {
+            URI source = URI.create(base);
+            String hostBase = source.getScheme() + "://" + source.getAuthority();
+            return hostBase + "/bookings/" + bookingId + "/invoice/view";
+        } catch (Exception e) {
+            return fallback;
         }
     }
 

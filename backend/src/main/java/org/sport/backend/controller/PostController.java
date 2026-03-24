@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.post.CreatePostRequest;
+import org.sport.backend.dto.request.post.PostFilterRequest;
 import org.sport.backend.dto.request.post.UpdatePostRequest;
 import org.sport.backend.dto.response.post.PostDetailResponse;
 import org.sport.backend.dto.response.post.PostResponse;
@@ -49,25 +50,13 @@ public class PostController {
     }
 
     @GetMapping
-    public ApiResponse<?> getAllPosts(
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String content,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate fromDate,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate toDate,
-            @RequestParam(defaultValue = "1", required = false) int page,
-            @RequestParam(defaultValue = "10", required = false) int size) {
-        PageResponse<PostSummaryResponse> result = postService.getAllPosts(title, content, fromDate, toDate, page, size);
-
+    public ApiResponse<?> getAllPosts(@ModelAttribute PostFilterRequest filterRequest) {
         try {
+            PageResponse<PostSummaryResponse> result = postService.getAllPosts(filterRequest);
             return ApiResponse.success(200, "Get all posts successfully", result);
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
-
     }
 
     @GetMapping("/{postId}")

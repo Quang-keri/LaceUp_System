@@ -40,6 +40,9 @@ import BookingPaymentResultPage from "../page/customer/payment/BookingPaymentRes
 import CategoryManagement from "../page/admin/court-type/CategoryManagement.tsx";
 import BookingHistoryPage from "../page/customer/bookings/BookingHistoryPage.tsx";
 import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
+import SettlementManagement from "../page/admin/finance/SettlementManagement.tsx";
+import PayoutHistory from "../page/admin/finance/PayoutHistory.tsx";
+import CommissionConfigManagement from "../page/admin/comission/CommissionConfigManagement.tsx";
 import PlayerDashboard from "../page/customer/profile-page/MyDashboard.tsx";
 
 import { useAuth } from "../context/AuthContext.tsx";
@@ -123,6 +126,12 @@ export const router = createBrowserRouter([
       { path: "permissions", element: <PermissionManagement /> },
       { path: "court-types", element: <CategoryManagement /> },
       { path: "bookings/list", element: <BookingManagement /> },
+      { path: "settlements", element: <SettlementManagement /> },
+      {
+        path: "settlements/:rentalAreaId/history",
+        element: <PayoutHistory />,
+      },
+      { path: "commissions", element: <CommissionConfigManagement /> },
     ],
   },
 
