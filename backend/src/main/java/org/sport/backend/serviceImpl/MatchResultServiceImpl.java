@@ -93,6 +93,8 @@ public class MatchResultServiceImpl implements MatchResultService {
             result.setStatus(ResultStatus.APPROVED);
             match.setStatus(MatchStatus.COMPLETED);
 
+            refundDeposits(match);
+
             // Xử lý cộng điểm hoặc chia tiền
             if (match.getMatchType() == MatchType.RANKED) {
                 processRankedMatch(result);
@@ -247,6 +249,15 @@ public class MatchResultServiceImpl implements MatchResultService {
 
             user.setFakeMoney(currentBalance.subtract(amount));
 
+            // --- BẮT LOG RA FILE TẠI ĐÂY ---
+            log.info("[TRANSACTION] - MINUS | Tác vụ: TRẢ TIỀN SÂN | User: {} ({}) | Số tiền: -{} VNĐ | Lý do: {} | Trận: {} | Số dư mới: {}",
+                    user.getUserName(),
+                    user.getUserId(),
+                    amount,
+                    reason,
+                    user.getFakeMoney());
+            // -------------------------------
+
             log.info("[Wallet Update] User: {} | Amount: -{} | Reason: {} | New Balance: {}",
                     user.getUserName(), amount, reason, user.getFakeMoney());
         }
@@ -272,5 +283,41 @@ public class MatchResultServiceImpl implements MatchResultService {
         BigDecimal hours = BigDecimal.valueOf(durationMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
         return pricePerHour.multiply(hours);
+    }
+
+    private void refundDeposits(Match match) {
+        // Tính lại đúng số tiền đã cọc lúc trước để hoàn trả
+        BigDecimal totalPrice = calculateTotalCourtPrice(match);
+        BigDecimal depositAmount = BigDecimal.ZERO;
+
+        if (totalPrice.compareTo(BigDecimal.ZERO) > 0) {
+            depositAmount = totalPrice.divide(BigDecimal.valueOf(match.getMaxPlayers()), 0, RoundingMode.HALF_UP);
+        }
+
+        // Nếu tiền cọc = 0 (Sân tự thỏa thuận) thì không cần làm gì cả
+        if (depositAmount.compareTo(BigDecimal.ZERO) <= 0) return;
+
+        List<MatchRegistration> regs = registrationRepository.findByMatch(match);
+        for (MatchRegistration reg : regs) {
+            if (reg.isDepositConfirmed()) {
+                User user = reg.getUser();
+                BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
+
+                // Cộng lại tiền cọc
+                user.setFakeMoney(currentBalance.add(depositAmount));
+                userRepository.save(user);
+
+                // --- BẮT LOG RA FILE TẠI ĐÂY ---
+                log.info("[TRANSACTION] - PLUS | Tác vụ: HOÀN CỌC | User: {} ({}) | Số tiền: +{} VNĐ | Trận: {} | Số dư mới: {}",
+                        user.getUserName(),
+                        user.getUserId(),
+                        depositAmount,
+                        match.getMatchId(),
+                        user.getFakeMoney());
+                // -------------------------------
+
+                log.info("Đã hoàn cọc {} VNĐ cho user {}", depositAmount, user.getUserName());
+            }
+        }
     }
 }
