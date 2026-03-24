@@ -2,6 +2,7 @@ package org.sport.backend.constant;
 
 public enum MatchStatus {
     OPEN,
+    WAITING_DEPOSIT,
     CONFIRMED,
     FULL,
     WAITING_RESULT_APPROVAL, // Chờ đối thủ xác nhận kết quả

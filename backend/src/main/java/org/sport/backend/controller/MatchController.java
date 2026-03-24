@@ -46,6 +46,16 @@ public class MatchController {
                 "Bạn đã tham gia trận đấu thành công!", null));
     }
 
+    @PostMapping("/{matchId}/confirm-deposit")
+    public ResponseEntity<ApiResponse<String>> confirmDeposit(
+            @PathVariable UUID matchId) {
+
+        matchService.confirmDeposit(matchId);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Đã xác nhận cọc thành công! Chờ người chơi còn lại xác nhận.", null));
+    }
+
     @GetMapping("/open")
     public ResponseEntity<ApiResponse<List<MatchResponse>>> getOpenMatches() {
         return ResponseEntity.ok(
@@ -91,6 +101,17 @@ public class MatchController {
 
         return ResponseEntity.ok(
                 ApiResponse.success(matchService.getMyMatches(page, size))
+        );
+    }
+
+    @GetMapping("/user/{userId}/history")
+    public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getUserMatchHistory(
+            @PathVariable UUID userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                ApiResponse.success(matchService.getUserMatchHistory(userId, page, size))
         );
     }
 }

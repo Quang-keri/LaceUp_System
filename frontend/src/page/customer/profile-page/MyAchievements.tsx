@@ -8,8 +8,8 @@ import {
   QuestionOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import achievementService from "../service/achievementService";
-import UserSidebar from "./sidebar/UserSidebar";
+import achievementService from "../../../service/achievementService";
+import UserSidebar from "../../../components/sidebar/UserSidebar";
 
 const { Text } = Typography;
 
@@ -48,7 +48,7 @@ interface UserAchievementsProps {
   userId?: string;
 }
 
-const UserAchievements: React.FC<UserAchievementsProps> = ({ userId }) => {
+const MyAchievements: React.FC<UserAchievementsProps> = ({ userId }) => {
   const [achievements, setAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -173,4 +173,4 @@ const UserAchievements: React.FC<UserAchievementsProps> = ({ userId }) => {
   );
 };
 
-export default UserAchievements;
+export default MyAchievements;

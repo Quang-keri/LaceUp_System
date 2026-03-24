@@ -108,17 +108,22 @@ public class MatchServiceImpl implements MatchService {
     @Override
     @Transactional
     public void joinMatch(UUID matchId) {
-
         User currentUser = userService.getCurrentUserEntity();
-
         Match match = matchRepository.findByIdWithLock(matchId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
+
+        // CHẶN: Không cho join nếu đang chờ cọc hoặc đã xác nhận/đầy
+        if (match.getStatus() == MatchStatus.WAITING_DEPOSIT ||
+                match.getStatus() == MatchStatus.CONFIRMED ||
+                match.getStatus() == MatchStatus.FULL) {
+            throw new RuntimeException("Trận đấu đã đủ người hoặc đang trong quá trình chốt cọc!");
+        }
 
         if (match.getCurrentPlayers() >= match.getMaxPlayers()) {
             throw new RuntimeException("Trận đấu đã đủ người!");
         }
 
-        // --- CHECK ĐIỀU KIỆN ĐÁNH RANK ---
+        // --- CHECK ĐIỀU KIỆN ĐÁNH RANK --- (Giữ nguyên của bạn)
         if (match.getMatchType() == MatchType.RANKED) {
             int userRank = currentUser.getRankPoint() != null ? currentUser.getRankPoint() : 3000;
             if (match.getMinRank() != null && userRank < match.getMinRank()) {
@@ -134,22 +139,53 @@ public class MatchServiceImpl implements MatchService {
             throw new RuntimeException("Bạn đã tham gia trận này rồi");
         }
 
+        // Mặc định isDepositConfirmed = false
         MatchRegistration reg = MatchRegistration.builder()
                 .user(currentUser)
                 .match(match)
                 .registeredAt(LocalDateTime.now())
+                .isDepositConfirmed(false)
                 .build();
         registrationRepository.save(reg);
 
         match.setCurrentPlayers(match.getCurrentPlayers() + 1);
 
+        // LOGIC MỚI: Đủ max người thì chuyển sang WAITING_DEPOSIT
         if (match.getCurrentPlayers() >= match.getMaxPlayers()) {
-            match.setStatus(MatchStatus.FULL);
-        } else if (match.getCurrentPlayers() >= match.getMinPlayersToStart()) {
-            match.setStatus(MatchStatus.CONFIRMED);
+            match.setStatus(MatchStatus.WAITING_DEPOSIT);
         }
 
         matchRepository.save(match);
+    }
+
+    @Transactional
+    @Override
+    public void confirmDeposit(UUID matchId) {
+        User currentUser = userService.getCurrentUserEntity();
+        Match match = matchRepository.findByIdWithLock(matchId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
+
+        if (match.getStatus() != MatchStatus.WAITING_DEPOSIT) {
+            throw new RuntimeException("Trận đấu chưa đủ người hoặc không ở trạng thái chờ xác nhận cọc!");
+        }
+
+        MatchRegistration reg = registrationRepository.findByMatchAndUser(match, currentUser)
+                .orElseThrow(() -> new RuntimeException("Bạn chưa tham gia trận này!"));
+
+        // Cập nhật người này đã xác nhận
+        reg.setDepositConfirmed(true);
+        registrationRepository.save(reg);
+
+        // Kiểm tra xem tất cả những người trong trận đã xác nhận hết chưa?
+        List<MatchRegistration> allRegs = registrationRepository.findByMatch(match);
+        boolean isAllConfirmed = allRegs.stream().allMatch(MatchRegistration::isDepositConfirmed);
+
+        // Nếu tất cả đã ấn xác nhận -> Chuyển Match sang CONFIRMED (Sẵn sàng chơi)
+        if (isAllConfirmed) {
+            match.setStatus(MatchStatus.CONFIRMED);
+            matchRepository.save(match);
+            log.info("Trận đấu {} đã được tất cả người chơi xác nhận cọc. Sẵn sàng bắt đầu!", match.getMatchId());
+        }
     }
 
     @Override
@@ -221,6 +257,26 @@ public class MatchServiceImpl implements MatchService {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").descending());
 
         Page<Match> matchPage = matchRepository.findMatchesByParticipantOrHost(currentUser, pageable);
+
+        return PageResponse.<MatchResponse>builder()
+                .currentPage(page)
+                .pageSize(size)
+                .totalPages(matchPage.getTotalPages())
+                .totalElements(matchPage.getTotalElements())
+                .data(matchMapper.toResponseList(matchPage.getContent()))
+                .build();
+    }
+
+    @Override
+    public PageResponse<MatchResponse> getUserMatchHistory(UUID userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").descending());
+
+        Specification<Match> spec = Specification.where(MatchSpecifications.fetchAllDetails())
+                .and(MatchSpecifications.isParticipantOrHost(userId))
+                .and(MatchSpecifications.hasStatus(MatchStatus.COMPLETED))
+                ;
+
+        Page<Match> matchPage = matchRepository.findAll(spec, pageable);
 
         return PageResponse.<MatchResponse>builder()
                 .currentPage(page)

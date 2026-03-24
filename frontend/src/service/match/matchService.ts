@@ -18,6 +18,13 @@ export const matchService = {
     return response.data;
   },
 
+  confirmDeposit: async (matchId: string): Promise<ApiResponse<string>> => {
+    const response = await api.post(
+      `${API_BASE_URL}/${matchId}/confirm-deposit`,
+    );
+    return response.data;
+  },
+
   getOpenMatches: async (): Promise<ApiResponse<MatchResponse[]>> => {
     const response = await api.get(`${API_BASE_URL}/open`);
     return response.data;
@@ -79,6 +86,17 @@ export const matchService = {
     size: number,
   ): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
     const response = await api.get(`${API_BASE_URL}/my-matches`, {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  getUserMatchHistory: async (
+    userId: string,
+    page: number,
+    size: number,
+  ): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
+    const response = await api.get(`${API_BASE_URL}/user/${userId}/history`, {
       params: { page, size },
     });
     return response.data;

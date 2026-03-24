@@ -35,8 +35,7 @@ public class DataInitializer implements CommandLineRunner {
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
     private final SlotRepository slotRepository;
-
-    // THÊM 2 REPOSITORY CHO HỆ THỐNG RANK
+    private final PostRepository postRepository;
     private final UserStatsRepository userStatsRepository;
     private final UserAchievementRepository userAchievementRepository;
 
@@ -144,10 +143,14 @@ public class DataInitializer implements CommandLineRunner {
                     .build());
 
             // Tạo Admins, Staffs, Owners
-            for (int i = 1; i <= 2; i++) users.add(createDummyUser("Admin " + i, "admin" + i + "@gmail.com", commonPass, adminRole, random.nextInt(3500)));
-            for (int i = 1; i <= 3; i++) users.add(createDummyUser("Staff " + i, "staff" + i + "@gmail.com", commonPass, staffRole, random.nextInt(2000)));
-            for (int i = 1; i <= 5; i++) users.add(createDummyUser("Owner " + i, "owner" + i + "@gmail.com", commonPass, ownerRole, random.nextInt(2500)));
-            for (int i = 1; i <= 11; i++) users.add(createDummyUser("Renter " + i, "renter" + i + "@gmail.com", commonPass, renterRole, random.nextInt(3200)));
+            for (int i = 1; i <= 2; i++)
+                users.add(createDummyUser("Admin " + i, "admin" + i + "@gmail.com", commonPass, adminRole, random.nextInt(3500)));
+            for (int i = 1; i <= 3; i++)
+                users.add(createDummyUser("Staff " + i, "staff" + i + "@gmail.com", commonPass, staffRole, random.nextInt(2000)));
+            for (int i = 1; i <= 5; i++)
+                users.add(createDummyUser("Owner " + i, "owner" + i + "@gmail.com", commonPass, ownerRole, random.nextInt(2500)));
+            for (int i = 1; i <= 11; i++)
+                users.add(createDummyUser("Renter " + i, "renter" + i + "@gmail.com", commonPass, renterRole, random.nextInt(3200)));
 
             // Lưu Users trước để có UUID
             users = userRepository.saveAll(users);
@@ -205,6 +208,10 @@ public class DataInitializer implements CommandLineRunner {
         // 6. Seed Booking & Payment (Dữ liệu giao dịch)
         if (bookingRepository.count() == 0) {
             seedBookingAndPaymentData();
+        }
+
+        if (postRepository.count() == 0) {
+            seedPostData();
         }
     }
 
@@ -341,5 +348,51 @@ public class DataInitializer implements CommandLineRunner {
                 amenityRepository.save(a);
             }
         });
+    }
+
+    private void seedPostData() {
+        User owner = userRepository.findByEmail("owner@gmail.com")
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+
+        RentalArea area = rentalAreaRepository.findAll().stream()
+                .filter(a -> a.getOwner().equals(owner))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Rental Area not found for owner"));
+
+        Court court = courtRepository.findAll().stream()
+                .filter(c -> c.getRentalArea().equals(area))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Court not found for area"));
+
+        List<Post> posts = List.of(
+                Post.builder()
+                        .title("Sân cầu lông VIP Quận 9 - Giảm giá 20% khung giờ sáng")
+                        .description("Sân thảm PVC tiêu chuẩn thi đấu, đầy đủ wifi, nước uống và bãi xe rộng rãi.")
+                        .postStatus(PostStatus.PUBLISHED) // Giả định enum có trạng thái này
+                        .user(owner)
+                        .court(court)
+                        .rentalArea(area)
+                        .build(),
+
+                Post.builder()
+                        .title("Tìm đối thủ giao lưu tại Sân VIP 01 tối nay")
+                        .description("Cần tìm nhóm trình độ trung bình khá giao lưu từ 18h-20h. Sân đã đặt sẵn.")
+                        .postStatus(PostStatus.PUBLISHED)
+                        .user(owner)
+                        .court(court)
+                        .rentalArea(area)
+                        .build(),
+
+                Post.builder()
+                        .title("Ưu đãi đặt sân cố định tháng 4")
+                        .description("Đăng ký slot cố định hàng tuần để nhận ưu đãi giá cực tốt tại cụm sân Lê Văn Việt.")
+                        .postStatus(PostStatus.PUBLISHED)
+                        .user(owner)
+                        .court(court)
+                        .rentalArea(area)
+                        .build()
+        );
+
+        postRepository.saveAll(posts);
     }
 }

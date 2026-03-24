@@ -97,7 +97,7 @@ public class MatchResultServiceImpl implements MatchResultService {
             if (match.getMatchType() == MatchType.RANKED) {
                 processRankedMatch(result);
             } else if (match.getMatchType() == MatchType.BET) {
-//                processBetMatch(result);
+                processBetMatch(result);
             }
         } else {
             result.setStatus(ResultStatus.REJECTED);
@@ -168,14 +168,21 @@ public class MatchResultServiceImpl implements MatchResultService {
         switch (tierIndex) {
             case 0: // Sắt
             case 1: // Đồng
-                gain = 30; loss = -10; break;
+                gain = 30;
+                loss = -10;
+                break;
             case 2: // Bạc
             case 3: // Vàng
-                gain = 25; loss = -15; break;
+                gain = 25;
+                loss = -15;
+                break;
             case 4: // Bạch Kim
-                gain = 20; loss = -20; break;
+                gain = 20;
+                loss = -20;
+                break;
             case 5: // Kim Cương
-                gain = 15; loss = -25;
+                gain = 15;
+                loss = -25;
                 // Ở Kim Cương, áp dụng thêm Win Rate (Tỉ lệ thắng)
                 double winRate = stats.getTotalMatches() > 0
                         ? (double) stats.getTotalWins() / stats.getTotalMatches() : 0.5;
@@ -189,7 +196,8 @@ public class MatchResultServiceImpl implements MatchResultService {
                 }
                 break;
             default: // Cao Thủ trở lên (>= 3000)
-                gain = 10; loss = -30; // Chế độ sinh tồn khắc nghiệt
+                gain = 10;
+                loss = -30; // Chế độ sinh tồn khắc nghiệt
                 break;
         }
 
@@ -198,37 +206,51 @@ public class MatchResultServiceImpl implements MatchResultService {
 
     private void processBetMatch(MatchResult result) {
         Match match = result.getMatch();
-        // Kiểm tra điều kiện đầu vào
         if (match.getCourt() == null || match.getStartTime() == null || match.getEndTime() == null) return;
 
-        // Lấy tổng tiền sân dựa trên thời gian đấu
+        // 1. Tính tổng tiền sân dựa trên khung giờ
         BigDecimal totalPrice = calculateTotalCourtPrice(match);
 
+        // 2. Tính tỷ lệ chia tiền (WinnerPercent là % phe Thắng phải trả)
         double winnerPercentVal = match.getWinnerPercent() != null ? match.getWinnerPercent() : 50.0;
-
-        BigDecimal winnerRatio = BigDecimal.valueOf(winnerPercentVal)
-                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+        BigDecimal winnerRatio = BigDecimal.valueOf(winnerPercentVal).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
         BigDecimal loserRatio = BigDecimal.ONE.subtract(winnerRatio);
 
         List<UUID> winners = result.getWinnerIds();
         List<UUID> losers = result.getLoserIds();
 
-        BigDecimal payPerWinner = BigDecimal.ZERO;
-        if (winners != null && !winners.isEmpty()) {
-            BigDecimal totalWinnerPay = totalPrice.multiply(winnerRatio);
-            payPerWinner = totalWinnerPay.divide(BigDecimal.valueOf(winners.size()), 0, RoundingMode.HALF_UP);
-        }
+        // 3. Tính toán số tiền mỗi cá nhân phải trả
+        BigDecimal payPerWinner = calculatePayPerPerson(totalPrice, winnerRatio, winners);
+        BigDecimal payPerLoser = calculatePayPerPerson(totalPrice, loserRatio, losers);
 
-        BigDecimal payPerLoser = BigDecimal.ZERO;
-        if (losers != null && !losers.isEmpty()) {
-            BigDecimal totalLoserPay = totalPrice.multiply(loserRatio);
-            payPerLoser = totalLoserPay.divide(BigDecimal.valueOf(losers.size()), 0, RoundingMode.HALF_UP);
-        }
+        // 4. Thực hiện trừ tiền trực tiếp vào ví giả (fakeMoney)
+        updateUserWallets(winners, payPerWinner, "Trừ tiền sân (Phe Thắng - " + winnerPercentVal + "%)");
+        updateUserWallets(losers, payPerLoser, "Trừ tiền sân (Phe Thua - " + (100 - winnerPercentVal) + "%)");
 
-        log.info("=== KẾT QUẢ KÈO TRẬN {} ===", match.getMatchId());
-        log.info("Tổng tiền sân: {} VNĐ", totalPrice);
-        log.info("Phe Thắng ({}) trả: {} VNĐ/người", winners.size(), payPerWinner);
-        log.info("Phe Thua ({}) trả: {} VNĐ/người", losers.size(), payPerLoser);
+        log.info("=== ĐÃ TRỪ TIỀN KÈO TRẬN {} ===", match.getMatchId());
+        log.info("Tổng: {} VNĐ | Thắng trả: {}/ng | Thua trả: {}/ng", totalPrice, payPerWinner, payPerLoser);
+    }
+
+    private BigDecimal calculatePayPerPerson(BigDecimal total, BigDecimal ratio, List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return BigDecimal.ZERO;
+        BigDecimal totalSidePay = total.multiply(ratio);
+        return totalSidePay.divide(BigDecimal.valueOf(ids.size()), 0, RoundingMode.HALF_UP);
+    }
+
+    private void updateUserWallets(List<UUID> userIds, BigDecimal amount, String reason) {
+        if (userIds == null || userIds.isEmpty() || amount.compareTo(BigDecimal.ZERO) <= 0) return;
+
+        List<User> users = userRepository.findAllById(userIds);
+
+        for (User user : users) {
+            BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
+
+            user.setFakeMoney(currentBalance.subtract(amount));
+
+            log.info("[Wallet Update] User: {} | Amount: -{} | Reason: {} | New Balance: {}",
+                    user.getUserName(), amount, reason, user.getFakeMoney());
+        }
+        userRepository.saveAll(users);
     }
 
     private BigDecimal calculateTotalCourtPrice(Match match) {
@@ -238,12 +260,10 @@ public class MatchResultServiceImpl implements MatchResultService {
         LocalTime matchStart = match.getStartTime().toLocalTime();
         LocalTime matchEnd = match.getEndTime().toLocalTime();
 
-        // Tìm giá phù hợp (Đơn giản nhất là lấy giá đầu tiên khớp khung giờ)
-        // Hoặc nếu bạn có logic priority/specificDate thì cần filter kỹ hơn
         CourtPrice courtPrice = prices.stream()
                 .filter(p -> !matchStart.isBefore(p.getStartTime()) && !matchEnd.isAfter(p.getEndTime()))
                 .findFirst()
-                .orElse(prices.getFirst()); // Fallback lấy cái đầu tiên nếu không khớp chính xác
+                .orElse(prices.getFirst());
 
         BigDecimal pricePerHour = courtPrice.getPricePerHour();
 

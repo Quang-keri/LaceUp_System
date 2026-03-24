@@ -19,6 +19,7 @@ export interface UserResponse {
     rankPoint?: number;
     fakeMoney?: number;
     displayRank?: string;
+    isDepositConfirmed?: boolean;
 }
 
 export interface CreateUserRequest {

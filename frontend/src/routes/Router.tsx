@@ -40,11 +40,12 @@ import BookingPaymentResultPage from "../page/customer/payment/BookingPaymentRes
 import CategoryManagement from "../page/admin/court-type/CategoryManagement.tsx";
 import BookingHistoryPage from "../page/customer/bookings/BookingHistoryPage.tsx";
 import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
-import PlayerDashboard from "../page/customer/profile-page/PlayerDashboard.tsx";
+import PlayerDashboard from "../page/customer/profile-page/MyDashboard.tsx";
 
 import { useAuth } from "../context/AuthContext.tsx";
 import { Spin } from "antd";
-import UserAchievements from "../components/UserAchievements.tsx";
+import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
+import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
         element: <BookingPaymentResultPage />,
         handle: { breadcrumb: "Kết quả thanh toán booking" },
       },
+      { path: "player/:id", element: <PlayerPublicPage /> },
 
       {
         element: (
@@ -88,7 +90,7 @@ export const router = createBrowserRouter([
           { path: "dashboard", element: <MyDashboardWrapper /> },
           { path: "profile", element: <ProfilePage /> },
           { path: "my-matches", element: <MyMatchPage /> },
-          { path: "achievements", element: <UserAchievements /> },
+          { path: "achievements", element: <MyAchievements /> },
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {

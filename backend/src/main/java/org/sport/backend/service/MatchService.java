@@ -1,5 +1,6 @@
 package org.sport.backend.service;
 
+import jakarta.transaction.Transactional;
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
@@ -17,6 +18,9 @@ public interface MatchService {
 
     void joinMatch(UUID matchId);
 
+    @Transactional
+    void confirmDeposit(UUID matchId);
+
     List<MatchResponse> getOpenMatches();
 
     MatchResponse getMatchDetail(UUID matchId);
@@ -28,4 +32,6 @@ public interface MatchService {
     PageResponse<MatchResponse> getOwnerMatchesPaged(int page, int size);
 
     PageResponse<MatchResponse> getMyMatches(int page, int size);
+
+    PageResponse<MatchResponse> getUserMatchHistory(UUID userId, int page, int size);
 }

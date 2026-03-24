@@ -1,67 +1,20 @@
 import React from "react";
-import { Card, Menu, Typography, Tag, Divider, message } from "antd";
-import {
-  UserOutlined,
-  HistoryOutlined,
-  SettingOutlined,
-  SafetyCertificateOutlined,
-  LinkOutlined,
-  LogoutOutlined,
-  DashboardOutlined,
-  TrophyOutlined,
-} from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.tsx";
+import { Card, Menu, Typography, Tag, Divider } from "antd";
+import { DashboardOutlined, HistoryOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
-interface UserSidebarProps {
+interface PublicSidebarProps {
+  targetUser: any;
   selectedKey: string;
+  onMenuClick: (key: string) => void;
 }
 
-const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  const handleMenuClick = (key: string) => {
-    if (key === selectedKey) return;
-
-    switch (key) {
-      case "0": // <-- Xử lý điều hướng cho Dashboard
-        navigate("/dashboard");
-        break;
-      case "1":
-        navigate("/profile");
-        break;
-      case "2":
-        navigate("/my-matches");
-        break;
-      case "3":
-        navigate("/booking-history");
-        break;
-      case "4":
-        message.info("Cài đặt chưa được phát triển");
-        break;
-      case "5":
-        message.info("Bảo mật tài khoản chưa được phát triển");
-        break;
-      case "6":
-        message.info("Liên kết tài khoản chưa được phát triển");
-        break;
-      case "7":
-        navigate("/achievements");
-        break;
-      default:
-        break;
-    }
-  };
-
-  // --- HÀM HELPER TÍNH TOÁN RANK VÀ LẤY ẢNH ---
+const PublicSidebar: React.FC<PublicSidebarProps> = ({
+  targetUser,
+  selectedKey,
+  onMenuClick,
+}) => {
   const getRankInfo = (points: number = 0, backendDisplayRank?: string) => {
     if (
       points >= 3000 ||
@@ -77,7 +30,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
         };
       return { name: "Cao Thủ", color: "purple", image: "/master.png" };
     }
-
     if (points >= 2500)
       return {
         name: `Kim Cương ${5 - Math.floor((points % 500) / 100)}`,
@@ -108,7 +60,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
         color: "orange",
         image: "/bronze.png",
       };
-
     return {
       name: `Sắt ${5 - Math.floor((points % 500) / 100)}`,
       color: "default",
@@ -116,29 +67,15 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
     };
   };
 
-  const rankInfo = getRankInfo(user?.rankPoint, user?.displayRank);
+  const rankInfo = getRankInfo(targetUser?.rankPoint, targetUser?.displayRank);
 
   const menuItems = [
-    { key: "0", icon: <DashboardOutlined />, label: "Bảng điều khiển" },
-    { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
-    { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
-    { key: "7", icon: <TrophyOutlined />, label: "Thành tựu" },
-    { key: "3", icon: <HistoryOutlined />, label: "Lịch sử đặt sân" },
-    { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
     {
-      key: "5",
-      icon: <SafetyCertificateOutlined />,
-      label: "Bảo mật tài khoản",
+      key: "dashboard",
+      icon: <DashboardOutlined />,
+      label: "Tổng quan hoạt động",
     },
-    { key: "6", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
-    { type: "divider" as const },
-    {
-      key: "logout",
-      icon: <LogoutOutlined />,
-      label: "Đăng xuất",
-      danger: true,
-      onClick: handleLogout,
-    },
+    { key: "history", icon: <HistoryOutlined />, label: "Lịch sử đấu" },
   ];
 
   return (
@@ -147,10 +84,9 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
       bordered={false}
     >
       <Title level={4} style={{ margin: "8px 0 0 0" }}>
-        {user ? `${user.userName}` : "N/A"}
+        {targetUser ? targetUser.userName : "Đang tải..."}
       </Title>
 
-      {/* KHỐI HIỂN THỊ RANK */}
       <div
         style={{
           display: "flex",
@@ -169,7 +105,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
         />
-
         <div
           style={{
             display: "flex",
@@ -181,8 +116,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
           <Text strong style={{ fontSize: "18px", color: "#475569" }}>
             {rankInfo.name}
           </Text>
-
-          {user?.rankPoint !== undefined && (
+          {targetUser?.rankPoint !== undefined && (
             <Tag
               color={rankInfo.color}
               style={{
@@ -191,10 +125,9 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
                 fontSize: "14px",
                 borderRadius: "12px",
                 fontWeight: "bold",
-                border: "1px solid transparent",
               }}
             >
-              🏆 {user.rankPoint} Đ
+              🏆 {targetUser.rankPoint} Đ
             </Tag>
           )}
         </div>
@@ -206,11 +139,11 @@ const UserSidebar: React.FC<UserSidebarProps> = ({ selectedKey }) => {
         mode="inline"
         selectedKeys={[selectedKey]}
         items={menuItems}
-        onClick={(e) => handleMenuClick(e.key)}
+        onClick={(e) => onMenuClick(e.key)}
         style={{ borderRight: "none", textAlign: "left" }}
       />
     </Card>
   );
 };
 
-export default UserSidebar;
+export default PublicSidebar;
