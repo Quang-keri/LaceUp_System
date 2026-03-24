@@ -173,12 +173,12 @@ public class MatchServiceImpl implements MatchService {
                 .orElseThrow(() -> new RuntimeException("Bạn chưa tham gia trận này!"));
 
         // Cập nhật người này đã xác nhận
-        reg.setDepositConfirmed(true);
+        reg.setIsDepositConfirmed(true);
         registrationRepository.save(reg);
 
         // Kiểm tra xem tất cả những người trong trận đã xác nhận hết chưa?
         List<MatchRegistration> allRegs = registrationRepository.findByMatch(match);
-        boolean isAllConfirmed = allRegs.stream().allMatch(MatchRegistration::isDepositConfirmed);
+        boolean isAllConfirmed = allRegs.stream().allMatch(MatchRegistration::getIsDepositConfirmed);
 
         // Nếu tất cả đã ấn xác nhận -> Chuyển Match sang CONFIRMED (Sẵn sàng chơi)
         if (isAllConfirmed) {
