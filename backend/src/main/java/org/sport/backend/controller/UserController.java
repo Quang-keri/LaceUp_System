@@ -3,12 +3,16 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.base.ApiResponse;
 import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserStatusRequest;
+import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
+import org.sport.backend.entity.User;
+import org.sport.backend.entity.UserStats;
 import org.sport.backend.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "2. User")
 public class UserController {
 
@@ -131,6 +136,13 @@ public class UserController {
                 ApiResponse.success("Lấy danh sách quyền thành công",
                         userService.getUserAuthorities(userId))
         );
+    }
+
+    @GetMapping("/{userId}/dashboard")
+    public ResponseEntity<ApiResponse<UserDashboardResponse>> getUserDashboard(@PathVariable UUID userId) {
+        log.info("Lấy thông tin dashboard thống kê của user: {}", userId);
+        UserDashboardResponse response = userService.getUserDashboard(userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
 }

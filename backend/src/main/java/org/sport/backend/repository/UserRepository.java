@@ -23,4 +23,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     Page<User> findAll(Specification<User> spec, Pageable pageable);
+
+    // Thêm vào UserRepository
+    @Query(value = """
+    SELECT rank_position FROM (
+        SELECT user_id, 
+               RANK() OVER (ORDER BY rank_point DESC) as rank_position 
+        FROM users 
+        WHERE rank_point >= 3000
+    ) as ranked_users 
+    WHERE user_id = :userId
+    """, nativeQuery = true)
+    Integer findLeaderboardPositionByUserId(@Param("userId") UUID userId);
 }

@@ -21,12 +21,7 @@ class WebSocketService {
 
     const headers = { Authorization: `Bearer ${token}` };
 
-    this.stompClient.connect(headers, (frame: any) => {
-      console.log(
-        "✅ Kết nối thành công! User Principal:",
-        frame.headers["user-name"],
-      );
-
+    this.stompClient.connect(headers, () => {
       this.stompClient.subscribe("/user/queue/messages", (message: any) => {
         if (message.body) {
           const data = JSON.parse(message.body);
@@ -117,9 +112,7 @@ class WebSocketService {
 
   disconnect(): void {
     if (this.stompClient) {
-      this.stompClient.disconnect(() => {
-        console.log("Disconnected");
-      });
+      this.stompClient.disconnect(() => {});
       this.stompClient = null;
     }
   }

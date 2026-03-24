@@ -3,8 +3,6 @@ import {
   Row,
   Col,
   Card,
-  Menu,
-  Button,
   List,
   Tag,
   Typography,
@@ -15,31 +13,26 @@ import {
   Modal,
   Checkbox,
   Avatar,
+  Button,
 } from "antd";
 import {
-  UserOutlined,
-  HistoryOutlined,
-  SettingOutlined,
-  SafetyCertificateOutlined,
-  LinkOutlined,
-  LogoutOutlined,
   CalendarOutlined,
   ManOutlined,
   TrophyOutlined,
   DollarOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../../../context/AuthContext.tsx";
-import { useNavigate } from "react-router-dom";
 import matchService from "../../../service/match/matchService.ts";
 import { toast } from "react-toastify";
 import { matchResultService } from "../../../service/match/matchResultService.ts";
 
+import UserSidebar from "../../../components/sidebar/UserSidebar.tsx";
+
 const { Title, Text } = Typography;
 
 const MyMatchPage: React.FC = () => {
-  const { user, logout, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const [selectedMenu, setSelectedMenu] = useState("2");
+  const { user, isLoading } = useAuth(); // <--- Lấy thông tin user hiện tại
+  const selectedMenu = "2";
 
   const [matches, setMatches] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
@@ -54,6 +47,8 @@ const MyMatchPage: React.FC = () => {
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [pendingResult, setPendingResult] = useState<any>(null);
   const [loadingApproveResult, setLoadingApproveResult] = useState(false);
+  // Thêm state để nhận biết người đang xem Modal có phải là người gửi kết quả không
+  const [isSubmitter, setIsSubmitter] = useState(false);
 
   const fetchMyMatches = async () => {
     setLoadingData(true);
@@ -73,32 +68,7 @@ const MyMatchPage: React.FC = () => {
     fetchMyMatches();
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  const handleMenuClick = (key: string) => {
-    setSelectedMenu(key);
-    if (key === "2") {
-      // Stay on my-matches page
-    } else if (key === "1") {
-      navigate("/profile");
-    } else if (key === "3") {
-      navigate("/booking-history");
-    } else if (key === "4") {
-      // Navigate to settings
-      toast.info("Cài đặt chưa được phát triển");
-    } else if (key === "5") {
-      // Navigate to security
-      toast.info("Bảo mật tài khoản chưa được phát triển");
-    } else if (key === "6") {
-      // Navigate to linked accounts
-      toast.info("Liên kết tài khoản chưa được phát triển");
-    }
-  };
-
-  // ---------------- XỬ LÝ CHỐT KẾT QUẢ (HOST) ----------------
+  // ---------------- XỬ LÝ CHỐT KẾT QUẢ (HOST/PHE THẮNG) ----------------
   const openResultModal = (match: any) => {
     setSelectedMatch(match);
     setWinnerIds([]);
@@ -132,20 +102,24 @@ const MyMatchPage: React.FC = () => {
     }
   };
 
-  // ---------------- XỬ LÝ DUYỆT KẾT QUẢ (PHE THUA) ----------------
+  // ---------------- XỬ LÝ DUYỆT KẾT QUẢ (PHE THUA / ĐỐI THỦ) ----------------
   const openApproveModal = async (match: any) => {
     setSelectedMatch(match);
     setIsApproveModalOpen(true);
     setLoadingApproveResult(true);
+    setIsSubmitter(false); // Reset cờ
     try {
-      // Gọi API lấy thông tin kết quả của trận này ra
       const res = await matchResultService.getResultsByMatch(match.matchId);
-      // Giả sử backend trả về data trong res.data hoặc res.result
       const results = res.result;
 
       if (results && results.length > 0) {
-        // Lấy kết quả đang chờ duyệt mới nhất
-        setPendingResult(results[0]);
+        const resultItem = results[0];
+        setPendingResult(resultItem);
+
+        // KIỂM TRA: Xem người đang đăng nhập có phải là người đã ấn chốt kết quả (submitterId) không?
+        if (resultItem.submitterId === user?.userId) {
+          setIsSubmitter(true);
+        }
       } else {
         toast.warning("Không tìm thấy kết quả chờ duyệt!");
         setIsApproveModalOpen(false);
@@ -159,7 +133,6 @@ const MyMatchPage: React.FC = () => {
   };
 
   const handleRespondResult = async (isAccepted: boolean) => {
-    // Tùy theo cách DTO trả về ID của result (có thể là .id hoặc .resultId)
     const targetResultId = pendingResult?.id || pendingResult?.resultId;
     if (!targetResultId)
       return toast.error("Không tìm thấy mã kết quả hợp lệ!");
@@ -186,31 +159,6 @@ const MyMatchPage: React.FC = () => {
       </div>
     );
   }
-
-  const menuItems = [
-    { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
-    { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
-    {
-      key: "3",
-      icon: <HistoryOutlined />,
-      label: "Lịch sử đặt sân",
-    },
-    { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
-    {
-      key: "5",
-      icon: <SafetyCertificateOutlined />,
-      label: "Bảo mật tài khoản",
-    },
-    { key: "6", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
-    { type: "divider" as const },
-    {
-      key: "logout",
-      icon: <LogoutOutlined />,
-      label: "Đăng xuất",
-      danger: true,
-      onClick: handleLogout,
-    },
-  ];
 
   const renderMatchTypeTag = (
     type: string,
@@ -240,7 +188,7 @@ const MyMatchPage: React.FC = () => {
       case "FULL":
         return <Tag color="green">Sắp diễn ra</Tag>;
       case "WAITING_RESULT_APPROVAL":
-        return <Tag color="orange">Chờ chốt KQ</Tag>;
+        return <Tag color="orange">Chờ đối thủ duyệt KQ</Tag>; // Đổi text một chút cho rõ ràng
       case "COMPLETED":
         return <Tag color="default">Đã hoàn thành</Tag>;
       default:
@@ -327,11 +275,12 @@ const MyMatchPage: React.FC = () => {
                   {match.status === "WAITING_RESULT_APPROVAL" ? (
                     <Button
                       type="primary"
-                      danger
+                      // Nếu Backend có trả về match.submitterId ở đây thì check luôn,
+                      // nếu không thì cứ cho nút vàng "Xem trạng thái duyệt"
                       onClick={() => openApproveModal(match)}
-                      style={{ borderRadius: "8px" }}
+                      style={{ borderRadius: "8px", background: "#f59e0b" }}
                     >
-                      Duyệt kết quả
+                      Xem trạng thái duyệt
                     </Button>
                   ) : match.matchType === "RANKED" ||
                     match.matchType === "BET" ? (
@@ -421,23 +370,7 @@ const MyMatchPage: React.FC = () => {
     >
       <Row gutter={[24, 24]} justify="center">
         <Col xs={24} md={8} lg={6}>
-          <Card
-            style={{ borderRadius: "12px", textAlign: "center" }}
-            bordered={false}
-          >
-            <Title level={4} style={{ margin: 0 }}>
-              {user ? `${user.userName}` : "N/A"}
-            </Title>
-            <Text type="secondary">Thành viên thân thiết</Text>
-            <Divider style={{ margin: "16px 0" }} />
-            <Menu
-              mode="inline"
-              selectedKeys={[selectedMenu]}
-              items={menuItems}
-              onClick={(e) => handleMenuClick(e.key)}
-              style={{ borderRight: "none", textAlign: "left" }}
-            />
-          </Card>
+          <UserSidebar selectedKey={selectedMenu} />
         </Col>
 
         <Col xs={24} md={16} lg={18}>
@@ -456,6 +389,7 @@ const MyMatchPage: React.FC = () => {
       </Row>
 
       {/* MODAL 1: CHỐT KẾT QUẢ / XEM CHI TIẾT */}
+      {/* ... (Giữ nguyên phần code của Modal này) ... */}
       <Modal
         title={
           <div className="text-xl font-bold text-gray-800">
@@ -578,11 +512,13 @@ const MyMatchPage: React.FC = () => {
         )}
       </Modal>
 
-      {/* MODAL 2: DUYỆT KẾT QUẢ (DÀNH CHO PHE THUA) */}
+      {/* MODAL 2: DUYỆT KẾT QUẢ / HOẶC THÔNG BÁO CHỜ DUYỆT */}
       <Modal
         title={
           <div className="text-xl font-bold text-orange-600">
-            ⚖️ Duyệt kết quả trận đấu
+            {isSubmitter
+              ? "⏳ Trạng thái kết quả"
+              : "⚖️ Duyệt kết quả trận đấu"}
           </div>
         }
         open={isApproveModalOpen}
@@ -598,32 +534,54 @@ const MyMatchPage: React.FC = () => {
           </div>
         ) : (
           <div className="mt-4">
-            <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl mb-6">
-              <p className="text-sm text-gray-600 text-center">
-                Đối thủ đã gửi yêu cầu chốt kết quả trận đấu{" "}
-                <strong>{selectedMatch?.title}</strong>. Vui lòng xác nhận để
-                hoàn tất hệ thống tính điểm/trừ tiền.
-              </p>
-            </div>
+            {/* NẾU LÀ NGƯỜI ĐÃ CHỐT KQ -> CHỈ HIỆN THÔNG BÁO CHỜ */}
+            {isSubmitter ? (
+              <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl text-center">
+                <p className="text-4xl mb-3">🕒</p>
+                <p className="text-blue-800 font-semibold mb-2">
+                  Bạn đã gửi kết quả thành công!
+                </p>
+                <p className="text-sm text-blue-600">
+                  Vui lòng chờ đối thủ xác nhận để hệ thống hoàn tất việc cộng
+                  điểm/trừ tiền.
+                </p>
+                <Button
+                  type="primary"
+                  className="mt-6 w-full"
+                  onClick={() => setIsApproveModalOpen(false)}
+                >
+                  Đóng
+                </Button>
+              </div>
+            ) : (
+              /* NẾU LÀ NGƯỜI THUA/ĐỐI THỦ -> HIỆN NÚT XÁC NHẬN/TỪ CHỐI */
+              <>
+                <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl mb-6">
+                  <p className="text-sm text-gray-600 text-center">
+                    Đối thủ đã gửi yêu cầu chốt kết quả trận đấu{" "}
+                    <strong>{selectedMatch?.title}</strong>. Vui lòng xác nhận
+                    để hoàn tất hệ thống tính điểm/trừ tiền.
+                  </p>
+                </div>
 
-            {/* Bạn có thể bổ sung hiển thị danh sách người thắng/thua ở đây dựa vào pendingResult nếu backend có trả về */}
-
-            <div className="flex justify-end gap-3 mt-6">
-              <Button
-                danger
-                onClick={() => handleRespondResult(false)}
-                loading={submittingResult}
-              >
-                Từ chối kết quả
-              </Button>
-              <Button
-                type="primary"
-                onClick={() => handleRespondResult(true)}
-                loading={submittingResult}
-              >
-                Xác nhận đúng
-              </Button>
-            </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <Button
+                    danger
+                    onClick={() => handleRespondResult(false)}
+                    loading={submittingResult}
+                  >
+                    Từ chối kết quả
+                  </Button>
+                  <Button
+                    type="primary"
+                    onClick={() => handleRespondResult(true)}
+                    loading={submittingResult}
+                  >
+                    Xác nhận đúng
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </Modal>

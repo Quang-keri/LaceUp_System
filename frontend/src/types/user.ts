@@ -17,6 +17,8 @@ export interface UserResponse {
     permissions?: string[];
     extraPermissions?: PermissionResponse[];
     rankPoint?: number;
+    fakeMoney?: number;
+    displayRank?: string;
 }
 
 export interface CreateUserRequest {
@@ -35,4 +37,17 @@ export interface UpdateUserRequest {
     phone?: string;
     gender?: Gender;
     dateOfBirth?: string;
+}
+
+export interface UserDashboardResponse {
+    userId: string;
+    userName: string;
+    avatarUrl?: string;
+    rankPoint: number;
+    displayRank: string;
+    totalMatches: number;
+    totalWins: number;
+    currentWinStreak: number;
+    maxWinStreak: number;
+    winRate: number;
 }

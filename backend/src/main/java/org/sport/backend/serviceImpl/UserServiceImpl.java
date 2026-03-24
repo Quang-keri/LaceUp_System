@@ -7,10 +7,12 @@ import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
+import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Permission;
 import org.sport.backend.entity.Role;
 import org.sport.backend.entity.User;
+import org.sport.backend.entity.UserStats;
 import org.sport.backend.entity.mongo.PasswordResetToken;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
@@ -18,6 +20,7 @@ import org.sport.backend.mapper.UserMapper;
 import org.sport.backend.repository.PermissionRepository;
 import org.sport.backend.repository.RoleRepository;
 import org.sport.backend.repository.UserRepository;
+import org.sport.backend.repository.UserStatsRepository;
 import org.sport.backend.repository.mongo.PasswordResetTokenRepository;
 import org.sport.backend.security.CustomUserDetails;
 import org.sport.backend.service.EmailService;
@@ -44,6 +47,7 @@ import java.util.*;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserStatsRepository userStatsRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -226,6 +230,34 @@ public class UserServiceImpl implements UserService {
         }
 
         return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    @Override
+    public UserDashboardResponse getUserDashboard(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        UserStats stats = userStatsRepository.findById(userId).orElse(new UserStats());
+
+        double winRate = 0.0;
+        if (stats.getTotalMatches() > 0) {
+            winRate = Math.round(((double) stats.getTotalWins() / stats.getTotalMatches() * 100) * 10.0) / 10.0;
+        }
+
+        Integer leaderboardPosition = null;
+
+        return UserDashboardResponse.builder()
+                .userId(user.getUserId())
+                .userName(user.getUserName())
+                // .avatarUrl(user.getAvatarUrl())
+                .rankPoint(user.getRankPoint() != null ? user.getRankPoint() : 0)
+                .displayRank(user.resolveDisplayRank(leaderboardPosition))
+                .totalMatches(stats.getTotalMatches())
+                .totalWins(stats.getTotalWins())
+                .currentWinStreak(stats.getCurrentWinStreak())
+                .maxWinStreak(stats.getMaxWinStreak())
+                .winRate(winRate)
+                .build();
     }
 
     @Override

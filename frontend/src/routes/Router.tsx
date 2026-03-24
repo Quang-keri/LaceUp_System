@@ -40,6 +40,25 @@ import BookingPaymentResultPage from "../page/customer/payment/BookingPaymentRes
 import CategoryManagement from "../page/admin/court-type/CategoryManagement.tsx";
 import BookingHistoryPage from "../page/customer/bookings/BookingHistoryPage.tsx";
 import ProfilePage from "../page/customer/profile-page/ProfilePage.tsx";
+import PlayerDashboard from "../page/customer/profile-page/PlayerDashboard.tsx";
+
+import { useAuth } from "../context/AuthContext.tsx";
+import { Spin } from "antd";
+import UserAchievements from "../components/UserAchievements.tsx";
+
+const MyDashboardWrapper = () => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading)
+    return (
+      <div className="p-10 text-center">
+        <Spin size="large" />
+      </div>
+    );
+  if (!user?.userId) return <NotFound />;
+
+  return <PlayerDashboard userId={user.userId} />;
+};
 
 export const router = createBrowserRouter([
   {
@@ -58,27 +77,35 @@ export const router = createBrowserRouter([
         element: <BookingPaymentResultPage />,
         handle: { breadcrumb: "Kết quả thanh toán booking" },
       },
-      // {
-      //   element: <ProtectedRouter allowedRoles={["RENTER"]} />,
-      //   children: [
-      { path: "profile", element: <ProfilePage /> },
-      { path: "my-matches", element: <MyMatchPage /> },
-      { path: "chat", element: <ChatHome /> },
-      { path: "payment/:bookingId", element: <PaymentPage /> },
+
       {
-        path: "payment-success/:bookingId",
-        element: <PaymentSuccessPage />,
+        element: (
+          <ProtectedRouter
+            allowedRoles={["RENTER", "ADMIN", "OWNER", "STAFF"]}
+          />
+        ),
+        children: [
+          { path: "dashboard", element: <MyDashboardWrapper /> },
+          { path: "profile", element: <ProfilePage /> },
+          { path: "my-matches", element: <MyMatchPage /> },
+          { path: "achievements", element: <UserAchievements /> },
+          { path: "chat", element: <ChatHome /> },
+          { path: "payment/:bookingId", element: <PaymentPage /> },
+          {
+            path: "payment-success/:bookingId",
+            element: <PaymentSuccessPage />,
+          },
+          { path: "booking-history", element: <BookingHistoryPage /> },
+          {
+            path: "notifications",
+            element: <NotificationPage />,
+            handle: { breadcrumb: "Thông báo mới" },
+          },
+        ],
       },
-      { path: "booking-history", element: <BookingHistoryPage /> },
-      {
-        path: "notifications",
-        element: <NotificationPage />,
-        handle: { breadcrumb: "Thông báo mới" },
-      },
-      //   ],
-      // },
     ],
   },
+
   { path: "/admin/login", element: <LoginAdminPage /> },
   {
     path: "/admin",
@@ -96,6 +123,7 @@ export const router = createBrowserRouter([
       { path: "bookings/list", element: <BookingManagement /> },
     ],
   },
+
   { path: "/owner/login", element: <LoginOwnerPage /> },
   {
     path: "/owner",
