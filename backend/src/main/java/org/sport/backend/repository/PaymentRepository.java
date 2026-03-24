@@ -39,4 +39,34 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Optional<Payment> findFirstByBookingOrderByTransactionDateDesc(Booking booking);
     Optional<Payment> findByPayosOrderCode(Long payosOrderCode);
 
+    @Query("SELECT DISTINCT b.rentalArea.rentalAreaId FROM Payment p " +
+            "JOIN p.booking b " +
+            "WHERE p.paymentStatus = 'SUCCESS' " + // Giả sử Enum của bạn có giá trị SUCCESS
+            "AND p.transactionDate >= :startDate AND p.transactionDate <= :endDate")
+    List<UUID> findRentalAreasWithSuccessfulPayments(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    // Tính tổng tiền Admin đã thực thu (SUCCESS) của một Tòa nhà trong tháng
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "JOIN p.booking b " +
+            "WHERE b.rentalArea.rentalAreaId = :rentalAreaId " +
+            "AND p.paymentStatus = 'SUCCESS' " +
+            "AND p.transactionDate >= :startDate AND p.transactionDate <= :endDate")
+    BigDecimal sumRevenueByRentalAreaAndDate(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    // Đếm số lượng booking đã được thanh toán của một Tòa nhà trong tháng
+    @Query("SELECT COUNT(DISTINCT b.bookingId) FROM Payment p " +
+            "JOIN p.booking b " +
+            "WHERE b.rentalArea.rentalAreaId = :rentalAreaId " +
+            "AND p.paymentStatus = 'SUCCESS' " +
+            "AND p.transactionDate >= :startDate AND p.transactionDate <= :endDate")
+    Long countBookingsByRentalAreaAndDate(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
 }

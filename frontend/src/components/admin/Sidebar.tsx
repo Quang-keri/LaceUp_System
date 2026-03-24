@@ -97,20 +97,16 @@ const Sidebar: React.FC<SidebarProps> = ({
     // 3. Quản lý Đặt sân (Sửa tên cho đúng chuyên môn)
     getItem("Lịch đặt sân", "sub_booking", <CalendarOutlined />, [
       getItem(
-        <Link to="/admin/bookings/calendar">Bản đồ lịch sân</Link>,
+        <Link to="/admin/bookings/calendar">Lịch sân</Link>,
         "/admin/bookings/calendar",
       ),
       getItem(
         <Link to="/admin/bookings/list">Danh sách đơn đặt</Link>,
         "/admin/bookings/list",
       ),
-      getItem(
-        <Link to="/admin/bookings/check-in">Nhận sân/Trả sân</Link>,
-        "/admin/bookings/check-in",
-      ),
+    
     ]),
 
-    // 4. Marketing & Khuyến mãi
     getItem(
       <Link to="/admin/vouchers">Mã giảm giá</Link>,
       "/admin/vouchers",
@@ -118,16 +114,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     ),
 
     // 5. Tài chính & Hợp tác
-    getItem("Tài chính & Đối tác", "sub_finance", <DollarOutlined />, [
-      getItem(<Link to="/admin/invoices">Hóa đơn</Link>, "/admin/invoices"),
+    getItem("Quản lý tài chính", "sub_finance", <DollarOutlined />, [
       getItem(
-        <Link to="/admin/payouts">Thanh toán cho chủ sân</Link>,
-        "/admin/payouts",
+        <Link to="/admin/settlements">Đối soát & Thanh toán</Link>,
+        "/admin/settlements",
       ),
-      getItem(
-        <Link to="/admin/transactions">Lịch sử giao dịch</Link>,
-        "/admin/transactions",
-      ),
+      // Bạn có thể thêm link Cấu hình hoa hồng vào đây sau
+      getItem(<Link to="/admin/commissions">Cấu hình hoa hồng</Link>, "/admin/commissions"),
     ]),
 
     getItem(
