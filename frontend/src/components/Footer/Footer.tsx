@@ -2,10 +2,10 @@ import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
 
 const Footer = () => {
   return (
-    <footer className="bg-black text-white mt-20">
+    <footer className="bg-white text-gray-50 mt-20">
       <div className="max-w-[1200px] mx-auto grid grid-cols-5 gap-8 py-12 px-6">
         <div>
-          <h3 className="font-semibold text-lg mb-4">Contact Us</h3>
+          <h3 className="font-semibold text-lg mb-4">Liên hệ với chúng tôi</h3>
           <p className="text-sm text-gray-400">Email: support@LaceUp.com</p>
           <p className="text-sm text-gray-400">Phone: +84 123 456 789</p>
           <p className="text-sm text-gray-400">Address: Ho Chi Minh City</p>

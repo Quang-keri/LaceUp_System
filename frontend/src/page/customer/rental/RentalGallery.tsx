@@ -7,9 +7,7 @@ export default function RentalGallery({ rental }: any) {
   if (!images?.length) return null;
 
   return (
-    <div className="grid grid-cols-10 gap-3 aspect-[16/6]">
-      
-
+    <div className="bg-white  grid grid-cols-10 gap-3 aspect-[16/6]">
       <img
         src={images[0].imageUrl}
         className="col-span-7 w-230 h-80 object-contain rounded-xl"

@@ -5,7 +5,7 @@ import ChatBubble from "../../page/customer/chat/ChatBubble";
 
 export default function DefaultLayout() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col bg-white">
       <AppHeader />
 
       <main className="flex-1">

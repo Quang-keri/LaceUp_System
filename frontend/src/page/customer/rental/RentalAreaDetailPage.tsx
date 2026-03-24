@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Row, Col } from "antd";
+import { Row, Col, ConfigProvider } from "antd";
 import { toast } from "react-toastify";
 
 import { useAuth } from "../../../context/AuthContext";
@@ -79,7 +79,12 @@ export default function RentalAreaDetailPage() {
     fetchDetail();
   }, [id]);
 
-  if (!data) return <p className="p-10 text-center">Đang tải dữ liệu...</p>;
+  if (!data)
+    return (
+      <p className="p-10 text-center text-sm text-gray-500">
+        Đang tải dữ liệu...
+      </p>
+    );
 
   // Hàm tính toán giá dựa trên Rule (Giữ nguyên logic của bạn)
   const getPriceByTime = (
@@ -261,48 +266,88 @@ export default function RentalAreaDetailPage() {
   };
 
   return (
-    <div className="max-w-[1150px] mx-auto px-4 mt-3">
-      <RentalGallery rental={data} />
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: "#9156F1",
+          borderRadius: 8,
+          fontFamily: "inherit",
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-        <div className="lg:col-span-8">
-          <RentalInfo rental={data} />
-        </div>
-        <div className="lg:col-span-4">
-          <HostCard rental={data} />
-        </div>
-      </div>
+          colorBgBase: "#ffffff",
+          colorBgContainer: "#ffffff",
+          colorBgLayout: "#ffffff",
+        },
+      }}
+    >
+      {/* Bao bọc toàn trang bằng bg-white */}
+      <div className="min-h-screen bg-white text-gray-600 text-sm py-8 font-sans w-full">
+        <div className="max-w-[1200px] mx-auto px-4 bg-white">
+          {/* Phần Gallery */}
+          <div className="bg-white p-2 rounded-xl border border-gray-100 mb-8">
+            <RentalGallery rental={data} />
+          </div>
 
-      <div className="mt-8">
-        <BookingSearchBar filter={filter} setFilter={setFilter} />
-      </div>
+          {/* Layout thông tin chính */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+            <div className="lg:col-span-8 space-y-6">
+              <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <RentalInfo rental={data} />
+              </div>
+            </div>
 
-      <Row gutter={[24, 24]} className="mt-6">
-        <Col xs={24} lg={16}>
-          <CourtList
-            courts={data.courts}
-            onAddCourt={addCourt}
-            filter={filter}
-          />
-        </Col>
-        <Col xs={24} lg={8}>
-          <BookingCart
+            <div className="lg:col-span-4">
+              <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm sticky top-6">
+                <HostCard rental={data} />
+              </div>
+            </div>
+          </div>
+
+          {/* Thanh tìm kiếm */}
+          <div className="mb-8 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-[#9156F1] rounded-full"></span>
+              Chọn thời gian đặt sân
+            </h3>
+            <BookingSearchBar filter={filter} setFilter={setFilter} />
+          </div>
+
+          {/* Danh sách sân và Giỏ hàng */}
+          <Row gutter={[24, 24]}>
+            <Col xs={24} lg={16}>
+              <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">
+                  Danh sách sân trống
+                </h3>
+                <CourtList
+                  courts={data.courts}
+                  onAddCourt={addCourt}
+                  filter={filter}
+                />
+              </div>
+            </Col>
+
+            <Col xs={24} lg={8}>
+              <div className="sticky top-6">
+                <BookingCart
+                  cart={cart}
+                  increase={increase}
+                  decrease={decrease}
+                  onOpenModal={handleOpenModal}
+                />
+              </div>
+            </Col>
+          </Row>
+
+          <BookingConfirmModal
+            open={openModal}
+            onClose={() => setOpenModal(false)}
             cart={cart}
-            increase={increase}
-            decrease={decrease}
-            onOpenModal={handleOpenModal}
+            userInfo={userInfo}
+            setUserInfo={setUserInfo}
+            onConfirm={submitBooking}
           />
-        </Col>
-      </Row>
-
-      <BookingConfirmModal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        cart={cart}
-        userInfo={userInfo}
-        setUserInfo={setUserInfo}
-        onConfirm={submitBooking}
-      />
-    </div>
+        </div>
+      </div>
+    </ConfigProvider>
   );
 }

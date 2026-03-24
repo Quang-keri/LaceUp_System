@@ -49,6 +49,8 @@ import { useAuth } from "../context/AuthContext.tsx";
 import { Spin } from "antd";
 import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
 import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx";
+import WaterSportsLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
+import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -70,6 +72,7 @@ export const router = createBrowserRouter([
     element: <DefaultLayout />,
     children: [
       { index: true, element: <LandingPage /> },
+      { path: "trang-chu", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
       { path: "/register", element: <RegisterPage /> },
       { path: "register/confirm", element: <ConfirmRegister /> },
