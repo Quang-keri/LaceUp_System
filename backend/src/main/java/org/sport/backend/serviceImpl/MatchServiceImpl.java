@@ -11,10 +11,7 @@ import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.mapper.MatchMapper;
-import org.sport.backend.repository.CategoryRepository;
-import org.sport.backend.repository.CourtRepository;
-import org.sport.backend.repository.MatchRegistrationRepository;
-import org.sport.backend.repository.MatchRepository;
+import org.sport.backend.repository.*;
 import org.sport.backend.service.MatchService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.MatchSpecifications;
@@ -25,8 +22,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,6 +39,7 @@ public class MatchServiceImpl implements MatchService {
     private final MatchRegistrationRepository registrationRepository;
     private final CourtRepository courtRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
     private final MatchMapper matchMapper;
 
     private final UserService userService;
@@ -172,19 +173,49 @@ public class MatchServiceImpl implements MatchService {
         MatchRegistration reg = registrationRepository.findByMatchAndUser(match, currentUser)
                 .orElseThrow(() -> new RuntimeException("Bạn chưa tham gia trận này!"));
 
-        // Cập nhật người này đã xác nhận
+        if (reg.isDepositConfirmed()) {
+            throw new RuntimeException("Bạn đã xác nhận cọc rồi!");
+        }
+
+        BigDecimal totalPrice = calculateTotalCourtPrice(match);
+        BigDecimal depositAmount = BigDecimal.ZERO;
+
+        if (totalPrice.compareTo(BigDecimal.ZERO) > 0) {
+            depositAmount = totalPrice.divide(BigDecimal.valueOf(match.getMaxPlayers()), 0, RoundingMode.HALF_UP);
+        }
+
+        // TRỪ TIỀN VÀ GHI LOG
+        if (depositAmount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal currentBalance = currentUser.getFakeMoney() != null ? currentUser.getFakeMoney() : BigDecimal.ZERO;
+            if (currentBalance.compareTo(depositAmount) < 0) {
+                throw new RuntimeException("Ví của bạn không đủ " + depositAmount + " VNĐ để đặt cọc! Vui lòng nạp thêm tiền.");
+            }
+
+            currentUser.setFakeMoney(currentBalance.subtract(depositAmount));
+            userRepository.save(currentUser);
+
+            // --- BẮT LOG RA FILE TẠI ĐÂY ---
+            log.info("[TRANSACTION] - MINUS | Tác vụ: ĐẶT CỌC | User: {} ({}) | Số tiền: -{} VNĐ | Trận: {} | Số dư mới: {}",
+                    currentUser.getUserName(),
+                    currentUser.getUserId(),
+                    depositAmount,
+                    match.getMatchId(),
+                    currentUser.getFakeMoney());
+            // -------------------------------
+
+            log.info("Đã trừ {} VNĐ tiền cọc của user {}", depositAmount, currentUser.getUserName());
+        }
+
         reg.setDepositConfirmed(true);
         registrationRepository.save(reg);
 
-        // Kiểm tra xem tất cả những người trong trận đã xác nhận hết chưa?
         List<MatchRegistration> allRegs = registrationRepository.findByMatch(match);
         boolean isAllConfirmed = allRegs.stream().allMatch(MatchRegistration::isDepositConfirmed);
 
-        // Nếu tất cả đã ấn xác nhận -> Chuyển Match sang CONFIRMED (Sẵn sàng chơi)
         if (isAllConfirmed) {
             match.setStatus(MatchStatus.CONFIRMED);
             matchRepository.save(match);
-            log.info("Trận đấu {} đã được tất cả người chơi xác nhận cọc. Sẵn sàng bắt đầu!", match.getMatchId());
+            log.info("Trận đấu {} đã được tất cả người chơi xác nhận cọc.", match.getMatchId());
         }
     }
 
@@ -273,8 +304,7 @@ public class MatchServiceImpl implements MatchService {
 
         Specification<Match> spec = Specification.where(MatchSpecifications.fetchAllDetails())
                 .and(MatchSpecifications.isParticipantOrHost(userId))
-                .and(MatchSpecifications.hasStatus(MatchStatus.COMPLETED))
-                ;
+                .and(MatchSpecifications.hasStatus(MatchStatus.COMPLETED));
 
         Page<Match> matchPage = matchRepository.findAll(spec, pageable);
 
@@ -347,5 +377,27 @@ public class MatchServiceImpl implements MatchService {
                 .maxRank(config.getMaxRank())
                 .build();
         matchRepository.save(newMatch);
+    }
+
+    private BigDecimal calculateTotalCourtPrice(Match match) {
+        if (match.getCourt() == null) return BigDecimal.ZERO;
+
+        List<CourtPrice> prices = match.getCourt().getCourtPrices();
+        if (prices == null || prices.isEmpty()) return BigDecimal.ZERO;
+
+        LocalTime matchStart = match.getStartTime().toLocalTime();
+        LocalTime matchEnd = match.getEndTime().toLocalTime();
+
+        CourtPrice courtPrice = prices.stream()
+                .filter(p -> !matchStart.isBefore(p.getStartTime()) && !matchEnd.isAfter(p.getEndTime()))
+                .findFirst()
+                .orElse(prices.getFirst());
+
+        BigDecimal pricePerHour = courtPrice.getPricePerHour();
+
+        long durationMinutes = java.time.Duration.between(match.getStartTime(), match.getEndTime()).toMinutes();
+        BigDecimal hours = BigDecimal.valueOf(durationMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+
+        return pricePerHour.multiply(hours);
     }
 }
