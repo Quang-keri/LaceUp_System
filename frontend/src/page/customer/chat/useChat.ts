@@ -164,9 +164,6 @@ export const useChat = (
 
     const unsubscribeReadReceipt = websocketService.onReadReceipt(
       (data: any) => {
-        // Log để kiểm tra xem receipt có về tới client không
-        console.log("📩 Nhận được Read Receipt:", data);
-
         setMessages((prev) =>
           prev.map((m) => {
             // Nếu tin nhắn đó là do mình gửi (sender === "user")
@@ -192,12 +189,6 @@ export const useChat = (
   }, [currentUserId]);
 
   const handleSendMessage = async () => {
-    // LOG 1: Kiểm tra trạng thái đầu vào
-    console.log("=== DEBUG SEND MESSAGE ===");
-    console.log("1. Current User ID (Sender):", currentUserId);
-    console.log("2. Selected Chat Object:", selectedChat);
-    console.log("3. Recipient ID:", selectedChat?.otherPerson?.userId);
-    console.log("4. Raw Message:", newMessage);
 
     if (!newMessage.trim() && selectedFiles.length === 0) return;
     if (!selectedChat || !currentUserId) {
@@ -207,7 +198,6 @@ export const useChat = (
 
     const recipientId = selectedChat.otherPerson?.userId;
 
-    // LOG 2: Kiểm tra định dạng ID trước khi bắn request
     if (recipientId?.includes("@") || currentUserId?.includes("@")) {
       console.error("CHẶN GỬI: Phát hiện Email trong trường ID!", {
         sender: currentUserId,
@@ -223,7 +213,6 @@ export const useChat = (
       currentConversationIdRef.current || selectedChat.conversationId;
 
     if (selectedFiles.length > 0 && selectedFiles[0]) {
-      console.log("Nhánh: Gửi kèm ảnh (HTTP)");
       try {
         const messageRequest = {
           content: newMessage.trim(),
@@ -231,15 +220,11 @@ export const useChat = (
           conversationId: targetConversationId || undefined,
         };
 
-        // LOG 3: Payload thực tế gửi lên qua API
-        console.log("Payload gửi qua API:", messageRequest);
-
         const fileToSend = selectedFiles[0].file;
-        const res = await chatService.sendMessageWithImage(
+        await chatService.sendMessageWithImage(
           messageRequest,
           fileToSend,
         );
-        console.log("Kết quả API:", res);
 
         setNewMessage("");
         setSelectedFiles([]);
@@ -247,7 +232,6 @@ export const useChat = (
         console.error("Lỗi gửi ảnh:", err);
       }
     } else {
-      console.log("Nhánh: Gửi văn bản thuần");
       const content = newMessage.trim();
 
       if (websocketService.isConnected()) {
@@ -257,8 +241,6 @@ export const useChat = (
           content,
           conversationId: targetConversationId,
         };
-        // LOG 4: Dữ liệu gửi qua Websocket
-        console.log("Payload gửi qua WS:", wsPayload);
 
         websocketService.send("/app/chat", wsPayload);
 

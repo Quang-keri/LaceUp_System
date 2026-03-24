@@ -3,7 +3,8 @@ import type { ApiResponse } from "../types/ApiResponse.ts";
 import type {
     UserResponse,
     CreateUserRequest,
-    UpdateUserRequest
+    UpdateUserRequest,
+    UserDashboardResponse
 } from '../types/user';
 
 const API_BASE_URL = '/users';
@@ -69,6 +70,11 @@ export const userService = {
 
     getUserAuthorities: async (userId: string): Promise<ApiResponse<string[]>> => {
         const response = await api.get(`${API_BASE_URL}/${userId}/authorities`);
+        return response.data;
+    },
+
+    getUserDashboard: async (userId: string): Promise<ApiResponse<UserDashboardResponse>> => {
+        const response = await api.get(`${API_BASE_URL}/${userId}/dashboard`);
         return response.data;
     }
 };

@@ -5,8 +5,8 @@ import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import type { NotificationResponse } from "../../../types/notification";
 import notificationService from "../../../service/notificationService";
-import notificationHelper from "./notificationHelper";
 import websocketService from "../../../service/websocketService";
+import notificationHelper from "./NotificationHelper";
 
 const NotificationPage = () => {
   const [allNotis, setAllNotis] = useState<NotificationResponse[]>([]);
@@ -51,24 +51,11 @@ const NotificationPage = () => {
 
     const unsubscribe = websocketService.onNotification(
       (data: NotificationResponse) => {
-        console.log("=== COMPONENT RECEIVE ===");
-        console.log("Data from WS:", data);
-
         setAllNotis((prev) => {
-          console.log("Old state count:", prev.length);
           return [data, ...prev];
         });
 
-        const isChatPage = window.location.pathname.includes("/chat");
-        console.log(
-          "Is Chat Page:",
-          isChatPage,
-          "| Visibility:",
-          document.visibilityState,
-        );
-
-        // Kiểm tra xem hàm helper có được gọi không
-        console.log("Calling NotificationHelper...");
+        window.location.pathname.includes("/chat");
         notificationHelper(data);
       },
     );

@@ -7,9 +7,11 @@ import {
   Modal,
   Select,
   Radio,
+  Input,
 } from "antd";
 import matchService from "../../service/match/matchService";
 import dayjs from "dayjs";
+import { useAuth } from "../../context/AuthContext";
 
 const PRICE_TYPE_LABEL: any = {
   NORMAL: "Giá thường",
@@ -20,7 +22,8 @@ const PRICE_TYPE_LABEL: any = {
   OTHER: "Khác",
 };
 
-export default function CourtList({ courts, onAddCourt, filter }: any) {
+export default function CourtList({ courts, onAddCourt }: any) {
+  const { user } = useAuth(); // Lấy thông tin user hiện tại để tính Rank
   const [selectedCourt, setSelectedCourt] = useState<any>(null);
   const [openModal, setOpenModal] = useState(false);
 
@@ -28,7 +31,6 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
-  // group theo type + specificDate
   const groupByType = (rules: any[]) => {
     const map: any = {};
 
@@ -117,6 +119,7 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
         winnerPercent: values.matchType === "BET" ? values.winnerPercent : null,
         minRank: values.matchType === "RANKED" ? values.minRank : null,
         maxRank: values.matchType === "RANKED" ? values.maxRank : null,
+        note: values.note || "", // Payload thêm phần ghi chú
       };
 
       await matchService.createMatch(payload as any);
@@ -204,7 +207,22 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
               <button
                 onClick={() => {
                   setSelectedCourt(court);
-                  form.resetFields(); // Reset form mỗi khi mở modal mới
+                  form.resetFields();
+
+                  // Lấy rank hiện tại của user, mặc định 0 nếu undefined
+                  const currentRank = user?.rankPoint || 0;
+
+                  // Set giá trị mặc định cho form ngay khi mở Modal
+                  form.setFieldsValue({
+                    maxPlayers: 4,
+                    minPlayersToStart: 2,
+                    duration: 1,
+                    matchType: "NORMAL",
+                    winnerPercent: 50, // Mặc định chia kèo 50-50
+                    minRank: Math.max(0, currentRank - 1000), // Không để rank âm
+                    maxRank: currentRank + 1000,
+                  });
+
                   setOpenMatchModal(true);
                 }}
                 className="border border-orange-500 text-orange-600 px-4 py-2 rounded-lg font-medium hover:bg-orange-50 transition-colors"
@@ -247,21 +265,7 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
           </p>
         </div>
 
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleCreateMatch}
-          initialValues={{
-            maxPlayers: 4,
-            minPlayersToStart: 2,
-            duration: 1,
-            // Giá trị mặc định cho thể thức
-            matchType: "NORMAL",
-            winnerPercent: 0,
-            minRank: 2000,
-            maxRank: 4000,
-          }}
-        >
+        <Form form={form} layout="vertical" onFinish={handleCreateMatch}>
           {/* Lựa chọn Thể thức */}
           <Form.Item
             label={
@@ -311,14 +315,13 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
                           % Tiền sân phe THẮNG phải trả
                         </span>
                       }
-                      className="mb-0" // Bỏ margin bottom mặc định của Antd
+                      className="mb-0"
                     >
                       <div className="flex items-center gap-4">
-                        {/* Ô nhập liệu (Nhỏ lại, nằm bên trái) */}
                         <Form.Item name="winnerPercent" noStyle>
                           <InputNumber
                             min={0}
-                            max={50}
+                            max={50} // Nếu muốn cho phép phe thắng trả nhiều hơn 50% thì bạn đổi max={100}
                             step={10}
                             formatter={(value) => `${value}%`}
                             parser={(value) => value!.replace("%", "")}
@@ -326,7 +329,6 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
                           />
                         </Form.Item>
 
-                        {/* Ô hiển thị phe thua (Nằm bên phải) */}
                         <div className="flex-1 bg-yellow-100/80 py-1.5 px-3 rounded-lg border border-yellow-300 text-sm text-yellow-800 flex items-center gap-2 shadow-sm">
                           <span>👉</span>
                           <span>
@@ -356,6 +358,7 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
                       className="mb-0"
                     >
                       <InputNumber
+                        min={0}
                         step={100}
                         className="w-full font-bold text-purple-700 text-lg"
                       />
@@ -435,6 +438,10 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
                 <Select.Option value={1}>1 giờ</Select.Option>
                 <Select.Option value={1.5}>1.5 giờ</Select.Option>
                 <Select.Option value={2}>2 giờ</Select.Option>
+                <Select.Option value={2.5}>2 giờ 30 phút</Select.Option>
+                <Select.Option value={3}>3 giờ</Select.Option>
+                <Select.Option value={3.5}>3 giờ 30 phút</Select.Option>
+                <Select.Option value={4}>4 giờ</Select.Option>
               </Select>
             </Form.Item>
           </div>
@@ -483,6 +490,20 @@ export default function CourtList({ courts, onAddCourt, filter }: any) {
               <InputNumber min={1} className="w-full" />
             </Form.Item>
           </div>
+
+          {/* Thêm trường Ghi chú */}
+          <Form.Item
+            label={
+              <span className="font-semibold text-gray-700">Ghi chú thêm</span>
+            }
+            name="note"
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder="Ví dụ: Trình độ trung bình khá, tự mang nước/bóng..."
+              className="rounded-lg border-gray-300"
+            />
+          </Form.Item>
         </Form>
       </Modal>
     </>

@@ -5,6 +5,7 @@ import org.sport.backend.base.PageResponse;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
+import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.User;
 
@@ -45,4 +46,6 @@ public interface UserService {
     User findByUserId(UUID id);
 
     User getCurrentUserEntity();
+
+    UserDashboardResponse getUserDashboard(UUID userId);
 }

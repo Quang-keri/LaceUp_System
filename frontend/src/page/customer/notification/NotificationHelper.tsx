@@ -30,7 +30,6 @@ const NotificationHelper = async (data: NotificationResponse) => {
     badge: "/logo.png",
   };
 
-  console.log("✅ Đang hiển thị thông báo:", data.notificationTitle);
   new Notification(data.notificationTitle, options);
 };
 

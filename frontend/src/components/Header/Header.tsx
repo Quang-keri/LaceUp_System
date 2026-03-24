@@ -53,10 +53,10 @@ const AppHeader = () => {
   const userMenuItems = isLoggedIn
     ? [
         {
-          key: "/profile",
+          key: "/dashboard",
           label: "Quản lý cá nhân",
           icon: <SettingOutlined />,
-          onClick: () => navigate("/profile"),
+          onClick: () => navigate("/dashboard"),
         },
         {
           key: "/booking-history",

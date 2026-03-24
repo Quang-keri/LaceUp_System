@@ -4,27 +4,31 @@ import matchService from "../../../service/match/matchService.ts";
 import type { MatchResponse } from "../../../types/match.ts";
 import { toast } from "react-toastify";
 import CreateMatchModal from "./CreateMatchModal";
+import JoinMatchModal from "./JoinMatchModal";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext.tsx";
 
 const MatchPage: React.FC = () => {
   const [matches, setMatches] = useState<MatchResponse[]>([]);
+  const navigate = useNavigate();
+  const { user } = useAuth(); // Lấy thông tin người dùng hiện tại
 
-  // State lọc môn thể thao
   const [categoryFilter, setCategoryFilter] = useState("Tất cả");
-  // State lọc loại hình (Thường, Kèo, Rank)
   const [typeFilter, setTypeFilter] = useState("ALL");
-
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Cập nhật hàm fetch để gọi getAllMatches và lọc từ Backend (Cách 2 tối ưu hơn)
+  // State Modal
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
+    null,
+  );
+
   const fetchMatches = async () => {
     setLoading(true);
     try {
-      // Gọi API getAllMatches để lấy tất cả trận OPEN
-      // Bạn có thể truyền thẳng categoryFilter và typeFilter vào đây nếu BE hỗ trợ lọc
       const response = await matchService.getAllMatches(1, 100);
       if (response.code === 1000 || response.code === 0) {
-        // Lấy array data từ PageResponse
         setMatches(response.result.data || []);
       }
     } catch (error) {
@@ -38,6 +42,11 @@ const MatchPage: React.FC = () => {
     fetchMatches();
   }, []);
 
+  const handleOpenJoinModal = (match: MatchResponse) => {
+    setSelectedMatch(match);
+    setIsJoinModalOpen(true);
+  };
+
   const handleJoinMatch = async (matchId: string) => {
     try {
       const response = await matchService.joinMatch(matchId);
@@ -48,6 +57,123 @@ const MatchPage: React.FC = () => {
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Lỗi tham gia");
     }
+  };
+
+  const handleConfirmDeposit = async (matchId: string) => {
+    try {
+      const response = await matchService.confirmDeposit(matchId);
+      if (response.code === 1000 || response.code === 0) {
+        toast.success("Đã xác nhận cọc thành công!");
+        fetchMatches();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Lỗi xác nhận cọc");
+    }
+  };
+
+  // Hàm render nút động tùy theo trạng thái (Không mở modal, click ăn liền)
+  const renderActionButton = (match: MatchResponse) => {
+    const isParticipant = match.participants?.some(
+      (p: any) => p.userId === user?.userId,
+    );
+    const isDepositConfirmed = match.participants?.find(
+      (p: any) => p.userId === user?.userId,
+    )?.isDepositConfirmed;
+
+    // 1. Trạng thái Đang tìm người (Vẫn còn chỗ)
+    if (
+      match.status === "OPEN" ||
+      (match.status === "CONFIRMED" && match.remainingSlots > 0)
+    ) {
+      if (isParticipant) {
+        return (
+          <button
+            disabled
+            className="bg-gray-100 text-gray-500 px-4 py-2 rounded-xl font-bold text-sm"
+          >
+            Đã Tham Gia
+          </button>
+        );
+      }
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleJoinMatch(match.matchId);
+          }}
+          className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition"
+        >
+          Tham Gia
+        </button>
+      );
+    }
+
+    // 2. Trạng thái Chờ xác nhận cọc (Khi vừa đủ người)
+    if (match.status === "WAITING_DEPOSIT") {
+      if (isParticipant) {
+        if (isDepositConfirmed) {
+          return (
+            <button
+              disabled
+              className="bg-green-100 text-green-600 px-4 py-2 rounded-xl font-bold text-sm"
+            >
+              Đã Cọc
+            </button>
+          );
+        }
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleConfirmDeposit(match.matchId);
+            }}
+            className="bg-orange-500 text-white hover:bg-orange-600 animate-pulse px-4 py-2 rounded-xl font-bold text-sm"
+          >
+            Xác Nhận Cọc
+          </button>
+        );
+      }
+      return (
+        <button
+          disabled
+          className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl font-bold text-sm"
+        >
+          Chờ Xác Nhận
+        </button>
+      );
+    }
+
+    // 3. Trạng thái Đã xác nhận xong cọc HOẶC trận đấu cũ đã Full
+    if (match.status === "CONFIRMED" || match.status === "FULL") {
+      if (isParticipant) {
+        return (
+          <button
+            disabled
+            className="bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-sm"
+          >
+            Sẵn Sàng
+          </button>
+        );
+      }
+      return (
+        <button
+          disabled
+          className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl font-bold text-sm"
+        >
+          Đã Đầy
+        </button>
+      );
+    }
+
+    // 4. Các trạng thái còn lại (COMPLETED, CANCELLED...)
+    return (
+      <button
+        disabled
+        className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl font-bold text-sm"
+      >
+        Đã Chốt
+      </button>
+    );
   };
 
   return (
@@ -75,9 +201,15 @@ const MatchPage: React.FC = () => {
         onSuccess={fetchMatches}
       />
 
-      {/* --- KHU VỰC FILTER TỔNG HỢP --- */}
+      <JoinMatchModal
+        isOpen={isJoinModalOpen}
+        onClose={() => setIsJoinModalOpen(false)}
+        onSuccess={fetchMatches}
+        match={selectedMatch}
+      />
+
       <div className="mb-8 space-y-4">
-        {/* Lọc Môn thể thao (Màu Xanh Blue) */}
+        {/* Bộ lọc ... (Giữ nguyên) */}
         <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
           {["Tất cả", "Sân bóng đá", "Sân cầu lông", "Sân Pickleball"].map(
             (tab) => (
@@ -95,8 +227,6 @@ const MatchPage: React.FC = () => {
             ),
           )}
         </div>
-
-        {/* Lọc Thể thức thi đấu (Màu Tím Purple) */}
         <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
           {[
             { id: "ALL", label: "Tất cả thể thức" },
@@ -124,10 +254,13 @@ const MatchPage: React.FC = () => {
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
         </div>
       ) : (
-        /* Match Cards Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {matches
-            // Lọc theo Môn
+            .filter((m) =>
+              ["OPEN", "CONFIRMED", "WAITING_DEPOSIT", "FULL"].includes(
+                m.status,
+              ),
+            )
             .filter(
               (m) =>
                 categoryFilter === "Tất cả" ||
@@ -135,15 +268,17 @@ const MatchPage: React.FC = () => {
                   .toLowerCase()
                   .includes(categoryFilter.toLowerCase()),
             )
-            // Lọc theo Loại kèo
             .filter((m) => typeFilter === "ALL" || m.matchType === typeFilter)
             .map((match) => (
               <div
                 key={match.matchId}
-                className="bg-white rounded-2xl border p-6 relative shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                className="bg-white rounded-2xl border relative shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
               >
-                <div>
-                  {/* Badge Tình trạng Sân/Chỗ */}
+                {/* --- KHỐI BẤM ĐƯỢC ĐỂ XEM CHI TIẾT --- */}
+                <div
+                  className="p-6 pb-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleOpenJoinModal(match)}
+                >
                   <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
@@ -156,21 +291,25 @@ const MatchPage: React.FC = () => {
                     </span>
                     <span
                       className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                        match.remainingSlots > 0
+                        match.status === "WAITING_DEPOSIT"
+                          ? "bg-orange-100 text-orange-600"
+                          : match.remainingSlots > 0
                           ? "bg-green-100 text-green-600"
-                          : "bg-red-100 text-red-600"
+                          : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {match.remainingSlots > 0 ? "Còn Chỗ" : "Hết Chỗ"}
+                      {match.status === "WAITING_DEPOSIT"
+                        ? "Chờ Cọc"
+                        : match.remainingSlots > 0
+                        ? "Còn Chỗ"
+                        : "Đã Đầy"}
                     </span>
                   </div>
 
-                  {/* Tiêu đề trận đấu */}
                   <h3 className="text-xl font-bold mb-1 text-gray-800 line-clamp-1 w-[70%] pr-4">
                     {match.title || `Giao lưu ${match.categoryName}`}
                   </h3>
 
-                  {/* Category & BADGE THỂ THỨC */}
                   <div className="flex items-center flex-wrap gap-2 mb-4">
                     <p className="text-blue-600 text-sm font-semibold">
                       {match.categoryName}
@@ -247,9 +386,9 @@ const MatchPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center border-t pt-4 mt-auto">
+                {/* --- KHỐI FOOTER CHỨA ACTION BUTTON (Dừng sự kiện click mở Modal) --- */}
+                <div className="flex justify-between items-center border-t p-6 pt-4 mt-auto">
                   <div>
-                    {/* FIXED: Kiểm tra chặt chẽ giá trị null, "null", undefined và "undefined" */}
                     {match.courtPrice &&
                     match.courtPrice !== null &&
                     match.courtPrice.toString() !== "null" &&
@@ -262,21 +401,29 @@ const MatchPage: React.FC = () => {
                         Sân tự thỏa thuận
                       </p>
                     )}
-                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">
+                    <p
+                      className="text-[10px] text-gray-400 font-bold uppercase mt-0.5 cursor-pointer hover:text-blue-600 hover:underline transition-colors"
+                      title="Xem hồ sơ người tạo"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Ngăn mở Modal khi bấm vào tên Host
+                        const hostUser = match.participants?.find(
+                          (p: any) => p.userName === match.hostName,
+                        );
+                        const hostId =
+                          (match as any).hostId || hostUser?.userId;
+                        if (hostId) navigate(`/player/${hostId}`);
+                        else
+                          toast.info(
+                            "Không tìm thấy thông tin hồ sơ của Host!",
+                          );
+                      }}
+                    >
                       Host: {match.hostName}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleJoinMatch(match.matchId)}
-                    disabled={match.remainingSlots <= 0}
-                    className={`px-4 py-2 rounded-xl font-bold text-sm transition ${
-                      match.remainingSlots <= 0
-                        ? "bg-gray-100 text-gray-400"
-                        : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-                    }`}
-                  >
-                    {match.remainingSlots <= 0 ? "Hết" : "Tham Gia"}
-                  </button>
+
+                  {/* GỌI HÀM RENDER NÚT ĐỘNG */}
+                  {renderActionButton(match)}
                 </div>
               </div>
             ))}

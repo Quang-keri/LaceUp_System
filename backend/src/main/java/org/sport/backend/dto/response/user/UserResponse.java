@@ -32,4 +32,5 @@ public class UserResponse {
     private LocalDateTime updatedAt;
     private boolean active;
     private Integer rankPoint;
+    private boolean isDepositConfirmed;
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
@@ -34,6 +35,9 @@ public class DataInitializer implements CommandLineRunner {
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
     private final SlotRepository slotRepository;
+    private final PostRepository postRepository;
+    private final UserStatsRepository userStatsRepository;
+    private final UserAchievementRepository userAchievementRepository;
 
     @Override
     @Transactional
@@ -76,10 +80,11 @@ public class DataInitializer implements CommandLineRunner {
         Role staffRole = roleRepository.findByRoleName("STAFF").orElse(null);
         Role renterRole = roleRepository.findByRoleName("RENTER").orElse(null);
 
-        // 3. Seed Users
+        // 3. Seed Users, Stats & Achievements
         if (userRepository.count() == 0) {
             String commonPass = passwordEncoder.encode("123456");
             List<User> users = new ArrayList<>();
+            Random random = new Random();
 
             users.add(User.builder()
                     .userName("Admin main")
@@ -87,10 +92,12 @@ public class DataInitializer implements CommandLineRunner {
                     .passwordHash(commonPass)
                     .gender("Male")
                     .phone("0901000011")
+                    .dateOfBirth(LocalDate.of(1990, 5, 15))
                     .provider(AuthProvider.LOCAL)
                     .role(adminRole)
                     .createdAt(LocalDateTime.now().minusYears(5))
                     .active(true)
+                    .rankPoint(3600) // Thách đấu
                     .build());
 
             users.add(User.builder()
@@ -99,10 +106,12 @@ public class DataInitializer implements CommandLineRunner {
                     .passwordHash(commonPass)
                     .gender("Male")
                     .phone("0911000011")
+                    .dateOfBirth(LocalDate.of(1985, 8, 20))
                     .provider(AuthProvider.LOCAL)
                     .role(ownerRole)
                     .createdAt(LocalDateTime.now().minusYears(1))
                     .active(true)
+                    .rankPoint(1500) // Vàng
                     .build());
 
             users.add(User.builder()
@@ -111,10 +120,12 @@ public class DataInitializer implements CommandLineRunner {
                     .passwordHash(commonPass)
                     .gender("Male")
                     .phone("0921000011")
+                    .dateOfBirth(LocalDate.of(1995, 12, 1))
                     .provider(AuthProvider.LOCAL)
                     .role(staffRole)
                     .createdAt(LocalDateTime.now().minusYears(1))
                     .active(true)
+                    .rankPoint(800) // Đồng
                     .build());
 
             users.add(User.builder()
@@ -123,72 +134,63 @@ public class DataInitializer implements CommandLineRunner {
                     .passwordHash(commonPass)
                     .gender("Male")
                     .phone("0931000011")
+                    .dateOfBirth(LocalDate.of(2000, 1, 10))
                     .provider(AuthProvider.LOCAL)
                     .role(renterRole)
                     .createdAt(LocalDateTime.now().minusYears(1))
                     .active(true)
+                    .rankPoint(3025) // Cao Thủ
                     .build());
 
-            // Tạo 2 Admins
-            for (int i = 1; i <= 2; i++) {
-                users.add(User.builder()
-                        .userName("Admin " + i)
-                        .email("admin" + i + "@gmail.com")
-                        .passwordHash(commonPass)
-                        .gender("Male")
-                        .phone("090100000" + i)
-                        .provider(AuthProvider.LOCAL)
-                        .role(adminRole)
-                        .active(true)
-                        .createdAt(LocalDateTime.now().minusYears(i))
+            // Tạo Admins, Staffs, Owners
+            for (int i = 1; i <= 2; i++)
+                users.add(createDummyUser("Admin " + i, "admin" + i + "@gmail.com", commonPass, adminRole, random.nextInt(3500)));
+            for (int i = 1; i <= 3; i++)
+                users.add(createDummyUser("Staff " + i, "staff" + i + "@gmail.com", commonPass, staffRole, random.nextInt(2000)));
+            for (int i = 1; i <= 5; i++)
+                users.add(createDummyUser("Owner " + i, "owner" + i + "@gmail.com", commonPass, ownerRole, random.nextInt(2500)));
+            for (int i = 1; i <= 11; i++)
+                users.add(createDummyUser("Renter " + i, "renter" + i + "@gmail.com", commonPass, renterRole, random.nextInt(3200)));
+
+            // Lưu Users trước để có UUID
+            users = userRepository.saveAll(users);
+
+            // Sinh dữ liệu Stats và Achievements cho từng User
+            List<UserStats> statsList = new ArrayList<>();
+            List<UserAchievement> achievementList = new ArrayList<>();
+
+            for (User u : users) {
+                int rank = u.getRankPoint();
+                int totalMatches = random.nextInt(150) + (rank / 25); // Rank cao thường đánh nhiều trận
+                int totalWins = (int) (totalMatches * (0.4 + random.nextDouble() * 0.25)); // Tỉ lệ thắng 40% - 65%
+                int maxStreak = totalWins > 0 ? random.nextInt(Math.min(12, totalWins)) + 1 : 0;
+                int currentStreak = maxStreak > 0 ? random.nextInt(maxStreak + 1) : 0;
+
+                statsList.add(UserStats.builder()
+                        .user(u)
+                        .totalMatches(totalMatches)
+                        .totalWins(totalWins)
+                        .maxWinStreak(maxStreak)
+                        .currentWinStreak(currentStreak)
                         .build());
+
+                // Cấp phát huy hiệu dựa trên chỉ số vừa sinh
+                if (totalWins >= 1) {
+                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.FIRST_BLOOD).achievedAt(LocalDateTime.now().minusDays(random.nextInt(100))).build());
+                }
+                if (maxStreak >= 5) {
+                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.ON_FIRE).achievedAt(LocalDateTime.now().minusDays(random.nextInt(50))).build());
+                }
+                if (maxStreak >= 10) {
+                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.UNSTOPPABLE).achievedAt(LocalDateTime.now().minusDays(random.nextInt(20))).build());
+                }
+                if (totalMatches >= 100) {
+                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.VETERAN).achievedAt(LocalDateTime.now().minusDays(random.nextInt(10))).build());
+                }
             }
 
-            // Tạo 3 Staffs
-            for (int i = 1; i <= 3; i++) {
-                users.add(User.builder()
-                        .userName("Staff " + i)
-                        .email("staff" + i + "@gmail.com")
-                        .passwordHash(commonPass)
-                        .gender("Female")
-                        .phone("090200000" + i)
-                        .provider(AuthProvider.LOCAL)
-                        .role(staffRole)
-                        .active(true)
-                        .createdAt(LocalDateTime.now().minusMonths(i))
-                        .build());
-            }
-
-            // Tạo 5 Owners
-            for (int i = 1; i <= 5; i++) {
-                users.add(User.builder()
-                        .userName("Owner " + i)
-                        .email("owner" + i + "@gmail.com")
-                        .passwordHash(commonPass)
-                        .gender("Male")
-                        .phone("090300000" + i)
-                        .provider(AuthProvider.LOCAL)
-                        .role(ownerRole)
-                        .active(true)
-                        .createdAt(LocalDateTime.now().minusWeeks(i))
-                        .build());
-            }
-
-            // Tạo 11 Renters
-            for (int i = 1; i <= 11; i++) {
-                users.add(User.builder()
-                        .userName("Renter " + i)
-                        .email("renter" + i + "@gmail.com")
-                        .passwordHash(commonPass)
-                        .gender(i % 2 == 0 ? "Female" : "Male")
-                        .phone("090400000" + i)
-                        .provider(AuthProvider.LOCAL)
-                        .role(renterRole)
-                        .active(true)
-                        .createdAt(LocalDateTime.now().minusDays(i))
-                        .build());
-            }
-            userRepository.saveAll(users);
+            userStatsRepository.saveAll(statsList);
+            userAchievementRepository.saveAll(achievementList);
         }
 
         // 4. Seed Cities, Categories, Amenities
@@ -207,6 +209,28 @@ public class DataInitializer implements CommandLineRunner {
         if (bookingRepository.count() == 0) {
             seedBookingAndPaymentData();
         }
+
+        if (postRepository.count() == 0) {
+            seedPostData();
+        }
+    }
+
+    // Hàm phụ trợ tạo User nhanh cho gọn code
+    private User createDummyUser(String name, String email, String pass, Role role, int rankPoint) {
+        Random rand = new Random();
+        return User.builder()
+                .userName(name)
+                .email(email)
+                .passwordHash(pass)
+                .gender(rand.nextBoolean() ? "Male" : "Female")
+                .phone("09" + (10000000 + rand.nextInt(90000000)))
+                .dateOfBirth(LocalDate.of(1980 + rand.nextInt(25), 1 + rand.nextInt(12), 1 + rand.nextInt(28)))
+                .provider(AuthProvider.LOCAL)
+                .role(role)
+                .active(true)
+                .createdAt(LocalDateTime.now().minusDays(rand.nextInt(365)))
+                .rankPoint(rankPoint)
+                .build();
     }
 
     private void seedCourtData() {
@@ -230,7 +254,6 @@ public class DataInitializer implements CommandLineRunner {
         Court court = Court.builder()
                 .courtName("Sân VIP 01")
                 .surfaceType("Thảm PVC")
-//                .price(BigDecimal.valueOf(80000))
                 .courtStatus(CourtStatus.ACTIVE)
                 .indoor(true)
                 .rentalArea(area)
@@ -325,5 +348,51 @@ public class DataInitializer implements CommandLineRunner {
                 amenityRepository.save(a);
             }
         });
+    }
+
+    private void seedPostData() {
+        User owner = userRepository.findByEmail("owner@gmail.com")
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+
+        RentalArea area = rentalAreaRepository.findAll().stream()
+                .filter(a -> a.getOwner().equals(owner))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Rental Area not found for owner"));
+
+        Court court = courtRepository.findAll().stream()
+                .filter(c -> c.getRentalArea().equals(area))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Court not found for area"));
+
+        List<Post> posts = List.of(
+                Post.builder()
+                        .title("Sân cầu lông VIP Quận 9 - Giảm giá 20% khung giờ sáng")
+                        .description("Sân thảm PVC tiêu chuẩn thi đấu, đầy đủ wifi, nước uống và bãi xe rộng rãi.")
+                        .postStatus(PostStatus.PUBLISHED) // Giả định enum có trạng thái này
+                        .user(owner)
+                        .court(court)
+                        .rentalArea(area)
+                        .build(),
+
+                Post.builder()
+                        .title("Tìm đối thủ giao lưu tại Sân VIP 01 tối nay")
+                        .description("Cần tìm nhóm trình độ trung bình khá giao lưu từ 18h-20h. Sân đã đặt sẵn.")
+                        .postStatus(PostStatus.PUBLISHED)
+                        .user(owner)
+                        .court(court)
+                        .rentalArea(area)
+                        .build(),
+
+                Post.builder()
+                        .title("Ưu đãi đặt sân cố định tháng 4")
+                        .description("Đăng ký slot cố định hàng tuần để nhận ưu đãi giá cực tốt tại cụm sân Lê Văn Việt.")
+                        .postStatus(PostStatus.PUBLISHED)
+                        .user(owner)
+                        .court(court)
+                        .rentalArea(area)
+                        .build()
+        );
+
+        postRepository.saveAll(posts);
     }
 }

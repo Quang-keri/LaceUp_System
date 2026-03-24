@@ -5,7 +5,9 @@ import lombok.*;
 import lombok.experimental.*;
 import org.sport.backend.base.BaseEntity;
 import org.sport.backend.constant.AuthProvider;
+import org.sport.backend.constant.RankHelper;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -18,57 +20,56 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "user_id")
-    UUID userId;
+    private UUID userId;
 
     @Column(name = "user_name", nullable = false, length = 100)
-    String userName;
+    private String userName;
 
     @Column(name = "gender")
-    String gender;
+    private String gender;
 
     @Column(nullable = false, unique = true, length = 100)
-    String email;
+    private String email;
 
     @Column(name = "password_hash")
-    String passwordHash;
+    private String passwordHash;
 
     @Column(name = "google_id", unique = true)
-    String googleId;
+    private String googleId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "auth_provider")
-    AuthProvider provider;
+    private AuthProvider provider;
 
     @Column(name = "phone_number", length = 20)
-    String phone;
+    private String phone;
 
     @Column(name = "date_of_birth")
-    LocalDate dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id")
-    Role role;
+    private Role role;
 
     @Column(name = "is_active")
-    boolean active;
+    private boolean active;
 
     @OneToMany(mappedBy = "recipient", fetch = FetchType.LAZY)
-    List<Notification> notifications;
+    private List<Notification> notifications;
 
     @OneToMany(mappedBy = "user1", cascade = CascadeType.ALL, orphanRemoval = true)
-    List<Conversation> sentConversations;
+    private List<Conversation> sentConversations;
 
     @OneToMany(mappedBy = "user2", cascade = CascadeType.ALL, orphanRemoval = true)
-    List<Conversation> receivedConversations;
+    private List<Conversation> receivedConversations;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    List<Payment> payments;
+    private List<Payment> payments;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -76,8 +77,19 @@ public class User extends BaseEntity {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    List<Permission> extraPermissions;
+    private List<Permission> extraPermissions;
 
     @Builder.Default
-    private Integer rankPoint = 3000;
+    private Integer rankPoint = 0;
+
+    @Builder.Default
+    private BigDecimal fakeMoney = BigDecimal.valueOf(1000000.00);
+
+    @Transient
+    private String displayRank;
+
+    // Hàm này sẽ được gọi ở tầng Service/Mapper khi cần trả dữ liệu về cho Client
+    public String resolveDisplayRank(Integer leaderboardPosition) {
+        return RankHelper.getDisplayRank(this.rankPoint != null ? this.rankPoint : 0, leaderboardPosition);
+    }
 }

@@ -68,4 +68,6 @@ public class Match extends BaseEntity {
 
     private Integer minRank;
     private Integer maxRank;
+
+    private String note;
 }

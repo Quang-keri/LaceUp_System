@@ -17,13 +17,13 @@ import java.util.UUID;
 @NoArgsConstructor
 public class Post extends BaseEntity {
     @Id
-    @GeneratedValue(strategy =  GenerationType.UUID)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID postId;
 
-    @Column(name = "title",length = 150)
+    @Column(name = "title", length = 150)
     private String title;
 
-    @Column(name = "description",length = 300)
+    @Column(name = "description", length = 300)
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -32,7 +32,7 @@ public class Post extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private  User user;
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "court_id", nullable = false)

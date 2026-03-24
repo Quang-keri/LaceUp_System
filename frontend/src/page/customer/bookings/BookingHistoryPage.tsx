@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Card, Table, Button, Tag, Space, Empty, message, Spin } from "antd";
+import {
+  Row,
+  Col,
+  Card,
+  Table,
+  Button,
+  Tag,
+  Space,
+  Empty,
+  message,
+  Spin,
+} from "antd";
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -13,11 +24,12 @@ import bookingService from "../../../service/bookingService";
 import { useAuth } from "../../../context/AuthContext";
 import "./BookingHistoryPage.css";
 import BookingDetailDrawer from "./BookingDetailDrawer";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+
+import UserSidebar from "../../../components/sidebar/UserSidebar.tsx";
+
 const BookingHistoryPage: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const selectedMenu = "3";
 
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -207,44 +219,55 @@ const BookingHistoryPage: React.FC = () => {
   }
 
   return (
-    <div className="booking-history-page" style={{ padding: 24 }}>
-      <div style={{ marginBottom: 16 }}>
+    <div
+      className="booking-history-page"
+      style={{
+        padding: "24px",
+        backgroundColor: "#f5f7fa",
+        minHeight: "calc(100vh - 70px)",
+      }}
+    >
+      <Row gutter={[24, 24]} justify="center">
+        {/* SIDEBAR */}
+        <Col xs={24} md={8} lg={6}>
+          <UserSidebar selectedKey={selectedMenu} />
+        </Col>
 
-        <Button
-          type="link"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate("/")}
-          style={{ paddingLeft: 0 }}
-        >
-          Về trang chủ
-        </Button>
+        {/* NỘI DUNG CHÍNH (TABLE) */}
+        <Col xs={24} md={16} lg={18}>
+          <Card
+            title={
+              <span style={{ fontSize: "20px", fontWeight: 600 }}>
+                <CalendarOutlined style={{ marginRight: "8px" }} />
+                Lịch sử Đặt Sân
+              </span>
+            }
+            bordered={false}
+            style={{ borderRadius: "12px", height: "100%" }}
+          >
+            {bookings.length === 0 && !loading ? (
+              <Empty description="Chưa có booking nào" />
+            ) : (
+              <Table
+                columns={columns}
+                dataSource={bookings}
+                loading={loading}
+                rowKey="bookingId"
+                pagination={{
+                  current: pagination.current,
+                  pageSize: pagination.pageSize,
+                  total: pagination.total,
+                  onChange: (page, pageSize) =>
+                    fetchBookings(page, pageSize, statusFilter),
+                }}
+                scroll={{ x: "max-content" }} // Thêm scroll ngang cho table trên mobile
+              />
+            )}
+          </Card>
+        </Col>
+      </Row>
 
-        <h2 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>
-          <CalendarOutlined /> Lịch sử Đặt Sân
-        </h2>
-      </div>
-
-      <Card>
-        {bookings.length === 0 && !loading ? (
-          <Empty description="Chưa có booking" />
-        ) : (
-          <Table
-            columns={columns}
-            dataSource={bookings}
-            loading={loading}
-            rowKey="bookingId"
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              onChange: (page, pageSize) =>
-                fetchBookings(page, pageSize, statusFilter),
-            }}
-          />
-        )}
-      </Card>
-
-      {/* DRAWER */}
+      {/* DRAWER CHI TIẾT */}
       <BookingDetailDrawer
         bookingId={selectedBookingId}
         open={drawerOpen}
