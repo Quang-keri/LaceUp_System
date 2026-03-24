@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import org.sport.backend.dto.response.permission.PermissionResponse;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,4 +34,5 @@ public class UserResponse {
     private boolean active;
     private Integer rankPoint;
     private boolean isDepositConfirmed;
+    private BigDecimal fakeMoney;
 }
