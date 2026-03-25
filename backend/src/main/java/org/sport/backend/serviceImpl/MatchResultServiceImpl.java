@@ -299,7 +299,7 @@ public class MatchResultServiceImpl implements MatchResultService {
 
         List<MatchRegistration> regs = registrationRepository.findByMatch(match);
         for (MatchRegistration reg : regs) {
-            if (reg.isDepositConfirmed()) {
+            if (reg.getIsDepositConfirmed()) {
                 User user = reg.getUser();
                 BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
 

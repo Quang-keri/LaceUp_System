@@ -9,6 +9,7 @@ import org.sport.backend.dto.request.slot.UpdateSlotRequest;
 import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
 import org.sport.backend.dto.response.slot.IntentSlotResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.entity.*;
@@ -58,6 +59,71 @@ public class BookingServiceImpl implements BookingService {
     private CourtPriceRepository courtPriceRepository;
      @Autowired
      private PaymentRepository paymentRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public CheckAvailabilityResponse checkAvailability(SlotRequest request) {
+
+        Court court = courtRepository.findById(request.getCourtId())
+                .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
+        System.err.println(court.getCourtId());
+        RentalArea rentalArea = court.getRentalArea();
+
+        System.err.println(rentalArea.getIsActive());
+
+        if (!Boolean.TRUE.equals(rentalArea.getIsActive()) || rentalArea.getStatus() != RentalAreaStatus.ACTIVE) {
+            return new CheckAvailabilityResponse(false, "Khu vực sân hiện không hoạt động");
+        }
+        if (court.getCourtStatus() != CourtStatus.ACTIVE) {
+            return new CheckAvailabilityResponse(false, "Loại sân này đang tạm bảo trì");
+        }
+        LocalTime reqStartTime = request.getStartTime().toLocalTime();
+        LocalTime reqEndTime = request.getEndTime().toLocalTime();
+
+        if (reqStartTime.isBefore(rentalArea.getOpenTime()) || reqEndTime.isAfter(rentalArea.getCloseTime())) {
+            return new CheckAvailabilityResponse(
+                    false,
+                    String.format("Giờ hoạt động của cơ sở là từ %s đến %s. Vui lòng chọn lại.",
+                            rentalArea.getOpenTime().toString(),
+                            rentalArea.getCloseTime().toString())
+            );
+        }
+
+        int requestQuantity = request.getQuantity() == null ? 1 : request.getQuantity();
+
+
+        List<CourtCopy> activeCopies = courtCopyRepository
+                .findByCourt_CourtIdAndCourtCopyStatus(court.getCourtId(), CourtCopyStatus.ACTIVE);
+
+        if (activeCopies.isEmpty()) {
+            return new CheckAvailabilityResponse(false, "Không có sân nào khả dụng lúc này");
+        }
+
+        int availableCount = 0;
+        for (CourtCopy copy : activeCopies) {
+            List<Slot> conflicts = slotRepository.findConflictSlot(
+                    copy.getCourtCopyId(),
+                    request.getStartTime(),
+                    request.getEndTime()
+            );
+            if (conflicts.isEmpty()) {
+                availableCount++;
+            }
+        }
+
+        if (availableCount < requestQuantity) {
+            if (availableCount == 0) {
+                return new CheckAvailabilityResponse(false, "Rất tiếc, khung giờ này đã kín sân.");
+            } else {
+                return new CheckAvailabilityResponse(false, "Chỉ còn trống " + availableCount + " sân trong khung giờ này.");
+            }
+        }
+
+
+        return new CheckAvailabilityResponse(true, "Sân khả dụng", availableCount);
+    }
+
+
 
     @Override
     @Transactional

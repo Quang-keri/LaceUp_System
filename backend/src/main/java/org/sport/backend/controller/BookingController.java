@@ -6,17 +6,15 @@ import org.sport.backend.base.ApiResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
+import org.sport.backend.dto.request.slot.SlotRequest;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.InvoiceService;
-import org.sport.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -30,6 +28,13 @@ public class BookingController {
     private BookingService bookingService;
     @Autowired
     private InvoiceService invoiceService;
+
+    @PostMapping("/check-availability")
+    public ApiResponse<?> checkAvailability(@RequestBody SlotRequest request) {
+        // Cứ gọi thẳng, lỗi thì Global Exception Handler sẽ tự lo
+        return ApiResponse.success(200, "Check availability successfully", bookingService.checkAvailability(request));
+    }
+
 
     @PostMapping("/intent")
     public ApiResponse<?> createIntent(
@@ -122,7 +127,7 @@ public class BookingController {
             bookingService.collectRemainingPayment(bookingId);
             return ResponseEntity.ok(ApiResponse.success(200,"Payment successfully",null));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Error when payment"));
+            return ResponseEntity.badRequest().body(ApiResponse.error(500,"Error when payment"+e.getMessage()));
         }
     }
 

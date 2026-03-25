@@ -180,8 +180,17 @@ export default function BookingManagementPage() {
           await bookingService.collectRemainingPayment(record.bookingId);
           message.success("Đã cập nhật thanh toán thành công!");
           fetchBookings(pagination.current, pagination.pageSize);
-        } catch (error) {
-          message.error("Lỗi khi cập nhật thanh toán!");
+        } catch (error: any) {
+          // Khắc phục: Lấy chính xác message từ Backend trả về
+          const backendMessage =
+            error.response?.data?.message || "Lỗi khi cập nhật thanh toán!";
+
+          // Bạn có thể format lại chuỗi nếu Backend trả chữ hơi dính (vd: "Error when paymentĐơn hàng...")
+          const cleanMessage = backendMessage
+            .replace("Error when payment", "")
+            .trim();
+
+          message.error(cleanMessage || "Lỗi khi cập nhật thanh toán!");
         } finally {
           setLoading(false);
         }
