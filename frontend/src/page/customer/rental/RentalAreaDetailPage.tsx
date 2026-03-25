@@ -1,35 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Row, Col } from "antd";
+import { Row, Col, ConfigProvider, Table } from "antd";
 import { toast } from "react-toastify";
 
 import { useAuth } from "../../../context/AuthContext";
-
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
 
-import RentalGallery from "./RentalGallery";
-import RentalInfo from "./RentalInfo";
-import HostCard from "./HostCard";
-
-import BookingSearchBar from "../bookings/BookingSearchBar";
-import CourtList from "../../../components/court/CourtList";
-import BookingCart from "../bookings/BookingCart";
+import CourtBookingPanel from "./CourtBookingPanel";
+import OtherCourtsList from "./OtherCourtsList";
 import BookingConfirmModal from "../bookings/BookingConfirmModal";
-
-interface BookingFilter {
-  date: string;
-  start: string;
-  end: string;
-}
-
-type CartItem = {
-  court: any;
-  date: string;
-  startTime: string;
-  endTime: string;
-  quantity: number;
-};
 
 export default function RentalAreaDetailPage() {
   const { user } = useAuth();
@@ -37,8 +17,10 @@ export default function RentalAreaDetailPage() {
   const navigate = useNavigate();
 
   const [data, setData] = useState<any>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [activeCourt, setActiveCourt] = useState<any>(null);
+
   const [openModal, setOpenModal] = useState(false);
+  const [cartToSubmit, setCartToSubmit] = useState<any[]>([]);
 
   const [userInfo, setUserInfo] = useState({
     userName: "",
@@ -46,18 +28,10 @@ export default function RentalAreaDetailPage() {
     note: "",
   });
 
-  const [filter, setFilter] = useState<BookingFilter>({
-    date: "",
-    start: "07:00",
-    end: "09:00",
-  });
-
-  // Sync thông tin từ context khi user login/logout
   useEffect(() => {
     if (user) {
       setUserInfo((prev) => ({
         ...prev,
-        // Ưu tiên lấy từ user context, nếu không có thì giữ nguyên giá trị cũ hoặc rỗng
         userName: user.userName || user.fullName || prev.userName,
         userPhone: user.phone || user.phoneNumber || prev.userPhone,
       }));
@@ -69,9 +43,12 @@ export default function RentalAreaDetailPage() {
       const res = await rentalService.getRentalAreaById(id!);
       if (res.code === 200) {
         setData(res.result);
+        if (res.result.courts && res.result.courts.length > 0) {
+          setActiveCourt(res.result.courts[0]);
+        }
       }
     } catch (error) {
-      toast.error("Không thể tải thông tin sân");
+      toast.error("Không thể tải thông tin khu vực sân");
     }
   };
 
@@ -79,150 +56,26 @@ export default function RentalAreaDetailPage() {
     fetchDetail();
   }, [id]);
 
-  if (!data) return <p className="p-10 text-center">Đang tải dữ liệu...</p>;
-
-  // Hàm tính toán giá dựa trên Rule (Giữ nguyên logic của bạn)
-  const getPriceByTime = (
-    court: any,
-    dateStr: string,
-    start: string,
-    end: string,
-  ) => {
-    if (!court.priceRules || court.priceRules.length === 0) {
-      return (court.price || 0) * calculateDiffHours(start, end);
-    }
-    const timeToMinutes = (t: string) => {
-      const [h, m] = t.split(":").map(Number);
-      return h * 60 + m;
-    };
-    const isWeekend = (dStr: string) => {
-      const day = new Date(dStr).getDay();
-      return day === 0 || day === 6;
-    };
-
-    const weekend = isWeekend(dateStr);
-    let totalPrice = 0;
-    let currentMins = timeToMinutes(start);
-    const endMins = timeToMinutes(end);
-
-    while (currentMins < endMins) {
-      const applicableRules = court.priceRules.filter((r: any) => {
-        const rStart = timeToMinutes(r.startTime);
-        const rEnd = r.endTime === "00:00:00" ? 1440 : timeToMinutes(r.endTime);
-        const timeMatch = currentMins >= rStart && currentMins < rEnd;
-        if (!timeMatch) return false;
-        if (r.specificDate) return r.specificDate === dateStr;
-        if (weekend)
-          return r.priceType === "WEEKEND" || r.priceType === "NORMAL";
-        return r.priceType === "NORMAL" || r.priceType === "PEAK";
-      });
-
-      applicableRules.sort((a: any, b: any) => {
-        if (a.specificDate && !b.specificDate) return -1;
-        if (!a.specificDate && b.specificDate) return 1;
-        return (b.priority || 0) - (a.priority || 0);
-      });
-
-      const rule = applicableRules[0];
-      if (!rule) {
-        const nextStep = endMins;
-        totalPrice += (court.price || 0) * ((nextStep - currentMins) / 60);
-        currentMins = nextStep;
-      } else {
-        const rEndMins =
-          rule.endTime === "00:00:00" ? 1440 : timeToMinutes(rule.endTime);
-        const nextStep = Math.min(rEndMins, endMins);
-        totalPrice += rule.pricePerHour * ((nextStep - currentMins) / 60);
-        currentMins = nextStep;
-      }
-    }
-    return totalPrice;
-  };
-
-  const calculateDiffHours = (s: string, e: string) => {
-    const [h1, m1] = s.split(":").map(Number);
-    const [h2, m2] = e.split(":").map(Number);
-    return (h2 * 60 + m2 - (h1 * 60 + m1)) / 60;
-  };
-
-  const validateFilter = () => {
-    if (!filter.date) {
-      toast.warn("Vui lòng chọn ngày");
-      return false;
-    }
-    if (filter.start >= filter.end) {
-      toast.warn("Giờ kết thúc phải lớn hơn giờ bắt đầu");
-      return false;
-    }
-    return true;
-  };
-
-  const getAvailableCopies = (court: any) => {
+  if (!data || !activeCourt)
     return (
-      court.courtCopies?.filter((c: any) => c.status === "ACTIVE").length || 0
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-gray-500 animate-pulse text-lg">
+          Đang tải dữ liệu sân...
+        </p>
+      </div>
     );
-  };
 
-  const addCourt = (court: any) => {
-    if (!validateFilter()) return;
-    const maxCopies = getAvailableCopies(court);
-
-    setCart((prev) => {
-      const index = prev.findIndex(
-        (item) =>
-          item.court.courtId === court.courtId &&
-          item.date === filter.date &&
-          item.startTime === filter.start &&
-          item.endTime === filter.end,
-      );
-
-      if (index !== -1) {
-        const copy = [...prev];
-        const newQty = copy[index].quantity + 1;
-        copy[index] = { ...copy[index], quantity: Math.min(newQty, maxCopies) };
-        return copy;
-      }
-
-      return [
-        ...prev,
-        {
-          court,
-          date: filter.date,
-          startTime: filter.start,
-          endTime: filter.end,
-          quantity: 1,
-        },
-      ];
-    });
-  };
-
-  const handleOpenModal = () => {
-    if (cart.length === 0) {
-      toast.warn("Vui lòng thêm sân vào danh sách");
-      return;
-    }
+  const handleDirectBooking = (bookingData: any) => {
+    setCartToSubmit([
+      {
+        court: activeCourt,
+        date: bookingData.date,
+        startTime: bookingData.start,
+        endTime: bookingData.end,
+        quantity: bookingData.quantity,
+      },
+    ]);
     setOpenModal(true);
-  };
-
-  const increase = (index: number) => {
-    setCart((prev) => {
-      const copy = [...prev];
-      const maxCopies = getAvailableCopies(copy[index].court);
-      copy[index].quantity = Math.min(copy[index].quantity + 1, maxCopies);
-      return copy;
-    });
-  };
-
-  const decrease = (index: number) => {
-    setCart((prev) => {
-      const copy = [...prev];
-      if (copy[index].quantity <= 1) {
-        copy.splice(index, 1);
-      } else {
-        copy[index].quantity -= 1;
-      }
-      return copy;
-    });
   };
 
   const submitBooking = async () => {
@@ -231,7 +84,7 @@ export default function RentalAreaDetailPage() {
       return;
     }
 
-    const slotRequests = cart.map((item) => ({
+    const slotRequests = cartToSubmit.map((item) => ({
       courtId: item.court.courtId,
       quantity: item.quantity,
       startTime: `${item.date}T${item.startTime}:00`,
@@ -239,7 +92,6 @@ export default function RentalAreaDetailPage() {
     }));
 
     const payload = {
-      // Nếu có user login thì gửi ID, không thì là null (Guest)
       userId: user?.id || user?.userId || null,
       userName: userInfo.userName.trim(),
       userPhone: userInfo.userPhone.trim(),
@@ -255,54 +107,226 @@ export default function RentalAreaDetailPage() {
       } else {
         toast.error(res.message || "Đặt sân thất bại");
       }
-    } catch (error) {
-      toast.error("Hệ thống đang bận, vui lòng thử lại sau");
+    } catch (error: any) {
+      // Bắt lỗi Validation (Code 2003) từ Backend
+      const errRes = error.response?.data;
+
+      if (errRes?.code === 2003 && errRes?.result) {
+        // Lấy thông báo lỗi đầu tiên trong object result (VD: "Không thể đặt phòng trong quá khứ")
+        const firstErrorMessage = Object.values(errRes.result)[0] as string;
+        toast.error(firstErrorMessage);
+      } else {
+        // Lỗi 500 hoặc lỗi mạng khác
+        toast.error(
+          errRes?.message || "Hệ thống đang bận, vui lòng thử lại sau",
+        );
+      }
+    } finally {
+      // Bạn có thể thêm finally ở đây nếu cần tắt loading
     }
   };
 
+  const handleChatClick = () => {
+    // 1. Kiểm tra xem dữ liệu 'data' đã được load chưa
+    if (!data) {
+      toast.warn("Đang tải dữ liệu, vui lòng đợi trong giây lát");
+      return;
+    }
+
+    // 2. Lấy ID chủ sân (thường là ownerId hoặc userId tùy theo API của bạn)
+    // Và tên chủ sân để hiển thị trong khung chat
+    const ownerId = data.ownerId || data.userId;
+    const ownerName = data.contactName || data.ownerName || "Chủ sân";
+
+    if (!ownerId) {
+      toast.error("Không tìm thấy ID chủ sân để bắt đầu chat");
+      console.error("Dữ liệu API thiếu ownerId:", data);
+      return;
+    }
+
+    // 3. Dispatch event để mở Modal/Component Chat
+    const event = new CustomEvent("OPEN_CHAT_WITH_USER", {
+      detail: {
+        userId: ownerId,
+        userName: ownerName,
+      },
+    });
+
+    window.dispatchEvent(event);
+  };
+
+  // Cấu hình cột cho Bảng giá
+  const priceColumns = [
+    {
+      title: "Khung giờ",
+      dataIndex: "time",
+      key: "time",
+      className: "font-medium text-gray-700",
+    },
+    {
+      title: "Loại giá",
+      dataIndex: "type",
+      key: "type",
+      className: "text-gray-600",
+    },
+    {
+      title: "Giá / Giờ",
+      dataIndex: "price",
+      key: "price",
+      render: (val: number) => (
+        <span className="text-[#3B82F6] font-semibold">
+          {val.toLocaleString()} đ
+        </span>
+      ),
+    },
+  ];
+
+  // Map dữ liệu priceRules từ API
+  const getPriceData = (rules: any[]) => {
+    if (!rules || rules.length === 0) return [];
+
+    return rules.map((rule, index) => {
+      // Hàm format HH:mm:ss -> HH:mm
+      const formatTime = (timeStr: string) =>
+        timeStr ? timeStr.substring(0, 5) : "";
+
+      // Dịch loại giá
+      let typeLabel = rule.priceType;
+      if (rule.priceType === "NORMAL") typeLabel = "Ngày thường";
+      if (rule.priceType === "WEEKEND") typeLabel = "Cuối tuần / Lễ";
+      if (rule.specificDate) typeLabel = `Ngày ${rule.specificDate}`;
+
+      return {
+        key: rule.courtPriceId || index,
+        time: `${formatTime(rule.startTime)} - ${formatTime(rule.endTime)}`,
+        type: typeLabel,
+        price: rule.pricePerHour,
+      };
+    });
+  };
+
+  const priceData = getPriceData(activeCourt.priceRules);
+
   return (
-    <div className="max-w-[1150px] mx-auto px-4 mt-3">
-      <RentalGallery rental={data} />
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: "#9156F1",
+          colorInfo: "#3B82F6",
+          borderRadius: 8,
+          fontFamily: "inherit",
+        },
+      }}
+    >
+      <div className="min-h-screen bg-[#F8F9FA] text-gray-700 font-sans w-full pb-16">
+        {/* Banner/Header */}
+        <div className="bg-white border-b border-gray-200 pt-6 pb-4 mb-8">
+          <div className="max-w-[1200px] mx-auto px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {data.rentalName}
+              </h1>
+              <p className="text-gray-500 flex items-center gap-2 mt-1">
+                <span className="text-[#9156F1]"></span> {data.address}
+              </p>
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-        <div className="lg:col-span-8">
-          <RentalInfo rental={data} />
+            <button
+              onClick={handleChatClick}
+              className="bg-white border border-[#9156F1] text-[#9156F1] hover:bg-[#9156F1] hover:text-white px-5 py-2.5 rounded-lg transition-all font-semibold flex items-center gap-2 w-fit shadow-sm"
+            >
+              <span></span> Nhắn tin chủ sân
+            </button>
+          </div>
         </div>
-        <div className="lg:col-span-4">
-          <HostCard rental={data} />
+
+        <div className="max-w-[1200px] mx-auto px-4">
+          <Row gutter={[32, 32]}>
+            <Col xs={24} lg={16}>
+              <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 mb-8">
+                <div className="relative h-[400px] w-full bg-gray-100">
+                  <img
+                    src={
+                      activeCourt.coverImage ||
+                      "https://placehold.co/800x500?text=San+The+Thao"
+                    }
+                    alt={activeCourt.courtName}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full font-semibold text-[#9156F1] shadow">
+                    {activeCourt.categoryName || "Sân Thể Thao"}
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      {activeCourt.courtName}
+                    </h2>
+                    <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
+                      Tổng cộng: {activeCourt.totalCourts} sân
+                    </span>
+                  </div>
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    {activeCourt.description ||
+                      "Mặt sân đạt chuẩn, hệ thống chiếu sáng chống chói, không gian thoáng đãng. Thích hợp cho tập luyện và thi đấu giao lưu."}
+                  </p>
+
+                  {/* Bảng giá tự động */}
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <span></span> Bảng giá tham khảo
+                    </h3>
+                    {priceData.length > 0 ? (
+                      <Table
+                        columns={priceColumns}
+                        dataSource={priceData}
+                        pagination={false}
+                        size="small"
+                        className="border border-gray-200 rounded-lg overflow-hidden bg-white"
+                      />
+                    ) : (
+                      <p className="text-gray-500 italic">
+                        Sân này hiện chưa có thông tin bảng giá chi tiết.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-5 bg-[#9156F1] rounded-full"></span>
+                  Các sân khác tại cơ sở
+                </h3>
+                <OtherCourtsList
+                  courts={data.courts}
+                  activeCourtId={activeCourt.courtId}
+                  onSelectCourt={setActiveCourt}
+                />
+              </div>
+            </Col>
+
+            <Col xs={24} lg={8}>
+              <div className="sticky top-6">
+                <CourtBookingPanel
+                  court={activeCourt}
+                  onBook={handleDirectBooking}
+                />
+              </div>
+            </Col>
+          </Row>
+
+          <BookingConfirmModal
+            open={openModal}
+            onClose={() => setOpenModal(false)}
+            cart={cartToSubmit}
+            userInfo={userInfo}
+            setUserInfo={setUserInfo}
+            onConfirm={submitBooking}
+          />
         </div>
       </div>
-
-      <div className="mt-8">
-        <BookingSearchBar filter={filter} setFilter={setFilter} />
-      </div>
-
-      <Row gutter={[24, 24]} className="mt-6">
-        <Col xs={24} lg={16}>
-          <CourtList
-            courts={data.courts}
-            onAddCourt={addCourt}
-            filter={filter}
-          />
-        </Col>
-        <Col xs={24} lg={8}>
-          <BookingCart
-            cart={cart}
-            increase={increase}
-            decrease={decrease}
-            onOpenModal={handleOpenModal}
-          />
-        </Col>
-      </Row>
-
-      <BookingConfirmModal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        cart={cart}
-        userInfo={userInfo}
-        setUserInfo={setUserInfo}
-        onConfirm={submitBooking}
-      />
-    </div>
+    </ConfigProvider>
   );
 }

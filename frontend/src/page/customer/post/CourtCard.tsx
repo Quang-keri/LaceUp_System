@@ -21,7 +21,7 @@ export default function CourtCard({ post, onClick }: any) {
       <p className="text-gray-500 text-sm">{post.courtName}</p>
 
       <div className="flex justify-between items-center mt-3">
-        <span className="text-red-500 font-bold">{post.price} VND</span>
+        <span className="text-purple-500 font-bold">{post.minPrice} VND</span>
 
         <Button
           size="small"

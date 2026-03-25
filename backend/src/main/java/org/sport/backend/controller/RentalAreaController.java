@@ -6,6 +6,7 @@ import org.sport.backend.base.ApiResponse;
 import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
+import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.service.RentalAreaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -103,21 +104,14 @@ public class RentalAreaController {
     }
 
 
-    @PutMapping("/{rentalAreaId}")
-    public ApiResponse<?> updateRentalArea(
+    @PutMapping(value = "/{rentalAreaId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<RentalAreaResponse> updateRentalArea(
             @PathVariable UUID rentalAreaId,
-            @RequestBody RentalAreaUpdateRequest request
-    ) {
+            @Valid @ModelAttribute RentalAreaUpdateRequest request) {
 
-        try {
-            return ApiResponse.success(
-                    200,
-                    "Update rental area successfully",
-                    rentalAreaService.updateRentalArea(rentalAreaId, request)
-            );
-        } catch (Exception e) {
-            return ApiResponse.success(500, "Update rental failed", e.getMessage());
-        }
+
+        RentalAreaResponse response = rentalAreaService.updateRentalArea(rentalAreaId, request);
+        return ApiResponse.success(response);
     }
 
     @DeleteMapping("/{rentalAreaId}")

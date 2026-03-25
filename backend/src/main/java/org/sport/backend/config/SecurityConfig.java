@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/posts").permitAll()
                         .requestMatchers(HttpMethod.GET,"/rental-areas/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/bookings/intent").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/bookings/check-availability").permitAll()
                         .requestMatchers(HttpMethod.GET,"/bookings/intent/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/payments/checkout").permitAll()
                         .anyRequest().authenticated()

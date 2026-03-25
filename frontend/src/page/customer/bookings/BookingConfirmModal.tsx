@@ -1,4 +1,5 @@
 import { Modal, Input } from "antd";
+import dayjs from "dayjs"; // Nhớ import dayjs vào nhé
 
 export default function BookingConfirmModal({
   open,
@@ -8,8 +9,75 @@ export default function BookingConfirmModal({
   setUserInfo,
   onConfirm,
 }: any) {
+  const timeToMinutes = (timeStr: string) => {
+    if (!timeStr) return 0;
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    return hours * 60 + (minutes || 0);
+  };
+
+  // Hàm tính giá tiền động (Dự kiến) cho từng khung sân
+  const calculateItemPrice = (item: any) => {
+    // 1. Nếu sân không cấu hình rules phức tạp, xài giá mặc định
+    const fallbackPrice =
+      item.court.pricePerHour || item.court.minPrice || item.court.price || 0;
+
+    if (!item.court.priceRules || item.court.priceRules.length === 0) {
+      const startObj = dayjs(`${item.date}T${item.startTime}`);
+      const endObj = dayjs(`${item.date}T${item.endTime}`);
+      const hours = endObj.diff(startObj, "minute") / 60;
+      return hours * item.quantity * fallbackPrice;
+    }
+
+    // 2. Nếu có rules, bắt đầu tính giá động
+    const reqStartMin = timeToMinutes(item.startTime);
+    const reqEndMin = timeToMinutes(item.endTime);
+
+    // Xác định xem ngày khách chọn có phải cuối tuần (Thứ 7 - 6, Chủ nhật - 0)
+    const dayOfWeek = dayjs(item.date).day();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    // Sắp xếp rules theo priority giảm dần (Rule đặc biệt > Cuối tuần > Ngày thường)
+    const sortedRules = [...item.court.priceRules].sort(
+      (a: any, b: any) => b.priority - a.priority,
+    );
+
+    let totalPriceForOneCourt = 0;
+
+    // Chạy vòng lặp duyệt từng phút khách thuê để tính tiền chính xác nếu vắt ngang 2 khung giờ
+    for (let min = reqStartMin; min < reqEndMin; min++) {
+      let appliedRule = null;
+
+      for (const rule of sortedRules) {
+        // Kiểm tra điều kiện Ngày
+        if (rule.specificDate && rule.specificDate !== item.date) continue;
+        if (!rule.specificDate) {
+          if (rule.priceType === "WEEKEND" && !isWeekend) continue;
+          if (rule.priceType === "NORMAL" && isWeekend) continue;
+        }
+
+        // Kiểm tra điều kiện Giờ
+        const ruleStartMin = timeToMinutes(rule.startTime);
+        const ruleEndMin = timeToMinutes(rule.endTime);
+
+        if (min >= ruleStartMin && min < ruleEndMin) {
+          appliedRule = rule;
+          break; // Tìm thấy rule ưu tiên cao nhất, thoát vòng lặp rule để sang phút tiếp theo
+        }
+      }
+
+      const pricePerMin = appliedRule
+        ? appliedRule.pricePerHour / 60
+        : fallbackPrice / 60;
+
+      totalPriceForOneCourt += pricePerMin;
+    }
+
+    return Math.round(totalPriceForOneCourt) * item.quantity;
+  };
+
+  // Tính tổng tiền toàn bộ giỏ hàng
   const total = cart.reduce(
-    (sum: number, item: any) => sum + item.quantity * item.court.pricePerHour,
+    (sum: number, item: any) => sum + calculateItemPrice(item),
     0,
   );
 
@@ -19,10 +87,9 @@ export default function BookingConfirmModal({
       open={open}
       onCancel={onClose}
       onOk={onConfirm}
-      okText="Xác nhận và  thanh toán"
+      okText="Xác nhận và thanh toán"
       width={520}
     >
-      {" "}
       {/* Thông tin người đặt */}
       <div className="border-t pt-4">
         <h3 className="font-semibold mb-3 text-gray-700">
@@ -67,33 +134,43 @@ export default function BookingConfirmModal({
           />
         </div>
       </div>
-      <div className="space-y-4 mb-6 max-h-[260px] overflow-y-auto pr-2">
-        {cart.map((item: any, index: number) => (
-          <div key={index} className="border rounded-lg p-3 bg-gray-50">
-            <div className="flex justify-between items-center">
-              <p className="font-semibold text-gray-800">
-                {item.court.courtName}
+
+      <div className="space-y-4 mb-6 max-h-[260px] overflow-y-auto pr-2 mt-4">
+        {cart.map((item: any, index: number) => {
+          // Tính lại số giờ để hiển thị cho UI đẹp hơn
+          const startObj = dayjs(`${item.date}T${item.startTime}`);
+          const endObj = dayjs(`${item.date}T${item.endTime}`);
+          const hours = endObj.diff(startObj, "minute") / 60;
+
+          return (
+            <div key={index} className="border rounded-lg p-3 bg-gray-50">
+              <div className="flex justify-between items-center">
+                <p className="font-semibold text-gray-800">
+                  {item.court.courtName}
+                </p>
+
+                <span className="text-blue-600 font-medium">
+                  {calculateItemPrice(item).toLocaleString()} VNĐ
+                </span>
+              </div>
+
+              <p className="text-sm text-gray-500 mt-1">
+                {item.date} • {item.startTime} - {item.endTime}{" "}
+                <span className="font-medium text-gray-700">({hours} giờ)</span>
               </p>
 
-              <span className="text-blue-600 font-medium">
-                {(item.court.pricePerHour * item.quantity).toLocaleString()} VNĐ
-              </span>
+              <p className="text-sm text-gray-500">
+                Số lượng sân: {item.quantity}
+              </p>
             </div>
-
-            <p className="text-sm text-gray-500 mt-1">
-              {item.date} • {item.startTime} - {item.endTime}
-            </p>
-
-            <p className="text-sm text-gray-500">
-              Số lượng sân: {item.quantity}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      <div className="border-t mt-5 pt-4 flex justify-between items-center">
-        <span className="text-gray-600">Chi phí</span>
 
-        <span className="text-xl font-bold text-red-500">
+      <div className="border-t mt-5 pt-4 flex justify-between items-center">
+        <span className="text-gray-600 font-medium">Tổng chi phí dự kiến</span>
+
+        <span className="text-2xl font-bold text-[#9156F1]">
           {total.toLocaleString()} VNĐ
         </span>
       </div>

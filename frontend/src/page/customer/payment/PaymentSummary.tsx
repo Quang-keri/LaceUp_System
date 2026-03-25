@@ -39,13 +39,13 @@ export default function PaymentSummary({
         >
           <Radio value={true}>
             Đặt cọc (50%):{" "}
-            <span className="font-semibold text-blue-600">
+            <span className="font-semibold text-purple-600">
               {depositPrice.toLocaleString("vi-VN")} VNĐ
             </span>
           </Radio>
           <Radio value={false}>
             Thanh toán toàn bộ (100%):{" "}
-            <span className="font-semibold text-blue-600">
+            <span className="font-semibold text-purple-600">
               {totalPrice.toLocaleString("vi-VN")} VNĐ
             </span>
           </Radio>

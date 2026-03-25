@@ -3,11 +3,10 @@ import PostService from "../../../service/post/postService";
 import type { PostResponse } from "../../../types/post";
 import { useNavigate } from "react-router-dom";
 import CourtCard from "./CourtCard";
-import { Row, Col } from "antd";
+import { Row, Col, Spin } from "antd";
 import FilterSidebar from "./FilterSidebar";
 import SearchBar from "./SearchBar";
 
-// Cấu trúc dữ liệu của bộ lọc (Export để dùng chung với FilterSidebar)
 export interface FilterState {
   title?: string;
   minPrice?: number;
@@ -24,19 +23,12 @@ export default function PostPage() {
   const [posts, setPosts] = useState<PostResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [filters, setFilters] = useState<FilterState>({ page: 1, size: 10 });
 
-  // Khởi tạo state bộ lọc mặc định
-  const [filters, setFilters] = useState<FilterState>({
-    page: 1,
-    size: 10,
-  });
-
-  // Hàm gọi API với bộ lọc hiện tại
   const fetchPosts = async (currentFilters: FilterState) => {
     try {
       setLoading(true);
       const response = await PostService.getPosts(currentFilters);
-      console.log("data post", response.result);
       if (response.code === 200) {
         setPosts(response.result.data);
       }
@@ -47,55 +39,76 @@ export default function PostPage() {
     }
   };
 
-  // Lắng nghe sự thay đổi của bộ lọc để tự động gọi lại API
   useEffect(() => {
     fetchPosts(filters);
   }, [filters]);
 
-  // Cập nhật state bộ lọc (Luôn reset về trang 1 khi lọc mới)
   const handleFilterChange = (newFilters: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...newFilters, page: 1 }));
   };
 
-  if (loading && posts.length === 0)
-    return <p className="p-4 text-center">Đang tải dữ liệu...</p>;
-
   return (
-    <>
-      <SearchBar
-        initialTitle={filters.title}
-        onSearch={(searchValues) => handleFilterChange(searchValues)}
-      />
-      <div className="w-[90%] mx-auto overflow-x-hidden">
-        <Row gutter={[20, 20]} className="p-4">
-          <Col xs={0} md={8} lg={6}>
-            <FilterSidebar filters={filters} onChange={handleFilterChange} />
-          </Col>
+    <div className="min-h-screen bg-[#F8F9FF] relative overflow-hidden">
 
-          <Col xs={24} md={16} lg={18}>
-            {loading ? (
-              <p>Đang cập nhật kết quả...</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {posts.map((post) => (
-                  <CourtCard
-                    key={post.postId}
-                    post={post}
-                    onClick={() =>
-                      navigate(`/rental-area/${post.rentalAreaId}`)
-                    }
-                  />
-                ))}
-                {posts.length === 0 && (
-                  <p className="text-gray-500 mt-4 col-span-full text-center">
-                    Không tìm thấy sân nào phù hợp với bộ lọc.
-                  </p>
-                )}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#9156F1]/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#B0DF94]/10 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="relative z-10">
+
+        <div className="py-8 bg-white/40 backdrop-blur-md border-b border-white/20">
+          <SearchBar
+            initialTitle={filters.title}
+            onSearch={(searchValues) => handleFilterChange(searchValues)}
+          />
+        </div>
+
+        <div className="w-[90%] mx-auto mt-8">
+          <Row gutter={[32, 32]}>
+            {/* Sidebar Filter */}
+            <Col xs={0} md={8} lg={6}>
+              {/* THAY ĐỔI: Thêm div bọc ngoài với sticky và h-max */}
+              <div className="sticky top-24 h-max w-full">
+                <FilterSidebar
+                  filters={filters}
+                  onChange={handleFilterChange}
+                />
               </div>
-            )}
-          </Col>
-        </Row>
+            </Col>
+
+            <Col xs={24} md={16} lg={18}>
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Spin size="large" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+                  {posts.map((post) => (
+                    <div
+                      key={post.postId}
+                      className="transform hover:translate-y-[-8px] transition-all duration-300"
+                    >
+                      <CourtCard
+                        post={post}
+                        onClick={() =>
+                          navigate(`/rental-area/${post.rentalAreaId}`)
+                        }
+                      />
+                    </div>
+                  ))}
+
+                  {posts.length === 0 && (
+                    <div className="col-span-full bg-white/50 backdrop-blur-md rounded-3xl p-20 text-center border border-dashed border-purple-200">
+                      <p className="text-gray-400 text-lg font-medium">
+                        Không tìm thấy sân nào phù hợp với bộ lọc.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Col>
+          </Row>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

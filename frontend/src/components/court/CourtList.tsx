@@ -281,13 +281,13 @@ export default function CourtList({ courts, onAddCourt }: any) {
               className="flex w-full"
             >
               <Radio.Button value="NORMAL" className="w-1/3 text-center">
-                😊 Giao lưu
+                 Giao lưu
               </Radio.Button>
               <Radio.Button value="BET" className="w-1/3 text-center">
-                💰 Chia Kèo
+                 Chia Kèo
               </Radio.Button>
               <Radio.Button value="RANKED" className="w-1/3 text-center">
-                🏆 Đánh Rank
+                 Đánh Rank
               </Radio.Button>
             </Radio.Group>
           </Form.Item>

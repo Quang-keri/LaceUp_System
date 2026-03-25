@@ -43,8 +43,18 @@ public class SlotRequestValidator
                 return false;
             }
 
+            if (minutes > 480) {
+                replaceMessage(context, "Không thể đặt quá 8 tiếng cho một lần thuê");
+                return false;
+            }
+
             if (start.isBefore(LocalDateTime.now())) {
                 replaceMessage(context, "Không thể đặt phòng trong quá khứ");
+                return false;
+            }
+
+            if (start.isAfter(LocalDateTime.now().plusDays(14))) {
+                replaceMessage(context, "Chỉ được phép đặt trước tối đa 14 ngày");
                 return false;
             }
 

@@ -3,7 +3,9 @@ package org.sport.backend.dto.request.rental;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.sport.backend.constant.RentalAreaStatus;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -30,4 +32,6 @@ public class RentalAreaUpdateRequest {
     private Long cityId;
 
     private RentalAreaStatus status;
+
+    private List<MultipartFile> images;
 }

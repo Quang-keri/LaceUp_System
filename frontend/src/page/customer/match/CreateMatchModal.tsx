@@ -113,7 +113,7 @@ const CreateMatchModal = ({
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
       <div className="bg-white rounded-3xl w-full max-w-lg p-8 shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
         <h2 className="text-2xl font-bold mb-6 text-blue-600 flex items-center gap-2">
-          🏸 Tìm Đồng Đội Giao Lưu
+          Tìm Đồng Đội Giao Lưu
         </h2>
 
         <Form form={form} layout="vertical" onFinish={handleFinish}>
@@ -171,13 +171,13 @@ const CreateMatchModal = ({
                 className="flex w-full"
               >
                 <Radio.Button value="NORMAL" className="w-1/3 text-center">
-                  😊 Giao lưu
+                  Giao lưu
                 </Radio.Button>
                 <Radio.Button value="BET" className="w-1/3 text-center">
-                  💰 Chia Kèo
+                  Chia Kèo
                 </Radio.Button>
                 <Radio.Button value="RANKED" className="w-1/3 text-center">
-                  🏆 Đánh Rank
+                  Đánh Rank
                 </Radio.Button>
               </Radio.Group>
             </Form.Item>

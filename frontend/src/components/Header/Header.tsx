@@ -7,6 +7,7 @@ import {
   Space,
   Button,
   message,
+  ConfigProvider,
 } from "antd";
 import {
   BellOutlined,
@@ -43,7 +44,7 @@ const AppHeader = () => {
   };
 
   const navItems = [
-    { key: "/", label: "Trang chủ" },
+    { key: "/trang-chu", label: "Trang chủ" },
     { key: "/danh-sach-san", label: "Sân" },
     { key: "/cong-dong", label: "Cộng đồng" },
     { key: "/tin-tuc", label: "Tin tức" },
@@ -101,122 +102,152 @@ const AppHeader = () => {
 
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 50, padding: "10px" }}>
-      <Header
-        style={{
-          background: "#ffffff",
-          padding: "0 40px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderRadius: 20,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-          height: "70px",
-          lineHeight: "70px",
+      <ConfigProvider
+        theme={{
+          colorPrimary: "#9156F1",
+          components: {
+            Menu: {
+              // Thêm các biến này để bao phủ toàn bộ các phiên bản Ant Design
+              activeBarColor: "#9156F1", // Cho bản v5.x mới nhất
+              activeBarHeight: 3,
+              itemSelectedColor: "#9156F1",
+              itemHoverColor: "#9156F1",
+              horizontalItemSelectedColor: "#9156F1",
+              horizontalItemIndicatorColor: "#9156F1",
+            },
+          },
         }}
       >
-        <div
+        <Header
           style={{
+            background: "#ffffff",
+            padding: "0 40px",
             display: "flex",
             alignItems: "center",
-            gap: 10,
-            cursor: "pointer",
-            height: "100%",
+            justifyContent: "space-between",
+            borderRadius: 20,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+            height: "70px",
+            lineHeight: "70px",
           }}
-          onClick={() => navigate("/")}
         >
-          <img src="/logo.png" alt="Logo" style={{ width: 42, height: 42 }} />
-          <span
+          {/* LOGO SECTION */}
+          <div
             style={{
-              fontWeight: 800,
-              fontSize: 22,
-              color: "#1f1f1f",
-              letterSpacing: "-0.5px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              cursor: "pointer",
+              height: "100%",
+            }}
+            onClick={() => navigate("/")}
+          >
+            <img src="/logo.png" alt="Logo" style={{ width: 42, height: 42 }} />
+            <span
+              style={{
+                fontWeight: 800,
+                fontSize: 22,
+                color: "#1f1f1f",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              Lace<span style={{ color: "#9156F1" }}>Up</span>
+            </span>
+          </div>
+
+          {/* MENU SECTION */}
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              justifyContent: "center",
+              height: "100%",
             }}
           >
-            Lace<span style={{ color: "#1677ff" }}>Up</span>
-          </span>
-        </div>
+            <Menu
+              mode="horizontal"
+              selectedKeys={[location.pathname]}
+              items={navItems}
+              onClick={(e) => navigate(e.key)}
+              style={{
+                borderBottom: "none",
+                background: "transparent",
+                fontWeight: 600,
+                fontSize: "16px",
+                minWidth: "400px",
+                justifyContent: "center",
+              }}
+            />
+          </div>
 
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            justifyContent: "center",
-            height: "100%",
-          }}
-        >
-          <Menu
-            mode="horizontal"
-            selectedKeys={[location.pathname]}
-            items={navItems}
-            onClick={(e) => navigate(e.key)}
+          {/* USER SECTION */}
+          <div
             style={{
-              borderBottom: "none",
-              background: "transparent",
-              fontWeight: 500,
-              fontSize: "16px",
-              minWidth: "400px",
-              justifyContent: "center",
+              display: "flex",
+              alignItems: "center",
+              gap: 24,
+              height: "100%",
             }}
-          />
-        </div>
+          >
+            {isLoggedIn ? (
+              <>
+                <Badge count={2} size="small" offset={[-2, 2]}>
+                  <div
+                    style={iconButtonStyle}
+                    onClick={() => navigate("/chat")}
+                  >
+                    <MessageOutlined
+                      style={{ fontSize: 18, color: "#595959" }}
+                    />
+                  </div>
+                </Badge>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 24,
-            height: "100%",
-          }}
-        >
-          {isLoggedIn ? (
-            <>
-              <Badge count={2} size="small" offset={[-2, 2]}>
-                <div style={iconButtonStyle} onClick={() => navigate("/chat")}>
-                  <MessageOutlined style={{ fontSize: 18, color: "#595959" }} />
-                </div>
-              </Badge>
+                <Badge count={4} size="small" offset={[-2, 2]}>
+                  <div
+                    style={iconButtonStyle}
+                    onClick={() => navigate("/notifications")}
+                  >
+                    <BellOutlined style={{ fontSize: 18, color: "#595959" }} />
+                  </div>
+                </Badge>
 
-              <Badge count={4} size="small" offset={[-2, 2]}>
-                <div
-                  style={iconButtonStyle}
-                  onClick={() => navigate("/notifications")}
+                <Dropdown
+                  menu={{ items: userMenuItems }}
+                  trigger={["click"]}
+                  placement="bottomRight"
                 >
-                  <BellOutlined style={{ fontSize: 18, color: "#595959" }} />
-                </div>
-              </Badge>
-
-              <Dropdown
-                menu={{ items: userMenuItems }}
-                trigger={["click"]}
-                placement="bottomRight"
+                  <Space style={{ cursor: "pointer" }}>
+                    <Avatar
+                      size={42}
+                      style={{
+                        backgroundColor: "#9156F1",
+                        border: "2px solid #f3eaff",
+                        cursor: "pointer",
+                      }}
+                      icon={<UserOutlined />}
+                    />
+                  </Space>
+                </Dropdown>
+              </>
+            ) : (
+              <Button
+                type="primary"
+                size="large"
+                icon={<LoginOutlined />}
+                onClick={() => navigate("/login")}
+                style={{
+                  borderRadius: "12px",
+                  fontWeight: 600,
+                  background: "#9156F1",
+                  borderColor: "#9156F1",
+                }}
               >
-                <Space style={{ cursor: "pointer" }}>
-                  <Avatar
-                    size={42}
-                    style={{
-                      backgroundColor: "#1677ff",
-                      border: "2px solid #e6f4ff",
-                      cursor: "pointer",
-                    }}
-                    icon={<UserOutlined />}
-                  />
-                </Space>
-              </Dropdown>
-            </>
-          ) : (
-            <Button
-              type="primary"
-              size="large"
-              icon={<LoginOutlined />}
-              onClick={() => navigate("/login")}
-              style={{ borderRadius: "8px", fontWeight: 600 }}
-            >
-              Đăng nhập
-            </Button>
-          )}
-        </div>
-      </Header>
+                Đăng nhập
+              </Button>
+            )}
+          </div>
+        </Header>
+      </ConfigProvider>
     </div>
   );
 };
