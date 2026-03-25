@@ -112,6 +112,11 @@ class BookingService {
 
     return response.data;
   }
+
+  async checkAvailability(payload: { courtId: string, startTime: string, endTime: string, quantity: number }) {
+  const response = await api.post("/bookings/check-availability", payload);
+  return response.data;
+}
 }
 
 export default new BookingService();

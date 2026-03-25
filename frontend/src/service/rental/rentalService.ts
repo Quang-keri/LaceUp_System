@@ -85,10 +85,31 @@ class RentalService {
   async updateRentalArea(
     rentalAreaId: string,
     request: UpdateRentalAreaRequest,
+    images: File[],
   ) {
+    const formData = new FormData();
+
+    formData.append("rentalAreaName", request.rentalAreaName);
+    formData.append("address", request.address);
+    formData.append("contactName", request.contactName);
+    formData.append("contactPhone", request.contactPhone);
+    formData.append("cityId", request.cityId.toString());
+
+    // Append ảnh vào request
+    if (images && images.length > 0) {
+      images.forEach((image) => {
+        formData.append("images", image); // Chữ "images" này phải khớp tên biến private List<MultipartFile> images
+      });
+    }
+
     const response = await api.put<ApiResponse<RentalAreaResponse>>(
       `/rental-areas/${rentalAreaId}`,
-      request,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
     );
     return response.data;
   }

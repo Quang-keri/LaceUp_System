@@ -173,7 +173,7 @@ public class MatchServiceImpl implements MatchService {
         MatchRegistration reg = registrationRepository.findByMatchAndUser(match, currentUser)
                 .orElseThrow(() -> new RuntimeException("Bạn chưa tham gia trận này!"));
 
-        if (reg.isDepositConfirmed()) {
+        if (reg.getIsDepositConfirmed()) {
             throw new RuntimeException("Bạn đã xác nhận cọc rồi!");
         }
 
@@ -206,11 +206,11 @@ public class MatchServiceImpl implements MatchService {
             log.info("Đã trừ {} VNĐ tiền cọc của user {}", depositAmount, currentUser.getUserName());
         }
 
-        reg.setDepositConfirmed(true);
+        reg.setIsDepositConfirmed(true);
         registrationRepository.save(reg);
 
         List<MatchRegistration> allRegs = registrationRepository.findByMatch(match);
-        boolean isAllConfirmed = allRegs.stream().allMatch(MatchRegistration::isDepositConfirmed);
+        boolean isAllConfirmed = allRegs.stream().allMatch(MatchRegistration::getIsDepositConfirmed);
 
         if (isAllConfirmed) {
             match.setStatus(MatchStatus.CONFIRMED);

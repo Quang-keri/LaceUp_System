@@ -9,3 +9,34 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 } */
+body {
+  background-color: #f8f9ff; /* Màu trắng xanh cực nhẹ */
+  color: #1a1a1a;
+}
+
+/* Fix: prevent nav/menu items from dimming (gray overlay) on hover/active */
+/* Overrides for Ant Design Menu so hover/active keep intended color */
+.ant-layout-header .ant-menu {
+  background: transparent !important;
+}
+.ant-menu-item,
+.ant-menu-item a {
+  opacity: 1 !important;
+  transition: color 0.2s, background 0.2s, opacity 0.2s;
+}
+.ant-menu-horizontal .ant-menu-item:hover,
+.ant-menu-item:hover {
+  color: #9156f1 !important;
+  background: transparent !important;
+  opacity: 1 !important;
+}
+.ant-menu-horizontal .ant-menu-item-active,
+.ant-menu-horizontal .ant-menu-item-selected,
+.ant-menu-item-selected {
+  color: #9156f1 !important;
+}
+
+.landing-body {
+  background: linear-gradient(120deg, rgba(30,30,30,0.8), rgba(70,70,70,0.6));
+  /* hoặc background-color: #333; color overlay ... */
+}

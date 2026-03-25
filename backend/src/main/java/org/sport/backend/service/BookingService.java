@@ -4,14 +4,17 @@ import org.sport.backend.base.PageResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
+import org.sport.backend.dto.request.slot.SlotRequest;
 import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
+import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
 import org.sport.backend.entity.Payment;
 
 import java.time.LocalDate;
 import java.util.UUID;
 
 public interface BookingService {
+    CheckAvailabilityResponse checkAvailability(SlotRequest request);
     BookingIntentResponse createBookingIntent(BookingRequest request);
     BookingIntentResponse getBookingIntentById(UUID bookingIntentId);
     BookingResponse confirmBooking(UUID bookingIntentId, Payment payment);

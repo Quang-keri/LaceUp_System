@@ -29,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -91,6 +92,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .contactName(request.getContactName())
                 .contactPhone(request.getContactPhone())
                 .status(RentalAreaStatus.ACTIVE)
+                .isActive(true)
                 .owner(owner)
                 .city(city)
                 .build();
@@ -255,40 +257,82 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
 
     @Override
+    @Transactional
     public RentalAreaResponse updateRentalArea(UUID rentalAreaId, RentalAreaUpdateRequest request) {
 
         RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
                 .orElseThrow(() -> new RuntimeException("Rental area not found"));
 
-        if (request.getRentalAreaName() != null) {
-            rentalArea.setRentalAreaName(request.getRentalAreaName());
-        }
 
-        if (request.getAddress() != null) {
-            rentalArea.setAddress(request.getAddress());
-        }
-
-        if (request.getContactName() != null) {
-            rentalArea.setContactName(request.getContactName());
-        }
-
-        if (request.getContactPhone() != null) {
-            rentalArea.setContactPhone(request.getContactPhone());
-        }
-
+        if (request.getRentalAreaName() != null) rentalArea.setRentalAreaName(request.getRentalAreaName());
+        if (request.getAddress() != null) rentalArea.setAddress(request.getAddress());
+        if (request.getContactName() != null) rentalArea.setContactName(request.getContactName());
+        if (request.getContactPhone() != null) rentalArea.setContactPhone(request.getContactPhone());
+        if (request.getStatus() != null) rentalArea.setStatus(request.getStatus());
         if (request.getCityId() != null) {
-
             City city = cityRepository.findById(request.getCityId())
                     .orElseThrow(() -> new RuntimeException("City not found"));
-
             rentalArea.setCity(city);
         }
 
         rentalAreaRepository.save(rentalArea);
 
-        return mapToResponse(rentalArea);
-    }
 
+        List<MultipartFile> images = request.getImages();
+        List<RentalAreaImage> currentImages = rentalAreaImageRepository.findByRentalArea(rentalArea);
+
+        int count = images == null ? 0 : (int) images.stream().filter(f -> f != null && !f.isEmpty()).count();
+
+        if (count > 0) {
+            if (count > 5) {
+                throw new IllegalArgumentException("RentalArea yêu cầu tối đa 5 ảnh");
+            }
+
+            // Xóa record ảnh cũ trong DB
+            rentalAreaImageRepository.deleteAll(currentImages);
+
+            // Upload ảnh mới lên Cloudinary
+            String folder = "rentals/" + rentalArea.getRentalAreaId();
+            List<CloudinaryUploadResult> uploaded = cloudinaryService.uploadImages(images, folder);
+
+            // Lưu ảnh mới vào DB
+            List<RentalAreaImage> newEntities = new ArrayList<>();
+            for (int i = 0; i < uploaded.size(); i++) {
+                CloudinaryUploadResult u = uploaded.get(i);
+                RentalAreaImage img = RentalAreaImage.builder()
+                        .rentalArea(rentalArea)
+                        .imageUrl(u.getUrl())
+                        .publicId(u.getPublicId())
+                        .isCover(i == 0)
+                        .sortOrder(i)
+                        .build();
+                newEntities.add(img);
+            }
+            rentalAreaImageRepository.saveAll(newEntities);
+            currentImages = newEntities;
+        }
+
+        // Map ảnh ra Response
+        List<RentalAreaImageResponse> imageResponses = currentImages.stream()
+                .sorted(Comparator.comparing(RentalAreaImage::getSortOrder, Comparator.nullsLast(Integer::compareTo)))
+                .map(img -> RentalAreaImageResponse.builder()
+                        .rentalAreaImageId(img.getRentalAreaImageId())
+                        .imageUrl(img.getImageUrl())
+                        .isCover(img.getIsCover())
+                        .sortOrder(img.getSortOrder())
+                        .build())
+                .collect(Collectors.toList());
+
+        return RentalAreaResponse.builder()
+                .rentalAreaId(rentalArea.getRentalAreaId())
+                .rentalAreaName(rentalArea.getRentalAreaName())
+                .address(rentalArea.getAddress())
+                .contactName(rentalArea.getContactName())
+                .contactPhone(rentalArea.getContactPhone())
+                .status(rentalArea.getStatus())
+                .images(imageResponses)
+                .build();
+    }
     @Override
     public RentalAreaDetailResponse getRentalAreaById(UUID rentalAreaId) {
 

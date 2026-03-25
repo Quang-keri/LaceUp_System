@@ -10,12 +10,16 @@ import {
   Skeleton,
   Row,
   Col,
+  TimePicker, // Thêm TimePicker
+  Switch, // Thêm Switch
 } from "antd";
 import { UploadOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import type { UploadFile } from "antd";
 import RentalService from "../../../service/rental/rentalService";
 import { useAuth } from "../../../context/AuthContext";
+import dayjs from "dayjs"; // Thêm dayjs để xử lý LocalTime
+
 const CITIES = [
   { label: "Hà Nội", value: 1 },
   { label: "TP Hồ Chí Minh", value: 2 },
@@ -40,7 +44,9 @@ export default function BuildingFormPage() {
       loadBuildingData(buildingId);
     }
   }, [buildingId]);
+
   const { user } = useAuth();
+
   const loadBuildingData = async (id: string) => {
     setPageLoading(true);
     try {
@@ -53,6 +59,14 @@ export default function BuildingFormPage() {
           contactName: building.contactName,
           contactPhone: building.contactPhone,
           cityId: building.cityId,
+          // Format chuỗi giờ từ backend (HH:mm:ss) sang dayjs object cho Form
+          openTime: building.openTime
+            ? dayjs(building.openTime, "HH:mm:ss")
+            : null,
+          closeTime: building.closeTime
+            ? dayjs(building.closeTime, "HH:mm:ss")
+            : null,
+          isActive: building.isActive,
         });
       }
     } catch (error) {
@@ -80,19 +94,28 @@ export default function BuildingFormPage() {
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
+      // Format dayjs object sang chuỗi "HH:mm:ss" để gửi xuống Java (LocalTime)
+      const openTimeFormatted = values.openTime
+        ? values.openTime.format("HH:mm:ss")
+        : null;
+      const closeTimeFormatted = values.closeTime
+        ? values.closeTime.format("HH:mm:ss")
+        : null;
+
       if (isEditMode && buildingId) {
-        // Update existing building
         const updateData = {
           rentalAreaName: values.rentalAreaName,
           address: values.address,
           contactName: values.contactName,
           contactPhone: values.contactPhone,
           cityId: values.cityId,
+          openTime: openTimeFormatted,
+          closeTime: closeTimeFormatted,
+          isActive: values.isActive, // Gửi trạng thái hoạt động khi edit
         };
         await RentalService.updateRentalArea(buildingId, updateData);
         message.success("Cập nhật tòa nhà thành công");
       } else {
-        // Create new building
         if (imageFiles.length === 0) {
           message.error("Vui lòng chọn ít nhất một hình ảnh");
           setLoading(false);
@@ -106,13 +129,15 @@ export default function BuildingFormPage() {
           contactName: values.contactName,
           contactPhone: values.contactPhone,
           cityId: values.cityId,
+          openTime: openTimeFormatted,
+          closeTime: closeTimeFormatted,
+          isActive: true, // Mặc định tạo mới là true
         };
 
         await RentalService.createRentalArea(createData, imageFiles);
         message.success("Tòa nhà được tạo thành công!");
       }
 
-      // Navigate back to list
       setTimeout(() => {
         navigate("/owner/buildings/list");
       }, 500);
@@ -139,7 +164,7 @@ export default function BuildingFormPage() {
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate("/owner/buildings/list")}
             />
-            <h2>{isEditMode ? "Cây nhật tòa nhà" : "Tạo tòa nhà mới"}</h2>
+            <h2>{isEditMode ? "Cập nhật tòa nhà" : "Tạo tòa nhà mới"}</h2>
           </div>
         }
       >
@@ -148,17 +173,15 @@ export default function BuildingFormPage() {
           layout="vertical"
           onFinish={onFinish}
           autoComplete="off"
+          initialValues={{ isActive: true }} // Set giá trị mặc định cho Switch
         >
           <Row gutter={[16, 16]}>
             <Col xs={24} md={12}>
               <Form.Item
-                label="Tên tòa nhà 1"
+                label="Tên tòa nhà"
                 name="rentalAreaName"
                 rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập tên tòa nhà",
-                  },
+                  { required: true, message: "Vui lòng nhập tên tòa nhà" },
                 ]}
               >
                 <Input placeholder="Nhập tên tòa nhà" />
@@ -168,12 +191,7 @@ export default function BuildingFormPage() {
               <Form.Item
                 label="Thành phố"
                 name="cityId"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng chọn thành phố",
-                  },
-                ]}
+                rules={[{ required: true, message: "Vui lòng chọn thành phố" }]}
               >
                 <Select placeholder="Chọn thành phố" options={CITIES} />
               </Form.Item>
@@ -185,12 +203,7 @@ export default function BuildingFormPage() {
               <Form.Item
                 label="Địa chỉ"
                 name="address"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập địa chỉ",
-                  },
-                ]}
+                rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
               >
                 <Input placeholder="Nhập địa chỉ tòa nhà" />
               </Form.Item>
@@ -217,10 +230,7 @@ export default function BuildingFormPage() {
                 label="Số điện thoại liên hệ"
                 name="contactPhone"
                 rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập số điện thoại",
-                  },
+                  { required: true, message: "Vui lòng nhập số điện thoại" },
                   {
                     pattern: /^[0-9]{10,11}$/,
                     message: "Số điện thoại không hợp lệ",
@@ -231,6 +241,62 @@ export default function BuildingFormPage() {
               </Form.Item>
             </Col>
           </Row>
+
+          {/* ----- THÊM PHẦN THỜI GIAN HOẠT ĐỘNG ----- */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Giờ mở cửa"
+                name="openTime"
+                rules={[
+                  { required: true, message: "Vui lòng chọn giờ mở cửa" },
+                ]}
+              >
+                <TimePicker
+                  format="HH:mm"
+                  className="w-full"
+                  placeholder="Ví dụ: 06:00"
+                  showNow={false}
+                  minuteStep={15} // Tuỳ chọn: để dễ chọn giờ chẵn
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Giờ đóng cửa"
+                name="closeTime"
+                rules={[
+                  { required: true, message: "Vui lòng chọn giờ đóng cửa" },
+                ]}
+              >
+                <TimePicker
+                  format="HH:mm"
+                  className="w-full"
+                  placeholder="Ví dụ: 23:00"
+                  showNow={false}
+                  minuteStep={15}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* ----- TRẠNG THÁI (CHỈ NÊN HIỆN KHI EDIT) ----- */}
+          {isEditMode && (
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label="Trạng thái hoạt động"
+                  name="isActive"
+                  valuePropName="checked"
+                >
+                  <Switch
+                    checkedChildren="Đang hoạt động"
+                    unCheckedChildren="Tạm ngưng"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
 
           {!isEditMode && (
             <Row gutter={[16, 16]}>
@@ -247,13 +313,13 @@ export default function BuildingFormPage() {
                   <Upload
                     listType="picture"
                     multiple
-                    maxCount={5}
+                    maxCount={1}
                     fileList={fileList}
                     onChange={handleFileChange}
                     accept="image/*"
                   >
                     <Button icon={<UploadOutlined />}>
-                      Chọn hình ảnh (tối đa 5 ảnh)
+                      Chọn hình ảnh (tối đa 1 ảnh)
                     </Button>
                   </Upload>
                 </Form.Item>

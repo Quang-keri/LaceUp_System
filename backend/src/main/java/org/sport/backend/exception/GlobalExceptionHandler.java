@@ -45,15 +45,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
 
-        ex.getBindingResult().getFieldErrors().forEach(err ->
-                errors.put(err.getField(), err.getDefaultMessage())
-        );
+        // Dùng getAllErrors() để lấy TẤT CẢ các lỗi (cả Field level và Class level)
+        ex.getBindingResult().getAllErrors().forEach(err -> {
+            if (err instanceof org.springframework.validation.FieldError) {
+                errors.put(((org.springframework.validation.FieldError) err).getField(), err.getDefaultMessage());
+            } else {
+                errors.put(err.getObjectName(), err.getDefaultMessage());
+            }
+        });
 
         return ResponseEntity.badRequest().body(
                 ApiResponse.<Map<String, String>>builder()
-                        .code(ErrorCode.USER_NOT_AUTHENTICATED.getCode())
+                        .code(2003) // Cứ để tạm 2003 của bạn
                         .message("Validation failed")
-                        .result(errors)
+                        .result(errors) // Lần này chắc chắn sẽ có dữ liệu ở đây!
                         .build()
         );
     }

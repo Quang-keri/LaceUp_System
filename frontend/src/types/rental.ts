@@ -36,6 +36,7 @@ export interface UpdateRentalAreaRequest {
   contactPhone?: string;
   status?: RentalAreaStatus;
   cityId?: number;
+  images?: File[];
 }
 
 export interface RentalAreaListResponse {
