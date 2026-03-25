@@ -1,5 +1,6 @@
 package org.sport.backend.dto.request.match;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.sport.backend.constant.RecurringType;
 import org.sport.backend.constant.MatchType;
@@ -12,7 +13,6 @@ import java.util.UUID;
 public class MatchRequest {
     private UUID courtId;
     private Integer categoryId;
-    private String address;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Integer maxPlayers;
@@ -26,4 +26,13 @@ public class MatchRequest {
     private Double winnerPercent;
     private Integer minRank;
     private Integer maxRank;
+
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String street;
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String ward;
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String district;
+    @NotNull(message = "thành phố không bỏ trống")
+    private Long cityId;
 }

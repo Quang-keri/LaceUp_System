@@ -13,6 +13,7 @@ import org.sport.backend.dto.response.post.PostSummaryResponse;
 
 import org.sport.backend.security.CustomUserDetails;
 import org.sport.backend.service.PostService;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -50,7 +51,7 @@ public class PostController {
     }
 
     @GetMapping
-    public ApiResponse<?> getAllPosts(@ModelAttribute PostFilterRequest filterRequest) {
+    public ApiResponse<?> getAllPosts(@ParameterObject PostFilterRequest filterRequest) {
         try {
             PageResponse<PostSummaryResponse> result = postService.getAllPosts(filterRequest);
             return ApiResponse.success(200, "Get all posts successfully", result);

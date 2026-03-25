@@ -30,8 +30,8 @@ public class RentalArea extends BaseEntity {
     @Column(name = "rental_area_name", length = 150)
     String rentalAreaName;
 
-    @Column(name = "address")
-    String address;
+    @Embedded
+    Address address;
 
     @Column(name = "contact_name", length = 100)
     String contactName;
@@ -59,10 +59,6 @@ public class RentalArea extends BaseEntity {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "city_id", nullable = false)
-    City city;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")

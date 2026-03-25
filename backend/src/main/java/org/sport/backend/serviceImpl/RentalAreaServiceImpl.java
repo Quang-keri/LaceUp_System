@@ -17,6 +17,7 @@ import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
+import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.CloudinaryService;
 import org.sport.backend.service.RentalAreaService;
@@ -70,7 +71,10 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     private RentalAreaImageRepository rentalAreaImageRepository;
 
     @Autowired
-    private  CourtPriceRepository courtPriceRepository;
+    private CourtPriceRepository courtPriceRepository;
+
+    @Autowired
+    private AddressMapper addressMapper;
 
     @Override
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
@@ -80,19 +84,24 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             throw new IllegalArgumentException("RentalArea yêu cầu  1 tới 5 ảnh");
         }
 
-         User owner = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User owner = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         City city = cityRepository.findById(request.getCityId()).orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
 
+        Address address = Address.builder()
+                .ward(request.getWard())
+                .district(request.getDistrict())
+                .street(request.getStreet())
+                .city(city)
+                .build();
 
         RentalArea rentalArea = RentalArea.builder()
                 .rentalAreaName(request.getRentalAreaName())
-                .address(request.getAddress())
+                .address(address)
                 .contactName(request.getContactName())
                 .contactPhone(request.getContactPhone())
                 .status(RentalAreaStatus.ACTIVE)
                 .owner(owner)
-                .city(city)
                 .build();
 
         rentalAreaRepository.save(rentalArea);
@@ -131,7 +140,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         return RentalAreaResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
-                .address(rentalArea.getAddress())
+                .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
                 .status(rentalArea.getStatus())
@@ -156,8 +165,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .toList();
 
         CityResponse cityResponse = CityResponse.builder()
-                .cityId(rentalArea.getCity().getCityId())
-                .cityName(rentalArea.getCity().getCityName())
+                .cityId(rentalArea.getAddress().getCity().getCityId())
+                .cityName(rentalArea.getAddress().getCity().getCityName())
                 .build();
         UserResponse userResponse = UserResponse.builder()
                 .userId(rentalArea.getOwner().getUserId())
@@ -169,7 +178,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         return RentalAreaResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
-                .address(rentalArea.getAddress())
+                .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
                 .status(rentalArea.getStatus())
@@ -178,6 +187,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .city(cityResponse)
                 .build();
     }
+
     @Override
     public PageResponse<RentalAreaResponse> getAllRentalAreas(
             int page,
@@ -189,7 +199,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             LocalDateTime toDate
     ) {
 
-        Pageable pageable = PageRequest.of(page -1 , size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 
         Specification<RentalArea> spec = Specification
                 .where(RentalAreaSpecification.isNotDeleted())
@@ -227,7 +237,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         UUID userId = userService.getMyInfo().getUserId();
 
-        Pageable pageable = PageRequest.of(page -1, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 
         Specification<RentalArea> spec = Specification
                 .where(RentalAreaSpecification.isNotDeleted())
@@ -258,34 +268,40 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     public RentalAreaResponse updateRentalArea(UUID rentalAreaId, RentalAreaUpdateRequest request) {
 
         RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
-                .orElseThrow(() -> new RuntimeException("Rental area not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
 
         if (request.getRentalAreaName() != null) {
             rentalArea.setRentalAreaName(request.getRentalAreaName());
         }
-
-        if (request.getAddress() != null) {
-            rentalArea.setAddress(request.getAddress());
-        }
-
         if (request.getContactName() != null) {
             rentalArea.setContactName(request.getContactName());
         }
-
         if (request.getContactPhone() != null) {
             rentalArea.setContactPhone(request.getContactPhone());
         }
 
-        if (request.getCityId() != null) {
+        Address currentAddress = rentalArea.getAddress();
 
-            City city = cityRepository.findById(request.getCityId())
-                    .orElseThrow(() -> new RuntimeException("City not found"));
-
-            rentalArea.setCity(city);
+        if (request.getStreet() != null) {
+            currentAddress.setStreet(request.getStreet());
+        }
+        if (request.getWard() != null) {
+            currentAddress.setWard(request.getWard());
+        }
+        if (request.getDistrict() != null) {
+            currentAddress.setDistrict(request.getDistrict());
         }
 
-        rentalAreaRepository.save(rentalArea);
+        // 4. Cập nhật City (nếu có cityId mới trong request)
+        if (request.getCityId() != null) {
+            City newCity = cityRepository.findById(request.getCityId())
+                    .orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
+            currentAddress.setCity(newCity);
+        }
 
+        rentalArea.setAddress(currentAddress);
+
+        rentalAreaRepository.save(rentalArea);
         return mapToResponse(rentalArea);
     }
 
@@ -359,7 +375,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             BigDecimal maxPrice = null;
 
             if (result != null && !result.isEmpty()) {
-                Object[] range = result.get(0);
+                Object[] range = result.getFirst();
 
                 minPrice = range[0] != null ? (BigDecimal) range[0] : null;
                 maxPrice = range[1] != null ? (BigDecimal) range[1] : null;
@@ -382,14 +398,14 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         }).toList();
 
         CityResponse cityResponse = CityResponse.builder()
-                .cityId(rentalArea.getCity().getCityId())
-                .cityName(rentalArea.getCity().getCityName())
+                .cityId(rentalArea.getAddress().getCity().getCityId())
+                .cityName(rentalArea.getAddress().getCity().getCityName())
                 .build();
 
         return RentalAreaDetailResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
-                .address(rentalArea.getAddress())
+                .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
                 .city(cityResponse)
@@ -416,7 +432,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     public void deleteRentalArea(UUID rentalAreaId) {
         RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
                 .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
-        
+
 
         rentalArea.setDeletedAt(LocalDateTime.now());
         rentalAreaRepository.save(rentalArea);

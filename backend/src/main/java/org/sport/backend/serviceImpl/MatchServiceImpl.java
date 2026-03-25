@@ -40,6 +40,8 @@ public class MatchServiceImpl implements MatchService {
     private final CourtRepository courtRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final CityRepository cityRepository;
+
     private final MatchMapper matchMapper;
 
     private final UserService userService;
@@ -95,7 +97,15 @@ public class MatchServiceImpl implements MatchService {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy loại môn thể thao này"));
             matchBuilder.category(category);
-            matchBuilder.address(request.getAddress());
+
+            City city = cityRepository.getReferenceById(request.getCityId());
+            Address address = Address.builder()
+                    .ward(request.getWard())
+                    .district(request.getDistrict())
+                    .street(request.getStreet())
+                    .city(city)
+                    .build();
+            matchBuilder.address(address);
         }
 
         Match savedMatch = matchRepository.save(matchBuilder.build());

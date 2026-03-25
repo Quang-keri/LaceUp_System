@@ -14,6 +14,7 @@ import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
+import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.CourtCopyService;
@@ -56,8 +57,10 @@ public class BookingServiceImpl implements BookingService {
     private CourtCopyService courtCopyService;
     @Autowired
     private CourtPriceRepository courtPriceRepository;
-     @Autowired
-     private PaymentRepository paymentRepository;
+    @Autowired
+    private PaymentRepository paymentRepository;
+    @Autowired
+    private AddressMapper addressMapper;
 
     @Override
     @Transactional
@@ -266,6 +269,7 @@ public class BookingServiceImpl implements BookingService {
                 )
                 .orElseThrow(() -> new RuntimeException("Không có rule phù hợp"));
     }
+
     private int getPriorityScore(CourtPrice p, boolean isWeekend) {
 
         // specific date luôn cao nhất
@@ -280,6 +284,7 @@ public class BookingServiceImpl implements BookingService {
             default -> 0;
         };
     }
+
     @Override
     public BookingIntentResponse getBookingIntentById(UUID bookingIntentId) {
 
@@ -334,7 +339,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse confirmBooking(UUID bookingIntentId,Payment payment) {
+    public BookingResponse confirmBooking(UUID bookingIntentId, Payment payment) {
 
         BookingIntent intent = bookingIntentRepository
                 .findById(bookingIntentId)
@@ -397,8 +402,8 @@ public class BookingServiceImpl implements BookingService {
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice())
                 .bookingStatus(booking.getBookingStatus())
-                 .depositAmount(booking.getDepositAmount())
-                 .remainingAmount(booking.getRemainingAmount())
+                .depositAmount(booking.getDepositAmount())
+                .remainingAmount(booking.getRemainingAmount())
                 .slots(slotResponses)
                 .createdAt(booking.getCreatedAt())
                 .build();
@@ -413,7 +418,7 @@ public class BookingServiceImpl implements BookingService {
                 .findFirstByBookingOrderByTransactionDateDesc(booking);
 
         String paymentMethod = null;
-        if(payment.isPresent()) {
+        if (payment.isPresent()) {
             paymentMethod = payment.get().getPaymentMethod().toString();
         }
         List<Slot> slots = booking.getSlots();
@@ -446,7 +451,7 @@ public class BookingServiceImpl implements BookingService {
                         RentalAreaResponse.builder()
                                 .rentalAreaId(booking.getRentalArea().getRentalAreaId())
                                 .rentalAreaName(booking.getRentalArea().getRentalAreaName())
-                                .address(booking.getRentalArea().getAddress())
+                                .address(addressMapper.toAddressResponse(booking.getRentalArea().getAddress()))
                                 .build()
                 )
                 .depositAmount(booking.getDepositAmount())
@@ -577,9 +582,9 @@ public class BookingServiceImpl implements BookingService {
                 .findFirstByBookingOrderByTransactionDateDesc(booking);
 
         String paymentMethod = null;
-        if(payment.isPresent()) {
+        if (payment.isPresent()) {
             paymentMethod = payment.get().getPaymentMethod().toString();
-        }else{
+        } else {
             paymentMethod = "không có";
         }
 
@@ -611,14 +616,12 @@ public class BookingServiceImpl implements BookingService {
                         RentalAreaResponse.builder()
                                 .rentalAreaId(booking.getRentalArea().getRentalAreaId())
                                 .rentalAreaName(booking.getRentalArea().getRentalAreaName())
-                                .address(booking.getRentalArea().getAddress())
+                                .address(addressMapper.toAddressResponse(booking.getRentalArea().getAddress()))
                                 .build() : null)
                 .depositAmount(booking.getDepositAmount())
                 .remainingAmount(booking.getRemainingAmount())
                 .paymentMethod(paymentMethod)
                 .build();
-
-
 
 
         return bookingResponse;
@@ -643,6 +646,7 @@ public class BookingServiceImpl implements BookingService {
 
         return mapToResponse(booking);
     }
+
     private void updateBookingInfo(Booking booking, UpdateBookingRequest request) {
 
         if (request.getBookerName() != null) {
@@ -662,6 +666,7 @@ public class BookingServiceImpl implements BookingService {
             syncSlotStatus(booking, request.getBookingStatus());
         }
     }
+
     private void updateSlots(List<UpdateSlotRequest> slotRequests) {
 
         for (UpdateSlotRequest slotReq : slotRequests) {
@@ -690,6 +695,7 @@ public class BookingServiceImpl implements BookingService {
             slotRepository.save(slot);
         }
     }
+
     private CourtCopy resolveCourtCopy(
             Slot slot,
             UpdateSlotRequest slotReq,
@@ -746,6 +752,7 @@ public class BookingServiceImpl implements BookingService {
 //                courtCopy.getCourt().getPrice().multiply(hours)
 //        );
     }
+
     private void validateSlotLogic(LocalDateTime start, LocalDateTime end, LocalDateTime oldStart) {
 
         if (start == null || end == null)
@@ -782,21 +789,22 @@ public class BookingServiceImpl implements BookingService {
         booking.setTotalPrice(total);
         booking.setStartTime(minStart);
         booking.setEndTime(maxEnd);
-                // Recalculate remaining amount based on existing deposit
-                BigDecimal deposit = booking.getDepositAmount() == null ? BigDecimal.ZERO : booking.getDepositAmount();
-                booking.setRemainingAmount(total.subtract(deposit));
+        // Recalculate remaining amount based on existing deposit
+        BigDecimal deposit = booking.getDepositAmount() == null ? BigDecimal.ZERO : booking.getDepositAmount();
+        booking.setRemainingAmount(total.subtract(deposit));
     }
 
-        @Override
-        public String generateInvoiceUrl(UUID bookingId, String invoiceViewUrl) {
-                Booking booking = bookingRepository.findById(bookingId)
-                                .orElseThrow(() -> new RuntimeException("Booking not found"));
+    @Override
+    public String generateInvoiceUrl(UUID bookingId, String invoiceViewUrl) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-                booking.setInvoiceUrl(invoiceViewUrl);
-                bookingRepository.save(booking);
-                return invoiceViewUrl;
-        }
-        @Override
+        booking.setInvoiceUrl(invoiceViewUrl);
+        bookingRepository.save(booking);
+        return invoiceViewUrl;
+    }
+
+    @Override
     @Transactional
     public void collectRemainingPayment(UUID bookingId) {
 
@@ -807,11 +815,12 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Đơn hàng này đã được thanh toán đủ!");
         }
         booking.setRemainingAmount(BigDecimal.ZERO);
-        booking.setDepositAmount(booking.getTotalPrice());;
+        booking.setDepositAmount(booking.getTotalPrice());
+        ;
 
-         if (booking.getBookingStatus() == BookingStatus.BOOKED) {
-             booking.setBookingStatus(BookingStatus.COMPLETED);
-         }
+        if (booking.getBookingStatus() == BookingStatus.BOOKED) {
+            booking.setBookingStatus(BookingStatus.COMPLETED);
+        }
 
         bookingRepository.save(booking);
     }

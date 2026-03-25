@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.sport.backend.constant.PostStatus;
+import org.sport.backend.dto.response.address.AddressResponse;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,5 +30,5 @@ public class PostSummaryResponse {
 
     private UUID rentalAreaId;
     private String rentalAreaName;
-    private String address;
+    private AddressResponse address;
 }

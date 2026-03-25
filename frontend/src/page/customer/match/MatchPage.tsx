@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, Clock, MapPin, MessageCircle, Users } from "lucide-react";
 import matchService from "../../../service/match/matchService.ts";
 import type { MatchResponse } from "../../../types/match.ts";
 import { toast } from "react-toastify";
@@ -174,6 +174,35 @@ const MatchPage: React.FC = () => {
         Đã Chốt
       </button>
     );
+  };
+
+  const handleChatClick = (e: React.MouseEvent, match: MatchResponse) => {
+    e.stopPropagation(); // Ngăn mở Modal chi tiết trận đấu khi bấm chat
+
+    // Tìm ID của người tạo (Host) giống như logic bạn đang dùng
+    const hostUser = match.participants?.find(
+      (p: any) => p.userName === match.hostName,
+    );
+    const hostId = (match as any).hostId || hostUser?.userId;
+
+    if (!hostId) {
+      toast.error("Không tìm thấy thông tin chủ phòng để chat");
+      return;
+    }
+
+    if (hostId === user?.userId) {
+      toast.info("Bạn đang là chủ phòng của trận đấu này.");
+      return;
+    }
+
+    const event = new CustomEvent("OPEN_CHAT_WITH_USER", {
+      detail: {
+        userId: hostId,
+        userName: match.hostName || "Chủ phòng",
+      },
+    });
+
+    window.dispatchEvent(event);
   };
 
   return (
@@ -422,8 +451,20 @@ const MatchPage: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* GỌI HÀM RENDER NÚT ĐỘNG */}
-                  {renderActionButton(match)}
+                  {/* ĐÃ SỬA: Bọc nút Chat và nút Action vào một Flexbox */}
+                  <div className="flex items-center gap-2">
+                    {/* Nút Chat */}
+                    <button
+                      onClick={(e) => handleChatClick(e, match)}
+                      className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-colors shadow-sm"
+                      title="Chat với chủ phòng"
+                    >
+                      <MessageCircle size={20} />
+                    </button>
+
+                    {/* GỌI HÀM RENDER NÚT ĐỘNG */}
+                    {renderActionButton(match)}
+                  </div>
                 </div>
               </div>
             ))}

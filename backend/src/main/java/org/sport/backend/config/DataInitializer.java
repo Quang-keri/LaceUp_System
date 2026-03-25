@@ -213,6 +213,10 @@ public class DataInitializer implements CommandLineRunner {
         if (postRepository.count() == 0) {
             seedPostData();
         }
+
+        if (rentalAreaRepository.count() < 4) {
+            seedMultipleRentalAreasAndPosts();
+        }
     }
 
     // Hàm phụ trợ tạo User nhanh cho gọn code
@@ -240,10 +244,16 @@ public class DataInitializer implements CommandLineRunner {
                 .filter(c -> c.getCategoryName().equals("Sân cầu lông"))
                 .findFirst().orElseThrow();
 
+        Address areaAddress = Address.builder()
+                .street("456 Lê Văn Việt")
+                .district("Quận 9")
+                .ward("Hiệp Phú")
+                .city(city)
+                .build();
+
         RentalArea area = RentalArea.builder()
                 .rentalAreaName("Hệ thống Sân Cầu Lông Pro - Owner Management")
-                .address("456 Lê Văn Việt, Quận 9")
-                .city(city)
+                .address(areaAddress)
                 .owner(owner) // Gán cho owner
                 .isActive(true)
                 .status(RentalAreaStatus.ACTIVE)
@@ -394,5 +404,86 @@ public class DataInitializer implements CommandLineRunner {
         );
 
         postRepository.saveAll(posts);
+    }
+
+    private void seedMultipleRentalAreasAndPosts() {
+        List<User> owners = userRepository.findAll().stream()
+                .filter(u -> u.getRole().getRoleName().equals("OWNER"))
+                .limit(3)
+                .toList();
+
+        City city = cityRepository.findAll().get(0);
+        Category category = categoryRepository.findAll().get(0);
+
+        int index = 1;
+
+        for (User owner : owners) {
+
+            // Tạo RentalArea
+            Address address = Address.builder()
+                    .street("Đường số " + (100 + index))
+                    .district("Quận " + (index + 1))
+                    .ward("Phường " + index)
+                    .city(city)
+                    .build();
+
+            RentalArea area = RentalArea.builder()
+                    .rentalAreaName("Khu sân " + owner.getUserName())
+                    .address(address)
+                    .owner(owner)
+                    .isActive(true)
+                    .status(RentalAreaStatus.ACTIVE)
+                    .createdAt(LocalDateTime.now().minusDays(index * 5))
+                    .build();
+
+            rentalAreaRepository.save(area);
+
+            // Tạo Court
+            Court court = Court.builder()
+                    .courtName("Sân chính " + index)
+                    .surfaceType("Thảm PVC")
+                    .courtStatus(CourtStatus.ACTIVE)
+                    .indoor(true)
+                    .rentalArea(area)
+                    .category(category)
+                    .build();
+
+            courtRepository.save(court);
+
+            // 1 CourtCopy
+            CourtCopy courtCopy = CourtCopy.builder()
+                    .court(court)
+                    .courtCode("COURT-" + index)
+                    .courtCopyStatus(CourtCopyStatus.ACTIVE)
+                    .build();
+
+            courtCopyRepository.save(courtCopy);
+
+            // Price
+            courtPriceRepository.save(
+                    CourtPrice.builder()
+                            .court(court)
+                            .startTime(LocalTime.of(6, 0))
+                            .endTime(LocalTime.of(22, 0))
+                            .pricePerHour(BigDecimal.valueOf(90000 + index * 10000))
+                            .priceType(PriceType.NORMAL)
+                            .priority(1)
+                            .build()
+            );
+
+            // 👉 MỖI AREA CHỈ 1 POST
+            Post post = Post.builder()
+                    .title("Sân mới khai trương - " + owner.getUserName())
+                    .description("Không gian rộng rãi, ánh đèn dịu nhẹ, phù hợp cho những trận đấu đầy cảm xúc.")
+                    .postStatus(PostStatus.PUBLISHED)
+                    .user(owner)
+                    .court(court)
+                    .rentalArea(area)
+                    .build();
+
+            postRepository.save(post);
+
+            index++;
+        }
     }
 }

@@ -11,6 +11,7 @@ import org.sport.backend.dto.response.post.PostSummaryResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
+import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.CourtRepository;
 import org.sport.backend.repository.PostRepository;
 import org.sport.backend.repository.RentalAreaRepository;
@@ -27,7 +28,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,6 +48,9 @@ public class PostServiceImpl implements PostService {
 
     @Autowired
     private RentalAreaRepository rentalAreaRepository;
+
+    @Autowired
+    private AddressMapper addressMapper;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -169,7 +172,7 @@ public class PostServiceImpl implements PostService {
 
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
-                .address(rentalArea.getAddress())
+                .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
                 .build();
     }
     @Override
