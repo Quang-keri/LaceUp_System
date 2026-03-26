@@ -9,6 +9,7 @@ import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Court;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,4 +27,7 @@ public class RentalAreaResponse {
     private UserResponse owner;
     private List<Court> courts;
     private List<RentalAreaImageResponse> images;
+    private LocalTime openTime;
+    private LocalTime closeTime;
+    private Boolean isActive;
 }

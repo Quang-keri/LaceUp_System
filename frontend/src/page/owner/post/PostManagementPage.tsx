@@ -21,7 +21,6 @@ import PostService from "../../../service/post/postService";
 import CreatePostModal from "./CreatePostModal";
 import UpdatePostModal from "./UpdatePostModal";
 import PostDetailModal from "./PostDetailModal";
-import type { PostResponse } from "../../../types/post";
 import { toast } from "react-toastify";
 const { Text, Title } = Typography;
 
@@ -132,7 +131,10 @@ export default function PostManagementPage() {
                 }
                 description={
                   <Space direction="vertical" size={0} className="w-full">
-                    <Text type="secondary">{post.address}</Text>
+                    <Text type="secondary">{post.address.street}</Text>
+                    <Text type="secondary">{post.address.ward}</Text>
+                    <Text type="secondary">{post.address.district}</Text>
+                    <Text type="secondary">{post.address.city.cityName}</Text>
                     <Text type="secondary">{post.courtName}</Text>
                     <div className="mt-2 flex justify-between items-center">
                       <Text className="text-red-500 font-bold text-lg">

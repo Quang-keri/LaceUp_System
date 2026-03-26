@@ -1,8 +1,6 @@
 export enum CourtStatus {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
-  PENDING = "PENDING",
-  REJECTED = "REJECTED",
 }
 
 export enum CourtCopyStatus {
