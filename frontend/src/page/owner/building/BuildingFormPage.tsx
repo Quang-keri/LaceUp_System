@@ -19,6 +19,7 @@ import type { UploadFile } from "antd";
 import RentalService from "../../../service/rental/rentalService";
 import { useAuth } from "../../../context/AuthContext";
 import dayjs from "dayjs"; // Thêm dayjs để xử lý LocalTime
+import type { UpdateRentalAreaRequest } from "../../../types/rental";
 
 const CITIES = [
   { label: "Hà Nội", value: 1 },
@@ -51,15 +52,16 @@ export default function BuildingFormPage() {
     setPageLoading(true);
     try {
       const response = await RentalService.getRentalAreaById(id);
-      if (response.data && response.data.result) {
-        const building = response.data.result;
+      if (response.result) {
+        const building = response.result;
         form.setFieldsValue({
           rentalAreaName: building.rentalAreaName,
-          address: building.address,
+          street: building.address?.street,
+          ward: building.address?.ward,
+          district: building.address?.district,
           contactName: building.contactName,
           contactPhone: building.contactPhone,
           cityId: building.cityId,
-          // Format chuỗi giờ từ backend (HH:mm:ss) sang dayjs object cho Form
           openTime: building.openTime
             ? dayjs(building.openTime, "HH:mm:ss")
             : null,
@@ -102,17 +104,24 @@ export default function BuildingFormPage() {
         ? values.closeTime.format("HH:mm:ss")
         : null;
 
+      const addressObject = {
+        street: values.street,
+        ward: values.ward,
+        district: values.district,
+      };
+
       if (isEditMode && buildingId) {
-        const updateData = {
+        const updateData: UpdateRentalAreaRequest = {
           rentalAreaName: values.rentalAreaName,
-          address: values.address,
+          address: addressObject,
           contactName: values.contactName,
           contactPhone: values.contactPhone,
           cityId: values.cityId,
           openTime: openTimeFormatted,
           closeTime: closeTimeFormatted,
-          isActive: values.isActive, // Gửi trạng thái hoạt động khi edit
+          isActive: values.isActive,
         };
+
         await RentalService.updateRentalArea(buildingId, updateData);
         message.success("Cập nhật tòa nhà thành công");
       } else {
@@ -125,7 +134,7 @@ export default function BuildingFormPage() {
         const createData = {
           userId: user?.userId,
           rentalAreaName: values.rentalAreaName,
-          address: values.address,
+          address: addressObject,
           contactName: values.contactName,
           contactPhone: values.contactPhone,
           cityId: values.cityId,
@@ -199,13 +208,41 @@ export default function BuildingFormPage() {
           </Row>
 
           <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Quận/Huyện"
+                name="district"
+                rules={[
+                  { required: true, message: "Vui lòng nhập quận/huyện" },
+                ]}
+              >
+                <Input placeholder="Ví dụ: Quận 1" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                label="Phường/Xã"
+                name="ward"
+                rules={[{ required: true, message: "Vui lòng nhập phường/xã" }]}
+              >
+                <Input placeholder="Ví dụ: Phường Bến Nghé" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 16]}>
             <Col xs={24}>
               <Form.Item
-                label="Địa chỉ"
-                name="address"
-                rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
+                label="Số nhà/Tên đường"
+                name="street"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập số nhà và tên đường",
+                  },
+                ]}
               >
-                <Input placeholder="Nhập địa chỉ tòa nhà" />
+                <Input placeholder="Ví dụ: 123 Lê Lợi" />
               </Form.Item>
             </Col>
           </Row>

@@ -1,15 +1,13 @@
 package org.sport.backend.service;
 
 import jakarta.transaction.Transactional;
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
-import org.sport.backend.entity.User;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 public interface MatchService {
@@ -21,7 +19,14 @@ public interface MatchService {
     @Transactional
     void confirmDeposit(UUID matchId);
 
-    List<MatchResponse> getOpenMatches();
+    PageResponse<MatchResponse> getOpenMatches(
+            int page,
+            int size,
+            String category,
+            String keyword,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            MatchType matchType);
 
     MatchResponse getMatchDetail(UUID matchId);
 

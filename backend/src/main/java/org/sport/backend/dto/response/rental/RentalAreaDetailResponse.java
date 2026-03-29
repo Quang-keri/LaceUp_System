@@ -1,6 +1,7 @@
 package org.sport.backend.dto.response.rental;
 
 import lombok.*;
+import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 
@@ -16,7 +17,7 @@ public class RentalAreaDetailResponse {
 
     private UUID rentalAreaId;
     private String rentalAreaName;
-    private String address;
+    private AddressResponse address;
     private String contactName;
     private String contactPhone;
     private UUID ownerId;

@@ -1,6 +1,6 @@
 package org.sport.backend.service;
 
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.CourtStatus;
 import org.sport.backend.dto.request.court.CourtRequest;
 import org.sport.backend.dto.request.court.CourtUpdateRequest;

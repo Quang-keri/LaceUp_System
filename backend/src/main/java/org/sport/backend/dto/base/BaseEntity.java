@@ -1,4 +1,4 @@
-package org.sport.backend.base;
+package org.sport.backend.dto.base;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

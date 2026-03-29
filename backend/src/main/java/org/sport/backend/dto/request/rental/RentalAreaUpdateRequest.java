@@ -17,20 +17,21 @@ public class RentalAreaUpdateRequest {
 
     @NotNull(message = "Tên tòa nhà không bỏ trống")
     private String rentalAreaName;
-
-    @NotNull(message = "Địa chỉ không bỏ trống")
-    private String address;
-
     @NotNull(message = "Tên liên hệ không bỏ trống")
     private String contactName;
-
     @NotNull(message = "SDT không bỏ trống")
     private String contactPhone;
 
-    private RentalAreaStatus status;
-
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String street;
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String ward;
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String district;
+    @NotNull(message = "thành phố không bỏ trống")
     private Long cityId;
 
+    private RentalAreaStatus status;
 
     private List<MultipartFile> images;
 }

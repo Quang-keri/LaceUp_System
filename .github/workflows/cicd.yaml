@@ -25,15 +25,15 @@ jobs:
           push: ${{ github.event_name == 'push' }}
           tags: ${{ secrets.DOCKER_USERNAME }}/lace-up-backend:latest
 
-      - name: Build & Push Frontend
-        uses: docker/build-push-action@v4
-        with:
-          context: ./frontend
-          push: ${{ github.event_name == 'push' }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/lace-up-frontend:latest
-          build-args: |
-            VITE_API_URL=${{ secrets.VITE_API_URL }}
-            VITE_GOOGLE_ID=${{ secrets.VITE_GOOGLE_ID }}
+      # - name: Build & Push Frontend
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: ./frontend
+      #     push: ${{ github.event_name == 'push' }}
+      #     tags: ${{ secrets.DOCKER_USERNAME }}/lace-up-frontend:latest
+      #     build-args: |
+      #       VITE_API_URL=${{ secrets.VITE_API_URL }}
+      #       VITE_GOOGLE_ID=${{ secrets.VITE_GOOGLE_ID }}
 
   # deploy:
   #   # Chỉ chạy khi job build-and-push thành công

@@ -1,7 +1,7 @@
 package org.sport.backend.exception;
 
 import lombok.extern.slf4j.Slf4j;
-import org.sport.backend.base.ApiResponse;
+import org.sport.backend.dto.base.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;

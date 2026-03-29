@@ -18,16 +18,20 @@ public class RentalAreaRequest {
     private String rentalAreaName;
 
     @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
-    private String address;
+    private String street;
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String ward;
+    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    private String district;
+    @NotNull(message = "thành phố không bỏ trống")
+    private Long cityId;
+
 
     @NotNull(message = "tên liên hệ không bỏ trống")
     private String contactName;
 
     @NotNull(message = "số điện thoại không bỏ trống")
     private String contactPhone;
-
-    @NotNull(message = "thành phố không bỏ trống")
-    private Long cityId;
 
     private List<MultipartFile> images;
 }

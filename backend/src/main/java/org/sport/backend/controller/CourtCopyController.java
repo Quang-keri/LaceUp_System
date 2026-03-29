@@ -2,31 +2,32 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.sport.backend.base.ApiResponse;
-
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.CourtCopyStatus;
-
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.court_copy.CourtCopyRequest;
 import org.sport.backend.dto.request.court_copy.CourtCopyUpdateRequest;
+import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
 import org.sport.backend.service.CourtCopyService;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/court_copies")
 @Tag(name = "6. Court Copy")
+@RequiredArgsConstructor
 public class CourtCopyController {
 
-    @Autowired
-    private CourtCopyService courtCopyService;
+    private final CourtCopyService courtCopyService;
 
     @PostMapping
-    public ApiResponse<?> createCourtCopy(
+    @PreAuthorize("hasAuthority('CREATE_COURT_COPY')")
+    public ApiResponse<CourtCopyResponse> createCourtCopy(
             @Valid @RequestBody CourtCopyRequest request) {
         try {
             return ApiResponse.success(
@@ -35,12 +36,14 @@ public class CourtCopyController {
                     courtCopyService.createCourt(request)
             );
         } catch (Exception e) {
-            return ApiResponse.error(500, e.getMessage());
+            return ApiResponse.error(
+                    500,
+                    e.getMessage());
         }
     }
 
     @GetMapping
-    public ApiResponse<?> getCourtCopies(
+    public ApiResponse<PageResponse<CourtCopyResponse>> getCourtCopies(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
@@ -56,12 +59,15 @@ public class CourtCopyController {
                     courtCopyService.getCourtCopies(page, size, keyword, status, fromDate, toDate)
             );
         } catch (Exception e) {
-            return ApiResponse.error(500, e.getMessage());
+            return ApiResponse.error(
+                    500,
+                    e.getMessage());
         }
     }
 
     @GetMapping("{courtCopyId}")
-    public ApiResponse<?> getCourtCopyById(@PathVariable UUID courtCopyId) {
+    public ApiResponse<CourtCopyResponse> getCourtCopyById(
+            @PathVariable UUID courtCopyId) {
         try {
             return ApiResponse.success(
                     200,
@@ -69,12 +75,14 @@ public class CourtCopyController {
                     courtCopyService.getCourtCopyById(courtCopyId)
             );
         } catch (Exception e) {
-            return ApiResponse.error(500, e.getMessage());
+            return ApiResponse.error(
+                    500,
+                    e.getMessage());
         }
     }
 
     @GetMapping("{courtCopyId}/availability")
-    public ApiResponse<?> checkAvailability(
+    public ApiResponse<Boolean> checkAvailability(
             @PathVariable UUID courtCopyId,
 
             @RequestParam
@@ -88,12 +96,12 @@ public class CourtCopyController {
             @RequestParam(required = false) UUID excludeSlotId
     ) {
         try {
-
-            boolean available = courtCopyService.checkAvailability(
-                    courtCopyId, start, end, excludeSlotId
-            );
-
-            return ApiResponse.success(200, "Check availability", available);
+            return ApiResponse.success(
+                    200,
+                    "Check availability",
+                    courtCopyService.checkAvailability(
+                            courtCopyId, start, end, excludeSlotId
+                    ));
 
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
@@ -101,7 +109,10 @@ public class CourtCopyController {
     }
 
     @PutMapping("{courtCopyId}")
-    public ApiResponse<?> updateCourtCopy(@PathVariable UUID courtCopyId, CourtCopyUpdateRequest request) {
+    @PreAuthorize("hasAuthority('UPDATE_COURT_COPY')")
+    public ApiResponse<CourtCopyResponse> updateCourtCopy(
+            @PathVariable UUID courtCopyId,
+            @RequestBody @Valid CourtCopyUpdateRequest request) {
         try {
             return ApiResponse.success(
                     200,
@@ -114,7 +125,8 @@ public class CourtCopyController {
     }
 
     @GetMapping("/my-rental-area/{rentalAreaId}")
-    public ApiResponse<?> getCourtCopiesByRentalArea(
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<List<CourtCopyResponse>> getCourtCopiesByRentalArea(
             @PathVariable UUID rentalAreaId
     ) {
         try {

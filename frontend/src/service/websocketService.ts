@@ -19,6 +19,8 @@ class WebSocketService {
     this.socket = new SockJS(url);
     this.stompClient = Stomp.over(this.socket);
 
+    this.stompClient.debug = () => {};
+
     const headers = { Authorization: `Bearer ${token}` };
 
     this.stompClient.connect(headers, () => {

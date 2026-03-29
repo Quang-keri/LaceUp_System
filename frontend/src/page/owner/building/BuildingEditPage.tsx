@@ -37,8 +37,6 @@ export default function BuildingEditPage() {
 
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // State quản lý danh sách file ảnh
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   useEffect(() => {
@@ -52,16 +50,17 @@ export default function BuildingEditPage() {
         if (response && response.result) {
           const data = response.result;
 
-          // 1. Fill data vào các ô Input
           form.setFieldsValue({
             rentalAreaName: data.rentalAreaName,
             cityId: data.cityId,
-            address: data.address,
+            street: data.address?.street,
+            ward: data.address?.ward,
+            district: data.address?.district,
+
             contactName: data.contactName,
             contactPhone: data.contactPhone,
           });
 
-          // 2. Hiển thị ảnh cũ lên khung Upload (nếu có)
           if (data.images) {
             const initialImages: UploadFile[] = data.images.map((img: any) => ({
               uid: img.rentalAreaImageId,
@@ -88,21 +87,22 @@ export default function BuildingEditPage() {
     try {
       setIsSubmitting(true);
 
-      // Chuẩn bị mảng File thực tế để gửi lên server
-      // Chỉ lấy những file thực sự là object File (những file mới chọn)
       const imageFiles = fileList
         .filter((file) => file.originFileObj)
         .map((file) => file.originFileObj as File);
 
       const updateData: UpdateRentalAreaRequest = {
         rentalAreaName: values.rentalAreaName,
-        address: values.address,
+        address: {
+          street: values.street,
+          ward: values.ward,
+          district: values.district,
+        },
         contactName: values.contactName,
         contactPhone: values.contactPhone,
         cityId: values.cityId,
       };
 
-      // Gọi API với cả text và mảng file ảnh mới
       await RentalService.updateRentalArea(buildingId, updateData, imageFiles);
 
       message.success("Cập nhật tòa nhà thành công!");
@@ -124,7 +124,7 @@ export default function BuildingEditPage() {
               type="text"
               onClick={() => navigate("/owner/buildings/list")}
             />
-            <h2>Chỉnh sửa tòa nhà</h2>
+            <h2 className="text-xl font-bold">Chỉnh sửa tòa nhà</h2>
           </Space>
         }
       >
@@ -135,28 +135,59 @@ export default function BuildingEditPage() {
                 <Form.Item
                   label="Tên tòa nhà"
                   name="rentalAreaName"
-                  rules={[{ required: true }]}
+                  rules={[
+                    { required: true, message: "Vui lòng nhập tên tòa nhà" },
+                  ]}
                 >
-                  <Input />
+                  <Input placeholder="Nhập tên tòa nhà" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item
                   label="Thành phố"
                   name="cityId"
-                  rules={[{ required: true }]}
+                  rules={[
+                    { required: true, message: "Vui lòng chọn thành phố" },
+                  ]}
                 >
-                  <Select options={CITIES} />
+                  <Select options={CITIES} placeholder="Chọn thành phố" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Quận/Huyện"
+                  name="district"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập quận/huyện" },
+                  ]}
+                >
+                  <Input placeholder="Ví dụ: Quận 1" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Phường/Xã"
+                  name="ward"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập phường/xã" },
+                  ]}
+                >
+                  <Input placeholder="Ví dụ: Phường Bến Nghé" />
                 </Form.Item>
               </Col>
             </Row>
 
             <Form.Item
-              label="Địa chỉ"
-              name="address"
-              rules={[{ required: true }]}
+              label="Số nhà/Tên đường"
+              name="street"
+              rules={[
+                { required: true, message: "Vui lòng nhập số nhà/đường" },
+              ]}
             >
-              <Input />
+              <Input placeholder="Ví dụ: 123 Lê Lợi" />
             </Form.Item>
 
             <Row gutter={16}>
@@ -164,44 +195,44 @@ export default function BuildingEditPage() {
                 <Form.Item
                   label="Người liên hệ"
                   name="contactName"
-                  rules={[{ required: true }]}
+                  rules={[{ required: true, message: "Vui lòng nhập tên" }]}
                 >
-                  <Input />
+                  <Input placeholder="Tên người quản lý" />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item
-                  label="SĐT"
+                  label="Số điện thoại"
                   name="contactPhone"
-                  rules={[{ required: true }]}
+                  rules={[{ required: true, message: "Vui lòng nhập SĐT" }]}
                 >
-                  <Input />
+                  <Input placeholder="Số điện thoại liên hệ" />
                 </Form.Item>
               </Col>
             </Row>
 
-            {/* Phần Upload Ảnh */}
-            <Form.Item label="Hình ảnh (Chọn tối đa 5 ảnh mới nếu muốn thay đổi)">
+            <Form.Item label="Hình ảnh (Chọn tối đa 5 ảnh mới để thay đổi)">
               <Upload
                 listType="picture-card"
                 fileList={fileList}
                 onChange={({ fileList: newFileList }) =>
                   setFileList(newFileList)
                 }
-                beforeUpload={() => false} // Không upload tự động
+                beforeUpload={() => false}
                 multiple
                 maxCount={5}
+                accept="image/*"
               >
                 {fileList.length < 5 && (
                   <div>
                     <UploadOutlined />
-                    <div style={{ marginTop: 8 }}>Upload</div>
+                    <div style={{ marginTop: 8 }}>Tải ảnh</div>
                   </div>
                 )}
               </Upload>
             </Form.Item>
 
-            <div style={{ textAlign: "right" }}>
+            <div style={{ textAlign: "right", marginTop: 24 }}>
               <Space>
                 <Button onClick={() => navigate("/owner/buildings/list")}>
                   Hủy

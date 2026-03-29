@@ -2,19 +2,18 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.sport.backend.base.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.CourtStatus;
-
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.court.CourtRequest;
 import org.sport.backend.dto.request.court.CourtUpdateRequest;
-
+import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.service.CourtService;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -22,13 +21,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/courts")
 @Tag(name = "5. Court")
+@RequiredArgsConstructor
 public class CourtController {
 
-    @Autowired
-    private CourtService courtService;
+    private final CourtService courtService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<?> createCourt(
+    @PreAuthorize("hasAuthority('CREATE_COURT')")
+    public ApiResponse<CourtResponse> createCourt(
             @Valid @ModelAttribute CourtRequest request
     ) {
         try {
@@ -44,7 +44,7 @@ public class CourtController {
     }
 
     @GetMapping
-    public ApiResponse<?> getAllCourts(
+    public ApiResponse<PageResponse<CourtResponse>> getAllCourts(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
@@ -71,7 +71,8 @@ public class CourtController {
     }
 
     @GetMapping("/my-courts")
-    public ApiResponse<?> getMyRentalAreas(
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<PageResponse<CourtResponse>> getMyRentalAreas(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
@@ -92,7 +93,8 @@ public class CourtController {
     }
 
     @GetMapping("/{courtId}")
-    public ApiResponse<?> getCourtById(@PathVariable UUID courtId) {
+    public ApiResponse<CourtResponse> getCourtById(
+            @PathVariable UUID courtId) {
         try {
             return ApiResponse.success(
                     200,
@@ -105,7 +107,7 @@ public class CourtController {
     }
 
     @GetMapping("/rental-area/{rentalAreaId}")
-    public ApiResponse<?> getCourtsByRentalArea(
+    public ApiResponse<PageResponse<CourtResponse>> getCourtsByRentalArea(
             @PathVariable UUID rentalAreaId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -123,7 +125,9 @@ public class CourtController {
     }
 
     @DeleteMapping("/{courtId}")
-    public ApiResponse<?> deleteCourt(@PathVariable UUID courtId) {
+    @PreAuthorize("hasAuthority('DELETE_COURT')")
+    public ApiResponse<Void> deleteCourt(
+            @PathVariable UUID courtId) {
         try {
             courtService.deleteCourt(courtId);
             return ApiResponse.success(
@@ -136,15 +140,17 @@ public class CourtController {
         }
     }
 
-    @PutMapping(value = "/{courtId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<?> updateCourt(
+    @PutMapping(value = "/{courtId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('UPDATE_COURT')")
+    public ApiResponse<CourtResponse> updateCourt(
             @PathVariable UUID courtId,
             @Valid @ModelAttribute("data") CourtUpdateRequest request,
-            @RequestParam(value = "images", required = false) MultipartFile[] images
+            @RequestParam(value = "images") MultipartFile[] images
     ) {
         return ApiResponse.success(
                 200,
-                "Update rental area successfully",
+                "Update court successfully",
                 courtService.updateCourt(courtId, request, List.of(images))
         );
     }

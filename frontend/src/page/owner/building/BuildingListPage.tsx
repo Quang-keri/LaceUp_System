@@ -29,8 +29,7 @@ import type {
 const statusColorMap: Record<string, string> = {
   ACTIVE: "green",
   INACTIVE: "red",
-  PENDING: "orange",
-  REJECTED: "volcano",
+  SUSPENDED: "orange",
 };
 
 export default function BuildingListPage() {
@@ -212,8 +211,7 @@ export default function BuildingListPage() {
               options={[
                 { label: "Hoạt động", value: "ACTIVE" },
                 { label: "Không hoạt động", value: "INACTIVE" },
-                { label: "Chờ duyệt", value: "PENDING" },
-                { label: "Từ chối", value: "REJECTED" },
+              { label: "Tạm dừng", value: "SUSPENDED" }
               ]}
             />
           </Col>

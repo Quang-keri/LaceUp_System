@@ -56,10 +56,14 @@ class RentalService {
   async createRentalArea(request: CreateRentalAreaRequest, images: File[]) {
     const formData = new FormData();
     formData.append("rentalAreaName", request.rentalAreaName);
-    formData.append("address", request.address);
+    formData.append("street", request.address?.street || "");
+    formData.append("ward", request.address?.ward || "");
+    formData.append("district", request.address?.district || "");
     formData.append("contactName", request.contactName);
     formData.append("contactPhone", request.contactPhone);
     formData.append("cityId", request.cityId.toString());
+    formData.append("openTime", request.openTime || "");
+    formData.append("closeTime", request.closeTime || "");
 
     // Use userId from request (passed from component via useAuth context)
     if (request.userId) {
@@ -85,15 +89,17 @@ class RentalService {
   async updateRentalArea(
     rentalAreaId: string,
     request: UpdateRentalAreaRequest,
-    images: File[],
+    images?: File[],
   ) {
     const formData = new FormData();
 
-    formData.append("rentalAreaName", request.rentalAreaName);
-    formData.append("address", request.address);
-    formData.append("contactName", request.contactName);
-    formData.append("contactPhone", request.contactPhone);
-    formData.append("cityId", request.cityId.toString());
+    formData.append("rentalAreaName", request.rentalAreaName || "");
+    formData.append("street", request.address?.street || "");
+    formData.append("ward", request.address?.ward || "");
+    formData.append("district", request.address?.district || "");
+    formData.append("contactName", request.contactName || "");
+    formData.append("contactPhone", request.contactPhone || "");
+    formData.append("cityId", request.cityId ? request.cityId.toString() : "");
 
     // Append ảnh vào request
     if (images && images.length > 0) {
