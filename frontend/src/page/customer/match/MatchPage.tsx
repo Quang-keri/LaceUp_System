@@ -27,11 +27,11 @@ const MatchPage: React.FC = () => {
   const fetchMatches = async () => {
     setLoading(true);
     try {
-      const response = await matchService.getAllMatches(1, 100);
+      const response = await matchService.getOpenMatches({ page: 1, size: 100 });
       if (response.code === 1000 || response.code === 0) {
         setMatches(response.result.data || []);
       }
-    } catch (error) {
+    } catch (error) { 
       toast.error("Lỗi kết nối máy chủ");
     } finally {
       setLoading(false);

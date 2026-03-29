@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -64,11 +63,20 @@ public class MatchController {
     }
 
     @GetMapping("/open")
-    public ResponseEntity<ApiResponse<List<MatchResponse>>> getOpenMatches() {
+    public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getOpenMatches(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) LocalDateTime startDate,
+            @RequestParam(required = false) LocalDateTime endDate,
+            @RequestParam(required = false) MatchType matchType
+    ) {
         return ResponseEntity.ok(
                 ApiResponse.success(200,
                         "Lấy danh sách trận đấu đang mở thành công.",
-                        matchService.getOpenMatches()));
+                        matchService.getOpenMatches(
+                                page, size, category, keyword, startDate, endDate, matchType)));
     }
 
     @GetMapping("/{matchId}")

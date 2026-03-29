@@ -8,7 +8,6 @@ import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 public interface MatchService {
@@ -20,7 +19,14 @@ public interface MatchService {
     @Transactional
     void confirmDeposit(UUID matchId);
 
-    List<MatchResponse> getOpenMatches();
+    PageResponse<MatchResponse> getOpenMatches(
+            int page,
+            int size,
+            String category,
+            String keyword,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            MatchType matchType);
 
     MatchResponse getMatchDetail(UUID matchId);
 

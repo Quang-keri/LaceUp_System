@@ -7,7 +7,6 @@ import org.sport.backend.dto.response.news.NewsResponse;
 import org.sport.backend.entity.News;
 import org.sport.backend.entity.User;
 import org.sport.backend.repository.NewsRepository;
-import org.sport.backend.repository.UserRepository;
 import org.sport.backend.service.NewsService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.NewsSpecification;

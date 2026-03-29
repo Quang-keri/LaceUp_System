@@ -25,8 +25,19 @@ export const matchService = {
     return response.data;
   },
 
-  getOpenMatches: async (): Promise<ApiResponse<MatchResponse[]>> => {
-    const response = await api.get(`${API_BASE_URL}/open`);
+  getOpenMatches: async (params: {
+    page?: number;
+    size?: number;
+    category?: string;
+    keyword?: string;
+    startDate?: string;
+    endDate?: string;
+    matchType?: string;
+  }): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
+    const response = await api.get(`${API_BASE_URL}/open`, {
+      params,
+    });
+
     return response.data;
   },
 
@@ -35,21 +46,6 @@ export const matchService = {
   ): Promise<ApiResponse<MatchResponse>> => {
     const response = await api.get(`${API_BASE_URL}/${matchId}`);
     return response.data;
-  },
-
-  filterMatches: (
-    page: number,
-    size: number,
-    category?: string,
-    level?: string,
-    keyword?: string,
-  ) => {
-    const params: any = { page, size };
-    if (category) params.category = category;
-    if (level) params.level = level;
-    if (keyword) params.keyword = keyword;
-
-    return api.get(`${API_BASE_URL}/filter`, { params });
   },
 
   getAllMatches: async (
@@ -66,7 +62,6 @@ export const matchService = {
     if (status) params.status = status;
     if (category && category !== "Tất cả") params.category = category;
     if (matchType && matchType !== "ALL") params.matchType = matchType;
-    // ...
     const response = await api.get(API_BASE_URL, { params });
     return response.data;
   },

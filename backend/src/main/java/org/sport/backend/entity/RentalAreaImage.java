@@ -30,7 +30,7 @@ public class RentalAreaImage extends BaseEntity {
     @Column(name = "image_url", length = 500, nullable = false)
     String imageUrl;
 
-    @Column(name = "public_id", length = 255, nullable = false)
+    @Column(name = "public_id", nullable = false)
     String publicId;
 
     @Builder.Default

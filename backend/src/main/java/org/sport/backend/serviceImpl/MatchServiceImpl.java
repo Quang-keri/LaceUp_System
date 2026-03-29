@@ -230,10 +230,27 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public List<MatchResponse> getOpenMatches() {
-        return matchMapper.toResponseList(
-                matchRepository.findByStatusIn(List.of(MatchStatus.OPEN, MatchStatus.CONFIRMED, MatchStatus.FULL))
-        );
+    public PageResponse<MatchResponse> getOpenMatches(
+            int page,
+            int size,
+            String category,
+            String keyword,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            MatchType matchType
+    ) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+
+        Specification<Match> spec = Specification.where(MatchSpecifications.fetchAllDetails())
+                .and(MatchSpecifications.hasStatus(MatchStatus.OPEN))
+                .and(MatchSpecifications.hasCategory(category))
+                .and(MatchSpecifications.searchByCourtName(keyword))
+                .and(MatchSpecifications.isWithinTimeRange(startDate, endDate))
+                .and(MatchSpecifications.hasMatchType(matchType));
+
+        Page<Match> matchPage = matchRepository.findAll(spec, pageable);
+
+        return PageResponse.of(matchPage, matchMapper.toResponseList(matchPage.getContent()));
     }
 
     @Override
@@ -259,15 +276,7 @@ public class MatchServiceImpl implements MatchService {
 
         Page<Match> matchPage = matchRepository.findAll(spec, pageable);
 
-        List<MatchResponse> dtoList = matchMapper.toResponseList(matchPage.getContent());
-
-        return PageResponse.<MatchResponse>builder()
-                .currentPage(page)
-                .pageSize(size)
-                .totalPages(matchPage.getTotalPages())
-                .totalElements(matchPage.getTotalElements())
-                .data(dtoList)
-                .build();
+        return PageResponse.of(matchPage, matchMapper.toResponseList(matchPage.getContent()));
     }
 
     @Override

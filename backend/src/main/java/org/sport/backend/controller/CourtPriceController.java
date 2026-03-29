@@ -5,7 +5,6 @@ import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.request.court_price.CourtPriceRequest;
 import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 import org.sport.backend.service.CourtPriceService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
