@@ -3,9 +3,13 @@ package org.sport.backend.serviceImpl;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.PaymentStatus;
+import org.sport.backend.entity.User;
+import org.sport.backend.exception.AppException;
+import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.repository.BookingRepository;
 import org.sport.backend.repository.PaymentRepository;
 import org.sport.backend.service.ReportService;
+import org.sport.backend.service.UserService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,19 +25,27 @@ public class ReportServiceImpl implements ReportService {
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
 
+    private final UserService userService;
+
     @Override
-    public Map<String, Object> getFullDashboardStats(String range, UUID ownerId) {
+    public Map<String, Object> getFullDashboardStats(String range) {
+
+        User user = userService.getCurrentUserEntity();
+        if (!"OWNER".equals(user.getRole().getRoleName())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
         // Gọi hàm xử lý mốc thời gian trả về mảng 2 phần tử [startDate, endDate]
         LocalDateTime[] dates = calculateDateRange(range);
         LocalDateTime startDate = dates[0];
         LocalDateTime endDate = dates[1];
 
         Map<String, Object> fullDashboard = new HashMap<>();
-        fullDashboard.put("bookingStats", getBookingStats(startDate, endDate, ownerId));
-        fullDashboard.put("paymentStats", getPaymentStats(startDate, endDate, ownerId));
-        fullDashboard.put("totalRevenue", getTotalRevenue(startDate, endDate, ownerId));
+        fullDashboard.put("bookingStats", getBookingStats(startDate, endDate, user.getUserId()));
+        fullDashboard.put("paymentStats", getPaymentStats(startDate, endDate, user.getUserId()));
+        fullDashboard.put("totalRevenue", getTotalRevenue(startDate, endDate, user.getUserId()));
 
-        fullDashboard.put("monthlyRevenue", getMonthlyRevenue(ownerId));
+        fullDashboard.put("monthlyRevenue", getMonthlyRevenue(user.getUserId()));
 
         return fullDashboard;
     }
@@ -74,28 +86,28 @@ public class ReportServiceImpl implements ReportService {
                 startDate = startOfToday.minusDays(1);
                 endDate = startOfToday.minusSeconds(1); // Cuối ngày hôm qua
             }
-            case "this_week" -> {
-                // Giả định tuần bắt đầu từ Thứ 2 (theo chuẩn ISO)
-                startDate = now.with(java.time.DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
-            }
+            case "this_week" -> startDate = now.with(java.time.DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
+
             case "7d" -> startDate = now.minusDays(7);
-            case "this_month" -> {
-                startDate = now.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
-            }
+
+            case "this_month" -> startDate = now.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
+
             case "30d" -> startDate = now.minusDays(30);
+
             case "last_month" -> {
                 startDate = now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
                 endDate = now.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59);
             }
-            case "this_year" -> {
-                startDate = now.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
-            }
+
+            case "this_year" -> startDate = now.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
+
             case "last_year" -> {
                 startDate = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
                 endDate = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59);
             }
+
             case "1y" -> startDate = now.minusYears(1);
-            case "all" -> startDate = LocalDateTime.of(2020, 1, 1, 0, 0);
+
             default -> startDate = LocalDateTime.of(2020, 1, 1, 0, 0);
         }
 

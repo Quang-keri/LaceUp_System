@@ -1,7 +1,7 @@
 package org.sport.backend.serviceImpl;
 
 import lombok.RequiredArgsConstructor;
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.news.NewsRequest;
 import org.sport.backend.dto.response.news.NewsResponse;
 import org.sport.backend.entity.News;
@@ -9,6 +9,7 @@ import org.sport.backend.entity.User;
 import org.sport.backend.repository.NewsRepository;
 import org.sport.backend.repository.UserRepository;
 import org.sport.backend.service.NewsService;
+import org.sport.backend.service.UserService;
 import org.sport.backend.specification.NewsSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,13 +25,13 @@ import java.util.UUID;
 public class NewsServiceImpl implements NewsService {
 
     private final NewsRepository newsRepository;
-    private final UserRepository userRepository;
+
+    private final UserService userService;
 
     @Override
-    public NewsResponse create(NewsRequest request, UUID userId) {
+    public NewsResponse create(NewsRequest request) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userService.getCurrentUserEntity();
 
         News news = new News();
         news.setTitle(request.getTitle());
@@ -91,7 +92,10 @@ public class NewsServiceImpl implements NewsService {
     }
 
     @Override
-    public PageResponse<NewsResponse> getMyNews(UUID userId, int page, int size) {
+    public PageResponse<NewsResponse> getMyNews(
+            int page, int size) {
+
+        UUID userId = userService.getCurrentUserEntity().getUserId();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
@@ -109,7 +113,8 @@ public class NewsServiceImpl implements NewsService {
     }
 
     @Override
-    public long countMyNews(UUID userId) {
+    public long countMyNews() {
+        UUID userId = userService.getCurrentUserEntity().getUserId();
         return newsRepository.countByCreatedBy_UserId(userId);
     }
 

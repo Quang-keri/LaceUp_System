@@ -3,7 +3,7 @@ package org.sport.backend.serviceImpl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
@@ -258,6 +258,19 @@ public class UserServiceImpl implements UserService {
                 .maxWinStreak(stats.getMaxWinStreak())
                 .winRate(winRate)
                 .build();
+    }
+
+    @Override
+    public void verifyOwnerAccount() {
+        User currentUser = getCurrentUserEntity();
+        if (currentUser.getRole().getRoleName().equals("OWNER")
+                || currentUser.getRole().getRoleName().equals("ADMIN")) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        Role roleOwner = roleRepository.findByRoleName("OWNER")
+                .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+        currentUser.setRole(roleOwner);
+        userRepository.save(currentUser);
     }
 
     @Override

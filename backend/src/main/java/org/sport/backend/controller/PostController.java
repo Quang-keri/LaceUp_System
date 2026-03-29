@@ -2,38 +2,33 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.sport.backend.base.ApiResponse;
-import org.sport.backend.base.PageResponse;
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.ApiResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.post.CreatePostRequest;
 import org.sport.backend.dto.request.post.PostFilterRequest;
 import org.sport.backend.dto.request.post.UpdatePostRequest;
 import org.sport.backend.dto.response.post.PostDetailResponse;
 import org.sport.backend.dto.response.post.PostResponse;
 import org.sport.backend.dto.response.post.PostSummaryResponse;
-
-import org.sport.backend.security.CustomUserDetails;
 import org.sport.backend.service.PostService;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
-
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/posts")
 @Tag(name = "14. Post")
+@RequiredArgsConstructor
 public class PostController {
 
-    @Autowired
-    private PostService postService;
+    private final PostService postService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('CREATE_POST')")
     public ApiResponse<PostResponse> createPost(
             @Valid @RequestBody CreatePostRequest request
 
@@ -51,10 +46,13 @@ public class PostController {
     }
 
     @GetMapping
-    public ApiResponse<?> getAllPosts(@ParameterObject PostFilterRequest filterRequest) {
+    public ApiResponse<PageResponse<PostSummaryResponse>> getAllPosts(
+            @ParameterObject PostFilterRequest filterRequest) {
         try {
-            PageResponse<PostSummaryResponse> result = postService.getAllPosts(filterRequest);
-            return ApiResponse.success(200, "Get all posts successfully", result);
+            return ApiResponse.success(
+                    200,
+                    "Get all posts successfully",
+                    postService.getAllPosts(filterRequest));
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
@@ -79,82 +77,48 @@ public class PostController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<PostSummaryResponse>> getMyPosts(
-            @RequestParam(required = false) String status,
-            @AuthenticationPrincipal UserDetails principal
+            @RequestParam(required = false) String status
     ) {
-
         try {
-            UUID currentUserId = null;
-            if (principal instanceof CustomUserDetails customUserDetails) {
-                currentUserId = customUserDetails.getUserId();
-            }
-            if (currentUserId == null) {
-                throw new RuntimeException("User not authenticated");
-            }
-
-            List<PostSummaryResponse> result = postService.getMyPosts(currentUserId, status);
-
-
             return ApiResponse.<List<PostSummaryResponse>>builder()
                     .code(200)
                     .message("Get my posts successfully")
-                    .result(result)
+                    .result(postService.getMyPosts(status))
                     .build();
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
-
     }
 
     @GetMapping("/me/{postId}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<PostDetailResponse> getMyPostDetail(
-            @PathVariable UUID postId,
-            @AuthenticationPrincipal UserDetails principal
+            @PathVariable UUID postId
     ) {
         try {
-            UUID currentUserId = null;
-            if (principal instanceof CustomUserDetails customUserDetails) {
-                currentUserId = customUserDetails.getUserId();
-            }
-            if (currentUserId == null) {
-                throw new RuntimeException("User not authenticated");
-            }
-
-            PostDetailResponse result = postService.getMyPostDetail(postId, currentUserId);
-
             return ApiResponse.<PostDetailResponse>builder()
                     .code(200)
                     .message("Get my post detail successfully")
-                    .result(result)
+                    .result(postService.getMyPostDetail(postId))
                     .build();
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
-
     }
 
     @PutMapping("/{postId}")
+    @PreAuthorize("hasAuthority('UPDATE_POST')")
     public ApiResponse<PostResponse> updateMyPost(
             @PathVariable UUID postId,
-            @Valid @RequestBody UpdatePostRequest request,
-            @AuthenticationPrincipal UserDetails principal
+            @Valid @RequestBody UpdatePostRequest request
     ) {
         try {
-            UUID currentUserId = null;
-            if (principal instanceof CustomUserDetails customUserDetails) {
-                currentUserId = customUserDetails.getUserId();
-            }
-            if (currentUserId == null) {
-                throw new RuntimeException("User not authenticated");
-            }
-
-            PostResponse result = postService.updateMyPost(postId, request, currentUserId);
-
             return ApiResponse.<PostResponse>builder()
                     .code(200)
                     .message("Update post successfully")
-                    .result(result)
+                    .result(postService.updateMyPost(postId, request))
                     .build();
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
@@ -162,22 +126,12 @@ public class PostController {
     }
 
     @DeleteMapping("/{postId}")
+    @PreAuthorize("hasAuthority('DELETE_POST')")
     public ApiResponse<Void> deleteMyPost(
-            @PathVariable UUID postId,
-            @AuthenticationPrincipal UserDetails principal
+            @PathVariable UUID postId
     ) {
         try {
-            UUID currentUserId = null;
-            if (principal instanceof CustomUserDetails customUserDetails) {
-                currentUserId = customUserDetails.getUserId();
-            }
-
-            if (currentUserId == null) {
-                throw new RuntimeException("User not authenticated");
-            }
-
-            postService.deleteMyPost(postId, currentUserId);
-
+            postService.deleteMyPost(postId);
             return ApiResponse.<Void>builder()
                     .code(200)
                     .message("Delete post successfully")

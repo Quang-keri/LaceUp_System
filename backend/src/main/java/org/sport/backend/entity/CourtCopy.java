@@ -3,7 +3,7 @@ package org.sport.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.sport.backend.base.BaseEntity;
+import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.CourtCopyStatus;
 
 import java.util.ArrayList;

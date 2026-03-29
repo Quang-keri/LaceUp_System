@@ -24,7 +24,6 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final PermissionRepository permissionRepository;
-    private final PasswordEncoder passwordEncoder;
     private final CityRepository cityRepository;
     private final CategoryRepository categoryRepository;
     private final AmenityRepository amenityRepository;
@@ -39,26 +38,123 @@ public class DataInitializer implements CommandLineRunner {
     private final UserStatsRepository userStatsRepository;
     private final UserAchievementRepository userAchievementRepository;
 
+    private final PasswordEncoder passwordEncoder;
+
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
-        // 1. Seed Permissions
+
         if (permissionRepository.count() == 0) {
             List<Permission> permissions = List.of(
-                    Permission.builder().permissionName("VIEW_DASHBOARD").description("Xem bảng điều khiển").build(),
-                    Permission.builder().permissionName("MANAGE_USERS").description("Quản lý người dùng").build(),
-                    Permission.builder().permissionName("MANAGE_ROLES").description("Quản lý vai trò & quyền hạn").build(),
-                    Permission.builder().permissionName("APPROVE_POST").description("Duyệt tin đăng sân").build(),
-                    Permission.builder().permissionName("SUPPORT_CUSTOMER").description("Hỗ trợ giải quyết khiếu nại").build(),
-                    Permission.builder().permissionName("VIEW_REPORT").description("Xem báo cáo hệ thống").build(),
-                    Permission.builder().permissionName("POST_ROOM").description("Đăng tin cho thuê").build(),
-                    Permission.builder().permissionName("UPDATE_ROOM").description("Cập nhật thông tin sân").build(),
-                    Permission.builder().permissionName("VIEW_BOOKINGS").description("Xem danh sách đặt sân").build(),
-                    Permission.builder().permissionName("MANAGE_FINANCE").description("Quản lý tài chính/doanh thu").build(),
-                    Permission.builder().permissionName("SEARCH_ROOM").description("Tìm kiếm sân").build(),
-                    Permission.builder().permissionName("BOOK_ROOM").description("Thực hiện đặt sân").build(),
-                    Permission.builder().permissionName("CHAT_WITH_OWNER").description("Nhắn tin trao đổi").build(),
-                    Permission.builder().permissionName("WRITE_REVIEW").description("Viết đánh giá phản hồi").build()
+
+                    Permission.builder().permissionName("VIEW_USERS").description("Xem danh sách người dùng").build(),
+                    Permission.builder().permissionName("VIEW_USER_DETAIL").description("Xem chi tiết một người dùng").build(),
+                    Permission.builder().permissionName("CREATE_USER").description("Tạo tài khoản người dùng mới").build(),
+                    Permission.builder().permissionName("UPDATE_USER").description("Cập nhật thông tin người dùng").build(),
+                    Permission.builder().permissionName("UPDATE_USER_STATUS").description("Cập nhật trạng thái người dùng (Khóa/Mở)").build(),
+
+                    Permission.builder().permissionName("ASSIGN_ROLE").description("Gán vai trò (Role) cho người dùng").build(),
+                    Permission.builder().permissionName("GRANT_EXTRA_PERMISSION").description("Cấp quyền riêng lẻ cho người dùng").build(),
+                    Permission.builder().permissionName("REVOKE_EXTRA_PERMISSION").description("Thu hồi quyền riêng lẻ của người dùng").build(),
+                    Permission.builder().permissionName("VIEW_USER_AUTHORITIES").description("Xem danh sách quyền của người dùng").build(),
+
+                    // --- NHÓM QUẢN LÝ VAI TRÒ (ROLE CONTROLLER) ---
+                    Permission.builder().permissionName("VIEW_ROLES").description("Xem danh sách và chi tiết vai trò").build(),
+                    Permission.builder().permissionName("CREATE_ROLE").description("Tạo mới vai trò").build(),
+                    Permission.builder().permissionName("UPDATE_ROLE").description("Cập nhật thông tin và trạng thái vai trò").build(),
+                    Permission.builder().permissionName("MANAGE_ROLE_PERMISSIONS").description("Thêm hoặc xóa quyền của vai trò").build(),
+
+                    // --- NHÓM QUẢN LÝ SLOT / ĐẶT SÂN (SLOT CONTROLLER) ---
+                    Permission.builder().permissionName("VIEW_COURTS").description("Xem danh sách sân trong khu vực").build(),
+                    Permission.builder().permissionName("EXTEND_SLOT").description("Gia hạn thời gian thuê sân").build(),
+                    Permission.builder().permissionName("SWAP_SLOT").description("Đổi sân hoặc đổi giờ thuê").build(),
+
+                    Permission.builder().permissionName("VIEW_DASHBOARD_ADMIN").description("Xem bảng admin").build(),
+
+                    // --- NHÓM QUẢN LÝ KHU VỰC THUÊ / CƠ SỞ (RENTAL AREA CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_RENTAL_AREA").description("Tạo mới khu vực cho thuê (Cơ sở)").build(),
+                    Permission.builder().permissionName("UPDATE_RENTAL_AREA").description("Cập nhật thông tin khu vực cho thuê").build(),
+                    Permission.builder().permissionName("DELETE_RENTAL_AREA").description("Xóa/Vô hiệu hóa khu vực cho thuê").build(),
+                    Permission.builder().permissionName("DELETE_RENTAL_AREA").description("Xóa/Vô hiệu hóa khu vực cho thuê").build(),
+
+                    // --- NHÓM QUẢN LÝ BÀI ĐĂNG (POST CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_POST").description("Tạo bài đăng mới").build(),
+                    Permission.builder().permissionName("UPDATE_POST").description("Cập nhật bài đăng của mình").build(),
+                    Permission.builder().permissionName("DELETE_POST").description("Xóa bài đăng của mình").build(),
+
+                    // --- NHÓM QUẢN LÝ QUYỀN HẠN (PERMISSION CONTROLLER) ---
+                    Permission.builder().permissionName("VIEW_PERMISSIONS").description("Xem danh sách và chi tiết các quyền").build(),
+                    Permission.builder().permissionName("CREATE_PERMISSION").description("Tạo quyền hệ thống mới").build(),
+                    Permission.builder().permissionName("UPDATE_PERMISSION").description("Cập nhật thông tin quyền hệ thống").build(),
+                    Permission.builder().permissionName("DELETE_PERMISSION").description("Xóa quyền khỏi hệ thống").build(),
+
+                    Permission.builder().permissionName("CREATE_PAYMENT").description("Thực hiện thanh toán").build(),
+
+                    // --- NHÓM QUẢN LÝ TIN TỨC (NEWS CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_NEWS").description("Đăng tin tức/thông báo mới").build(),
+                    Permission.builder().permissionName("UPDATE_NEWS").description("Cập nhật tin tức").build(),
+                    Permission.builder().permissionName("DELETE_NEWS").description("Xóa tin tức").build(),
+
+                    // --- NHÓM QUẢN LÝ KẾT QUẢ TRẬN ĐẤU (MATCH RESULT CONTROLLER) ---
+                    Permission.builder().permissionName("SUBMIT_MATCH_RESULT").description("Gửi kết quả trận đấu").build(),
+                    Permission.builder().permissionName("RESPOND_MATCH_RESULT").description("Xác nhận hoặc từ chối kết quả trận đấu").build(),
+
+                    // --- NHÓM QUẢN LÝ TRẬN ĐẤU / KÈO ĐẤU (MATCH CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_MATCH").description("Tạo trận đấu (giao lưu/cố định)").build(),
+                    Permission.builder().permissionName("JOIN_MATCH").description("Tham gia trận đấu đã tạo").build(),
+                    Permission.builder().permissionName("CONFIRM_MATCH_DEPOSIT").description("Xác nhận tiền cọc cho trận đấu").build(),
+                    Permission.builder().permissionName("VIEW_ALL_MATCHES").description("Xem toàn bộ danh sách trận đấu trên hệ thống").build(),
+                    Permission.builder().permissionName("VIEW_OWNER_MATCHES").description("Xem danh sách trận đấu diễn ra tại sân của mình").build(),
+
+                    // --- NHÓM QUẢN LÝ GIÁ SÂN (COURT PRICE CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_COURT_PRICE").description("Tạo cấu hình giá thuê sân").build(),
+                    Permission.builder().permissionName("UPDATE_COURT_PRICE").description("Cập nhật giá thuê sân").build(),
+                    Permission.builder().permissionName("DELETE_COURT_PRICE").description("Xóa cấu hình giá thuê sân").build(),
+
+                    // --- NHÓM QUẢN LÝ SÂN VẬT LÝ (COURT COPY CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_COURT_COPY").description("Thêm mới sân vật lý vào cơ sở").build(),
+                    Permission.builder().permissionName("UPDATE_COURT_COPY").description("Cập nhật thông tin/trạng thái sân vật lý").build(),
+
+                    // --- NHÓM QUẢN LÝ LOẠI SÂN (COURT CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_COURT").description("Tạo mới loại sân trong khu vực").build(),
+                    Permission.builder().permissionName("UPDATE_COURT").description("Cập nhật thông tin loại sân").build(),
+                    Permission.builder().permissionName("DELETE_COURT").description("Xóa loại sân").build(),
+
+                    Permission.builder().permissionName("USE_CHAT").description("Sử dụng tính năng nhắn tin nội bộ").build(),
+
+                    // --- NHÓM QUẢN LÝ DANH MỤC SÂN (CATEGORY CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_CATEGORY").description("Tạo danh mục môn thể thao mới").build(),
+                    Permission.builder().permissionName("UPDATE_CATEGORY").description("Cập nhật danh mục thể thao").build(),
+                    Permission.builder().permissionName("DELETE_CATEGORY").description("Xóa danh mục thể thao").build(),
+
+                    // --- NHÓM QUẢN LÝ ĐẶT SÂN VÀ GIAO DỊCH (BOOKING & FINANCE) ---
+
+                    // 1. Dành cho Người thuê (Renter)
+                    Permission.builder().permissionName("BOOK_ROOM").description("Thực hiện đặt sân và tạo giao dịch").build(),
+
+                    // 2. Dành cho Chủ sân, Nhân viên, Admin (Xem dữ liệu)
+                    Permission.builder().permissionName("VIEW_BOOKINGS").description("Xem danh sách chi tiết các đơn đặt sân").build(),
+
+                    // 3. Dành cho Chủ sân, Admin (Thao tác sửa đổi đơn)
+                    Permission.builder().permissionName("MANAGE_BOOKING").description("Cập nhật trạng thái/thông tin đơn đặt sân").build(),
+
+                    // 4. Dành cho Chủ sân, Admin (Thao tác tiền bạc)
+                    Permission.builder().permissionName("MANAGE_FINANCE").description("Quản lý tài chính, xác nhận thu tiền khách").build(),
+
+                    // --- NHÓM QUẢN LÝ TIỆN ÍCH (AMENITY CONTROLLER) ---
+                    Permission.builder().permissionName("CREATE_AMENITY").description("Tạo mới tiện ích hệ thống").build(),
+                    Permission.builder().permissionName("UPDATE_AMENITY").description("Cập nhật tiện ích hệ thống").build(),
+                    Permission.builder().permissionName("DELETE_AMENITY").description("Xóa tiện ích hệ thống").build(),
+
+                    // --- NHÓM QUẢN LÝ THANH TOÁN CHO CHỦ SÂN (PAYOUT CONTROLLER) ---
+                    Permission.builder().permissionName("MANAGE_PAYOUT").description("Xác nhận chuyển tiền/thanh toán cho chủ sân").build(),
+                    Permission.builder().permissionName("VIEW_PAYOUT").description("Xem lịch sử nhận tiền của cơ sở").build(),
+
+                    // --- NHÓM QUẢN LÝ CẤU HÌNH HOA HỒNG (COMMISSION CONTROLLER) ---
+                    Permission.builder().permissionName("MANAGE_COMMISSION").description("Thiết lập và quản lý cấu hình hoa hồng").build(),
+                    Permission.builder().permissionName("VIEW_COMMISSION").description("Xem bảng cấu hình phần trăm hoa hồng").build()
+
+
             );
             permissionRepository.saveAll(permissions);
         }
@@ -239,7 +335,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private void seedCourtData() {
         User owner = userRepository.findByEmail("owner@gmail.com").orElseThrow();
-        City city = cityRepository.findAll().get(0);
+        City city = cityRepository.findAll().getFirst();
         Category category = categoryRepository.findAll().stream()
                 .filter(c -> c.getCategoryName().equals("Sân cầu lông"))
                 .findFirst().orElseThrow();
@@ -412,8 +508,8 @@ public class DataInitializer implements CommandLineRunner {
                 .limit(3)
                 .toList();
 
-        City city = cityRepository.findAll().get(0);
-        Category category = categoryRepository.findAll().get(0);
+        City city = cityRepository.findAll().getFirst();
+        Category category = categoryRepository.findAll().getFirst();
 
         int index = 1;
 
@@ -433,7 +529,7 @@ public class DataInitializer implements CommandLineRunner {
                     .owner(owner)
                     .isActive(true)
                     .status(RentalAreaStatus.ACTIVE)
-                    .createdAt(LocalDateTime.now().minusDays(index * 5))
+                    .createdAt(LocalDateTime.now().minusDays(index * 5L))
                     .build();
 
             rentalAreaRepository.save(area);
@@ -465,7 +561,7 @@ public class DataInitializer implements CommandLineRunner {
                             .court(court)
                             .startTime(LocalTime.of(6, 0))
                             .endTime(LocalTime.of(22, 0))
-                            .pricePerHour(BigDecimal.valueOf(90000 + index * 10000))
+                            .pricePerHour(BigDecimal.valueOf(90000 + index * 10000L))
                             .priceType(PriceType.NORMAL)
                             .priority(1)
                             .build()

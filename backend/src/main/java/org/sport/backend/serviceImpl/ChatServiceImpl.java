@@ -39,9 +39,12 @@ import java.util.UUID;
 public class ChatServiceImpl implements ChatService {
 
     private final SimpMessagingTemplate messagingTemplate;
+
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
+
     private final ChatMapper chatMapper;
+
     private final UserService userService;
     private final UploadService uploadService;
     private final NotificationService notificationService;
@@ -67,7 +70,8 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public List<ConversationResponse> getUserConversations(UUID userId) {
+    public List<ConversationResponse> getUserConversations() {
+        UUID userId = userService.getCurrentUserEntity().getUserId();
         return conversationRepository
                 .findAllByUser1UserIdOrUser2UserIdOrderByUpdatedAtDesc(userId, userId)
                 .stream()
@@ -98,15 +102,26 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public ConversationResponse getConversationById(UUID conversationId) {
         Conversation conv = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Phòng chat không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Phòng chat không tồn tại")); // Nên dùng ResourceNotFoundException thay vì RuntimeException
+
+        UUID currentUserId = userService.getCurrentUserEntity().getUserId();
+        if (!conv.getUser1().getUserId().equals(currentUserId) &&
+                !conv.getUser2().getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập cuộc hội thoại này");
+        }
+
         return chatMapper.toConversationResponse(conv);
     }
 
     @Transactional
     @Override
-    public void markAllMessagesInConversationAsRead(UUID conversationId, UUID userId) {
+    public void markAllMessagesInConversationAsRead(UUID conversationId) {
+
+        UUID userId = userService.getCurrentUserEntity().getUserId();
+
         List<Message> unreadMessages = messageRepository
-                .findByConversation_ConversationIdAndRecipient_UserIdAndStatusNot(conversationId, userId, MessageStatus.READ);
+                .findByConversation_ConversationIdAndRecipient_UserIdAndStatusNot(
+                        conversationId, userId, MessageStatus.READ);
 
         if (unreadMessages.isEmpty()) return;
 
@@ -174,7 +189,6 @@ public class ChatServiceImpl implements ChatService {
                     return Conversation.builder()
                             .user1(senderIsUser1 ? sender : recipient)
                             .user2(senderIsUser1 ? recipient : sender)
-                            .conversationTitle(sender.getUserName() + " & " + recipient.getUserName())
                             .createdAt(LocalDateTime.now())
                             .build();
                 });

@@ -1,7 +1,7 @@
 package org.sport.backend.service;
 
 import jakarta.transaction.Transactional;
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
@@ -48,4 +48,6 @@ public interface UserService {
     User getCurrentUserEntity();
 
     UserDashboardResponse getUserDashboard(UUID userId);
+
+    void verifyOwnerAccount();
 }

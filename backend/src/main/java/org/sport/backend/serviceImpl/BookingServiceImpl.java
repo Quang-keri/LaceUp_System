@@ -1,6 +1,6 @@
 package org.sport.backend.serviceImpl;
 
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.*;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
@@ -19,7 +19,6 @@ import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.CourtCopyService;
-import org.sport.backend.service.CourtService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.BookingSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -569,7 +568,6 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public PageResponse<BookingResponse> getMyBookings(
-            UUID userId,
             BookingStatus bookingStatus,
             String keyword,
             LocalDate from,
@@ -577,6 +575,8 @@ public class BookingServiceImpl implements BookingService {
             int page,
             int size
     ) {
+
+        UUID userId = userService.getCurrentUserEntity().getUserId();
 
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 

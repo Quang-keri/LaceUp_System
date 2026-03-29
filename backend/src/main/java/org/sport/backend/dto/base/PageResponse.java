@@ -1,4 +1,4 @@
-package org.sport.backend.base;
+package org.sport.backend.dto.base;
 
 import lombok.*;
 

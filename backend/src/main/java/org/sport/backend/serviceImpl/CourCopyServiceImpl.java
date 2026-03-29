@@ -1,6 +1,7 @@
 package org.sport.backend.serviceImpl;
 
-import org.sport.backend.base.PageResponse;
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.CourtCopyStatus;
 import org.sport.backend.dto.request.court_copy.CourtCopyRequest;
 import org.sport.backend.dto.request.court_copy.CourtCopyUpdateRequest;
@@ -16,7 +17,6 @@ import org.sport.backend.repository.SlotRepository;
 import org.sport.backend.entity.Slot;
 import org.sport.backend.service.CourtCopyService;
 import org.sport.backend.specification.CourtCopySpecification;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,13 +28,12 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class CourCopyServiceImpl implements CourtCopyService {
-    @Autowired
-    private CourtRepository courtRepository;
-    @Autowired
-    private CourtCopyRepository courtCopyRepository;
-        @Autowired
-        private SlotRepository slotRepository;
+
+    private final CourtRepository courtRepository;
+    private final CourtCopyRepository courtCopyRepository;
+    private final SlotRepository slotRepository;
 
     @Override
     public CourtCopyResponse createCourt(CourtCopyRequest copyRequest) {
@@ -129,14 +128,14 @@ public class CourCopyServiceImpl implements CourtCopyService {
         return mapToResponse(courtCopy);
     }
 
-        @Override
-        public boolean checkAvailability(UUID courtCopyId, LocalDateTime start, LocalDateTime end, UUID excludeSlotId) {
-                List<Slot> conflicts = slotRepository.findConflictSlot(courtCopyId, start, end);
-                if (excludeSlotId != null) {
-                        conflicts = conflicts.stream().filter(s -> !s.getSlotId().equals(excludeSlotId)).toList();
-                }
-                return conflicts.isEmpty();
+    @Override
+    public boolean checkAvailability(UUID courtCopyId, LocalDateTime start, LocalDateTime end, UUID excludeSlotId) {
+        List<Slot> conflicts = slotRepository.findConflictSlot(courtCopyId, start, end);
+        if (excludeSlotId != null) {
+            conflicts = conflicts.stream().filter(s -> !s.getSlotId().equals(excludeSlotId)).toList();
         }
+        return conflicts.isEmpty();
+    }
 
     @Override
     public CourtCopyResponse updateCourtCopy(UUID courtCopyId, CourtCopyUpdateRequest request) {

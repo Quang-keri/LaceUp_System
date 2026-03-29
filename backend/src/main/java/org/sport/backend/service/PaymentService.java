@@ -9,6 +9,8 @@ public interface PaymentService {
     CheckoutResponse checkout(CheckoutRequest checkoutRequest);
 
     CheckoutResponse checkoutPayment(CheckoutRequest checkoutRequest);
+
     Map<String, Object> handlePayOsWebhook(Map<String, Object> payload);
+
     CheckoutResponse handleCheckoutResult(String orderCode, String status);
 }

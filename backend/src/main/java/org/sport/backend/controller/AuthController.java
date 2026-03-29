@@ -5,7 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sport.backend.base.ApiResponse;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.request.auth.LoginGoogleRequest;
 import org.sport.backend.dto.request.auth.LoginRequest;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
@@ -64,8 +64,8 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<LoginResponse>> refresh(
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         LoginResponse newTokens = authService.refresh(request);
         return ResponseEntity.ok(ApiResponse.<LoginResponse>builder()
                 .code(200)
@@ -91,8 +91,8 @@ public class AuthController {
     @GetMapping("/register/confirm")
     public ResponseEntity<ApiResponse<?>> confirmRegister(
             @RequestParam String email,
-            @RequestParam String otp) {
-
+            @RequestParam String otp
+    ) {
         CreateUserRequest userRequest = emailService.verifyAndGetPendingUser(email, otp);
 
         userService.createUser(userRequest);
@@ -127,6 +127,17 @@ public class AuthController {
                 ApiResponse.builder()
                         .code(200)
                         .message("Đổi mật khẩu thành công.")
+                        .build()
+        );
+    }
+
+    @PostMapping("/verify-owner")
+    public ResponseEntity<ApiResponse<Void>> verifyOwner() {
+        userService.verifyOwnerAccount();
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(204)
+                        .message("Xác thực tài khoản Chủ sân thành công.")
                         .build()
         );
     }

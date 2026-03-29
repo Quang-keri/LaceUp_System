@@ -3,16 +3,18 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sport.backend.base.ApiResponse;
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.ApiResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.service.MatchService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -27,49 +29,60 @@ public class MatchController {
     private final MatchService matchService;
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('CREATE_MATCH')")
     public ResponseEntity<ApiResponse<MatchResponse>> createMatch(
-            @RequestBody MatchRequest request) {
+            @RequestBody @Valid MatchRequest request) {
         log.info("Request nhận được: isRecurring={}, type={}, days={}",
                 request.isRecurring(), request.getRecurringType(), request.getDayOfWeek());
         return ResponseEntity.ok(
                 ApiResponse.success(
+                        200,
                         "Tạo trận vãng lai thành công",
                         matchService.createMatch(request)));
     }
 
     @PostMapping("/{matchId}/join")
-    public ResponseEntity<ApiResponse<String>> joinMatch(
+    @PreAuthorize("hasAuthority('JOIN_MATCH')")
+    public ResponseEntity<ApiResponse<Void>> joinMatch(
             @PathVariable UUID matchId) {
         matchService.joinMatch(matchId);
-
         return ResponseEntity.ok(ApiResponse.success(
-                "Bạn đã tham gia trận đấu thành công!", null));
+                200,
+                "Bạn đã tham gia trận đấu thành công!",
+                null));
     }
 
     @PostMapping("/{matchId}/confirm-deposit")
-    public ResponseEntity<ApiResponse<String>> confirmDeposit(
+    @PreAuthorize("hasAuthority('CONFIRM_MATCH_DEPOSIT')")
+    public ResponseEntity<ApiResponse<Void>> confirmDeposit(
             @PathVariable UUID matchId) {
-
         matchService.confirmDeposit(matchId);
-
         return ResponseEntity.ok(ApiResponse.success(
-                "Đã xác nhận cọc thành công! Chờ người chơi còn lại xác nhận.", null));
+                200,
+                "Đã xác nhận cọc thành công! Chờ người chơi còn lại xác nhận.",
+                null));
     }
 
     @GetMapping("/open")
     public ResponseEntity<ApiResponse<List<MatchResponse>>> getOpenMatches() {
         return ResponseEntity.ok(
-                ApiResponse.success(matchService.getOpenMatches()));
+                ApiResponse.success(200,
+                        "Lấy danh sách trận đấu đang mở thành công.",
+                        matchService.getOpenMatches()));
     }
 
     @GetMapping("/{matchId}")
     public ResponseEntity<ApiResponse<MatchResponse>> getMatchDetail(
             @PathVariable UUID matchId) {
         return ResponseEntity.ok(
-                ApiResponse.success(matchService.getMatchDetail(matchId)));
+                ApiResponse.success(
+                        200,
+                        "Lấy thông tin trận đấu thành công.",
+                        matchService.getMatchDetail(matchId)));
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('VIEW_ALL_MATCHES')")
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getAllMatches(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -82,36 +95,49 @@ public class MatchController {
     ) {
         PageResponse<MatchResponse> result = matchService.getAllMatches(
                 page, size, status, category, keyword, startDate, endDate, matchType);
-
-        return ResponseEntity.ok(ApiResponse.success(result));
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        200,
+                        "Lấy tất cả trận đấu thành công.",
+                        result));
     }
 
     @GetMapping("/owner")
+    @PreAuthorize("hasAuthority('VIEW_OWNER_MATCHES')")
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getOwnerMatches(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(
-                ApiResponse.success(matchService.getOwnerMatchesPaged(page, size)));
+                ApiResponse.success(
+                        200,
+                        "Lấy danh sách trận đấu trên sân của owner thành công.",
+                        matchService.getOwnerMatchesPaged(page, size)));
     }
 
     @GetMapping("/my-matches")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getMyMatches(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-
         return ResponseEntity.ok(
-                ApiResponse.success(matchService.getMyMatches(page, size))
+                ApiResponse.success(
+                        200,
+                        "Lấy danh sách trận đấu của tôi thành công.",
+                        matchService.getMyMatches(page, size))
         );
     }
 
     @GetMapping("/user/{userId}/history")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getUserMatchHistory(
             @PathVariable UUID userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-
         return ResponseEntity.ok(
-                ApiResponse.success(matchService.getUserMatchHistory(userId, page, size))
+                ApiResponse.success(200,
+                        "Lấy danh sách trận đấu của người chơi thành công.",
+                        matchService.getUserMatchHistory(userId, page, size))
         );
     }
+
 }

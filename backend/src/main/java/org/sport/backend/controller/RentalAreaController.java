@@ -2,37 +2,37 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.sport.backend.base.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.service.RentalAreaService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/rental-areas")
 @Tag(name = "9. Rental Area")
+@RequiredArgsConstructor
 public class RentalAreaController {
 
-    @Autowired
-    private RentalAreaService rentalAreaService;
+    private final RentalAreaService rentalAreaService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
     public ApiResponse<?> createRentalArea(
             @Valid @ModelAttribute RentalAreaRequest request
     ) {
         try {
             List<MultipartFile> images = request.getImages();
-            System.err.println("images length = " + (images == null ? 0 : images.size()));
             return ApiResponse.success(
                     201,
                     "Create rental successfully",
@@ -80,6 +80,7 @@ public class RentalAreaController {
     }
 
     @GetMapping("/my-rentals")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<?> getMyRentalAreas(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -103,18 +104,20 @@ public class RentalAreaController {
         );
     }
 
-
-    @PutMapping(value = "/{rentalAreaId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/{rentalAreaId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('UPDATE_RENTAL_AREA')")
     public ApiResponse<RentalAreaResponse> updateRentalArea(
             @PathVariable UUID rentalAreaId,
-            @Valid @ModelAttribute RentalAreaUpdateRequest request) {
-
-
-        RentalAreaResponse response = rentalAreaService.updateRentalArea(rentalAreaId, request);
-        return ApiResponse.success(response);
+            @Valid @ModelAttribute RentalAreaUpdateRequest request
+    ) {
+        return ApiResponse.success(200,
+                "Update rental area successfully",
+                rentalAreaService.updateRentalArea(rentalAreaId, request));
     }
 
     @DeleteMapping("/{rentalAreaId}")
+    @PreAuthorize("hasAuthority('DELETE_RENTAL_AREA')")
     public ApiResponse<?> deleteRentalArea(@PathVariable UUID rentalAreaId) {
         try {
             rentalAreaService.deleteRentalArea(rentalAreaId);

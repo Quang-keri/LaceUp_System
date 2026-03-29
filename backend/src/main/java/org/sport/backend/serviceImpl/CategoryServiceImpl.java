@@ -1,6 +1,6 @@
 package org.sport.backend.serviceImpl;
 
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.category.CategoryRequest;
 import org.sport.backend.dto.request.category.UpdateCategoryRequest;
 import org.sport.backend.dto.response.category.CategoryResponse;
@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 @Service
 public class CategoryServiceImpl implements CategoryService{

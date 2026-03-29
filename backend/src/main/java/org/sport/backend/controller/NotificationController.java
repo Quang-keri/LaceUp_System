@@ -2,7 +2,7 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.sport.backend.base.ApiResponse;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.response.notification.NotificationResponse;
 import org.sport.backend.service.NotificationService;
 import org.springframework.data.domain.Page;
@@ -25,11 +25,12 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        return ResponseEntity.ok(ApiResponse.<Page<NotificationResponse>>builder()
-                .code(200)
-                .result(notificationService.getMyNotification(page, size))
-                .message("Get my notification successful")
-                .build());
+        return ResponseEntity.ok(
+                ApiResponse.<Page<NotificationResponse>>builder()
+                        .code(200)
+                        .result(notificationService.getMyNotification(page, size))
+                        .message("Get my notification successful")
+                        .build());
     }
 
 }

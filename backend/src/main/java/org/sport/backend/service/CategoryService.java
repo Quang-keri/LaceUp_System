@@ -1,6 +1,6 @@
 package org.sport.backend.service;
 
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.category.CategoryRequest;
 import org.sport.backend.dto.request.category.UpdateCategoryRequest;
 import org.sport.backend.dto.response.category.CategoryResponse;
