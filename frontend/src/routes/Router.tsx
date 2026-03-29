@@ -51,6 +51,7 @@ import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
 import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx";
 import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
 import BuildingEditPage from "../page/owner/building/BuildingEditPage.tsx";
+import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
     element: <DefaultLayout />,
     children: [
       { index: true, element: <LandingPage /> },
+      {
+        path: "/create-rental-area",
+        element: <CreateRentalAreaPage />, // Thêm route này
+      },
       { path: "trang-chu", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
       { path: "/register", element: <RegisterPage /> },
@@ -124,6 +129,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <AdminDashboard /> },
+
       { path: "users", element: <UserManagement /> },
       { path: "roles", element: <RoleManagement /> },
       { path: "permissions", element: <PermissionManagement /> },

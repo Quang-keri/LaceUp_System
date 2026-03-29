@@ -147,6 +147,7 @@ const AppHeader = () => {
               style={{
                 fontWeight: 800,
                 fontSize: 22,
+    
                 color: "#1f1f1f",
                 letterSpacing: "-0.5px",
               }}

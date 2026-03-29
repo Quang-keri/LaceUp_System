@@ -9,6 +9,7 @@ import org.sport.backend.constant.RentalAreaStatus;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,5 +75,23 @@ public class RentalArea extends BaseEntity {
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     List<Booking> bookings;
 
+    @Column(name = "zalo_link", length = 255)
+    private String zaloLink;
+
+    @Column(name = "facebook_link", length = 255)
+    private String facebookLink;
+
+    @Column(name = "area_size")
+    private Double areaSize; // Diện tích
+
+    // Thông tin pháp lý (Step 5)
+    @Column(name = "business_license_number", length = 100)
+    private String businessLicenseNumber;
+
+    @Column(name = "tax_id", length = 50)
+    private String taxId;
+
+    @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RentalAreaImage> images = new ArrayList<>();
 
 }
