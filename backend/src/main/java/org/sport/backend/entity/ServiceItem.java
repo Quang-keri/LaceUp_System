@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "service_items")
@@ -19,7 +20,8 @@ public class ServiceItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String serviceItemId;
+    @Column(name = "service_item_id")
+    private UUID serviceItemId;
 
     @ManyToOne
     @JoinColumn(name = "rental_area_id")

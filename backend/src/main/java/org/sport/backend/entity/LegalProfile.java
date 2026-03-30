@@ -5,6 +5,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.sport.backend.dto.base.BaseEntity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -15,20 +17,17 @@ import java.util.UUID;
 @Getter
 @Setter
 @Table(name = "legal_profiles")
-public class LegalProfile extends BaseEntity {
+public class LegalProfile {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "business_license_number")
     private String businessLicenseNumber;
-
-    @Column(name = "tax_id")
     private String taxId;
-
-    @Column(name = "legal_note", columnDefinition = "TEXT")
     private String legalNote;
-
-    // Ảnh giấy phép (có thể lưu dạng JSON chuỗi hoặc tạo Entity LegalImage riêng)
-    // OneToOne với RentalArea hoặc ManyToOne với User (Owner)
+    @ManyToOne
+    @JoinColumn(name = "rental_area_id")
+    private RentalArea rentalArea;
+    @OneToMany(mappedBy = "legalProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LegalImage> images = new ArrayList<>();
 }

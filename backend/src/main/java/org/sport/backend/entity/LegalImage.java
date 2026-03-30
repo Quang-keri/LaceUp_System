@@ -1,26 +1,26 @@
 package org.sport.backend.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.UUID;
 
-@Entity
-@Table(name = "service_item_images")
+import java.util.UUID;
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class ServiceItemImage {
-
+@Entity
+public class LegalImage {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     private String imageUrl;
-    private String publicId;
 
+    private String publicId;
     @ManyToOne
-    @JoinColumn(name = "service_item_id")
-    private ServiceItem serviceItem;
+    @JoinColumn(name = "legal_id")
+    private LegalProfile legalProfile;
+
 }
