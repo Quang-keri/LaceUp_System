@@ -22,6 +22,11 @@ public class RentalAreaDetailResponse {
     private String contactPhone;
     private UUID ownerId;
     private CityResponse city;
+    private String street;
+    private String ward;
+    private String district;
+    private String gmailLink;
+    private String facebookLink;
     private List<RentalAreaImageResponse> images;
 
     private List<CourtSummaryResponse> courts;

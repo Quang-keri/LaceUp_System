@@ -59,9 +59,10 @@ export default function PaymentSummary({
           onChange={(e) => setPaymentMethod(e.target.value)}
           className="flex flex-col gap-2"
         >
-          <Radio value="PAY_OS">Chuyển khoản (PAY OS)</Radio>
+          <Radio value="PAY_OS">Chuyển khoản PAY OS</Radio>
+             <Radio value="VN_PAY">Chuyển khoản VNPay</Radio>
           <Radio value="CASH">Thanh toán tại sân (Tiền mặt)</Radio>
-          {/* <Radio value="VN_PAY">VNPay</Radio> */}
+
         </Radio.Group>
       </Card>
 

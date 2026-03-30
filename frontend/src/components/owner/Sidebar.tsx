@@ -162,7 +162,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
       }}
     >
-      <div
+      <Link to="/trang-chu">
+       <div
         className={`h-16 flex items-center justify-center border-b transition-colors ${
           isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
         }`}
@@ -181,6 +182,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
+      </Link>
+
+     
       <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">
         <Menu
           mode="inline"

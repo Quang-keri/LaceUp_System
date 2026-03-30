@@ -25,7 +25,7 @@ public class City {
     @Column(name = "city_name", nullable = false, unique = true)
     String cityName;
 
-    @OneToMany(mappedBy = "city", fetch = FetchType.LAZY)
-    List<RentalArea> rentalAreas;
+//    @OneToMany(mappedBy = "address.city", fetch = FetchType.LAZY)
+//    List<RentalArea> rentalAreas;
 
 }

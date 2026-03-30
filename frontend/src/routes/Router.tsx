@@ -52,6 +52,7 @@ import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx
 import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
 import BuildingEditPage from "../page/owner/building/BuildingEditPage.tsx";
 import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
+import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -88,6 +89,11 @@ export const router = createBrowserRouter([
         path: "payment/booking-result",
         element: <BookingPaymentResultPage />,
         handle: { breadcrumb: "Kết quả thanh toán booking" },
+      },
+      {
+        path: "payment/vnpay-return",
+        element: <VnPayReturnPage />,
+        handle: { breadcrumb: "Kết quả thanh toán VNPay" },
       },
       { path: "player/:id", element: <PlayerPublicPage /> },
 

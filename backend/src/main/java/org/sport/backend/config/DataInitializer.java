@@ -282,7 +282,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // 4. Seed Cities, Categories, Amenities
         if (cityRepository.count() == 0) {
-            cityRepository.saveAll(List.of(City.builder().cityName("Thành Phố Hồ Chí Minh").build(), City.builder().cityName("Bình Dương").build()));
+            cityRepository.saveAll(List.of(City.builder().cityName("Hồ Chí Minh").build(), City.builder().cityName("Bình Dương").build()));
         }
         if (categoryRepository.count() == 0) seedCategories();
         if (amenityRepository.count() == 0) seedAmenities();
@@ -346,6 +346,9 @@ public class DataInitializer implements CommandLineRunner {
                 .isActive(true)
                 .status(RentalAreaStatus.ACTIVE)
                 .createdAt(LocalDateTime.now().minusMonths(2))
+                .openTime(LocalTime.of(6,00))
+                .closeTime(LocalTime.of(22,00))
+                .gmail(owner.getEmail())
                 .build();
         rentalAreaRepository.save(area);
 

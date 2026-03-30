@@ -22,7 +22,7 @@ const statusLabelMap: Record<string, string> = {
 const methodLabelMap: Record<string, string> = {
   CASH: "Tiền mặt",
   PAY_OS: "PAY OS",
-  VN_PAY: "Chuyển khoản",
+  VN_PAY: "VN Pay",
   BANKING: "Chuyển khoản",
 };
 

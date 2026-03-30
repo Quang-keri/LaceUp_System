@@ -104,7 +104,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         <Link to="/admin/bookings/list">Danh sách đơn đặt</Link>,
         "/admin/bookings/list",
       ),
-    
     ]),
 
     getItem(
@@ -120,7 +119,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/admin/settlements",
       ),
       // Bạn có thể thêm link Cấu hình hoa hồng vào đây sau
-      getItem(<Link to="/admin/commissions">Cấu hình hoa hồng</Link>, "/admin/commissions"),
+      getItem(
+        <Link to="/admin/commissions">Cấu hình hoa hồng</Link>,
+        "/admin/commissions",
+      ),
     ]),
 
     getItem(
@@ -159,25 +161,27 @@ const Sidebar: React.FC<SidebarProps> = ({
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
       }}
     >
-      {/* Logo Section */}
-      <div
-        className={`h-16 flex items-center justify-center border-b transition-colors ${
-          isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
-        }`}
-      >
-        <div className="flex items-center gap-2 overflow-hidden px-4">
-          <img rel="icon" src="/logo.png" alt="Logo" className="w-12 h-12" />
-          {!collapsed && (
-            <div
-              className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
-                isDark ? "text-white" : "text-gray-800"
-              }`}
-            >
-              Lace Up
-            </div>
-          )}
+      <Link to="/trang-chu">
+        {" "}
+        <div
+          className={`h-16 flex items-center justify-center border-b transition-colors ${
+            isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
+          }`}
+        >
+          <div className="flex items-center gap-2 overflow-hidden px-4">
+            <img rel="icon" src="/logo.png" alt="Logo" className="w-12 h-12" />
+            {!collapsed && (
+              <div
+                className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
+                  isDark ? "text-white" : "text-gray-800"
+                }`}
+              >
+                Lace Up
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </Link>
 
       <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">
         <Menu

@@ -1,22 +1,13 @@
-import React from "react";
-import {
-  Form,
-  Input,
-  Button,
-  Card,
-  Space,
-  Select,
-  Switch,
-  InputNumber,
-  TimePicker,
-  Upload,
-} from "antd";
+import React, { useEffect, useState } from "react";
+import { Form, Input, Button, Card, Space, Select, Switch, Upload } from "antd";
 import {
   MinusCircleOutlined,
   PlusOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 import { useRentalForm } from "../../context/RentalFormContext";
+import amenityService from "../../service/amenityService";
+import categoryService from "../../service/categoryService";
 
 export default function Step2CourtInfo({
   next,
@@ -27,159 +18,195 @@ export default function Step2CourtInfo({
 }) {
   const { formData, updateFormData } = useRentalForm();
   const [form] = Form.useForm();
+  const [categories, setCategories] = useState([]);
+  const [amenities, setAmenities] = useState([]);
 
-  const onFinish = (values: any) => {
-    updateFormData("courts", values.courts);
+  // Bắt buộc: Đồng bộ dữ liệu từ Context vào Form khi quay lại bước này
+  useEffect(() => {
+    form.setFieldsValue({ courts: formData.courts });
+  }, [formData.courts, form]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [catRes, ameRes] = await Promise.all([
+          categoryService.getAllCategories(),
+          amenityService.getAllAmenities(),
+        ]);
+        setCategories(catRes.result.data);
+        setAmenities(ameRes.result);
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Hàm chuẩn hóa fileList cho Ant Design Upload
+  const normFile = (e: any) => {
+    if (Array.isArray(e)) {
+      return e;
+    }
+    return e?.fileList;
+  };
+
+  // Hàm xử lý lưu dữ liệu chung cho cả Next và Prev
+  const saveData = () => {
+    const values = form.getFieldsValue();
+    const mergedCourts = (values.courts || []).map(
+      (court: any, index: number) => {
+        const existing = formData.courts?.[index] || {};
+        // Merge: Giữ lại các field cũ (prices, courtCopies) và ghi đè field mới từ form (bao gồm cả courtImages)
+        return { ...existing, ...court };
+      },
+    );
+    updateFormData("courts", mergedCourts);
+  };
+
+  const onFinish = () => {
+    saveData();
     next();
   };
 
+  const handlePrev = () => {
+    saveData();
+    prev();
+  };
+
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      initialValues={{ courts: formData.courts }}
-      onFinish={onFinish}
-    >
+    <Form form={form} layout="vertical" onFinish={onFinish} autoComplete="off">
       <Form.List name="courts">
         {(fields, { add, remove }) => (
-          <div style={{ display: "flex", rowGap: 16, flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             {fields.map((field) => (
               <Card
-                size="small"
-                title={`Loại Sân ${field.name + 1}`}
                 key={field.key}
+                title={
+                  <span style={{ color: "#1890ff" }}>
+                    Loại sân #{field.name + 1}
+                  </span>
+                }
                 extra={
-                  <MinusCircleOutlined
+                  <Button
+                    type="text"
+                    danger
+                    icon={<MinusCircleOutlined />}
                     onClick={() => remove(field.name)}
-                    style={{ color: "red" }}
                   />
                 }
+                style={{ border: "1px solid #d9d9d9" }}
               >
-                <Space
-                  style={{ display: "flex", marginBottom: 8 }}
-                  align="baseline"
-                >
+                <Space wrap size="large" align="baseline">
                   <Form.Item
                     {...field}
                     name={[field.name, "courtName"]}
-                    label="Tên loại sân (VD: Sân cỏ 5 người)"
+                    label="Tên loại sân"
+                    rules={[{ required: true, message: "Nhập tên loại sân" }]}
+                  >
+                    <Input
+                      placeholder="VD: Sân Tennis chuẩn ATP"
+                      style={{ width: 250 }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    {...field}
+                    name={[field.name, "categoryId"]}
+                    label="Môn thể thao"
                     rules={[{ required: true }]}
                   >
-                    <Input placeholder="Tên loại sân" />
+                    <Select placeholder="Chọn môn" style={{ width: 150 }}>
+                      {categories.map((c: any) => (
+                        <Select.Option key={c.categoryId} value={c.categoryId}>
+                          {c.categoryName}
+                        </Select.Option>
+                      ))}
+                    </Select>
                   </Form.Item>
+
                   <Form.Item
                     {...field}
                     name={[field.name, "surfaceType"]}
-                    label="Loại mặt sân"
+                    label="Mặt sân"
                   >
-                    <Select placeholder="Chọn mặt sân" style={{ width: 150 }}>
-                      <Select.Option value="Cỏ nhân tạo">
-                        Cỏ nhân tạo
-                      </Select.Option>
-                      <Select.Option value="Đất nện">Đất nện</Select.Option>
-                      <Select.Option value="Sàn gỗ">Sàn gỗ</Select.Option>
-                    </Select>
+                    <Input
+                      placeholder="VD: thảm pvc, cỏ nhân tạo..."
+                      style={{ width: 250 }}
+                    />
                   </Form.Item>
+
                   <Form.Item
                     {...field}
                     name={[field.name, "indoor"]}
                     label="Trong nhà?"
                     valuePropName="checked"
                   >
-                    <Switch />
+                    <Switch checkedChildren="Có" unCheckedChildren="Không" />
                   </Form.Item>
                 </Space>
 
                 <Form.Item
                   {...field}
-                  name={[field.name, "amenities"]}
-                  label="Tiện ích sân"
+                  name={[field.name, "amenityIds"]}
+                  label="Tiện ích"
                 >
-                  <Select
-                    mode="multiple"
-                    placeholder="Chọn tiện ích (Trà đá, Wifi, Bóng...)"
-                  >
-                    <Select.Option value="wifi">Wifi miễn phí</Select.Option>
-                    <Select.Option value="water">Trà đá</Select.Option>
-                    <Select.Option value="ball">Bóng thi đấu</Select.Option>
+                  <Select mode="multiple" placeholder="Chọn tiện ích">
+                    {amenities.map((a: any) => (
+                      <Select.Option key={a.amenityId} value={a.amenityId}>
+                        {a.amenityName}
+                      </Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
 
-                <Form.Item {...field} label="Ảnh sân chi tiết (2-6 ảnh)">
-                  <Upload maxCount={6} listType="picture" multiple>
-                    <Button icon={<UploadOutlined />}>Tải ảnh lên</Button>
+                {/* UPLOAD TỪNG LOẠI SÂN: Đã cấu hình lấy fileList */}
+                <Form.Item
+                  {...field}
+                  name={[field.name, "courtImages"]}
+                  label="Hình ảnh thực tế (Tối đa 5 ảnh)"
+                  valuePropName="fileList"
+                  getValueFromEvent={normFile}
+                >
+                  <Upload
+                    listType="picture-card"
+                    maxCount={5}
+                    multiple
+                    beforeUpload={() => false}
+                  >
+                    <div>
+                      <PlusOutlined />
+                      <div style={{ marginTop: 8 }}>Tải ảnh</div>
+                    </div>
                   </Upload>
                 </Form.Item>
-
-                {/* Nested Form: Giá động theo giờ */}
-                <Form.List name={[field.name, "prices"]}>
-                  {(priceFields, { add: addPrice, remove: removePrice }) => (
-                    <div
-                      style={{
-                        background: "#f5f5f5",
-                        padding: 16,
-                        borderRadius: 8,
-                      }}
-                    >
-                      <p style={{ fontWeight: "bold" }}>
-                        Cài đặt giá động theo giờ
-                      </p>
-                      {priceFields.map((priceField) => (
-                        <Space key={priceField.key} align="baseline">
-                          <Form.Item
-                            {...priceField}
-                            name={[priceField.name, "timeRange"]}
-                            label="Khung giờ"
-                            rules={[{ required: true }]}
-                          >
-                            <TimePicker.RangePicker format="HH:mm" />
-                          </Form.Item>
-                          <Form.Item
-                            {...priceField}
-                            name={[priceField.name, "pricePerHour"]}
-                            label="Giá/Giờ (VNĐ)"
-                            rules={[{ required: true }]}
-                          >
-                            <InputNumber
-                              style={{ width: 150 }}
-                              formatter={(value) =>
-                                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                              }
-                            />
-                          </Form.Item>
-                          <MinusCircleOutlined
-                            onClick={() => removePrice(priceField.name)}
-                            style={{ color: "red" }}
-                          />
-                        </Space>
-                      ))}
-                      <Button
-                        type="dashed"
-                        onClick={() => addPrice()}
-                        block
-                        icon={<PlusOutlined />}
-                      >
-                        Thêm khung giá
-                      </Button>
-                    </div>
-                  )}
-                </Form.List>
               </Card>
             ))}
             <Button
-              type="dashed"
+              type="primary"
+              ghost
               onClick={() => add()}
               block
               icon={<PlusOutlined />}
+              size="large"
             >
-              Thêm Loại Sân
+              THÊM LOẠI SÂN MỚI
             </Button>
           </div>
         )}
       </Form.List>
-      <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
-        <Button onClick={prev}>Quay lại</Button>
-        <Button type="primary" htmlType="submit">
+
+      <div
+        style={{
+          marginTop: 32,
+          display: "flex",
+          gap: 12,
+          justifyContent: "flex-end",
+        }}
+      >
+        <Button onClick={handlePrev} size="large">
+          Quay lại
+        </Button>
+        <Button type="primary" htmlType="submit" size="large">
           Tiếp tục
         </Button>
       </div>

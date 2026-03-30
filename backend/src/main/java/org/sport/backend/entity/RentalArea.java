@@ -20,32 +20,32 @@ import java.util.UUID;
 @SuperBuilder
 @Entity
 @Table(name = "rental_areas")
-@FieldDefaults(level = AccessLevel.PRIVATE)
+
 public class RentalArea extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "rental_area_id")
-    UUID rentalAreaId;
+    private UUID rentalAreaId;
 
     @Column(name = "rental_area_name", length = 150)
-    String rentalAreaName;
+    private String rentalAreaName;
 
     @Embedded
-    Address address;
+    private  Address address;
 
     @Column(name = "contact_name", length = 100)
-    String contactName;
+    private String contactName;
 
     @Column(name = "contact_phone", length = 20)
-    String contactPhone;
+    private  String contactPhone;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    RentalAreaStatus status;
+    private RentalAreaStatus status;
 
     @Column(name = "deleted_at")
-    LocalDateTime deletedAt;
+    private LocalDateTime deletedAt;
 
     private Double rating;
 
@@ -63,29 +63,22 @@ public class RentalArea extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
-    User owner;
+    private  User owner;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
-    List<Court> courts;
+    private List<Court> courts;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
-    List<Booking> bookings;
+    private List<Booking> bookings;
 
-    @Column(name = "zalo_link", length = 255)
-    private String zaloLink;
+
 
     @Column(name = "facebook_link", length = 255)
     private String facebookLink;
 
-    @Column(name = "area_size")
-    private Double areaSize; // Diện tích
+    @Column(name = "gmail", length = 255)
+    private String gmail;
 
-    // Thông tin pháp lý (Step 5)
-    @Column(name = "business_license_number", length = 100)
-    private String businessLicenseNumber;
-
-    @Column(name = "tax_id", length = 50)
-    private String taxId;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RentalAreaImage> images = new ArrayList<>();

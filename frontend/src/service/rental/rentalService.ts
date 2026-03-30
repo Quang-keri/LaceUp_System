@@ -53,36 +53,37 @@ class RentalService {
     return response.data;
   }
 
-  async createRentalArea(request: CreateRentalAreaRequest, images: File[]) {
+  async createRentalArea(values: any) {
     const formData = new FormData();
-    formData.append("rentalAreaName", request.rentalAreaName);
-    formData.append("street", request.address?.street || "");
-    formData.append("ward", request.address?.ward || "");
-    formData.append("district", request.address?.district || "");
-    formData.append("contactName", request.contactName);
-    formData.append("contactPhone", request.contactPhone);
-    formData.append("cityId", request.cityId.toString());
-    formData.append("openTime", request.openTime || "");
-    formData.append("closeTime", request.closeTime || "");
 
-    // Use userId from request (passed from component via useAuth context)
-    if (request.userId) {
-      formData.append("userId", request.userId);
+    formData.append("userId", values.userId);
+    formData.append("rentalAreaName", values.rentalAreaName);
+    formData.append("street", values.street);
+    formData.append("ward", values.ward);
+    formData.append("district", values.district);
+
+    formData.append("cityName", values.cityName);
+    formData.append("contactName", values.contactName);
+    formData.append("contactPhone", values.contactPhone);
+    formData.append("gmail", values.gmail || "");
+    if (values.latitude) formData.append("latitude", String(values.latitude));
+    if (values.longitude)
+      formData.append("longitude", String(values.longitude));
+    formData.append("openTime", values.openTime);
+    formData.append("closeTime", values.closeTime);
+    formData.append("facebookLink", values.facebookLink || "");
+    if (values.images && Array.isArray(values.images)) {
+      values.images.forEach((file: any) => {
+        const fileObj = file.originFileObj || file;
+        if (fileObj instanceof File || fileObj instanceof Blob) {
+          formData.append("images", fileObj);
+        }
+      });
     }
 
-    images.forEach((image) => {
-      formData.append("images", image);
+    const response = await api.post("/rental-areas", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
-
-    const response = await api.post<ApiResponse<RentalAreaResponse>>(
-      "/rental-areas",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      },
-    );
     return response.data;
   }
 

@@ -35,10 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -81,19 +78,20 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
 
         int count = images == null ? 0 : (int) images.stream().filter(f -> f != null && !f.isEmpty()).count();
-        if (count < 1 || count > 5) {
-            throw new IllegalArgumentException("RentalArea yêu cầu  1 tới 5 ảnh");
+        if (count < 1 || count > 3) {
+            throw new IllegalArgumentException("RentalArea yêu cầu  1 tới 3 ảnh");
         }
 
         User owner = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        City city = cityRepository.findById(request.getCityId()).orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
+//        City city = cityRepository.findById(request.getCityId()).orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
 
         Address address = Address.builder()
                 .ward(request.getWard())
                 .district(request.getDistrict())
                 .street(request.getStreet())
-                .city(city)
+                .cityName(request.getCityName())
+//                .city(city)
                 .build();
 
         RentalArea rentalArea = RentalArea.builder()
@@ -103,6 +101,12 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .contactPhone(request.getContactPhone())
                 .status(RentalAreaStatus.ACTIVE)
                 .isActive(true)
+                .openTime(request.getOpenTime())
+                .closeTime(request.getCloseTime())
+                .latitude(request.getLatitude() != null ? Double.parseDouble(request.getLatitude()) : null)
+                .longitude(request.getLongitude() != null ? Double.parseDouble(request.getLongitude()) : null)
+                .facebookLink(request.getFacebookLink())
+                .gmail(request.getGmailLink())
                 .owner(owner)
                 .build();
 
@@ -166,10 +170,9 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                         .build())
                 .toList();
 
-        CityResponse cityResponse = CityResponse.builder()
-                .cityId(rentalArea.getAddress().getCity().getCityId())
-                .cityName(rentalArea.getAddress().getCity().getCityName())
-                .build();
+        CityResponse cityResponse = null;
+
+
         UserResponse userResponse = UserResponse.builder()
                 .userId(rentalArea.getOwner().getUserId())
                 .email(rentalArea.getOwner().getEmail())
@@ -453,10 +456,19 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         }).toList();
 
-        CityResponse cityResponse = CityResponse.builder()
-                .cityId(rentalArea.getAddress().getCity().getCityId())
-                .cityName(rentalArea.getAddress().getCity().getCityName())
-                .build();
+        CityResponse cityResponse = null;
+
+        if(rentalArea.getAddress().getCity() == null){
+            CityResponse.builder()
+                    .cityName(rentalArea.getAddress().getCityName())
+                    .build();
+        }else{
+            cityResponse = CityResponse.builder()
+                    .cityId(rentalArea.getAddress().getCity().getCityId())
+                    .cityName(rentalArea.getAddress().getCity().getCityName())
+                    .build();
+        }
+
 
         return RentalAreaDetailResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
@@ -468,6 +480,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .images(images)
                 .courts(courtResponses)
                 .ownerId(rentalArea.getOwner().getUserId())
+                .gmailLink(rentalArea.getGmail())
+                .facebookLink(rentalArea.getFacebookLink())
                 .build();
     }
 

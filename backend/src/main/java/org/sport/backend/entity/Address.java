@@ -20,6 +20,9 @@ public class Address {
     @Column(name = "district")
     private String district;
 
+    @Column(name = "city_name")
+    private String cityName;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "city_id")
     private City city;

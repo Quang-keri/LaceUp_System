@@ -53,7 +53,7 @@ public class UserController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('VIEW_USERS')")
+//    @PreAuthorize("hasAuthority('VIEW_USERS')")
     public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllUsers(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -80,7 +80,7 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    @PreAuthorize("hasAuthority('UPDATE_USER')")
+//    @PreAuthorize("hasAuthority('UPDATE_USER')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable UUID userId,
             @RequestBody @Valid UpdateUserRequest request) {

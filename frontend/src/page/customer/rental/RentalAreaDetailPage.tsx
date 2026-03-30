@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Row, Col, ConfigProvider, Table } from "antd";
+import { Row, Col, ConfigProvider, Table, message } from "antd";
 import { toast } from "react-toastify";
 
 import { useAuth } from "../../../context/AuthContext";
@@ -48,7 +48,7 @@ export default function RentalAreaDetailPage() {
         }
       }
     } catch (error) {
-      toast.error("Không thể tải thông tin khu vực sân");
+      message.error("Không thể tải thông tin khu vực sân");
     }
   };
 
@@ -80,7 +80,7 @@ export default function RentalAreaDetailPage() {
 
   const submitBooking = async () => {
     if (!userInfo.userName.trim() || !userInfo.userPhone.trim()) {
-      toast.warn("Vui lòng nhập tên và số điện thoại liên hệ");
+      message.info("Vui lòng nhập tên và số điện thoại liên hệ");
       return;
     }
 
@@ -102,10 +102,10 @@ export default function RentalAreaDetailPage() {
     try {
       const res = await bookingService.createBooking(payload);
       if (res.code === 201 || res.code === 200) {
-        toast.success("Đặt sân thành công! Đang chuyển hướng thanh toán...");
+        message.success("Đặt sân thành công! Đang chuyển hướng thanh toán...");
         navigate(`/payment/${res.result.bookingIntentId}`);
       } else {
-        toast.error(res.message || "Đặt sân thất bại");
+        message.error(res.message || "Đặt sân thất bại");
       }
     } catch (error: any) {
       // Bắt lỗi Validation (Code 2003) từ Backend
@@ -114,10 +114,10 @@ export default function RentalAreaDetailPage() {
       if (errRes?.code === 2003 && errRes?.result) {
         // Lấy thông báo lỗi đầu tiên trong object result (VD: "Không thể đặt phòng trong quá khứ")
         const firstErrorMessage = Object.values(errRes.result)[0] as string;
-        toast.error(firstErrorMessage);
+        message.error(firstErrorMessage);
       } else {
         // Lỗi 500 hoặc lỗi mạng khác
-        toast.error(
+        message.error(
           errRes?.message || "Hệ thống đang bận, vui lòng thử lại sau",
         );
       }
@@ -127,19 +127,17 @@ export default function RentalAreaDetailPage() {
   };
 
   const handleChatClick = () => {
-    // 1. Kiểm tra xem dữ liệu 'data' đã được load chưa
+
     if (!data) {
-      toast.warn("Đang tải dữ liệu, vui lòng đợi trong giây lát");
+      message.info("Đang tải dữ liệu, vui lòng đợi trong giây lát");
       return;
     }
 
-    // 2. Lấy ID chủ sân (thường là ownerId hoặc userId tùy theo API của bạn)
-    // Và tên chủ sân để hiển thị trong khung chat
     const ownerId = data.ownerId || data.userId;
     const ownerName = data.contactName || data.ownerName || "Chủ sân";
 
     if (!ownerId) {
-      toast.error("Không tìm thấy ID chủ sân để bắt đầu chat");
+      message.error("Không tìm thấy ID chủ sân để bắt đầu chat");
       console.error("Dữ liệu API thiếu ownerId:", data);
       return;
     }

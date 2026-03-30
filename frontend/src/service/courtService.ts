@@ -48,27 +48,49 @@ class CourtService {
     return response.data;
   }
 
-  async createCourt(request: CreateCourtRequest, images: File[] = []) {
+  async createCourt(courtData: any, rentalAreaId: string) {
     const formData = new FormData();
 
-    formData.append("courtName", request.courtName);
-    formData.append("categoryId", String(request.categoryId));
-    formData.append("pricePerHour", String(request.pricePerHour));
-    formData.append("rentalAreaId", request.rentalAreaId);
+    formData.append("rentalAreaId", rentalAreaId);
+    formData.append("courtName", courtData.courtName);
+    formData.append("categoryId", String(courtData.categoryId));
 
-    request.courtCodes.forEach((code) => {
-      formData.append("courtCodes", code);
+  
+    if (courtData.amenityIds && Array.isArray(courtData.amenityIds)) {
+      courtData.amenityIds.forEach((id: number) => {
+        formData.append("amenityIds", String(id));
+      });
+    }
+
+
+    if (
+      courtData.courtCopyRequests &&
+      Array.isArray(courtData.courtCopyRequests)
+    ) {
+      courtData.courtCopyRequests.forEach((item: any, index: number) => {
+        formData.append(
+          `courtCopyRequests[${index}].courtCode`,
+          item.courtCode,
+        );
+        formData.append(
+          `courtCopyRequests[${index}].location`,
+          item.location || "",
+        );
+      });
+    }
+
+    if (courtData.images && Array.isArray(courtData.images)) {
+      courtData.images.forEach((file: any) => {
+        const fileToUpload = file.originFileObj || file;
+        if (fileToUpload instanceof File || fileToUpload instanceof Blob) {
+          formData.append("images", fileToUpload);
+        }
+      });
+    }
+
+    const response = await api.post("/courts", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
-
-    images.forEach((image) => {
-      formData.append("images", image);
-    });
-
-    const response = await api.post<ApiResponse<CourtResponse>>(
-      "/courts",
-      formData,
-    );
-
     return response.data;
   }
 
@@ -113,8 +135,9 @@ class CourtService {
   }
 
   async getCategories() {
-    const response =
-      await api.get<ApiResponse<CategoryResponse[]>>("/categories");
+    const response = await api.get<ApiResponse<CategoryResponse[]>>(
+      "/categories",
+    );
     return response.data;
   }
 

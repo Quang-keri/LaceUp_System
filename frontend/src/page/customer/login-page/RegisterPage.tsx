@@ -1,165 +1,145 @@
-import React, {useState} from "react";
-import {message} from "antd";
-import authService from "../../../service/authService.ts";
-import type {CreateUserRequest} from "../../../types/auth.ts";
-import {useNavigate} from "react-router-dom";
 
-const RegisterPage: React.FC = ({}) => {
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
-    const [values, setValues] = useState({
-        userName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        phone: "",
-        gender: "MALE",
-        dateOfBirth: "",
-    });
+// RegisterPage.tsx
+import React, { useState } from "react";
+import { message } from "antd";
+import authService from "../../../service/authService";
+import { useNavigate } from "react-router-dom";
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const {name, value} = e.target;
-        setValues((prev) => ({...prev, [name]: value}));
-    };
+const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [values, setValues] = useState({
+    userName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phone: "",
+    gender: "MALE",
+    dateOfBirth: "",
+  });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setValues((prev) => ({ ...prev, [name]: value }));
+  };
 
-        if (values.password !== values.confirmPassword) {
-            return message.error("Mật khẩu nhập lại không khớp!");
-        }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-        setLoading(true);
-        try {
-            const payload: CreateUserRequest = {
-                ...values,
-                roleName: "RENTER",
-            };
-            const response = await authService.sendRegisterOtp(payload);
-            if (response?.code === 200) {
-                message.success("Đăng ký thành công! Hãy kiểm tra Email.");
-                navigate("/login");
-            } else {
-                message.error(response?.message || "Đăng ký thất bại");
-            }
-        } catch (error) {
-            message.error("Lỗi kết nối máy chủ!");
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (values.password !== values.confirmPassword) {
+      return message.error("Mật khẩu nhập lại không khớp!");
+    }
 
-    return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-800">Tạo tài khoản</h2>
-                    <p className="text-gray-500 mt-2">Bắt đầu trải nghiệm cùng LaceUp</p>
-                </div>
+    setLoading(true);
+    try {
+      const response = await authService.sendRegisterOtp({
+        ...values,
+        roleName: "RENTER",
+      });
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Họ tên */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-                        <input
-                            name="userName"
-                            type="text"
-                            required
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            onChange={handleChange}
-                        />
-                    </div>
+      if (response?.code === 200) {
+        message.success("Đăng ký thành công! Kiểm tra email.");
+        navigate("/login");
+      }
+    } catch (error) {
+      message.error("Lỗi kết nối máy chủ!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                    {/* Email */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input
-                            name="email"
-                            type="email"
-                            required
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            onChange={handleChange}
-                        />
-                    </div>
+  return (
+    <div className="h-screen flex items-center justify-center bg-[#F5F3FF] px-3 overflow-hidden">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+        <h2 className="text-xl font-bold text-center text-black mb-4">
+          Tạo tài khoản
+        </h2>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* SĐT */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">SĐT</label>
-                            <input
-                                name="phone"
-                                type="tel"
-                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                onChange={handleChange}
-                            />
-                        </div>
-                        {/* Giới tính */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
-                            <select
-                                name="gender"
-                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                onChange={handleChange}
-                            >
-                                <option value="MALE">Nam</option>
-                                <option value="FEMALE">Nữ</option>
-                            </select>
-                        </div>
-                    </div>
+        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+          <input
+            name="userName"
+            placeholder="Họ và tên"
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+            onChange={handleChange}
+          />
 
-                    {/* Ngày sinh */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
-                        <input
-                            name="dateOfBirth"
-                            type="date"
-                            required
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            onChange={handleChange}
-                        />
-                    </div>
+          <input
+            name="email"
+            type="email"
+            placeholder="Email"
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+            onChange={handleChange}
+          />
 
-                    {/* Mật khẩu */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
-                        <input
-                            name="password"
-                            type="password"
-                            required
-                            minLength={8}
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            onChange={handleChange}
-                        />
-                    </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              name="phone"
+              placeholder="SĐT"
+              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+              onChange={handleChange}
+            />
 
-                    {/* Nhập lại mật khẩu */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nhập lại mật khẩu</label>
-                        <input
-                            name="confirmPassword"
-                            type="password"
-                            required
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            onChange={handleChange}
-                        />
-                    </div>
+            <select
+              name="gender"
+              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+              onChange={handleChange}
+            >
+              <option value="MALE">Nam</option>
+              <option value="FEMALE">Nữ</option>
+            </select>
+          </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition-colors mt-4 disabled:bg-blue-300"
-                    >
-                        {loading ? "Đang xử lý..." : "Đăng ký ngay"}
-                    </button>
-                </form>
+          <input
+            name="dateOfBirth"
+            type="date"
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+            onChange={handleChange}
+          />
 
-                <div className="mt-6 text-center text-sm text-gray-600">
-                    Đã có tài khoản?{" "}
-                    <button onClick={() => navigate("/login")}>Đăng nhập</button>
-                </div>
-            </div>
+          <input
+            name="password"
+            type="password"
+            placeholder="Mật khẩu"
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+            onChange={handleChange}
+          />
+
+          <input
+            name="confirmPassword"
+            type="password"
+            placeholder="Nhập lại mật khẩu"
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+            onChange={handleChange}
+          />
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#9156F1] hover:bg-[#7E46D6] text-white py-2 rounded-lg font-semibold transition"
+          >
+            {loading ? "Đang xử lý..." : "Đăng ký"}
+          </button>
+        </form>
+
+        <div className="mt-3 text-center text-xs">
+          Đã có tài khoản?{" "}
+          <button
+            onClick={() => navigate("/login")}
+            className="text-[#9156F1] hover:underline"
+          >
+            Đăng nhập
+          </button>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default RegisterPage;

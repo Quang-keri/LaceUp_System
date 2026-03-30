@@ -109,10 +109,10 @@ export default function CourtBookingPanel({
         );
       }
     } catch (error: any) {
-      // Backend bắt validation (@Valid) trả về lỗi HTTP 400
+    
       const errMsg =
         error.response?.data?.message ||
-        error.response?.data?.result?.message || // Thêm dòng này đề phòng lỗi gom vào object result
+        error.response?.data?.result?.message || 
         "Lỗi khi kiểm tra lịch sân. Vui lòng thử lại!";
       message.error(errMsg);
     } finally {

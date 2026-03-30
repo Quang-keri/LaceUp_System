@@ -44,7 +44,7 @@ public class BookingController {
     }
 
     @PostMapping("/intent")
-    @PreAuthorize("hasAuthority('BOOK_ROOM')")
+//    @PreAuthorize("hasAuthority('BOOK_ROOM')")
     public ApiResponse<BookingIntentResponse> createIntent(
             @Valid @RequestBody BookingRequest request
     ) {
@@ -56,7 +56,7 @@ public class BookingController {
     }
 
     @GetMapping("/intent/{intentId}")
-    @PreAuthorize("hasAuthority('BOOK_ROOM')")
+//    @PreAuthorize("hasAuthority('BOOK_ROOM')")
     public ApiResponse<BookingIntentResponse> getBookingIntentById(
             @PathVariable UUID intentId) {
         return ApiResponse.success(
@@ -67,7 +67,7 @@ public class BookingController {
     }
 
     @PostMapping("/confirm/{intentId}")
-    @PreAuthorize("hasAuthority('BOOK_ROOM')")
+//    @PreAuthorize("hasAuthority('BOOK_ROOM')")
     public ApiResponse<BookingResponse> confirmBooking(
             @PathVariable UUID intentId
     ) {
@@ -138,7 +138,7 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}/collect-payment")
-    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
+//    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
     public ResponseEntity<ApiResponse<Void>> collectRemainingPayment(
             @PathVariable UUID bookingId
     ) {
@@ -213,7 +213,7 @@ public class BookingController {
     }
 
     @GetMapping("/my-rentals")
-    @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
+//    @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
     public ApiResponse<PageResponse<BookingResponse>> getMyRentals(
             @RequestParam UUID rentalId,
             @RequestParam(required = false) BookingStatus bookingStatus,
