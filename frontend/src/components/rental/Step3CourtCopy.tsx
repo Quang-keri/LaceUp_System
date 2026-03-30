@@ -74,8 +74,21 @@ export default function Step3CourtCopy({ next, prev }: any) {
                 style={{ marginBottom: 20 }}
               >
                 <Divider>Danh sách sân cụ thể</Divider>
-                <Form.List name={[field.name, "courtCopies"]}>
-                  {(copyFields, { add, remove }) => (
+                <Form.List
+                  name={[field.name, "courtCopies"]}
+                  rules={[
+                    {
+                      validator: async (_, copies) => {
+                        if (!copies || copies.length < 1) {
+                          return Promise.reject(
+                            new Error("Phải có ít nhất 1 sân"),
+                          );
+                        }
+                      },
+                    },
+                  ]}
+                >
+                  {(copyFields, { add, remove }, { errors }) => (
                     <>
                       {copyFields.map((copyField) => (
                         <Space
@@ -86,7 +99,7 @@ export default function Step3CourtCopy({ next, prev }: any) {
                             {...copyField}
                             name={[copyField.name, "courtCode"]}
                             label="Mã sân"
-                            rules={[{ required: true, message: "Bắt buộc" }]}
+                            rules={[{ required: true, message: "Thêm mã sân" }]}
                           >
                             <Input placeholder="VD: Sân 1" />
                           </Form.Item>
@@ -110,13 +123,30 @@ export default function Step3CourtCopy({ next, prev }: any) {
                       >
                         Thêm sân cụ thể
                       </Button>
+                      <Form.ErrorList
+                        errors={errors}
+                        className="text-red-500 font-medium"
+                      />
                     </>
                   )}
                 </Form.List>
 
                 <Divider>Cấu hình giá</Divider>
-                <Form.List name={[field.name, "prices"]}>
-                  {(priceFields, { add, remove }) => (
+                <Form.List
+                  name={[field.name, "prices"]}
+                  rules={[
+                    {
+                      validator: async (_, prices) => {
+                        if (!prices || prices.length < 1) {
+                          return Promise.reject(
+                            new Error("Phải có ít nhất 1 khung giá"),
+                          );
+                        }
+                      },
+                    },
+                  ]}
+                >
+                  {(priceFields, { add, remove }, { errors }) => (
                     <>
                       {priceFields.map((p) => (
                         <Space
@@ -171,6 +201,10 @@ export default function Step3CourtCopy({ next, prev }: any) {
                       >
                         Thêm khung giá
                       </Button>
+                      <Form.ErrorList
+                        errors={errors}
+                        className="text-red-500 font-medium"
+                      />
                     </>
                   )}
                 </Form.List>
@@ -191,7 +225,15 @@ export default function Step3CourtCopy({ next, prev }: any) {
         <Button onClick={handlePrev} size="large">
           Quay lại
         </Button>
-        <Button type="primary" htmlType="submit" size="large">
+        <Button
+          type="primary"
+          htmlType="submit"
+          size="large"
+          style={{
+            background: "#9156F1",
+            borderColor: "#9156F1",
+          }}
+        >
           Tiếp tục
         </Button>
       </div>

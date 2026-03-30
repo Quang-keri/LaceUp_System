@@ -32,6 +32,9 @@ export default function CourtCard({ post, onClick }: any) {
             e.stopPropagation();
             onClick();
           }}
+          style={{
+            background: "#9156F1",
+          }}
         >
           Xem sân
         </Button>

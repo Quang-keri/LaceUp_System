@@ -55,7 +55,7 @@ export default function Step1BasicInfo({ next }: { next: () => void }) {
         <Result
           status="warning"
           title="Bạn cần tài khoản để tiếp tục"
-          subTitle="Để quản lý khu vực cho thuê và nhận thông báo đặt sân, vui lòng đăng nhập hoặc tạo tài khoản mới."
+          subTitle="Để quản lý khu vực và nhận thông báo đặt sân, vui lòng đăng nhập hoặc tạo tài khoản mới."
           extra={[
             <Button
               type="primary"
@@ -292,10 +292,17 @@ export default function Step1BasicInfo({ next }: { next: () => void }) {
               label="Ảnh khu vực chung"
               valuePropName="fileList"
               getValueFromEvent={normFile}
+              rules={[
+                {
+                  required: true,
+                  message:
+                    "Vui lòng tải lên ít nhất 1 và tối đa 3 ảnh khu vực chung",
+                },
+              ]}
             >
               <Upload
                 listType="picture-card"
-                maxCount={5}
+                maxCount={3}
                 multiple
                 beforeUpload={() => false}
               >
@@ -313,7 +320,11 @@ export default function Step1BasicInfo({ next }: { next: () => void }) {
           htmlType="submit"
           block
           size="large"
-          style={{ marginTop: 16 }}
+          style={{
+            marginTop: 16,
+            background: "#9156F1",
+            borderColor: "#9156F1",
+          }}
         >
           Tiếp tục
         </Button>

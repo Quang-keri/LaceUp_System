@@ -125,14 +125,13 @@ export default function Step5Legal({
             htmlType="submit"
             icon={<CheckCircleOutlined />}
             size="large"
-            loading={loading} // Hiển thị vòng xoay loading
+            loading={loading} 
             style={{
-              background: "#52c41a",
-              borderColor: "#52c41a",
-              flex: 1,
+              background: "#9156F1",
+              borderColor: "#9156F1",
             }}
           >
-            {loading ? "Đang xử lý..." : "Hoàn tất & Tạo khu vực"}
+            {loading ? "Đang xử lý vui lòng đợi 30 giây..." : "Hoàn tất & Tạo khu vực"}
           </Button>
         </div>
       </Form>

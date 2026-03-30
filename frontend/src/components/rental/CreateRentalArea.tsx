@@ -1,6 +1,6 @@
 // CreateRentalArea.tsx
-import React, { useState } from "react";
-import { Steps, Button, Flex, message } from "antd";
+import React, { useEffect, useState } from "react";
+import { Steps, Button, Flex, message, theme, ConfigProvider } from "antd";
 import {
   RentalFormProvider,
   useRentalForm,
@@ -15,13 +15,19 @@ import { useAuth } from "../../context/AuthContext";
 import rentalService from "../../service/rental/rentalService";
 import courtService from "../../service/courtService";
 import courtPriceService from "../../service/courtPriceService";
+import ScrollToTop from "../scoll/ScrollToTop";
 
 const FormContainer: React.FC = () => {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const { formData } = useRentalForm();
   const [loading, setLoading] = useState(false);
-
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth", // hoặc "auto" nếu không muốn animation
+    });
+  }, [currentStep]);
   const next = () => setCurrentStep(currentStep + 1);
   const prev = () => setCurrentStep(currentStep - 1);
 
@@ -65,7 +71,9 @@ const FormContainer: React.FC = () => {
 
       const rentalAreaId = rentalResponse.result.rentalAreaId;
       if (!rentalAreaId) {
-        message.error("Không tạo được dữ liệu tòa nhà có lỗi xảy ra , thử lại sau");
+        message.error(
+          "Không tạo được dữ liệu tòa nhà có lỗi xảy ra , thử lại sau",
+        );
         return;
       }
       for (const courtType of completeData.courts) {
@@ -161,8 +169,18 @@ const FormContainer: React.FC = () => {
 
 export default function CreateRentalAreaPage() {
   return (
-    <RentalFormProvider>
-      <FormContainer />
-    </RentalFormProvider>
+    <ConfigProvider
+      theme={{
+        token: {
+         
+          colorPrimary: "#722ed1", 
+          borderRadius: 6, 
+        },
+      }}
+    >
+      <RentalFormProvider>
+        <FormContainer />
+      </RentalFormProvider>
+    </ConfigProvider>
   );
 }

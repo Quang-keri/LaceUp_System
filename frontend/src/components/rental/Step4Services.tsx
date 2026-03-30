@@ -228,7 +228,10 @@ export default function Step4Services({
 
       <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
         <Button onClick={handlePrev}>Quay lại</Button>
-        <Button type="primary" htmlType="submit">
+        <Button type="primary" htmlType="submit" style={{
+            background: "#9156F1",
+            borderColor: "#9156F1",
+          }}>
           Tiếp tục
         </Button>
       </div>

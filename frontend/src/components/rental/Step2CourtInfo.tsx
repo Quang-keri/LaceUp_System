@@ -75,8 +75,19 @@ export default function Step2CourtInfo({
 
   return (
     <Form form={form} layout="vertical" onFinish={onFinish} autoComplete="off">
-      <Form.List name="courts">
-        {(fields, { add, remove }) => (
+      <Form.List
+        name="courts"
+        rules={[
+          {
+            validator: async (_, courts) => {
+              if (!courts || courts.length < 1) {
+                return Promise.reject(new Error("Phải có ít nhất 1 loại sân"));
+              }
+            },
+          },
+        ]}
+      >
+        {(fields, { add, remove }, { errors }) => (
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             {fields.map((field) => (
               <Card
@@ -113,7 +124,7 @@ export default function Step2CourtInfo({
                     {...field}
                     name={[field.name, "categoryId"]}
                     label="Môn thể thao"
-                    rules={[{ required: true }]}
+                    rules={[{ required: true, message: "Chọn môn thể thao" }]}
                   >
                     <Select placeholder="Chọn môn" style={{ width: 150 }}>
                       {categories.map((c: any) => (
@@ -149,6 +160,12 @@ export default function Step2CourtInfo({
                   {...field}
                   name={[field.name, "amenityIds"]}
                   label="Tiện ích"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Phải ít nhất có 1 tiện ích",
+                    },
+                  ]}
                 >
                   <Select mode="multiple" placeholder="Chọn tiện ích">
                     {amenities.map((a: any) => (
@@ -166,6 +183,10 @@ export default function Step2CourtInfo({
                   label="Hình ảnh thực tế (Tối đa 5 ảnh)"
                   valuePropName="fileList"
                   getValueFromEvent={normFile}
+                  rules={[{
+                    required : true,
+                    message :"Ít nhất 1 tấm ảnh và tối đa 5 tấm ảnh"
+                  }]}
                 >
                   <Upload
                     listType="picture-card"
@@ -191,6 +212,11 @@ export default function Step2CourtInfo({
             >
               THÊM LOẠI SÂN MỚI
             </Button>
+
+            <Form.ErrorList
+              errors={errors}
+              className="text-red-500 font-medium"
+            />
           </div>
         )}
       </Form.List>
@@ -206,7 +232,10 @@ export default function Step2CourtInfo({
         <Button onClick={handlePrev} size="large">
           Quay lại
         </Button>
-        <Button type="primary" htmlType="submit" size="large">
+        <Button type="primary" htmlType="submit" size="large"  style={{
+            background: "#9156F1",
+            borderColor: "#9156F1",
+          }} >
           Tiếp tục
         </Button>
       </div>
