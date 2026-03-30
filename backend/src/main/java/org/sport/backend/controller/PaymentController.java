@@ -2,12 +2,13 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.sport.backend.base.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.service.PaymentService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -15,17 +16,19 @@ import java.util.Map;
 @RestController
 @RequestMapping("/payments")
 @Tag(name = "11. Payment")
+@RequiredArgsConstructor
 public class PaymentController {
 
-    @Autowired
-    private PaymentService paymentService;
+    private final PaymentService paymentService;
 
     @PostMapping("/checkout")
-    public ApiResponse<?> checkout(
+    @PreAuthorize("hasAuthority('CREATE_PAYMENT')")
+    public ApiResponse<CheckoutResponse> checkout(
             @Valid @RequestBody CheckoutRequest request
     ) {
         try {
-            return ApiResponse.success(201,
+            return ApiResponse.success(
+                    201,
                     "Payment Checkout successfully",
                     paymentService.checkout(request)
             );
@@ -37,20 +40,20 @@ public class PaymentController {
 
 
     @PostMapping("/checkout-payment")
-    public ApiResponse<?> checkoutPayment(
+    @PreAuthorize("hasAuthority('CREATE_PAYMENT')")
+    public ApiResponse<CheckoutResponse> checkoutPayment(
             @Valid @RequestBody CheckoutRequest request
     ) {
         try {
-            return ApiResponse.success(201,
+            return ApiResponse.success(
+                    201,
                     "Payment Checkout successfully",
                     paymentService.checkoutPayment(request)
             );
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
-
     }
-
 
     @PostMapping("/payos/webhook")
     public ResponseEntity<Map<String, Object>> handlePayOsWebhook(

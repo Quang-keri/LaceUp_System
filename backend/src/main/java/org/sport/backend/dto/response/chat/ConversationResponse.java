@@ -14,7 +14,6 @@ import java.util.UUID;
 @NoArgsConstructor
 public class ConversationResponse {
     private UUID conversationId;
-    private String conversationTitle;
     private String lastMessage;
     private String lastSenderName;
     private UserChatResponse user1;

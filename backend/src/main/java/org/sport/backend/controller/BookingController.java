@@ -2,16 +2,21 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.sport.backend.base.ApiResponse;
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.BookingStatus;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
+import org.sport.backend.dto.response.booking.BookingIntentResponse;
+import org.sport.backend.dto.response.booking.BookingResponse;
+import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.InvoiceService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,33 +27,38 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/bookings")
 @Tag(name = "10. Booking")
+@RequiredArgsConstructor
 public class BookingController {
 
-    @Autowired
-    private BookingService bookingService;
-    @Autowired
-    private InvoiceService invoiceService;
+    private final BookingService bookingService;
+    private final InvoiceService invoiceService;
 
     @PostMapping("/check-availability")
-    public ApiResponse<?> checkAvailability(@RequestBody SlotRequest request) {
-        // Cứ gọi thẳng, lỗi thì Global Exception Handler sẽ tự lo
-        return ApiResponse.success(200, "Check availability successfully", bookingService.checkAvailability(request));
+    public ApiResponse<CheckAvailabilityResponse> checkAvailability(
+            @RequestBody @Valid SlotRequest request
+    ) {
+        return ApiResponse.success(
+                200,
+                "Check availability successfully",
+                bookingService.checkAvailability(request));
     }
 
-
     @PostMapping("/intent")
-    public ApiResponse<?> createIntent(
+    @PreAuthorize("hasAuthority('BOOK_ROOM')")
+    public ApiResponse<BookingIntentResponse> createIntent(
             @Valid @RequestBody BookingRequest request
     ) {
-
-        return ApiResponse.success(200, "Create booking intent successfully",
+        return ApiResponse.success(
+                200,
+                "Create booking intent successfully",
                 bookingService.createBookingIntent(request)
         );
     }
 
     @GetMapping("/intent/{intentId}")
-    public ApiResponse<?> getBookingIntentById(@PathVariable UUID intentId) {
-
+    @PreAuthorize("hasAuthority('BOOK_ROOM')")
+    public ApiResponse<BookingIntentResponse> getBookingIntentById(
+            @PathVariable UUID intentId) {
         return ApiResponse.success(
                 200,
                 "Get booking intent successfully",
@@ -57,29 +67,32 @@ public class BookingController {
     }
 
     @PostMapping("/confirm/{intentId}")
-    public ApiResponse<?> confirmBooking(
+    @PreAuthorize("hasAuthority('BOOK_ROOM')")
+    public ApiResponse<BookingResponse> confirmBooking(
             @PathVariable UUID intentId
     ) {
-
         return ApiResponse.success(
                 bookingService.confirmBooking(intentId, null)
         );
     }
 
     @GetMapping("/{bookingId}")
-    public ApiResponse<?> getBooking(@PathVariable UUID bookingId) {
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<BookingResponse> getBooking(
+            @PathVariable UUID bookingId) {
         try {
-            return ApiResponse.success(200,
+            return ApiResponse.success(
+                    200,
                     "Get booking by id successfully",
                     bookingService.getBookingById(bookingId));
-
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
     }
 
-
-    @GetMapping(value = "/{bookingId}/invoice/view", produces = MediaType.TEXT_HTML_VALUE)
+    @GetMapping(value = "/{bookingId}/invoice/view",
+            produces = MediaType.TEXT_HTML_VALUE)
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> viewInvoice(@PathVariable UUID bookingId) {
         try {
             var booking = bookingService.getBookingById(bookingId);
@@ -111,7 +124,10 @@ public class BookingController {
     }
 
     @GetMapping("/{bookingId}/invoice/download")
-    public ResponseEntity<byte[]> downloadInvoice(@PathVariable UUID bookingId) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> downloadInvoice(
+            @PathVariable UUID bookingId
+    ) {
         var booking = bookingService.getBookingById(bookingId);
         byte[] pdf = invoiceService.generateInvoicePdf(booking);
 
@@ -122,17 +138,26 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}/collect-payment")
-    public ResponseEntity<?> collectRemainingPayment(@PathVariable UUID bookingId) {
+    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
+    public ResponseEntity<ApiResponse<Void>> collectRemainingPayment(
+            @PathVariable UUID bookingId
+    ) {
         try {
             bookingService.collectRemainingPayment(bookingId);
-            return ResponseEntity.ok(ApiResponse.success(200,"Payment successfully",null));
+            return ResponseEntity.ok(ApiResponse.success(
+                    200,
+                    "Payment successfully",
+                    null));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(500,"Error when payment"+e.getMessage()));
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error(
+                            500, "Error when payment" + e.getMessage()));
         }
     }
 
     @GetMapping
-    public ApiResponse<?> getAllBooking(
+    @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
+    public ApiResponse<PageResponse<BookingResponse>> getAllBooking(
             @RequestParam(required = false) BookingStatus bookingStatus,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false)
@@ -142,17 +167,17 @@ public class BookingController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDate to,
             @RequestParam(defaultValue = "1", required = false) int page,
-            @RequestParam(defaultValue = "10", required = false) int size) {
+            @RequestParam(defaultValue = "10", required = false) int size
+    ) {
         try {
-
-            return ApiResponse.builder()
+            return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(200)
                     .message("Get all bookings successfully")
                     .result(bookingService.getAllBookings(bookingStatus, keyword, from, to, page, size))
                     .build();
         } catch (Exception e) {
             e.getStackTrace();
-            return ApiResponse.builder()
+            return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(500)
                     .message("Api system have some problems " + e.getMessage())
                     .build();
@@ -160,33 +185,27 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}")
-    public ApiResponse<?> updateBooking(
+    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
+    public ApiResponse<BookingResponse> updateBooking(
             @PathVariable UUID bookingId,
             @Valid @RequestBody UpdateBookingRequest request
     ) {
         try {
-
-
             if (request.getSlots() != null && !request.getSlots().isEmpty()) {
-                System.out.println("📍 Slot Times Received:");
                 for (int i = 0; i < request.getSlots().size(); i++) {
                     var slot = request.getSlots().get(i);
                     System.out.println("   Slot " + i + ": " + slot.getStartTime() + " → " + slot.getEndTime());
                 }
             }
 
-
-            return ApiResponse.builder()
+            return ApiResponse.<BookingResponse>builder()
                     .code(200)
                     .message("Update booking successfully")
                     .result(bookingService.updateBooking(bookingId, request))
                     .build();
 
         } catch (Exception e) {
-            System.err.println("ERROR in updateBooking: " + e.getMessage());
-            e.printStackTrace();
-
-            return ApiResponse.builder()
+            return ApiResponse.<BookingResponse>builder()
                     .code(500)
                     .message("Api system have some problems " + e.getMessage())
                     .build();
@@ -194,7 +213,8 @@ public class BookingController {
     }
 
     @GetMapping("/my-rentals")
-    public ApiResponse<?> getMyRentals(
+    @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
+    public ApiResponse<PageResponse<BookingResponse>> getMyRentals(
             @RequestParam UUID rentalId,
             @RequestParam(required = false) BookingStatus bookingStatus,
             @RequestParam(required = false) String keyword,
@@ -205,17 +225,17 @@ public class BookingController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDate to,
             @RequestParam(defaultValue = "1", required = false) int page,
-            @RequestParam(defaultValue = "10", required = false) int size) {
+            @RequestParam(defaultValue = "10", required = false) int size
+    ) {
         try {
-
-            return ApiResponse.builder()
+            return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(200)
                     .message("Get all bookings of rental successfully")
                     .result(bookingService.getBookingsRentalId(rentalId, bookingStatus, keyword, from, to, page, size))
                     .build();
         } catch (Exception e) {
             e.getStackTrace();
-            return ApiResponse.builder()
+            return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(500)
                     .message("Api system have some problems " + e.getMessage())
                     .build();
@@ -223,8 +243,8 @@ public class BookingController {
     }
 
     @GetMapping("/my-bookings")
-    public ApiResponse<?> getMyBookings(
-            @RequestParam UUID userId,
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<PageResponse<BookingResponse>> getMyBookings(
             @RequestParam(required = false) BookingStatus bookingStatus,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false)
@@ -234,17 +254,17 @@ public class BookingController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDate to,
             @RequestParam(defaultValue = "1", required = false) int page,
-            @RequestParam(defaultValue = "10", required = false) int size) {
+            @RequestParam(defaultValue = "10", required = false) int size
+    ) {
         try {
-
-            return ApiResponse.builder()
+            return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(200)
                     .message("Get all bookings of me successfully")
-                    .result(bookingService.getMyBookings(userId, bookingStatus, keyword, from, to, page, size))
+                    .result(bookingService.getMyBookings(bookingStatus, keyword, from, to, page, size))
                     .build();
         } catch (Exception e) {
             e.getStackTrace();
-            return ApiResponse.builder()
+            return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(500)
                     .message("Api system have some problems " + e.getMessage())
                     .build();

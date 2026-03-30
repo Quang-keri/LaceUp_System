@@ -25,7 +25,10 @@ export default function PostDetailModal({ open, onClose, post }: any) {
       <Descriptions bordered column={1}>
         <Descriptions.Item label="Tiêu đề">{post.title}</Descriptions.Item>
         <Descriptions.Item label="Tên sân">{post.courtName}</Descriptions.Item>
-        <Descriptions.Item label="Địa chỉ">{post.address}</Descriptions.Item>
+        <Descriptions.Item label="Địa chỉ">
+          {post.address.street}, {post.address.ward}, {post.address.district},{" "}
+          {post.address.city.cityName}
+        </Descriptions.Item>
         <Descriptions.Item label="Giá thuê">
           <Typography.Text type="danger" strong>
             {post.price?.toLocaleString()} VND

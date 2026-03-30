@@ -33,7 +33,7 @@ export const useChat = (
   const loadConversations = async () => {
     if (!currentUserId) return;
     setLoading(true);
-    const res = await chatService.getUserConversations(currentUserId);
+    const res = await chatService.getUserConversations();
     if (res.result && Array.isArray(res.result)) {
       const mapped = res.result.map((c: any) => {
         const other = c.user1?.userId === currentUserId ? c.user2 : c.user1;

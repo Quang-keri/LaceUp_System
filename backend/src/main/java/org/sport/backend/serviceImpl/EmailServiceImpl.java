@@ -11,7 +11,7 @@ import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.repository.UserRepository;
 import org.sport.backend.repository.mongo.TemporaryRegistrationRepository;
 import org.sport.backend.service.EmailService;
-import org.springframework.boot.mail.autoconfigure.MailProperties;
+import org.springframework.boot.autoconfigure.mail.MailProperties;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;

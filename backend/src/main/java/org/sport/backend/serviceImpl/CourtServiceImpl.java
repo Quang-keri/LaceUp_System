@@ -1,6 +1,6 @@
 package org.sport.backend.serviceImpl;
 
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.CourtCopyStatus;
 import org.sport.backend.constant.CourtStatus;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;

@@ -13,13 +13,13 @@ public interface ChatService {
 
     MessageResponse saveMessageWithFile(MessageRequest request, String currentUserEmail, MultipartFile file);
 
-    List<ConversationResponse> getUserConversations(UUID userId);
+    List<ConversationResponse> getUserConversations();
 
     List<MessageResponse> getMessagesByConversation(
             UUID conversationId, String currentUser, int page, int size);
 
     ConversationResponse getConversationById(UUID conversationId);
 
-    void markAllMessagesInConversationAsRead(UUID conversationId, UUID recipientId);
+    void markAllMessagesInConversationAsRead(UUID conversationId);
 
 }

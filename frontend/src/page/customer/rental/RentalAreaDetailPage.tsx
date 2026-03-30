@@ -32,8 +32,8 @@ export default function RentalAreaDetailPage() {
     if (user) {
       setUserInfo((prev) => ({
         ...prev,
-        userName: user.userName || user.fullName || prev.userName,
-        userPhone: user.phone || user.phoneNumber || prev.userPhone,
+        userName: user.userName || prev.userName,
+        userPhone: user.phone || prev.userPhone,
       }));
     }
   }, [user]);
@@ -92,7 +92,7 @@ export default function RentalAreaDetailPage() {
     }));
 
     const payload = {
-      userId: user?.id || user?.userId || null,
+      userId: user?.userId || null,
       userName: userInfo.userName.trim(),
       userPhone: userInfo.userPhone.trim(),
       note: userInfo.note,
@@ -186,11 +186,13 @@ export default function RentalAreaDetailPage() {
     if (!rules || rules.length === 0) return [];
 
     return rules.map((rule, index) => {
-      // Hàm format HH:mm:ss -> HH:mm
-      const formatTime = (timeStr: string) =>
-        timeStr ? timeStr.substring(0, 5) : "";
+      const formatTime = (timeStr: any) => {
+        if (timeStr && typeof timeStr === "string") {
+          return timeStr.substring(0, 5);
+        }
+        return timeStr ? String(timeStr).substring(0, 5) : "--:--";
+      };
 
-      // Dịch loại giá
       let typeLabel = rule.priceType;
       if (rule.priceType === "NORMAL") typeLabel = "Ngày thường";
       if (rule.priceType === "WEEKEND") typeLabel = "Cuối tuần / Lễ";
@@ -226,8 +228,8 @@ export default function RentalAreaDetailPage() {
               <h1 className="text-2xl font-bold text-gray-800">
                 {data.rentalName}
               </h1>
-              <p className="text-gray-500 flex items-center gap-2 mt-1">
-                <span className="text-[#9156F1]"></span> {data.address}
+              <p className="text-gray-500 text-sm line-clamp-1">
+                {`${data.address.street}, ${data.address.ward}, ${data.address.district}, ${data.address.city.cityName}`}
               </p>
             </div>
 

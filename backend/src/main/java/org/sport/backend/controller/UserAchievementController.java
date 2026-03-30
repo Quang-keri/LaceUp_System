@@ -3,7 +3,7 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sport.backend.base.ApiResponse;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.response.user.UserAchievementResponse;
 import org.sport.backend.service.UserAchievementService;
 import org.springframework.http.ResponseEntity;

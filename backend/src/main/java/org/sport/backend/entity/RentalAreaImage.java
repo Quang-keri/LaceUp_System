@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
-import org.sport.backend.base.BaseEntity;
+import org.sport.backend.dto.base.BaseEntity;
 
 import java.util.UUID;
 
@@ -30,7 +30,7 @@ public class RentalAreaImage extends BaseEntity {
     @Column(name = "image_url", length = 500, nullable = false)
     String imageUrl;
 
-    @Column(name = "public_id", length = 255, nullable = false)
+    @Column(name = "public_id", nullable = false)
     String publicId;
 
     @Builder.Default

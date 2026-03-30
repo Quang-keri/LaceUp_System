@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.match;
 
 import lombok.Builder;
 import lombok.Data;
+import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.constant.MatchType;
 
@@ -15,7 +16,7 @@ public class MatchResponse {
     private UUID matchId;
     private String courtName;
     private String courtPrice;
-    private String address;
+    private AddressResponse address;
     private String categoryName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

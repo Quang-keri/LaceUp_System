@@ -1,0 +1,23 @@
+"Nội quy khu vực sân bóng của LaceUP: Để bảo vệ chất lượng mặt sân cỏ nhân tạo, khách hàng tuyệt đối không sử dụng giày đinh sắt (đinh SG), chỉ được phép sử dụng giày đinh dăm (TF), đinh tán (AG) hoặc giày đế bằng (IC/Futsal). Không mang theo đồ ăn, thức uống có cồn và các chất dễ cháy nổ vào khu vực thi đấu. Khách hàng vui lòng có mặt trước giờ đá 10 phút để nhận sân từ ban quản lý."
+
+"Quy định đặt sân và hủy lịch tại hệ thống LaceUP: Để xác nhận giữ sân, khách hàng cần thanh toán cọc trước 50% hoặc thanh toán 25% giá trị đơn đặt. Nếu khách hàng có việc đột xuất và muốn hủy lịch, vui lòng thao tác hủy trên hệ thống hoặc liên hệ hotline trước 4 giờ so với giờ bắt đầu đá để được hoàn lại 100% tiền cọc. Nếu khách hàng báo hủy trong vòng chưa tới 4 giờ trước trận đấu, LaceUP xin phép không hỗ trợ hoàn lại tiền cọc."
+
+"Chính sách điểm thưởng và thanh toán của LaceUP: Khách hàng khi đăng ký tài khoản và đặt sân thành công sẽ được tích lũy Điểm hạng (Rank Point) để nhận các ưu đãi giảm giá. Ngoài ra, LaceUP hỗ trợ tính năng Ví điện tử nội bộ. Khách hàng có thể nạp tiền trước vào ví nội bộ này để thao tác đặt sân và thanh toán diễn ra nhanh chóng, tiện lợi hơn mà không cần qua cổng ngân hàng nhiều lần."
+
+"Giới thiệu về LaceUP: LaceUP là nền tảng đặt sân thể thao thông minh hàng đầu, kết nối người chơi thể thao với các chủ sân một cách nhanh chóng. Thời gian trực tổng đài hỗ trợ khách hàng của LaceUP là từ 06:00 sáng đến 23:00 đêm hàng ngày. Mọi thắc mắc về sự cố đặt sân, phàn nàn chất lượng dịch vụ hoặc cần hỗ trợ khẩn cấp, vui lòng gọi ngay Hotline CSKH: 1900 9999."
+
+Khuyến mãi & Voucher: "Đang có mã giảm giá nào cho người mới không?" -> Bạn nạp các chương trình khuyến mãi đang chạy trong DB vào.
+
+Cộng đồng / Tìm kèo: "Tối nay ở Quận 9 có kèo bóng đá sân 5 nào đang thiếu người không?" -> Nếu hệ thống LaceUP của bạn có tính năng "Tìm đối tác/Tìm kèo", bạn có thể nạp các bài post tìm kèo vào Vector DB.
+
+Lịch sử & Cá nhân (Cấp độ Khó): "Tôi đang có bao nhiêu điểm tích lũy?" hoặc "Tuần trước tôi đá ở sân nào nhỉ?" -> Để làm được cái này, AI cần biết người đang chat là ai (truyền User ID vào prompt) và dùng tính năng Function Calling để gọi thẳng vào DB query ra số dư.
+
+"Luật việt vị sân 11 người là như thế nào?"
+
+"Trước khi đá bóng cần khởi động các bài tập nào để không bị căng cơ?"
+
+"Kích thước chuẩn của sân cầu lông đánh đôi là bao nhiêu?"
+
+Khách hỏi: "Sân Pro lúc 19h tối nay còn trống không?" -> Bot hiện tại sẽ KHÔNG biết, vì tình trạng Book sân thay đổi từng phút, bạn không thể nạp file Text liên tục được.
+
+Khách bảo: "Đặt cho mình sân Pro lúc 19h tối nay nhé" -> Bot hiện tại sẽ từ chối và bảo khách tự lên web bấm đặt.

@@ -2,7 +2,7 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.sport.backend.base.ApiResponse;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.request.chat.MessageRequest;
 import org.sport.backend.dto.response.chat.ConversationResponse;
 import org.sport.backend.dto.response.chat.MessageResponse;
@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,23 +28,24 @@ public class ChatController {
     private final ChatService chatService;
 
     @MessageMapping("/chat")
+    @PreAuthorize("isAuthenticated()")
     public void processMessage(@Payload MessageRequest messageRequest, Principal principal) {
-        System.err.println("Received message: " + messageRequest + " from user: " + principal.getName());
         if (principal == null) {
             throw new RuntimeException("User not authenticated in WebSocket");
         }
         chatService.saveMessage(messageRequest, principal.getName());
     }
 
-    @GetMapping("/conversations/{userId}")
-    public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversations(
-            @PathVariable UUID userId) {
+    @GetMapping("/conversations")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversations() {
         return ResponseEntity.ok(ApiResponse.<List<ConversationResponse>>builder()
-                .result(chatService.getUserConversations(userId))
+                .result(chatService.getUserConversations())
                 .build());
     }
 
     @GetMapping("/history/{conversationId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<MessageResponse>>> getHistory(
             @PathVariable UUID conversationId,
             @RequestParam(defaultValue = "0") int page,
@@ -56,6 +58,7 @@ public class ChatController {
     }
 
     @GetMapping("/conversation/{conversationId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ConversationResponse>> getConversation(
             @PathVariable UUID conversationId) {
         return ResponseEntity.ok(ApiResponse.<ConversationResponse>builder()
@@ -64,17 +67,19 @@ public class ChatController {
     }
 
     @PatchMapping("/conversations/{conversationId}/read")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> markConversationAsRead(
-            @PathVariable UUID conversationId,
-            @RequestParam UUID userId) {
-
-        chatService.markAllMessagesInConversationAsRead(conversationId, userId);
+            @PathVariable UUID conversationId
+    ) {
+        chatService.markAllMessagesInConversationAsRead(conversationId);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .message("Conversation marked as read")
                 .build());
     }
 
-    @PostMapping(value = "/send-with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/send-with-image",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<MessageResponse>> sendMessageWithImage(
             @RequestPart("data") MessageRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file,

@@ -2,7 +2,6 @@ server:
   port: ${SERVER_PORT}
   servlet:
     context-path: ${SERVER_SERVLET_CONTEXT_PATH}
-
     multipart:
       enabled: true
       max-file-size: 10MB
@@ -37,7 +36,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -46,6 +45,28 @@ spring:
   mongodb:
     uri: ${SPRING_DATA_MONGODB_URI}
     auto-index-creation: true
+
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        chat:
+          options:
+            model: gemma-3-27b-it
+            temperature: 0.7
+
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 384
+
+    embedding:
+      transformer:
+        onnx:
+          model-uri: classpath:/models/model.onnx
+          tokenizer-uri: classpath:/models/tokenizer.json
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
@@ -67,3 +88,9 @@ logging:
     name: logs/app.log
   level:
     org.sport.backend: INFO
+
+app:
+  ai:
+    vector:
+      threshold: 0.1
+      top-k: 5

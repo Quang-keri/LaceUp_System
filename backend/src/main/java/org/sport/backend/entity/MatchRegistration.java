@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.sport.backend.base.BaseEntity;
+import org.sport.backend.dto.base.BaseEntity;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

@@ -1,6 +1,7 @@
 package org.sport.backend.serviceImpl;
 
-import org.sport.backend.base.PageResponse;
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.PostStatus;
 import org.sport.backend.dto.request.post.CreatePostRequest;
 import org.sport.backend.dto.request.post.PostFilterRequest;
@@ -11,6 +12,7 @@ import org.sport.backend.dto.response.post.PostSummaryResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
+import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.CourtRepository;
 import org.sport.backend.repository.PostRepository;
 import org.sport.backend.repository.RentalAreaRepository;
@@ -18,7 +20,6 @@ import org.sport.backend.repository.UserRepository;
 import org.sport.backend.service.PostService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.PostSpecification;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,27 +28,21 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class PostServiceImpl implements PostService {
 
-    @Autowired
-    private PostRepository postRepository;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+    private final CourtRepository courtRepository;
+    private final RentalAreaRepository rentalAreaRepository;
 
-    @Autowired
-    private UserService userService;
+    private final AddressMapper addressMapper;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private CourtRepository courtRepository;
-
-    @Autowired
-    private RentalAreaRepository rentalAreaRepository;
+    private final UserService userService;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -94,10 +89,8 @@ public class PostServiceImpl implements PostService {
 
         Specification<Post> spec = PostSpecification.filterByCriteria(filterRequest);
 
-        // 3. Query
         Page<Post> postPage = postRepository.findAll(spec, pageable);
 
-        // 4. Map to DTO
         List<PostSummaryResponse> data = postPage.getContent()
                 .stream()
                 .map(this::mapToSummary)
@@ -122,7 +115,9 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public List<PostSummaryResponse> getMyPosts(UUID userId, String status) {
+    public List<PostSummaryResponse> getMyPosts(String status) {
+
+        UUID userId = userService.getCurrentUserEntity().getUserId();
 
         List<Post> posts = postRepository.findByUser_UserId(userId);
 
@@ -130,6 +125,7 @@ public class PostServiceImpl implements PostService {
                 .map(this::mapToSummary)
                 .toList();
     }
+
     private PostSummaryResponse mapToSummary(Post post) {
         Court court = post.getCourt();
         RentalArea rentalArea = post.getRentalArea();
@@ -169,15 +165,17 @@ public class PostServiceImpl implements PostService {
 
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
-                .address(rentalArea.getAddress())
+                .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
                 .build();
     }
+
     @Override
-    public PostDetailResponse getMyPostDetail(UUID postId, UUID userId) {
+    public PostDetailResponse getMyPostDetail(UUID postId) {
+
+        UUID userId = userService.getCurrentUserEntity().getUserId();
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
-
 
         if (!post.getUser().getUserId().equals(userId)) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -185,10 +183,13 @@ public class PostServiceImpl implements PostService {
 
         return mapToDetail(post);
     }
+
     @Override
-    public PostResponse updateMyPost(UUID postId,
-                                     UpdatePostRequest request,
-                                     UUID userId) {
+    public PostResponse updateMyPost(
+            UUID postId,
+            UpdatePostRequest request
+    ) {
+        UUID userId = userService.getCurrentUserEntity().getUserId();
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
@@ -210,6 +211,7 @@ public class PostServiceImpl implements PostService {
 
         return mapToResponse(post);
     }
+
     private PostResponse mapToResponse(Post post) {
 
         return PostResponse.builder()
@@ -223,9 +225,6 @@ public class PostServiceImpl implements PostService {
                 .createdAt(post.getCreatedAt())
                 .build();
     }
-
-
-
 
     private PostDetailResponse mapToDetail(Post post) {
 
@@ -241,7 +240,9 @@ public class PostServiceImpl implements PostService {
                 .build();
     }
 
-    public void deleteMyPost(UUID postId, UUID userId) {
+    public void deleteMyPost(UUID postId) {
+
+        UUID userId = userService.getCurrentUserEntity().getUserId();
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found"));
 

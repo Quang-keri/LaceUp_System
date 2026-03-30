@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
-import org.sport.backend.base.BaseEntity;
+import org.sport.backend.dto.base.BaseEntity;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,9 +22,6 @@ public class Conversation extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     UUID conversationId;
-
-    @Column(name = "conversation_title", length = 200)
-    String conversationTitle;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user1", referencedColumnName = "user_id")

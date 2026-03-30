@@ -1,6 +1,6 @@
 package org.sport.backend.service;
 
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
@@ -32,7 +32,7 @@ public interface BookingService {
 
     PageResponse<BookingResponse> getBookingsRentalId(UUID rentalId, BookingStatus bookingStatus, String keyword, LocalDate from, LocalDate to, int page, int size);
 
-    PageResponse<BookingResponse> getMyBookings(UUID userId, BookingStatus bookingStatus, String keyword, LocalDate from, LocalDate to, int page, int size);
+    PageResponse<BookingResponse> getMyBookings(BookingStatus bookingStatus, String keyword, LocalDate from, LocalDate to, int page, int size);
 
     BookingResponse updateBooking(UUID bookingId, UpdateBookingRequest request);
 

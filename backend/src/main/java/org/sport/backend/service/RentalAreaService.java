@@ -1,6 +1,6 @@
 package org.sport.backend.service;
 
-import org.sport.backend.base.PageResponse;
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;

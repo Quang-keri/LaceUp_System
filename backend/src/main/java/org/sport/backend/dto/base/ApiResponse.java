@@ -1,4 +1,4 @@
-package org.sport.backend.base;
+package org.sport.backend.dto.base;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -11,11 +11,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiResponse<T>{
-   @Builder.Default
-    private int code = 1000 ;
+public class ApiResponse<T> {
+    @Builder.Default
+    private int code = 1000;
     private String message;
     private T result;
+
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(0, "success", data);
     }
@@ -24,7 +25,7 @@ public class ApiResponse<T>{
         return new ApiResponse<>(0, message, data);
     }
 
-    public static <T> ApiResponse<T> success(int code,String message, T data) {
+    public static <T> ApiResponse<T> success(int code, String message, T data) {
         return new ApiResponse<>(code, message, data);
     }
 

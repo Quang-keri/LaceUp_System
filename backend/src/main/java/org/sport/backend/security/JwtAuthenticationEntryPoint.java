@@ -3,7 +3,7 @@ package org.sport.backend.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.sport.backend.base.ApiResponse;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.exception.ErrorCode;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
