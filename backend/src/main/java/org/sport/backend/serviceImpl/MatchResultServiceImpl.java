@@ -29,8 +29,11 @@ public class MatchResultServiceImpl implements MatchResultService {
     private final MatchResultRepository matchResultRepository;
     private final MatchRepository matchRepository;
     private final MatchRegistrationRepository registrationRepository;
-    private final UserStatsRepository userStatsRepository;
     private final UserRepository userRepository;
+
+    // THÊM: Repository mới để xử lý rank theo từng môn
+    private final UserCategoryRankRepository userCategoryRankRepository;
+
     private final UserService userService;
     private final MatchResultMapper matchResultMapper;
 
@@ -93,7 +96,7 @@ public class MatchResultServiceImpl implements MatchResultService {
             result.setStatus(ResultStatus.APPROVED);
             match.setStatus(MatchStatus.COMPLETED);
 
-            refundDeposits(match);
+//            refundDeposits(match);
 
             // Xử lý cộng điểm hoặc chia tiền
             if (match.getMatchType() == MatchType.RANKED) {
@@ -115,58 +118,76 @@ public class MatchResultServiceImpl implements MatchResultService {
         return matchResultMapper.toResponseList(matchResultRepository.findByMatch_MatchId(matchId));
     }
 
-    // --- LOGIC RANK ---
+    // --- LOGIC RANK --- ĐÃ CẬP NHẬT ĐỂ DÙNG UserCategoryRank ---
     private void processRankedMatch(MatchResult result) {
-        List<MatchRegistration> registrations = registrationRepository.findByMatch(result.getMatch());
+        Match match = result.getMatch();
+        Court court = match.getCourt();
+
+        // Kiểm tra an toàn: Đảm bảo trận đấu có sân và sân đó thuộc một môn thể thao (Category)
+        if (court == null || court.getCategory() == null) {
+            log.error("Lỗi cập nhật Rank: Trận đấu {} không xác định được môn thể thao", match.getMatchId());
+            return;
+        }
+
+        Category category = court.getCategory();
+        List<MatchRegistration> registrations = registrationRepository.findByMatch(match);
         List<UUID> winners = result.getWinnerIds();
         List<UUID> losers = result.getLoserIds();
 
         for (MatchRegistration reg : registrations) {
             User user = reg.getUser();
-            UserStats stats = userStatsRepository.findById(user.getUserId())
-                    .orElse(UserStats.builder().user(user).build());
-
-            int currentPoints = user.getRankPoint() != null ? user.getRankPoint() : 0;
             boolean isWinner = winners.contains(user.getUserId());
 
-            // 1. Tính toán điểm cộng/trừ dựa trên độ khó và tỉ lệ thắng
-            int pointChange = calculatePointChange(currentPoints, stats, isWinner);
+            // 1. Tìm Rank của User ở môn thể thao này. Nếu chưa từng chơi, tạo mới mặc định
+            UserCategoryRank userRank = userCategoryRankRepository
+                    .findByUser_UserIdAndCategory_CategoryId(user.getUserId(), category.getCategoryId())
+                    .orElse(UserCategoryRank.builder()
+                            .user(user)
+                            .category(category)
+                            .rankPoint(0)
+                            .totalMatches(0)
+                            .totalWins(0)
+                            .currentWinStreak(0)
+                            .build());
 
-            // 2. Cập nhật điểm mới
+            int currentPoints = userRank.getRankPoint() != null ? userRank.getRankPoint() : 0;
+
+            // 2. Tính toán điểm cộng/trừ
+            int pointChange = calculatePointChange(currentPoints, userRank, isWinner);
+
+            // 3. Tính điểm mới và áp dụng LOGIC BẢO VỆ RỚT HẠNG
             int newPoints = currentPoints + pointChange;
-
-            // 3. LOGIC BẢO VỆ RỚT HẠNG (Chỉ áp dụng dưới 3000 điểm)
             if (!isWinner && currentPoints < 3000) {
-                int currentTierMinPoints = (currentPoints / 500) * 500; // Đáy của rank hiện tại (VD: Vàng là 1500)
-
-                // Nếu điểm mới rơi xuống dưới đáy Rank hiện tại -> Giữ lại ở mức đáy (Không rớt hạng)
+                int currentTierMinPoints = (currentPoints / 500) * 500;
                 if (newPoints < currentTierMinPoints) {
                     newPoints = currentTierMinPoints;
                 }
             }
 
-            user.setRankPoint(Math.max(0, newPoints)); // Đảm bảo điểm không bao giờ âm
-            userRepository.save(user);
+            // 4. Lưu lại điểm mới (Đảm bảo không âm)
+            userRank.setRankPoint(Math.max(0, newPoints));
 
-            // Cập nhật Stats
-            stats.setTotalMatches(stats.getTotalMatches() + 1);
+            // 5. Cập nhật Stats riêng cho môn thể thao này
+            userRank.setTotalMatches(userRank.getTotalMatches() + 1);
             if (isWinner) {
-                stats.setTotalWins(stats.getTotalWins() + 1);
-                stats.setCurrentWinStreak(stats.getCurrentWinStreak() + 1);
+                userRank.setTotalWins(userRank.getTotalWins() + 1);
+                userRank.setCurrentWinStreak(userRank.getCurrentWinStreak() + 1);
             } else {
-                stats.setCurrentWinStreak(0);
+                userRank.setCurrentWinStreak(0);
             }
-            userStatsRepository.save(stats);
+
+            // 6. Lưu xuống DB
+            userCategoryRankRepository.save(userRank);
         }
     }
 
-    private int calculatePointChange(int currentPoints, UserStats stats, boolean isWinner) {
+    // Cập nhật tham số nhận vào là UserCategoryRank thay vì UserStats
+    private int calculatePointChange(int currentPoints, UserCategoryRank userRank, boolean isWinner) {
         int tierIndex = Math.min(currentPoints / 500, 6); // 0=Sắt, 5=Kim Cương, 6=Cao Thủ+
 
         int gain = 0;
         int loss = 0;
 
-        // Càng lên cao, cộng càng ít, trừ càng nhiều
         switch (tierIndex) {
             case 0: // Sắt
             case 1: // Đồng
@@ -185,35 +206,33 @@ public class MatchResultServiceImpl implements MatchResultService {
             case 5: // Kim Cương
                 gain = 15;
                 loss = -25;
-                // Ở Kim Cương, áp dụng thêm Win Rate (Tỉ lệ thắng)
-                double winRate = stats.getTotalMatches() > 0
-                        ? (double) stats.getTotalWins() / stats.getTotalMatches() : 0.5;
+                // Tính tỉ lệ thắng trên rank của MÔN NÀY
+                double winRate = userRank.getTotalMatches() > 0
+                        ? (double) userRank.getTotalWins() / userRank.getTotalMatches() : 0.5;
 
-                if (winRate > 0.55) { // Đánh hay, tỉ lệ thắng cao -> Cho lên rank nhanh hơn
+                if (winRate > 0.55) {
                     gain += 5;
-                    loss += 5; // Trừ ít đi (Ví dụ: -25 + 5 = -20)
-                } else if (winRate < 0.45) { // Thua nhiều -> Phạt nặng hơn
+                    loss += 5; // Trừ ít đi
+                } else if (winRate < 0.45) {
                     gain -= 5;
-                    loss -= 5; // Trừ nặng hơn (Ví dụ: -25 - 5 = -30)
+                    loss -= 5; // Trừ nặng hơn
                 }
                 break;
-            default: // Cao Thủ trở lên (>= 3000)
+            default: // Cao Thủ trở lên
                 gain = 10;
-                loss = -30; // Chế độ sinh tồn khắc nghiệt
+                loss = -30;
                 break;
         }
 
         return isWinner ? gain : loss;
     }
 
+    // --- CÁC HÀM XỬ LÝ TIỀN CƯỢC / HOÀN CỌC GIỮ NGUYÊN ---
     private void processBetMatch(MatchResult result) {
         Match match = result.getMatch();
         if (match.getCourt() == null || match.getStartTime() == null || match.getEndTime() == null) return;
 
-        // 1. Tính tổng tiền sân dựa trên khung giờ
         BigDecimal totalPrice = calculateTotalCourtPrice(match);
-
-        // 2. Tính tỷ lệ chia tiền (WinnerPercent là % phe Thắng phải trả)
         double winnerPercentVal = match.getWinnerPercent() != null ? match.getWinnerPercent() : 50.0;
         BigDecimal winnerRatio = BigDecimal.valueOf(winnerPercentVal).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
         BigDecimal loserRatio = BigDecimal.ONE.subtract(winnerRatio);
@@ -221,13 +240,11 @@ public class MatchResultServiceImpl implements MatchResultService {
         List<UUID> winners = result.getWinnerIds();
         List<UUID> losers = result.getLoserIds();
 
-        // 3. Tính toán số tiền mỗi cá nhân phải trả
         BigDecimal payPerWinner = calculatePayPerPerson(totalPrice, winnerRatio, winners);
         BigDecimal payPerLoser = calculatePayPerPerson(totalPrice, loserRatio, losers);
 
-        // 4. Thực hiện trừ tiền trực tiếp vào ví giả (fakeMoney)
-        updateUserWallets(winners, payPerWinner, "Trừ tiền sân (Phe Thắng - " + winnerPercentVal + "%)");
-        updateUserWallets(losers, payPerLoser, "Trừ tiền sân (Phe Thua - " + (100 - winnerPercentVal) + "%)");
+//        updateUserWallets(winners, payPerWinner, "Trừ tiền sân (Phe Thắng - " + winnerPercentVal + "%)");
+//        updateUserWallets(losers, payPerLoser, "Trừ tiền sân (Phe Thua - " + (100 - winnerPercentVal) + "%)");
 
         log.info("=== ĐÃ TRỪ TIỀN KÈO TRẬN {} ===", match.getMatchId());
         log.info("Tổng: {} VNĐ | Thắng trả: {}/ng | Thua trả: {}/ng", totalPrice, payPerWinner, payPerLoser);
@@ -239,30 +256,28 @@ public class MatchResultServiceImpl implements MatchResultService {
         return totalSidePay.divide(BigDecimal.valueOf(ids.size()), 0, RoundingMode.HALF_UP);
     }
 
-    private void updateUserWallets(List<UUID> userIds, BigDecimal amount, String reason) {
-        if (userIds == null || userIds.isEmpty() || amount.compareTo(BigDecimal.ZERO) <= 0) return;
-
-        List<User> users = userRepository.findAllById(userIds);
-
-        for (User user : users) {
-            BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
-
-            user.setFakeMoney(currentBalance.subtract(amount));
-
-            // --- BẮT LOG RA FILE TẠI ĐÂY ---
-            log.info("[TRANSACTION] - MINUS | Tác vụ: TRẢ TIỀN SÂN | User: {} ({}) | Số tiền: -{} VNĐ | Lý do: {} | Trận: {} | Số dư mới: {}",
-                    user.getUserName(),
-                    user.getUserId(),
-                    amount,
-                    reason,
-                    user.getFakeMoney());
-            // -------------------------------
-
-            log.info("[Wallet Update] User: {} | Amount: -{} | Reason: {} | New Balance: {}",
-                    user.getUserName(), amount, reason, user.getFakeMoney());
-        }
-        userRepository.saveAll(users);
-    }
+//    private void updateUserWallets(List<UUID> userIds, BigDecimal amount, String reason) {
+//        if (userIds == null || userIds.isEmpty() || amount.compareTo(BigDecimal.ZERO) <= 0) return;
+//
+//        List<User> users = userRepository.findAllById(userIds);
+//
+//        for (User user : users) {
+//            BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
+//
+//            user.setFakeMoney(currentBalance.subtract(amount));
+//
+//            log.info("[TRANSACTION] - MINUS | Tác vụ: TRẢ TIỀN SÂN | User: {} ({}) | Số tiền: -{} VNĐ | Lý do: {} | Trận: {} | Số dư mới: {}",
+//                    user.getUserName(),
+//                    user.getUserId(),
+//                    amount,
+//                    reason,
+//                    user.getFakeMoney());
+//
+//            log.info("[Wallet Update] User: {} | Amount: -{} | Reason: {} | New Balance: {}",
+//                    user.getUserName(), amount, reason, user.getFakeMoney());
+//        }
+//        userRepository.saveAll(users);
+//    }
 
     private BigDecimal calculateTotalCourtPrice(Match match) {
         List<CourtPrice> prices = match.getCourt().getCourtPrices();
@@ -278,46 +293,40 @@ public class MatchResultServiceImpl implements MatchResultService {
 
         BigDecimal pricePerHour = courtPrice.getPricePerHour();
 
-        // Tính số giờ (Duration)
         long durationMinutes = java.time.Duration.between(match.getStartTime(), match.getEndTime()).toMinutes();
         BigDecimal hours = BigDecimal.valueOf(durationMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
         return pricePerHour.multiply(hours);
     }
 
-    private void refundDeposits(Match match) {
-        // Tính lại đúng số tiền đã cọc lúc trước để hoàn trả
-        BigDecimal totalPrice = calculateTotalCourtPrice(match);
-        BigDecimal depositAmount = BigDecimal.ZERO;
-
-        if (totalPrice.compareTo(BigDecimal.ZERO) > 0) {
-            depositAmount = totalPrice.divide(BigDecimal.valueOf(match.getMaxPlayers()), 0, RoundingMode.HALF_UP);
-        }
-
-        // Nếu tiền cọc = 0 (Sân tự thỏa thuận) thì không cần làm gì cả
-        if (depositAmount.compareTo(BigDecimal.ZERO) <= 0) return;
-
-        List<MatchRegistration> regs = registrationRepository.findByMatch(match);
-        for (MatchRegistration reg : regs) {
-            if (reg.getIsDepositConfirmed()) {
-                User user = reg.getUser();
-                BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
-
-                // Cộng lại tiền cọc
-                user.setFakeMoney(currentBalance.add(depositAmount));
-                userRepository.save(user);
-
-                // --- BẮT LOG RA FILE TẠI ĐÂY ---
-                log.info("[TRANSACTION] - PLUS | Tác vụ: HOÀN CỌC | User: {} ({}) | Số tiền: +{} VNĐ | Trận: {} | Số dư mới: {}",
-                        user.getUserName(),
-                        user.getUserId(),
-                        depositAmount,
-                        match.getMatchId(),
-                        user.getFakeMoney());
-                // -------------------------------
-
-                log.info("Đã hoàn cọc {} VNĐ cho user {}", depositAmount, user.getUserName());
-            }
-        }
-    }
+//    private void refundDeposits(Match match) {
+//        BigDecimal totalPrice = calculateTotalCourtPrice(match);
+//        BigDecimal depositAmount = BigDecimal.ZERO;
+//
+//        if (totalPrice.compareTo(BigDecimal.ZERO) > 0) {
+//            depositAmount = totalPrice.divide(BigDecimal.valueOf(match.getMaxPlayers()), 0, RoundingMode.HALF_UP);
+//        }
+//
+//        if (depositAmount.compareTo(BigDecimal.ZERO) <= 0) return;
+//
+//        List<MatchRegistration> regs = registrationRepository.findByMatch(match);
+//        for (MatchRegistration reg : regs) {
+//            if (reg.getIsDepositConfirmed()) {
+//                User user = reg.getUser();
+//                BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
+//
+//                user.setFakeMoney(currentBalance.add(depositAmount));
+//                userRepository.save(user);
+//
+//                log.info("[TRANSACTION] - PLUS | Tác vụ: HOÀN CỌC | User: {} ({}) | Số tiền: +{} VNĐ | Trận: {} | Số dư mới: {}",
+//                        user.getUserName(),
+//                        user.getUserId(),
+//                        depositAmount,
+//                        match.getMatchId(),
+//                        user.getFakeMoney());
+//
+//                log.info("Đã hoàn cọc {} VNĐ cho user {}", depositAmount, user.getUserName());
+//            }
+//        }
+//    }
 }

@@ -7,6 +7,7 @@ import org.sport.backend.properties.JwtProperties;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -14,6 +15,7 @@ import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -24,7 +26,6 @@ public class JwtService {
     JwtEncoder jwtEncoder;
     JwtDecoder jwtDecoder;
     JwtProperties jwtProperties;
-    UserDetailsService userDetailsService;
 
     public String generateAccessToken(UserDetails user) {
         return generateToken(user, jwtProperties.getAccessExpiration(), "access");
@@ -59,15 +60,21 @@ public class JwtService {
     public Authentication getAuthentication(String token) {
         Jwt jwt = jwtDecoder.decode(token);
 
-        String userId = jwt.getClaim("userId");
-
         String email = jwt.getSubject();
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
+        // 1. Đọc trực tiếp danh sách roles/permissions từ trong Token
+        List<String> roles = jwt.getClaimAsStringList("roles");
+
+        // 2. Map thành GrantedAuthority cho Spring Security hiểu
+        List<SimpleGrantedAuthority> authorities = roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .toList();
+
+        // 3. Trả về Authentication không cần hit Database
         return new UsernamePasswordAuthenticationToken(
-                userId,
+                email,
                 null,
-                userDetails.getAuthorities()
+                authorities
         );
     }
 

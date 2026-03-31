@@ -7,6 +7,8 @@ import org.sport.backend.entity.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -33,7 +35,26 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName()));
+        List<GrantedAuthority> authorities = new ArrayList<>();
+
+        // 1. Add quyền của Role
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName()));
+
+        // 2. Add các quyền thuộc về Role đó (từ bảng roles_permissions)
+        if (user.getRole().getPermissions() != null) {
+            user.getRole().getPermissions().forEach(permission ->
+                    authorities.add(new SimpleGrantedAuthority(permission.getPermissionName()))
+            );
+        }
+
+        // 3. Add các quyền ĐƯỢC CẤP RIÊNG cho User (từ bảng users_permissions)
+        if (user.getExtraPermissions() != null) {
+            user.getExtraPermissions().forEach(permission ->
+                    authorities.add(new SimpleGrantedAuthority(permission.getPermissionName()))
+            );
+        }
+
+        return authorities;
     }
 
     @Override

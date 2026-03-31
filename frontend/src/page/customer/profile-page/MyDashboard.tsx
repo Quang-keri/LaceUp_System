@@ -28,7 +28,6 @@ import type { UserDashboardResponse } from "../../../types/user";
 
 const { Text } = Typography;
 
-// Định nghĩa cấu hình hiển thị Badge
 const BADGE_MAP: Record<string, any> = {
   FIRST_BLOOD: {
     name: "Chiến Công Đầu",
@@ -92,7 +91,6 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ userId }) => {
     fetchDashboardInfo();
   }, [userId]);
 
-  // Gọi API lấy dữ liệu thành tựu (chỉ lấy 4 cái mới nhất)
   useEffect(() => {
     const fetchRecentAchievements = async () => {
       if (!userId) return;
@@ -108,13 +106,10 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ userId }) => {
           safeArray = res.result;
         }
 
-        // Sắp xếp giảm dần theo thời gian
         safeArray.sort(
           (a, b) =>
             new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime(),
         );
-
-        // Cắt lấy 4 phần tử đầu tiên
         setRecentAchievements(safeArray.slice(0, 4));
       } catch (error) {
         console.error("Lỗi lấy thành tựu gần đây: ", error);
@@ -135,14 +130,12 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ userId }) => {
       }}
     >
       <Row gutter={[24, 24]} justify="center">
-        {/* Cột 1: Sidebar Menu */}
+        {/* TRUYỀN DỮ LIỆU SANG SIDEBAR ĐỂ KHÔNG PHẢI GỌI LẠI API */}
         <Col xs={24} md={8} lg={6}>
-          <UserSidebar selectedKey="0" />
+          <UserSidebar selectedKey="0" dashboardData={dashboardData} />
         </Col>
 
-        {/* Cột 2: Nội dung Dashboard */}
         <Col xs={24} md={16} lg={18}>
-          {/* Card Tổng quan hoạt động */}
           <Card
             title={
               <span style={{ fontSize: "20px", fontWeight: 600 }}>
@@ -176,7 +169,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ userId }) => {
                     style={{ background: "#f6ffed", borderColor: "#d9f7be" }}
                   >
                     <Statistic
-                      title="Tỉ lệ thắng"
+                      title="Tỉ lệ thắng tổng"
                       value={dashboardData?.winRate || 0}
                       suffix="%"
                       prefix={<TrophyOutlined style={{ color: "#52c41a" }} />}
@@ -190,7 +183,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ userId }) => {
                   >
                     <Statistic
                       title="Điểm uy tín"
-                      value={dashboardData?.reputationScore || 100}
+                      value={100}
                       prefix={<StarOutlined style={{ color: "#faad14" }} />}
                     />
                   </Card>

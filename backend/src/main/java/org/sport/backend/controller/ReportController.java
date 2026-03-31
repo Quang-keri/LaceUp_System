@@ -21,15 +21,28 @@ public class ReportController {
 
     private final ReportService reportService;
 
-    @GetMapping("/dashboard/all")
-    @PreAuthorize("hasAuthority('VIEW_DASHBOARD_ADMIN')")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getFullDashboard(
+    @GetMapping("/dashboard/owner")
+    @PreAuthorize("hasAuthority('VIEW_DASHBOARD_OWNER')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardOwner(
             @RequestParam(value = "range", defaultValue = "all") String range
     ) {
         return ResponseEntity.ok(
                 ApiResponse.<Map<String, Object>>builder()
                         .code(200)
-                        .result(reportService.getFullDashboardStats(range))
+                        .result(reportService.getFullDashboardStatsOwner(range))
+                        .build()
+        );
+    }
+
+    @GetMapping("/dashboard/admin")
+    @PreAuthorize("hasAuthority('VIEW_DASHBOARD_ADMIN')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardAdmin(
+            @RequestParam(value = "range", defaultValue = "all") String range
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.<Map<String, Object>>builder()
+                        .code(200)
+                        .result(reportService.getFullDashboardStatsAdmin(range))
                         .build()
         );
     }

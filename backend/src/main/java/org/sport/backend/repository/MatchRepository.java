@@ -33,10 +33,14 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             "OR m.host = :owner")
     Page<Match> findByOwnerSystem(User owner, Pageable pageable);
 
-    @Query("SELECT DISTINCT m FROM Match m LEFT JOIN m.registrations r WHERE m.host = :user OR r.user = :user")
+    @Query("SELECT DISTINCT m FROM Match m " +
+            "LEFT JOIN m.registrations r " +
+            "WHERE m.host = :user OR r.user = :user")
     Page<Match> findMatchesByParticipantOrHost(@Param("user") User user, Pageable pageable);
 
     List<Match> findByIsRecurringTrue();
 
     boolean existsByCourtAndStartTime(Court court, LocalDateTime localDateTime);
+
+    List<Match> findByStatus(MatchStatus status);
 }

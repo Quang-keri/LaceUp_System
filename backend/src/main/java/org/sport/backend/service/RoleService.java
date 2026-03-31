@@ -16,13 +16,10 @@ public interface RoleService {
     RoleResponse createRole(RoleRequest request);
 
     @Transactional
-    RoleResponse updateRole(Long roleId, RoleRequest request);
-
-    @Transactional
-    RoleResponse addPermissionsToRole(Long roleId, Set<Integer> permissionIds);
-
-    @Transactional
-    RoleResponse removePermissionsFromRole(Long roleId, Set<Integer> permissionIds);
+    void updateRole(Long roleId, RoleRequest request);
 
     void updateStatus(Long roleId, boolean active);
+
+    @Transactional
+    RoleResponse updatePermissionsOfRole(Long roleId, Set<Integer> permissionIds);
 }

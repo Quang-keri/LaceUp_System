@@ -79,17 +79,10 @@ public class User extends BaseEntity {
     )
     private List<Permission> extraPermissions;
 
-    @Builder.Default
-    private Integer rankPoint = 0;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserCategoryRank> categoryRanks;
 
-    @Builder.Default
-    private BigDecimal fakeMoney = BigDecimal.valueOf(1000000.00);
+//    @Builder.Default
+//    private BigDecimal fakeMoney = BigDecimal.valueOf(1000000.00);
 
-    @Transient
-    private String displayRank;
-
-    // Hàm này sẽ được gọi ở tầng Service/Mapper khi cần trả dữ liệu về cho Client
-    public String resolveDisplayRank(Integer leaderboardPosition) {
-        return RankHelper.getDisplayRank(this.rankPoint != null ? this.rankPoint : 0, leaderboardPosition);
-    }
 }

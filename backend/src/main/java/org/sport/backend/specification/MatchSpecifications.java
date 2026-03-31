@@ -35,15 +35,36 @@ public class MatchSpecifications {
 
     public static Specification<Match> searchByCourtName(String keyword) {
         return (root, query, cb) -> {
-            if (keyword == null || keyword.isEmpty()) return null;
+            if (keyword == null || keyword.trim().isEmpty()) return null;
             String likeKeyword = "%" + keyword.toLowerCase() + "%";
 
             Join<Object, Object> courtJoin = root.join("court", JoinType.LEFT);
             Predicate matchCourtName = cb.like(cb.lower(courtJoin.get("courtName")), likeKeyword);
 
-            Predicate matchAddress = cb.like(cb.lower(root.get("address")), likeKeyword);
+            Predicate matchStreet = cb.like(cb.lower(root.get("address").get("street")), likeKeyword);
 
-            return cb.or(matchCourtName, matchAddress);
+            return cb.or(matchCourtName, matchStreet);
+        };
+    }
+
+    public static Specification<Match> hasCity(String city) {
+        return (root, query, cb) -> {
+            if (city == null || city.trim().isEmpty()) return null;
+            return cb.like(cb.lower(root.get("address").get("city").get("cityName")), "%" + city.toLowerCase() + "%");
+        };
+    }
+
+    public static Specification<Match> hasDistrict(String district) {
+        return (root, query, cb) -> {
+            if (district == null || district.trim().isEmpty()) return null;
+            return cb.like(cb.lower(root.get("address").get("district")), "%" + district.toLowerCase() + "%");
+        };
+    }
+
+    public static Specification<Match> hasWard(String ward) {
+        return (root, query, cb) -> {
+            if (ward == null || ward.trim().isEmpty()) return null;
+            return cb.like(cb.lower(root.get("address").get("ward")), "%" + ward.toLowerCase() + "%");
         };
     }
 

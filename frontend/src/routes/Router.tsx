@@ -51,6 +51,7 @@ import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
 import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx";
 import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
 import BuildingEditPage from "../page/owner/building/BuildingEditPage.tsx";
+import MyRanks from "../page/customer/profile-page/MyRankPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -97,6 +98,7 @@ export const router = createBrowserRouter([
           { path: "profile", element: <ProfilePage /> },
           { path: "my-matches", element: <MyMatchPage /> },
           { path: "achievements", element: <MyAchievements /> },
+          { path: "my-ranks", element: <MyRanks /> },
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {

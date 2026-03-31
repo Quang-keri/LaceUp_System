@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import authService from '../../../service/authService';
 import {useNavigate} from 'react-router-dom';
 import './style.css';
-import {toast} from "react-toastify";
+import { message } from "antd";
 import {useAuth} from "../../../context/AuthContext.tsx";
 
 const LoginAdminPage: React.FC = () => {
@@ -25,11 +25,11 @@ const LoginAdminPage: React.FC = () => {
 
                 await refreshProfile();
 
-                toast("Đăng nhập thành công.");
+                message.success("Đăng nhập thành công.");
                 navigate('/admin');
             }
         } catch (error: any) {
-            alert('Đăng nhập thất bại: ' + (error.response?.data?.message || 'Lỗi kết nối'));
+            message.error('Đăng nhập thất bại: ' + (error.response?.data?.message || 'Lỗi kết nối'));
         } finally {
             setLoading(false);
         }

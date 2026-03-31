@@ -42,8 +42,10 @@ public class MatchServiceImpl implements MatchService {
     private final UserRepository userRepository;
     private final CityRepository cityRepository;
 
-    private final MatchMapper matchMapper;
+    // THÊM REPOSITORY ĐỂ CHECK RANK THEO MÔN
+    private final UserCategoryRankRepository userCategoryRankRepository;
 
+    private final MatchMapper matchMapper;
     private final UserService userService;
 
 
@@ -53,14 +55,12 @@ public class MatchServiceImpl implements MatchService {
 
         User currentUser = userService.getCurrentUserEntity();
 
-        // Validate cơ bản cho Rank
         if (request.getMatchType() == MatchType.RANKED) {
             if (request.getMinRank() == null || request.getMaxRank() == null) {
                 throw new RuntimeException("Vui lòng nhập mức Rank tối thiểu và tối đa cho trận Rank");
             }
         }
 
-        // Validate cơ bản cho Kèo
         if (request.getMatchType() == MatchType.BET && request.getWinnerPercent() == null) {
             throw new RuntimeException("Vui lòng nhập tỉ lệ chia tiền sân cho trận Kèo (VD: 40, 0)");
         }
@@ -77,35 +77,32 @@ public class MatchServiceImpl implements MatchService {
                 .recurringType(request.getRecurringType())
                 .dayOfWeek(request.getDayOfWeek())
                 .endDate(request.getEndDate())
-                // Set dữ liệu loại trận
                 .matchType(request.getMatchType() != null ? request.getMatchType() : MatchType.NORMAL)
                 .winnerPercent(request.getWinnerPercent())
                 .minRank(request.getMinRank())
                 .maxRank(request.getMaxRank());
 
-        // Nếu có courtId
+        City city = cityRepository.getReferenceById(request.getCityId());
+        Address address = Address.builder()
+                .ward(request.getWard())
+                .district(request.getDistrict())
+                .street(request.getStreet())
+                .city(city)
+                .build();
+        matchBuilder.address(address);
+
         if (request.getCourtId() != null) {
             Court court = courtRepository.findById(request.getCourtId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sân này"));
             matchBuilder.court(court);
             matchBuilder.category(court.getCategory());
         } else {
-            // Renter tạo kèo tìm người
             if (request.getCategoryId() == null) {
                 throw new RuntimeException("Vui lòng chọn loại môn thể thao");
             }
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy loại môn thể thao này"));
             matchBuilder.category(category);
-
-            City city = cityRepository.getReferenceById(request.getCityId());
-            Address address = Address.builder()
-                    .ward(request.getWard())
-                    .district(request.getDistrict())
-                    .street(request.getStreet())
-                    .city(city)
-                    .build();
-            matchBuilder.address(address);
         }
 
         Match savedMatch = matchRepository.save(matchBuilder.build());
@@ -123,7 +120,6 @@ public class MatchServiceImpl implements MatchService {
         Match match = matchRepository.findByIdWithLock(matchId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
 
-        // CHẶN: Không cho join nếu đang chờ cọc hoặc đã xác nhận/đầy
         if (match.getStatus() == MatchStatus.WAITING_DEPOSIT ||
                 match.getStatus() == MatchStatus.CONFIRMED ||
                 match.getStatus() == MatchStatus.FULL) {
@@ -134,14 +130,24 @@ public class MatchServiceImpl implements MatchService {
             throw new RuntimeException("Trận đấu đã đủ người!");
         }
 
-        // --- CHECK ĐIỀU KIỆN ĐÁNH RANK --- (Giữ nguyên của bạn)
+        // --- CHECK ĐIỀU KIỆN ĐÁNH RANK THEO CATEGORY ---
         if (match.getMatchType() == MatchType.RANKED) {
-            int userRank = currentUser.getRankPoint() != null ? currentUser.getRankPoint() : 3000;
+            Category category = match.getCategory();
+            if (category == null) {
+                throw new RuntimeException("Trận đấu không xác định được môn thể thao để xét Rank.");
+            }
+
+            // Lấy điểm rank của người dùng ứng với môn thể thao này
+            int userRank = userCategoryRankRepository
+                    .findByUser_UserIdAndCategory_CategoryId(currentUser.getUserId(), category.getCategoryId())
+                    .map(UserCategoryRank::getRankPoint)
+                    .orElse(0); // Nếu chưa từng chơi môn này, rank mặc định là 0
+
             if (match.getMinRank() != null && userRank < match.getMinRank()) {
-                throw new RuntimeException("Điểm Rank của bạn không đủ để tham gia trận này.");
+                throw new RuntimeException("Điểm Rank môn này của bạn (" + userRank + ") không đủ để tham gia. Yêu cầu tối thiểu: " + match.getMinRank());
             }
             if (match.getMaxRank() != null && userRank > match.getMaxRank()) {
-                throw new RuntimeException("Điểm Rank của bạn vượt quá mức cho phép của trận này.");
+                throw new RuntimeException("Điểm Rank môn này của bạn (" + userRank + ") vượt quá mức cho phép. Tối đa: " + match.getMaxRank());
             }
         }
 
@@ -150,7 +156,6 @@ public class MatchServiceImpl implements MatchService {
             throw new RuntimeException("Bạn đã tham gia trận này rồi");
         }
 
-        // Mặc định isDepositConfirmed = false
         MatchRegistration reg = MatchRegistration.builder()
                 .user(currentUser)
                 .match(match)
@@ -161,7 +166,6 @@ public class MatchServiceImpl implements MatchService {
 
         match.setCurrentPlayers(match.getCurrentPlayers() + 1);
 
-        // LOGIC MỚI: Đủ max người thì chuyển sang WAITING_DEPOSIT
         if (match.getCurrentPlayers() >= match.getMaxPlayers()) {
             match.setStatus(MatchStatus.WAITING_DEPOSIT);
         }
@@ -194,24 +198,21 @@ public class MatchServiceImpl implements MatchService {
             depositAmount = totalPrice.divide(BigDecimal.valueOf(match.getMaxPlayers()), 0, RoundingMode.HALF_UP);
         }
 
-        // TRỪ TIỀN VÀ GHI LOG
         if (depositAmount.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal currentBalance = currentUser.getFakeMoney() != null ? currentUser.getFakeMoney() : BigDecimal.ZERO;
-            if (currentBalance.compareTo(depositAmount) < 0) {
-                throw new RuntimeException("Ví của bạn không đủ " + depositAmount + " VNĐ để đặt cọc! Vui lòng nạp thêm tiền.");
-            }
+//            BigDecimal currentBalance = currentUser.getFakeMoney() != null ? currentUser.getFakeMoney() : BigDecimal.ZERO;
+//            if (currentBalance.compareTo(depositAmount) < 0) {
+//                throw new RuntimeException("Ví của bạn không đủ " + depositAmount + " VNĐ để đặt cọc! Vui lòng nạp thêm tiền.");
+//            }
 
-            currentUser.setFakeMoney(currentBalance.subtract(depositAmount));
+//            currentUser.setFakeMoney(currentBalance.subtract(depositAmount));
             userRepository.save(currentUser);
 
-            // --- BẮT LOG RA FILE TẠI ĐÂY ---
-            log.info("[TRANSACTION] - MINUS | Tác vụ: ĐẶT CỌC | User: {} ({}) | Số tiền: -{} VNĐ | Trận: {} | Số dư mới: {}",
-                    currentUser.getUserName(),
-                    currentUser.getUserId(),
-                    depositAmount,
-                    match.getMatchId(),
-                    currentUser.getFakeMoney());
-            // -------------------------------
+//            log.info("[TRANSACTION] - MINUS | Tác vụ: ĐẶT CỌC | User: {} ({}) | Số tiền: -{} VNĐ | Trận: {} | Số dư mới: {}",
+//                    currentUser.getUserName(),
+//                    currentUser.getUserId(),
+//                    depositAmount,
+//                    match.getMatchId(),
+//                    currentUser.getFakeMoney());
 
             log.info("Đã trừ {} VNĐ tiền cọc của user {}", depositAmount, currentUser.getUserName());
         }
@@ -237,7 +238,8 @@ public class MatchServiceImpl implements MatchService {
             String keyword,
             LocalDateTime startDate,
             LocalDateTime endDate,
-            MatchType matchType
+            MatchType matchType,
+            String ward, String district, String city
     ) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 
@@ -246,7 +248,10 @@ public class MatchServiceImpl implements MatchService {
                 .and(MatchSpecifications.hasCategory(category))
                 .and(MatchSpecifications.searchByCourtName(keyword))
                 .and(MatchSpecifications.isWithinTimeRange(startDate, endDate))
-                .and(MatchSpecifications.hasMatchType(matchType));
+                .and(MatchSpecifications.hasMatchType(matchType))
+                .and(MatchSpecifications.hasCity(city))
+                .and(MatchSpecifications.hasDistrict(district))
+                .and(MatchSpecifications.hasWard(ward));
 
         Page<Match> matchPage = matchRepository.findAll(spec, pageable);
 
@@ -281,16 +286,10 @@ public class MatchServiceImpl implements MatchService {
 
     @Override
     public PageResponse<MatchResponse> getOwnerMatchesPaged(int page, int size) {
-        // 1. Lấy thông tin Owner hiện tại từ Token
         User currentUser = userService.getCurrentUserEntity();
-
-        // 2. Tạo pageable (Trang trong Spring Data JPA bắt đầu từ 0)
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-
-        // 3. Gọi query lấy các trận đấu thuộc sân của Owner này
         Page<Match> matchPage = matchRepository.findByOwnerSystem(currentUser, pageable);
 
-        // 4. Map sang DTO và trả về
         return PageResponse.<MatchResponse>builder()
                 .currentPage(page)
                 .pageSize(size)
@@ -303,9 +302,7 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public PageResponse<MatchResponse> getMyMatches(int page, int size) {
         User currentUser = userService.getCurrentUserEntity();
-
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").descending());
-
         Page<Match> matchPage = matchRepository.findMatchesByParticipantOrHost(currentUser, pageable);
 
         return PageResponse.<MatchResponse>builder()
@@ -361,10 +358,8 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private boolean shouldCreateForDate(Match config, LocalDate date) {
-        // Nếu không có cấu hình lặp lại cụ thể thì bỏ qua
         if (config.getRecurringType() == null) return false;
 
-        // Nếu có ngày kết thúc và ngày hiện tại đã vượt quá ngày đó thì dừng lặp
         if (config.getEndDate() != null && date.isAfter(config.getEndDate())) {
             return false;
         }

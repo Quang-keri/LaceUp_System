@@ -28,7 +28,7 @@ public class MatchController {
     private final MatchService matchService;
 
     @PostMapping("/create")
-    @PreAuthorize("hasAuthority('CREATE_MATCH')")
+    @PreAuthorize("isAuthenticated")
     public ResponseEntity<ApiResponse<MatchResponse>> createMatch(
             @RequestBody @Valid MatchRequest request) {
         log.info("Request nhận được: isRecurring={}, type={}, days={}",
@@ -70,13 +70,18 @@ public class MatchController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) LocalDateTime startDate,
             @RequestParam(required = false) LocalDateTime endDate,
-            @RequestParam(required = false) MatchType matchType
+            @RequestParam(required = false) MatchType matchType,
+            @RequestParam(required = false) String ward,
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String city
     ) {
         return ResponseEntity.ok(
                 ApiResponse.success(200,
                         "Lấy danh sách trận đấu đang mở thành công.",
                         matchService.getOpenMatches(
-                                page, size, category, keyword, startDate, endDate, matchType)));
+                                page, size, category, keyword,
+                                startDate, endDate, matchType,
+                                ward, district, city)));
     }
 
     @GetMapping("/{matchId}")
