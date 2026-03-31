@@ -53,6 +53,7 @@ import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLan
 import BuildingEditPage from "../page/owner/building/BuildingEditPage.tsx";
 import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
 import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
+import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManagement.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -138,6 +139,7 @@ export const router = createBrowserRouter([
 
       { path: "users", element: <UserManagement /> },
       { path: "roles", element: <RoleManagement /> },
+      { path: "owners", element: <RentalAreaManagement /> },
       { path: "permissions", element: <PermissionManagement /> },
       { path: "court-types", element: <CategoryManagement /> },
       { path: "bookings/list", element: <BookingManagement /> },

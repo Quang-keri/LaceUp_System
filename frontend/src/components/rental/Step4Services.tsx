@@ -18,6 +18,7 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import { useRentalForm } from "../../context/RentalFormContext";
+import itemGroupService from "../../service/itemGroupService"; // Import service vừa tạo
 
 export default function Step4Services({
   next,
@@ -33,22 +34,17 @@ export default function Step4Services({
   );
   const [itemGroups, setItemGroups] = useState<any[]>([]);
 
-  // Đồng bộ data từ context khi quay lại step
+
   useEffect(() => {
     form.setFieldsValue({ services: formData.extraServices?.services || [] });
   }, [formData.extraServices, form]);
 
-  // Call API lấy danh mục nhóm hàng hóa
+  
   useEffect(() => {
     const fetchItemGroups = async () => {
       try {
-        // Thay bằng API thực tế của bạn: await itemGroupService.getAll()
-        const mockData = [
-          { id: "FOOD", name: "Đồ ăn / Thức uống" },
-          { id: "EQUIPMENT", name: "Thiết bị thuê (Vợt, Bóng...)" },
-          { id: "SERVICE", name: "Dịch vụ khác (Trọng tài, Nhặt bóng...)" },
-        ];
-        setItemGroups(mockData);
+        const data = await itemGroupService.getAll();
+        setItemGroups(data);
       } catch (error) {
         console.error("Lỗi lấy danh mục nhóm hàng hóa:", error);
       }
@@ -112,7 +108,11 @@ export default function Step4Services({
                       >
                         <Select placeholder="Chọn nhóm">
                           {itemGroups.map((group) => (
-                            <Select.Option key={group.id} value={group.id}>
+          
+                            <Select.Option
+                              key={group.itemGroupId}
+                              value={group.itemGroupId}
+                            >
                               {group.name}
                             </Select.Option>
                           ))}
@@ -228,10 +228,14 @@ export default function Step4Services({
 
       <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
         <Button onClick={handlePrev}>Quay lại</Button>
-        <Button type="primary" htmlType="submit" style={{
+        <Button
+          type="primary"
+          htmlType="submit"
+          style={{
             background: "#9156F1",
             borderColor: "#9156F1",
-          }}>
+          }}
+        >
           Tiếp tục
         </Button>
       </div>

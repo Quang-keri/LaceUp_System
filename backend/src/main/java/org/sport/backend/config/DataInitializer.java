@@ -37,7 +37,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PostRepository postRepository;
     private final UserStatsRepository userStatsRepository;
     private final UserAchievementRepository userAchievementRepository;
-
+    private  final ItemGroupRepository itemGroupRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -301,11 +301,29 @@ public class DataInitializer implements CommandLineRunner {
             seedPostData();
         }
 
-        if (rentalAreaRepository.count() < 0) {
+        if (rentalAreaRepository.count() == 0) {
             seedMultipleRentalAreasAndPosts();
+        }
+
+        if(itemGroupRepository.count() == 0){
+            seedItemGroup();
         }
     }
 
+    private void seedItemGroup(){
+        ItemGroup group1 = new ItemGroup();
+        group1.setName("Đồ ăn / Thức uống");
+
+        ItemGroup group2 = new ItemGroup();
+        group2.setName("Thiết bị thuê (Vợt, Bóng...)");
+
+        ItemGroup group3 = new ItemGroup();
+        group3.setName("Dịch vụ khác (Trọng tài, Nhặt bóng...)");
+
+        itemGroupRepository.save(group1);
+        itemGroupRepository.save(group2);
+        itemGroupRepository.save(group3);
+    }
     // Hàm phụ trợ gán quyền an toàn, tránh bị NullPointerException
     private Set<Permission> getPermissions(Map<String, Permission> permMap, String... names) {
         return Arrays.stream(names)
@@ -502,6 +520,9 @@ public class DataInitializer implements CommandLineRunner {
                     .owner(owner)
                     .isActive(true)
                     .status(RentalAreaStatus.ACTIVE)
+                    .verificationStatus(VerificationStatus.VERIFIED)
+                    .openTime(LocalTime.of(5,00))
+                    .closeTime(LocalTime.of(23,00))
                     .build();
             rentalAreaRepository.save(area);
 

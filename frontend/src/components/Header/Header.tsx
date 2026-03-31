@@ -20,13 +20,14 @@ import {
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
 
 const { Header } = Layout;
 
 const AppHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
+  const { user } = useAuth();
   const [token, setToken] = useState(localStorage.getItem("accessToken"));
 
   useEffect(() => {
@@ -65,6 +66,17 @@ const AppHeader = () => {
           icon: <SettingOutlined />,
           onClick: () => navigate("/booking-history"),
         },
+
+        ...(user?.role === "OWNER"
+          ? [
+              {
+                key: "/owner",
+                label: "Quản lí cơ sở",
+                icon: <SettingOutlined />,
+                onClick: () => navigate("/owner"),
+              },
+            ]
+          : []),
         {
           key: "/wallet",
           label: "Ví của tôi",
@@ -147,7 +159,7 @@ const AppHeader = () => {
               style={{
                 fontWeight: 800,
                 fontSize: 22,
-    
+
                 color: "#1f1f1f",
                 letterSpacing: "-0.5px",
               }}

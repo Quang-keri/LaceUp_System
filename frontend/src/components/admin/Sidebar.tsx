@@ -83,6 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     // 2. Quản lý Sân & Cơ sở (Thay cho Rooms)
     getItem("Quản lý sân bãi", "sub_courts", <ShopOutlined />, [
+      getItem(<Link to="/admin/owners">Quản lí các cơ sở</Link>, "/admin/owners"),
       getItem(<Link to="/admin/courts">Danh sách sân</Link>, "/admin/courts"),
       getItem(
         <Link to="/admin/court-types">Loại sân</Link>,

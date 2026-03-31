@@ -271,13 +271,14 @@ export default function Step1BasicInfo({ next }: { next: () => void }) {
               name="contactPhone"
               label="Số điện thoại"
               rules={[{ required: true }]}
+              
             >
-              <Input placeholder="Số điện thoại liên hệ" />
+              <Input placeholder="Số điện thoại liên hệ" disabled />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="gmail" label="Email" rules={[{ type: "email" }]}>
-              <Input placeholder="Địa chỉ Email" />
+              <Input placeholder="Địa chỉ Email" disabled/>
             </Form.Item>
           </Col>
           <Col span={12}>

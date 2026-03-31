@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.RentalAreaStatus;
 
@@ -44,6 +45,10 @@ public class RentalArea extends BaseEntity {
     @Column(name = "status", length = 20)
     private RentalAreaStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", length = 30)
+    private VerificationStatus verificationStatus;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -79,6 +84,8 @@ public class RentalArea extends BaseEntity {
     @Column(name = "gmail", length = 255)
     private String gmail;
 
+    @Column(name = "reason")
+    private String reason;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RentalAreaImage> images = new ArrayList<>();

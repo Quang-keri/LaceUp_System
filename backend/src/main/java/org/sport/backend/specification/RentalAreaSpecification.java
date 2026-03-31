@@ -1,5 +1,6 @@
 package org.sport.backend.specification;
 
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.entity.RentalArea;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -14,7 +15,14 @@ import java.time.LocalDateTime;
 
 
 public class RentalAreaSpecification {
-
+    public static Specification<RentalArea> hasVerificationStatus(VerificationStatus verificationStatus) {
+        return (root, query, criteriaBuilder) -> {
+            if (verificationStatus == null) {
+                return null;
+            }
+            return criteriaBuilder.equal(root.get("verificationStatus"), verificationStatus);
+        };
+    }
     public static Specification<RentalArea> isNotDeleted() {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }

@@ -13,6 +13,7 @@ import lombok.*;
 public class ItemGroup {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long itemGroupId;
     private String name;
 }

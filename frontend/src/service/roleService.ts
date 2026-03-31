@@ -6,7 +6,7 @@ const API_BASE_URL = '/roles';
 
 export const roleService = {
 
-    // --- CRUD APIs ---
+  
 
     getAllRoles: async (): Promise<ApiResponse<RoleResponse[]>> => {
         const response = await api.get(API_BASE_URL);

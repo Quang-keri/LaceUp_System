@@ -3,8 +3,10 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.RentalAreaStatus;
+import org.sport.backend.dto.request.rental.RejectRentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
@@ -25,6 +27,30 @@ import java.util.UUID;
 public class RentalAreaController {
 
     private final RentalAreaService rentalAreaService;
+
+    @PutMapping("/{rentalAreaId}/approve")
+    public ApiResponse<Void> approveRentalArea(@PathVariable UUID rentalAreaId) {
+        rentalAreaService.approveRentalArea(rentalAreaId);
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Đã phê duyệt cơ sở thành công")
+                .build();
+    }
+
+    @PutMapping("/{rentalAreaId}/reject")
+    public ApiResponse<Void> rejectRentalArea(
+            @PathVariable UUID rentalAreaId,
+            @RequestBody(required = false) RejectRentalAreaRequest request) {
+
+        String reason = (request != null) ? request.getReason() : null;
+        rentalAreaService.rejectRentalArea(rentalAreaId, reason);
+
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Đã từ chối cơ sở thành công")
+                .build();
+    }
+
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 //    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
@@ -49,7 +75,7 @@ public class RentalAreaController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) UUID cityId,
-            @RequestParam(required = false) RentalAreaStatus status,
+            @RequestParam(required = false) VerificationStatus verificationStatus,
             @RequestParam(required = false) LocalDateTime fromDate,
             @RequestParam(required = false) LocalDateTime toDate
     ) {
@@ -62,7 +88,7 @@ public class RentalAreaController {
                         size,
                         keyword,
                         cityId,
-                        status,
+                        verificationStatus,
                         fromDate,
                         toDate
                 )

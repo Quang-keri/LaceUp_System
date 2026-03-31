@@ -38,14 +38,14 @@ class RentalService {
     size: number = 10,
     keyword?: string,
     cityId?: number,
-    status?: string,
+    verificationStatus?: string,
   ) {
     const params = new URLSearchParams();
     params.append("page", page.toString());
     params.append("size", size.toString());
     if (keyword) params.append("keyword", keyword);
     if (cityId) params.append("cityId", cityId.toString());
-    if (status) params.append("status", status);
+    if (verificationStatus) params.append("verificationStatus", verificationStatus);
 
     const response = await api.get<ApiResponse<RentalAreaListResponse>>(
       `/rental-areas?${params.toString()}`,
@@ -124,6 +124,25 @@ class RentalService {
   async deleteRentalArea(rentalAreaId: string) {
     const response = await api.delete<ApiResponse<void>>(
       `/rental-areas/${rentalAreaId}`,
+    );
+    return response.data;
+  }
+
+  async approveRentalArea(rentalAreaId: string) {
+    // Backend may expose an admin endpoint or a rental-areas/{id}/approve
+    // Adjust the path if your API uses a different route.
+    const response = await api.put<ApiResponse<void>>(
+      `/rental-areas/${rentalAreaId}/approve`,
+    );
+    return response.data;
+  }
+
+  async rejectRentalArea(rentalAreaId: string, reason?: string) {
+   
+    const payload = reason ? { reason } : {};
+    const response = await api.put<ApiResponse<void>>(
+      `/rental-areas/${rentalAreaId}/reject`,
+      payload,
     );
     return response.data;
   }

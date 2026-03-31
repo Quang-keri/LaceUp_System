@@ -93,7 +93,8 @@ export default function Step2CourtInfo({
               <Card
                 key={field.key}
                 title={
-                  <span style={{ color: "#1890ff" }}>
+              
+                  <span style={{ color: "#9156F1" }}>
                     Loại sân #{field.name + 1}
                   </span>
                 }
@@ -183,10 +184,12 @@ export default function Step2CourtInfo({
                   label="Hình ảnh thực tế (Tối đa 5 ảnh)"
                   valuePropName="fileList"
                   getValueFromEvent={normFile}
-                  rules={[{
-                    required : true,
-                    message :"Ít nhất 1 tấm ảnh và tối đa 5 tấm ảnh"
-                  }]}
+                  rules={[
+                    {
+                      required: true,
+                      message: "Ít nhất 1 tấm ảnh và tối đa 5 tấm ảnh",
+                    },
+                  ]}
                 >
                   <Upload
                     listType="picture-card"
@@ -232,10 +235,15 @@ export default function Step2CourtInfo({
         <Button onClick={handlePrev} size="large">
           Quay lại
         </Button>
-        <Button type="primary" htmlType="submit" size="large"  style={{
+        <Button
+          type="primary"
+          htmlType="submit"
+          size="large"
+          style={{
             background: "#9156F1",
             borderColor: "#9156F1",
-          }} >
+          }}
+        >
           Tiếp tục
         </Button>
       </div>

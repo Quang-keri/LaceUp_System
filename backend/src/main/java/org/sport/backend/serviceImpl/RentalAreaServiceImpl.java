@@ -1,18 +1,23 @@
 package org.sport.backend.serviceImpl;
 
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.amenity.AmenityResponse;
+import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.city.CityResponse;
+import org.sport.backend.dto.response.court.CourtImageResponse;
+import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
 import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
 import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
@@ -74,6 +79,10 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     @Autowired
     private AddressMapper addressMapper;
 
+    @Autowired
+    private RoleRepository roleRepository;
+
+
     @Override
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
 
@@ -83,7 +92,13 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         }
 
         User owner = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
+        Role role =roleRepository.findByRoleName("OWNER").orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+        System.err.println("Owner role: " + owner.getRole().getRoleName());
+        if(!owner.getRole().getRoleName().equals("OWNER")){
+            owner.setRole(role);
+            userRepository.save(owner);
+        }
+        System.err.println("Owner role: " + owner.getRole().getRoleName());
 //        City city = cityRepository.findById(request.getCityId()).orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
 
         Address address = Address.builder()
@@ -108,6 +123,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .facebookLink(request.getFacebookLink())
                 .gmail(request.getGmailLink())
                 .owner(owner)
+                .verificationStatus(VerificationStatus.PENDING)
                 .build();
 
         rentalAreaRepository.save(rentalArea);
@@ -151,6 +167,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .contactPhone(rentalArea.getContactPhone())
                 .status(rentalArea.getStatus())
                 .images(imageResponses)
+                .verificationStatus(rentalArea.getVerificationStatus())
                 .build();
     }
 
@@ -171,7 +188,10 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .toList();
 
         CityResponse cityResponse = null;
-
+        List<Court> courts = courtRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId());
+        List<CourtResponse> courtResponses = courts.stream()
+                .map(this::mapToResponseCourt)
+                .toList();
 
         UserResponse userResponse = UserResponse.builder()
                 .userId(rentalArea.getOwner().getUserId())
@@ -190,16 +210,95 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .images(imageResponses)
                 .owner(userResponse)
                 .city(cityResponse)
+                .courtResponses(courtResponses)
+                .verificationStatus(rentalArea.getVerificationStatus())
                 .build();
     }
+    private CourtResponse mapToResponseCourt(Court court) {
 
+        List<CourtImage> images =
+                courtImageRepository.findByCourt_CourtId(court.getCourtId());
+
+        List<CourtImageResponse> imageResponses = images.stream()
+                .sorted(Comparator.comparing(
+                        CourtImage::getSortOrder,
+                        Comparator.nullsLast(Integer::compareTo)
+                ))
+                .map(img -> CourtImageResponse.builder()
+                        .courtImageId(img.getCourtImageId())
+                        .imageUrl(img.getImageUrl())
+                        .isCover(img.getIsCover())
+                        .sortOrder(img.getSortOrder())
+                        .build())
+                .toList();
+        List<AmenityResponse> amenityResponses = court.getAmenities()
+                .stream()
+                .map(a -> AmenityResponse.builder()
+                        .amenityId(a.getAmenityId())
+                        .amenityName(a.getAmenityName())
+                        .build())
+                .toList();
+
+        List<CourtCopy> courtCopies =
+                courtCopyRepository.findByCourt_CourtId(court.getCourtId());
+
+        List<CourtCopyResponse> copyResponses = courtCopies.stream()
+                .map(copy -> {
+                            List<Slot> slots = copy.getSlots() == null ? List.of() : copy.getSlots();
+
+                            return CourtCopyResponse.builder()
+                                    .courtCopyId(copy.getCourtCopyId())
+                                    .courtCode(copy.getCourtCode())
+                                    .status(copy.getCourtCopyStatus())
+                                    .slots(null)
+                                    .build();
+                        }
+                )
+                .toList();
+
+        List<CourtPrice> prices =
+                courtPriceRepository.findByCourt_CourtId(court.getCourtId());
+
+        List<CourtPriceResponse> priceResponses = prices.stream()
+                .sorted(Comparator.comparing(CourtPrice::getStartTime))
+                .map(this::mapToPriceResponse)
+                .toList();
+
+
+        List<Object[]> result = courtPriceRepository.getPriceRange(court.getCourtId());
+
+        BigDecimal minPrice = null;
+        BigDecimal maxPrice = null;
+
+        if (result != null && !result.isEmpty()) {
+            Object[] range = result.get(0);
+
+            minPrice = range[0] != null ? (BigDecimal) range[0] : null;
+            maxPrice = range[1] != null ? (BigDecimal) range[1] : null;
+        }
+
+
+        return CourtResponse.builder()
+                .courtId(court.getCourtId())
+                .courtName(court.getCourtName())
+
+                .status(court.getCourtStatus())
+                .rentalAreaId(court.getRentalArea().getRentalAreaId())
+                .minPrice(minPrice)
+                .maxPrice(maxPrice)
+                .priceRules(priceResponses)
+                .images(imageResponses)
+                .courtCopies(copyResponses)
+                .amenities(amenityResponses)
+                .build();
+    }
     @Override
     public PageResponse<RentalAreaResponse> getAllRentalAreas(
             int page,
             int size,
             String keyword,
             UUID cityId,
-            RentalAreaStatus status,
+            VerificationStatus verificationStatus,
             LocalDateTime fromDate,
             LocalDateTime toDate
     ) {
@@ -209,7 +308,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         Specification<RentalArea> spec = Specification
                 .where(RentalAreaSpecification.isNotDeleted())
                 .and(RentalAreaSpecification.hasCity(cityId))
-                .and(RentalAreaSpecification.hasStatus(status))
+                .and(RentalAreaSpecification.hasVerificationStatus(verificationStatus))
                 .and(RentalAreaSpecification.hasKeyword(keyword))
                 .and(RentalAreaSpecification.fromDate(fromDate))
                 .and(RentalAreaSpecification.toDate(toDate));
@@ -364,6 +463,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .images(imageResponses)
                 .build();
     }
+
     @Override
     public RentalAreaDetailResponse getRentalAreaById(UUID rentalAreaId) {
 
@@ -458,11 +558,11 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         CityResponse cityResponse = null;
 
-        if(rentalArea.getAddress().getCity() == null){
+        if (rentalArea.getAddress().getCity() == null) {
             CityResponse.builder()
                     .cityName(rentalArea.getAddress().getCityName())
                     .build();
-        }else{
+        } else {
             cityResponse = CityResponse.builder()
                     .cityId(rentalArea.getAddress().getCity().getCityId())
                     .cityName(rentalArea.getAddress().getCity().getCityName())
@@ -506,5 +606,28 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         rentalArea.setDeletedAt(LocalDateTime.now());
         rentalAreaRepository.save(rentalArea);
     }
+    @Override
+    @Transactional
+    public void approveRentalArea(UUID rentalAreaId) {
+        RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy cơ sở cho thuê"));
 
+        rentalArea.setVerificationStatus(VerificationStatus.VERIFIED);
+        rentalAreaRepository.save(rentalArea);
+
+        // Gợi ý: Tại đây bạn có thể gửi Email thông báo cho chủ sân là đã được duyệt,phát triển sau
+    }
+
+    @Override
+    @Transactional
+    public void rejectRentalArea(UUID rentalAreaId, String reason) {
+        RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy cơ sở cho thuê"));
+
+        rentalArea.setVerificationStatus(VerificationStatus.REJECTED);
+
+        rentalAreaRepository.save(rentalArea);
+
+        // Gửi Email thông báo lý do từ chối cho chủ sân Phát triển sau
+    }
 }

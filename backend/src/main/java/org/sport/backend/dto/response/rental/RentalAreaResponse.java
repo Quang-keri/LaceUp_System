@@ -3,8 +3,10 @@ package org.sport.backend.dto.response.rental;
 import lombok.Builder;
 import lombok.Getter;
 import org.sport.backend.constant.RentalAreaStatus;
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.city.CityResponse;
+import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Court;
 
@@ -30,4 +32,6 @@ public class RentalAreaResponse {
     private LocalTime openTime;
     private LocalTime closeTime;
     private Boolean isActive;
+    private VerificationStatus verificationStatus;
+    private List<CourtResponse> courtResponses;
 }

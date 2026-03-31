@@ -1,5 +1,6 @@
 package org.sport.backend.service;
 
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
@@ -13,13 +14,15 @@ import java.util.List;
 import java.util.UUID;
 
 public interface RentalAreaService {
+     void approveRentalArea(UUID rentalAreaId);
+    void rejectRentalArea(UUID rentalAreaId, String reason);
     RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images);
     PageResponse<RentalAreaResponse> getAllRentalAreas(
             int page,
             int size,
             String keyword,
             UUID cityId,
-            RentalAreaStatus status,
+            VerificationStatus status,
             LocalDateTime fromDate,
             LocalDateTime toDate
     );
