@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Modal, Button, List, Avatar, Tag, Typography } from "antd";
 import { Calendar, Clock, MapPin, CheckCircle2 } from "lucide-react";
 import matchService from "../../../service/match/matchService";
-import { toast } from "react-toastify";
+import { message } from "antd";
 import { useAuth } from "../../../context/AuthContext";
 import type { MatchResponse } from "../../../types/match";
 
@@ -38,28 +38,12 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
     try {
       const response = await matchService.joinMatch(match.matchId);
       if (response.code === 1000 || response.code === 0) {
-        toast.success("Tham gia trận thành công!");
+        message.success("Tham gia trận thành công!");
         onSuccess();
         onClose();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi tham gia");
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  const handleConfirmDeposit = async () => {
-    setLoadingAction(true);
-    try {
-      const response = await matchService.confirmDeposit(match.matchId);
-      if (response.code === 1000 || response.code === 0) {
-        toast.success("Đã xác nhận cọc thành công!");
-        onSuccess();
-        onClose();
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi xác nhận cọc");
+      message.error(error.response?.data?.message || "Lỗi tham gia");
     } finally {
       setLoadingAction(false);
     }
@@ -93,34 +77,22 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
       );
     }
 
-    // 2. Chờ chốt cọc
+    // 2. Chờ chốt cọc (Tính năng xác nhận cọc đã chuyển sang MyMatchPage)
     if (match.status === "WAITING_DEPOSIT") {
-      if (isParticipant) {
-        if ((myParticipantInfo as any)?.isDepositConfirmed) {
-          return (
-            <Button
-              disabled
-              className="bg-green-50 text-green-600 font-semibold border-green-200 rounded-lg px-6 h-10"
-            >
-              <CheckCircle2 size={18} className="mr-2 inline" /> Đã xác nhận cọc
-            </Button>
-          );
-        }
+      if (isParticipant && (myParticipantInfo as any)?.isDepositConfirmed) {
         return (
           <Button
-            type="primary"
-            onClick={handleConfirmDeposit}
-            loading={loadingAction}
-            className="bg-orange-500 hover:bg-orange-600 font-semibold rounded-lg px-8 h-10 animate-pulse border-none"
+            disabled
+            className="bg-green-50 text-green-600 font-semibold border-green-200 rounded-lg px-6 h-10"
           >
-            Xác Nhận Cọc Ngay
+            <CheckCircle2 size={18} className="mr-2 inline" /> Đã xác nhận cọc
           </Button>
         );
       }
       return (
         <Button
           disabled
-          className="bg-gray-100 text-gray-400 font-semibold rounded-lg px-6"
+          className="bg-orange-50 text-orange-400 border-none font-semibold rounded-lg px-6"
         >
           Đang chờ chốt cọc
         </Button>
@@ -177,20 +149,53 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
               <Text strong>
                 {match.hasCourt
                   ? match.courtName
-                  : match.address || "Tự thỏa thuận"}
+                  : typeof match.address === "string"
+                  ? match.address
+                  : match.address?.street +
+                      ", " +
+                      match.address?.ward +
+                      ", " +
+                      match.address?.district +
+                      ", " +
+                      match.address?.city.cityName || "Tự thỏa thuận"}
               </Text>
             </div>
             <div className="flex items-center gap-3">
               <Calendar size={18} className="text-blue-500 shrink-0" />
               <Text>
-                {new Date(match.startTime).toLocaleDateString("vi-VN")}
+                {Array.isArray(match.startTime)
+                  ? `${match.startTime[2]
+                      .toString()
+                      .padStart(2, "0")}/${match.startTime[1]
+                      .toString()
+                      .padStart(2, "0")}/${match.startTime[0]}`
+                  : new Date(match.startTime).toLocaleDateString("vi-VN")}
               </Text>
             </div>
             <div className="flex items-center gap-3">
               <Clock size={18} className="text-blue-500 shrink-0" />
               <Text>
-                {match.startTime.split("T")[1]?.substring(0, 5)} -{" "}
-                {match.endTime.split("T")[1]?.substring(0, 5)}
+                {(() => {
+                  const { startTime, endTime } = match;
+
+                  const extractTime = (timeData: any) => {
+                    if (Array.isArray(timeData)) {
+                      const h =
+                        timeData[3]?.toString().padStart(2, "0") || "00";
+                      const m =
+                        timeData[4]?.toString().padStart(2, "0") || "00";
+                      return `${h}:${m}`;
+                    }
+                    if (typeof timeData === "string") {
+                      return timeData.includes("T")
+                        ? timeData.split("T")[1].substring(0, 5)
+                        : timeData.substring(0, 5);
+                    }
+                    return "--:--";
+                  };
+
+                  return `${extractTime(startTime)} - ${extractTime(endTime)}`;
+                })()}
               </Text>
             </div>
           </div>

@@ -85,29 +85,16 @@ public class RoleController {
                         null));
     }
 
-    @PostMapping("/{roleId}/permissions")
+    @PutMapping("/{roleId}/permissions")
     @PreAuthorize("hasAuthority('MANAGE_ROLE_PERMISSIONS')")
-    public ResponseEntity<ApiResponse<RoleResponse>> addPermissionsToRole(
-            @PathVariable Long roleId,
-            @RequestBody Set<Integer> permissionIds) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.success(
-                        200,
-                        "Thêm quyền vào Role thành công",
-                        roleService.addPermissionsToRole(roleId, permissionIds))
-        );
-    }
-
-    @DeleteMapping("/{roleId}/permissions")
-    @PreAuthorize("hasAuthority('MANAGE_ROLE_PERMISSIONS')")
-    public ResponseEntity<ApiResponse<RoleResponse>> removePermissionsFromRole(
+    public ResponseEntity<ApiResponse<RoleResponse>> updatePermissionsOfRole(
             @PathVariable Long roleId,
             @RequestBody Set<Integer> permissionIds) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         200,
-                        "Xóa quyền khỏi Role thành công",
-                        roleService.removePermissionsFromRole(roleId, permissionIds))
+                        "Cập nhật danh sách quyền thành công",
+                        roleService.updatePermissionsOfRole(roleId, permissionIds))
         );
     }
 }

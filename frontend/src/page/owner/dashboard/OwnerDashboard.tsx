@@ -20,7 +20,7 @@ const OwnerDashboard: React.FC = () => {
             setLoading(true);
             try {
                 // API nhận param range: ?range=7d
-                const response = await reportService.getFullDashboard(range);
+                const response = await reportService.getDashboardOwner(range);
                 setStats(response.result);
             } finally {
                 setLoading(false);

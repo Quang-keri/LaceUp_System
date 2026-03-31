@@ -58,6 +58,7 @@ public class Match extends BaseEntity {
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<MatchRegistration> registrations;
 
+    @Embedded
     private Address address;
 
     @Enumerated(EnumType.STRING)

@@ -1,5 +1,6 @@
 package org.sport.backend.dto.request.match;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.sport.backend.constant.RecurringType;
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MatchRequest {
     private UUID courtId;
     private Integer categoryId;
@@ -26,6 +28,7 @@ public class MatchRequest {
     private Double winnerPercent;
     private Integer minRank;
     private Integer maxRank;
+    private String note;
 
     @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
     private String street;

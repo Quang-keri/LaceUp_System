@@ -10,8 +10,8 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
@@ -29,7 +29,7 @@ import java.util.Optional;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     JwtDecoder jwtDecoder;
-    CustomUserDetailsService userDetailsService;
+    JwtService jwtService;
 
     @Override
     protected void doFilterInternal(
@@ -61,25 +61,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            String email = jwt.getClaim("email");
+            Authentication authentication = jwtService.getAuthentication(token);
 
-            UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(email);
+            if (authentication instanceof UsernamePasswordAuthenticationToken authWithDetails) {
+                authWithDetails.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+            }
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-
-            authentication.setDetails(
-                    new WebAuthenticationDetailsSource()
-                            .buildDetails(request)
-            );
-
-            SecurityContextHolder.getContext()
-                    .setAuthentication(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (JwtException e) {
             log.error("JWT_FILTER invalid token: {}", e.getMessage());

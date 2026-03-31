@@ -4,5 +4,7 @@ import java.util.Map;
 
 public interface ReportService {
 
-    Map<String, Object> getFullDashboardStats(String range);
+    Map<String, Object> getFullDashboardStatsOwner(String range);
+
+    Map<String, Object> getFullDashboardStatsAdmin(String range);
 }

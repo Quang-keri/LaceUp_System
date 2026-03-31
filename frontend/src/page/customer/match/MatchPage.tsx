@@ -1,38 +1,54 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, Clock, MapPin, MessageCircle, Users } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  DollarSign,
+  MapPin,
+  MessageCircle,
+  Smile,
+  Trophy,
+  Users,
+} from "lucide-react";
 import matchService from "../../../service/match/matchService.ts";
 import type { MatchResponse } from "../../../types/match.ts";
-import { toast } from "react-toastify";
 import CreateMatchModal from "./CreateMatchModal";
 import JoinMatchModal from "./JoinMatchModal";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext.tsx";
+import { message } from "antd";
+import { LOCATION_DATA } from "../../../constants/locationData.ts";
 
 const MatchPage: React.FC = () => {
   const [matches, setMatches] = useState<MatchResponse[]>([]);
   const navigate = useNavigate();
-  const { user } = useAuth(); // Lấy thông tin người dùng hiện tại
+  const { user } = useAuth();
 
-  const [categoryFilter, setCategoryFilter] = useState("Tất cả");
-  const [typeFilter, setTypeFilter] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
-
-  // State Modal
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
     null,
   );
 
+  // --- STATE CHO BỘ LỌC TÌM KIẾM ---
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [sortOrder, setSortOrder] = useState("NEWEST");
+  const [selectedLocation, setSelectedLocation] = useState<string>(""); // Lưu Thành phố
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(""); // Lưu Quận/Huyện
+  const [selectedCategory, setSelectedCategory] = useState<string>(""); // Lưu Loại sân
+
   const fetchMatches = async () => {
     setLoading(true);
     try {
-      const response = await matchService.getOpenMatches({ page: 1, size: 100 });
-      if (response.code === 1000 || response.code === 0) {
+      const response = await matchService.getOpenMatches({
+        page: 1,
+        size: 100,
+      });
+      if (response.code === 200) {
         setMatches(response.result.data || []);
       }
-    } catch (error) { 
-      toast.error("Lỗi kết nối máy chủ");
+    } catch (error) {
+      message.error("Lỗi kết nối máy chủ");
     } finally {
       setLoading(false);
     }
@@ -42,6 +58,16 @@ const MatchPage: React.FC = () => {
     fetchMatches();
   }, []);
 
+  // Reset tất cả bộ lọc
+  const resetFilters = () => {
+    setSortOrder("NEWEST");
+    setSelectedLocation("");
+    setSelectedDistrict("");
+    setSelectedCategory("");
+    setTypeFilter("ALL");
+  };
+
+  // --- CÁC HÀM XỬ LÝ ---
   const handleOpenJoinModal = (match: MatchResponse) => {
     setSelectedMatch(match);
     setIsJoinModalOpen(true);
@@ -50,28 +76,27 @@ const MatchPage: React.FC = () => {
   const handleJoinMatch = async (matchId: string) => {
     try {
       const response = await matchService.joinMatch(matchId);
-      if (response.code === 1000 || response.code === 0) {
-        toast.success("Tham gia trận thành công!");
+      if (response.code === 200) {
+        message.success("Tham gia trận thành công!");
         fetchMatches();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi tham gia");
+      message.error(error.response?.data?.message || "Lỗi tham gia");
     }
   };
 
   const handleConfirmDeposit = async (matchId: string) => {
     try {
       const response = await matchService.confirmDeposit(matchId);
-      if (response.code === 1000 || response.code === 0) {
-        toast.success("Đã xác nhận cọc thành công!");
+      if (response.code === 200) {
+        message.success("Đã xác nhận cọc thành công!");
         fetchMatches();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi xác nhận cọc");
+      message.error(error.response?.data?.message || "Lỗi xác nhận cọc");
     }
   };
 
-  // Hàm render nút động tùy theo trạng thái (Không mở modal, click ăn liền)
   const renderActionButton = (match: MatchResponse) => {
     const isParticipant = match.participants?.some(
       (p: any) => p.userId === user?.userId,
@@ -80,54 +105,49 @@ const MatchPage: React.FC = () => {
       (p: any) => p.userId === user?.userId,
     )?.isDepositConfirmed;
 
-    // 1. Trạng thái Đang tìm người (Vẫn còn chỗ)
     if (
       match.status === "OPEN" ||
       (match.status === "CONFIRMED" && match.remainingSlots > 0)
     ) {
-      if (isParticipant) {
+      if (isParticipant)
         return (
           <button
             disabled
-            className="bg-gray-100 text-gray-500 px-4 py-2 rounded-xl font-bold text-sm"
+            className="bg-slate-100 text-slate-500 px-4 py-2 rounded-xl font-semibold text-sm border border-slate-200"
           >
             Đã Tham Gia
           </button>
         );
-      }
       return (
         <button
           onClick={(e) => {
             e.stopPropagation();
             handleJoinMatch(match.matchId);
           }}
-          className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl font-bold text-sm active:scale-95 transition"
+          className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all shadow-sm"
         >
           Tham Gia
         </button>
       );
     }
-
-    // 2. Trạng thái Chờ xác nhận cọc (Khi vừa đủ người)
     if (match.status === "WAITING_DEPOSIT") {
       if (isParticipant) {
-        if (isDepositConfirmed) {
+        if (isDepositConfirmed)
           return (
             <button
               disabled
-              className="bg-green-100 text-green-600 px-4 py-2 rounded-xl font-bold text-sm"
+              className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-semibold text-sm border border-indigo-100"
             >
               Đã Cọc
             </button>
           );
-        }
         return (
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleConfirmDeposit(match.matchId);
             }}
-            className="bg-orange-500 text-white hover:bg-orange-600 animate-pulse px-4 py-2 rounded-xl font-bold text-sm"
+            className="bg-orange-500 text-white hover:bg-orange-600 animate-pulse px-4 py-2 rounded-xl font-semibold text-sm shadow-sm"
           >
             Xác Nhận Cọc
           </button>
@@ -136,40 +156,35 @@ const MatchPage: React.FC = () => {
       return (
         <button
           disabled
-          className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl font-bold text-sm"
+          className="bg-slate-100 text-slate-400 px-4 py-2 rounded-xl font-semibold text-sm"
         >
           Chờ Xác Nhận
         </button>
       );
     }
-
-    // 3. Trạng thái Đã xác nhận xong cọc HOẶC trận đấu cũ đã Full
     if (match.status === "CONFIRMED" || match.status === "FULL") {
-      if (isParticipant) {
+      if (isParticipant)
         return (
           <button
             disabled
-            className="bg-green-500 text-white px-4 py-2 rounded-xl font-bold text-sm"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-sm"
           >
             Sẵn Sàng
           </button>
         );
-      }
       return (
         <button
           disabled
-          className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl font-bold text-sm"
+          className="bg-slate-100 text-slate-400 px-4 py-2 rounded-xl font-semibold text-sm"
         >
           Đã Đầy
         </button>
       );
     }
-
-    // 4. Các trạng thái còn lại (COMPLETED, CANCELLED...)
     return (
       <button
         disabled
-        className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl font-bold text-sm"
+        className="bg-slate-100 text-slate-400 px-4 py-2 rounded-xl font-semibold text-sm"
       >
         Đã Chốt
       </button>
@@ -177,51 +192,111 @@ const MatchPage: React.FC = () => {
   };
 
   const handleChatClick = (e: React.MouseEvent, match: MatchResponse) => {
-    e.stopPropagation(); // Ngăn mở Modal chi tiết trận đấu khi bấm chat
-
-    // Tìm ID của người tạo (Host) giống như logic bạn đang dùng
+    e.stopPropagation();
     const hostUser = match.participants?.find(
       (p: any) => p.userName === match.hostName,
     );
     const hostId = (match as any).hostId || hostUser?.userId;
-
     if (!hostId) {
-      toast.error("Không tìm thấy thông tin chủ phòng để chat");
+      message.error("Không tìm thấy thông tin chủ phòng để chat");
       return;
     }
-
     if (hostId === user?.userId) {
-      toast.info("Bạn đang là chủ phòng của trận đấu này.");
+      message.info("Bạn đang là chủ phòng của trận đấu này.");
       return;
     }
-
-    const event = new CustomEvent("OPEN_CHAT_WITH_USER", {
-      detail: {
-        userId: hostId,
-        userName: match.hostName || "Chủ phòng",
-      },
-    });
-
-    window.dispatchEvent(event);
+    window.dispatchEvent(
+      new CustomEvent("OPEN_CHAT_WITH_USER", {
+        detail: { userId: hostId, userName: match.hostName || "Chủ phòng" },
+      }),
+    );
   };
 
+  const formatDate = (dateData: any) => {
+    if (Array.isArray(dateData))
+      return `${dateData[2].toString().padStart(2, "0")}/${dateData[1]
+        .toString()
+        .padStart(2, "0")}/${dateData[0]}`;
+    return new Date(dateData).toLocaleDateString("vi-VN");
+  };
+
+  const formatTime = (timeData: any) => {
+    if (Array.isArray(timeData))
+      return `${(timeData[3]?.toString() || "00").padStart(2, "0")}:${(
+        timeData[4]?.toString() || "00"
+      ).padStart(2, "0")}`;
+    if (typeof timeData === "string" && timeData.includes("T"))
+      return timeData.split("T")[1].substring(0, 5);
+    return "--:--";
+  };
+
+  const isValidPrice = (price: any) =>
+    price != null && price !== "" && !isNaN(Number(price));
+
+  // --- LOGIC LỌC DỮ LIỆU ĐÃ CẬP NHẬT ---
+  const filteredMatches = matches
+    .filter((m) =>
+      ["OPEN", "CONFIRMED", "WAITING_DEPOSIT", "FULL"].includes(m.status),
+    )
+    .filter((m) => typeFilter === "ALL" || m.matchType === typeFilter)
+    .filter(
+      (m) =>
+        !selectedCategory ||
+        m.categoryName?.toLowerCase().includes(selectedCategory.toLowerCase()),
+    )
+    .filter((m) => {
+      if (!selectedLocation && !selectedDistrict) return true;
+      const isStringAddress = typeof m.address === "string";
+      const cityString = String(
+        isStringAddress ? m.address : m.address?.city?.cityName || "",
+      );
+      const districtString = String(
+        isStringAddress ? m.address : m.address?.district || "",
+      );
+
+      const matchCity =
+        !selectedLocation ||
+        cityString.toLowerCase().includes(selectedLocation.toLowerCase());
+      const matchDistrict =
+        !selectedDistrict ||
+        districtString.toLowerCase().includes(selectedDistrict.toLowerCase());
+
+      return matchCity && matchDistrict;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "PRICE_ASC")
+        return Number(a.courtPrice || 0) - Number(b.courtPrice || 0);
+      if (sortOrder === "PRICE_DESC")
+        return Number(b.courtPrice || 0) - Number(a.courtPrice || 0);
+      return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+    });
+
+  // Lấy danh sách quận/huyện dựa vào Thành phố đang chọn
+  const availableDistricts =
+    LOCATION_DATA.find((city) => city.name === selectedLocation)?.districts ||
+    [];
+
   return (
-    <div className="min-h-screen bg-white p-6 font-sans">
-      <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-slate-50 p-6 font-sans">
+      {/* --- TOP BAR --- */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-extrabold text-slate-800">
             Trận Đấu Vãng Lai
           </h1>
-          <p className="text-gray-500">
+          <p className="text-slate-500 mt-1 font-medium">
             Tìm đồng đội giao lưu hoặc tham gia kèo có sẵn
           </p>
         </div>
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium flex items-center gap-2 transition active:scale-95 shadow-lg shadow-blue-100"
-        >
-          <span className="text-xl">+</span> Tạo Kèo Tìm Bạn
-        </button>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all active:scale-95 shadow-sm whitespace-nowrap border-0"
+          >
+            <span className="text-xl leading-none">+</span> Tạo Kèo Tìm Bạn
+          </button>
+        </div>
       </div>
 
       <CreateMatchModal
@@ -229,7 +304,6 @@ const MatchPage: React.FC = () => {
         onClose={() => setIsFormOpen(false)}
         onSuccess={fetchMatches}
       />
-
       <JoinMatchModal
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
@@ -237,239 +311,378 @@ const MatchPage: React.FC = () => {
         match={selectedMatch}
       />
 
-      <div className="mb-8 space-y-4">
-        {/* Bộ lọc ... (Giữ nguyên) */}
-        <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
-          {["Tất cả", "Sân bóng đá", "Sân cầu lông", "Sân Pickleball"].map(
-            (tab) => (
-              <button
-                key={tab}
-                onClick={() => setCategoryFilter(tab)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all border whitespace-nowrap ${
-                  categoryFilter === tab
-                    ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200"
-                    : "bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600"
-                }`}
-              >
-                {tab}
-              </button>
-            ),
-          )}
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
-          {[
-            { id: "ALL", label: "Tất cả thể thức" },
-            { id: "NORMAL", label: "😊 Đánh thường" },
-            { id: "BET", label: "💰 Đánh kèo" },
-            { id: "RANKED", label: "🏆 Đánh Rank" },
-          ].map((tab) => (
+      {/* --- MAIN LAYOUT --- */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* SIDEBAR BỘ LỌC TÌM KIẾM */}
+        <div className="w-full lg:w-1/4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 shrink-0 sticky top-6">
+          <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+            <h2 className="text-xl font-extrabold text-slate-800">Bộ lọc</h2>
             <button
-              key={tab.id}
-              onClick={() => setTypeFilter(tab.id)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all border whitespace-nowrap ${
-                typeFilter === tab.id
-                  ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-purple-400 hover:text-purple-600"
-              }`}
+              onClick={resetFilters}
+              className="text-sm text-indigo-500 hover:text-indigo-700 font-medium hover:underline"
             >
-              {tab.label}
+              Làm mới
             </button>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {matches
-            .filter((m) =>
-              ["OPEN", "CONFIRMED", "WAITING_DEPOSIT", "FULL"].includes(
-                m.status,
-              ),
-            )
-            .filter(
-              (m) =>
-                categoryFilter === "Tất cả" ||
-                m.categoryName
-                  .toLowerCase()
-                  .includes(categoryFilter.toLowerCase()),
-            )
-            .filter((m) => typeFilter === "ALL" || m.matchType === typeFilter)
-            .map((match) => (
-              <div
-                key={match.matchId}
-                className="bg-white rounded-2xl border relative shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
-              >
-                {/* --- KHỐI BẤM ĐƯỢC ĐỂ XEM CHI TIẾT --- */}
-                <div
-                  className="p-6 pb-2 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleOpenJoinModal(match)}
+          {/* Sắp xếp */}
+          <div className="mb-8">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
+              Sắp xếp
+            </h3>
+            <div className="space-y-3">
+              {[
+                { id: "NEWEST", label: "Mới nhất" },
+                { id: "PRICE_ASC", label: "Giá thấp → cao" },
+                { id: "PRICE_DESC", label: "Giá cao → thấp" },
+              ].map((sort) => (
+                <label
+                  key={sort.id}
+                  className="flex items-center gap-3 cursor-pointer group"
                 >
-                  <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                        match.hasCourt
-                          ? "bg-green-100 text-green-600"
-                          : "bg-orange-100 text-orange-600"
-                      }`}
-                    >
-                      {match.hasCourt ? "Sân cố định" : "Kèo tự do"}
-                    </span>
-                    <span
-                      className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                        match.status === "WAITING_DEPOSIT"
-                          ? "bg-orange-100 text-orange-600"
-                          : match.remainingSlots > 0
-                          ? "bg-green-100 text-green-600"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {match.status === "WAITING_DEPOSIT"
-                        ? "Chờ Cọc"
-                        : match.remainingSlots > 0
-                        ? "Còn Chỗ"
-                        : "Đã Đầy"}
-                    </span>
-                  </div>
+                  <input
+                    type="radio"
+                    name="sort"
+                    checked={sortOrder === sort.id}
+                    onChange={() => setSortOrder(sort.id)}
+                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-slate-600 group-hover:text-slate-800 font-medium">
+                    {sort.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
 
-                  <h3 className="text-xl font-bold mb-1 text-gray-800 line-clamp-1 w-[70%] pr-4">
-                    {match.title || `Giao lưu ${match.categoryName}`}
-                  </h3>
+          {/* Loại sân */}
+          <div>
+            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
+              Loại sân
+            </h3>
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+              {["Cầu lông", "Bóng đá", "Pickleball", "Tennis"].map((cat) => (
+                <label
+                  key={cat}
+                  className="flex items-center gap-2 cursor-pointer group"
+                >
+                  <input
+                    type="radio"
+                    name="categoryCourt"
+                    checked={selectedCategory === cat}
+                    onChange={() => setSelectedCategory(cat)}
+                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span
+                    className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
+                    title={cat}
+                  >
+                    {cat}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <br />
 
-                  <div className="flex items-center flex-wrap gap-2 mb-4">
-                    <p className="text-blue-600 text-sm font-semibold">
-                      {match.categoryName}
-                    </p>
-                    <span className="text-gray-300">•</span>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase whitespace-nowrap ${
-                        match.matchType === "RANKED"
-                          ? "bg-purple-100 text-purple-700 border border-purple-200"
-                          : match.matchType === "BET"
-                          ? "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                          : "bg-gray-100 text-gray-600 border border-gray-200"
-                      }`}
-                    >
-                      {match.matchType === "RANKED"
-                        ? `🏆 Rank (${match.minRank}-${match.maxRank})`
-                        : match.matchType === "BET"
-                        ? `💰 Kèo (${match.winnerPercent}/${
-                            100 - (match.winnerPercent || 0)
-                          })`
-                        : "😊 Giao lưu"}
-                    </span>
-                  </div>
+          {/* Thể thức */}
+          <div className="mb-8">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
+              Thể thức
+            </h3>
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+              {[
+                { id: "ALL", label: "Tất cả" },
+                { id: "NORMAL", label: "Đánh thường" },
+                { id: "BET", label: "Đánh kèo" },
+                { id: "RANKED", label: "Đánh Rank" },
+              ].map((type) => (
+                <label
+                  key={type.id}
+                  className="flex items-center gap-2 cursor-pointer group"
+                >
+                  <input
+                    type="radio"
+                    name="matchType"
+                    checked={typeFilter === type.id}
+                    onChange={() => setTypeFilter(type.id)}
+                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span
+                    className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
+                    title={type.label}
+                  >
+                    {type.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
 
-                  <div className="space-y-3 mb-6 text-gray-600">
-                    <div className="flex items-start gap-2">
-                      <MapPin
-                        size={16}
-                        className="text-blue-500 shrink-0 mt-0.5"
-                      />
-                      <span className="text-sm font-medium line-clamp-2 leading-tight">
-                        {match.hasCourt
-                          ? match.courtName
-                          : match.address || "Địa điểm tự thỏa thuận"}
+          {/* Khu vực (Render trực tiếp từ LOCATION_DATA) */}
+          <div className="mb-6">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
+              Khu vực
+            </h3>
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+              {LOCATION_DATA.map((city) => (
+                <label
+                  key={city.id}
+                  className="flex items-center gap-2 cursor-pointer group"
+                >
+                  <input
+                    type="radio"
+                    name="locationCity"
+                    checked={selectedLocation === city.name}
+                    onChange={() => {
+                      setSelectedLocation(city.name);
+                      setSelectedDistrict(""); // Reset Quận khi đổi Thành phố
+                    }}
+                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span
+                    className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
+                    title={city.name}
+                  >
+                    {city.name === "Thành phố Hồ Chí Minh"
+                      ? "TP.HCM"
+                      : city.name}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Quận / Huyện (Lấy động từ availableDistricts) */}
+          <div className="mb-8">
+            <h3 className="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">
+              Quận / Huyện
+            </h3>
+            <select
+              value={selectedDistrict}
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+              disabled={!selectedLocation}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm transition-colors hover:border-slate-300"
+            >
+              <option value="">
+                {selectedLocation
+                  ? "-- Tất cả Quận/Huyện --"
+                  : "-- Chọn Thành phố trước --"}
+              </option>
+
+              {availableDistricts.map((district) => (
+                <option key={district.name} value={district.name}>
+                  {district.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* GRID DANH SÁCH (3 CỘT: lg:grid-cols-3) */}
+        <div className="flex-1 w-full">
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-indigo-600 border-t-transparent"></div>
+            </div>
+          ) : filteredMatches.length === 0 ? (
+            <div className="bg-white p-10 rounded-2xl border border-slate-200 text-center text-slate-500 flex flex-col items-center justify-center">
+              <p className="font-semibold text-lg mb-2">
+                Không tìm thấy trận đấu nào!
+              </p>
+              <p className="text-sm">
+                Hãy thử chọn "Làm mới" hoặc thay đổi tiêu chí bộ lọc của bạn.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredMatches.map((match) => (
+                <div
+                  key={match.matchId}
+                  className="bg-white rounded-2xl border border-slate-200 relative shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                >
+                  <div
+                    className="p-5 pb-2 cursor-pointer group flex-grow relative"
+                    onClick={() => handleOpenJoinModal(match)}
+                  >
+                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2">
+                      <span
+                        className={`text-[11px] px-2 py-1 rounded-md font-bold whitespace-nowrap shadow-sm ${
+                          match.matchType === "RANKED"
+                            ? "bg-indigo-50 text-indigo-700"
+                            : match.matchType === "BET"
+                            ? "bg-orange-50 text-orange-700 border border-orange-100"
+                            : "bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {match.matchType === "RANKED" && (
+                            <>
+                              <Trophy size={14} />
+                              Rank ({match.minRank}-{match.maxRank})
+                            </>
+                          )}
+
+                          {match.matchType === "BET" && (
+                            <>
+                              <DollarSign size={14} />
+                              Kèo ({match.winnerPercent}/
+                              {100 - (match.winnerPercent || 0)})
+                            </>
+                          )}
+
+                          {match.matchType !== "RANKED" &&
+                            match.matchType !== "BET" && (
+                              <>
+                                <Smile size={14} />
+                                Giao lưu
+                              </>
+                            )}
+                        </span>
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-blue-500 shrink-0" />
-                      <span className="text-sm">
-                        {new Date(match.startTime).toLocaleDateString("vi-VN")}
+
+                    <div className="flex flex-col items-start mb-4">
+                      <span
+                        className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider inline-block mb-2 ${
+                          match.hasCourt
+                            ? "bg-indigo-50 text-indigo-600"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {match.hasCourt ? "Sân cố định" : "Kèo tự do"}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-blue-500 shrink-0" />
-                      <span className="text-sm">
-                        {match.startTime.split("T")[1]?.substring(0, 5)} -{" "}
-                        {match.endTime.split("T")[1]?.substring(0, 5)}
-                      </span>
+
+                      <h3 className="text-xl font-bold text-slate-800 pr-24 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                        {match.title || `Giao lưu ${match.categoryName}`}
+                      </h3>
+
+                      <p className="text-indigo-600 text-sm font-semibold mt-1">
+                        {match.categoryName}
+                      </p>
                     </div>
 
-                    <div className="space-y-2 pt-2">
-                      <div className="flex justify-between items-center text-xs font-bold">
-                        <div className="flex items-center gap-2">
-                          <Users size={14} />
-                          <span>
-                            {match.currentPlayers}/{match.maxPlayers} người
-                          </span>
-                        </div>
-                        <span className="text-blue-600">
-                          Còn {match.remainingSlots} slot
+                    <div className="space-y-3 mb-4 text-slate-600">
+                      <div className="flex items-start gap-2.5">
+                        <MapPin
+                          size={16}
+                          className="text-slate-400 shrink-0 mt-0.5"
+                        />
+                        <span className="text-sm font-medium line-clamp-2 leading-tight">
+                          {match.address?.street +
+                            ", " +
+                            match.address?.ward +
+                            ", " +
+                            match.address?.district +
+                            ", " +
+                            match.address?.city?.cityName}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className="bg-blue-600 h-full transition-all duration-700"
-                          style={{
-                            width: `${
-                              (match.currentPlayers / match.maxPlayers) * 100
-                            }%`,
-                          }}
-                        />
+
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar
+                            size={16}
+                            className="text-slate-400 shrink-0"
+                          />
+                          <span className="text-sm font-medium">
+                            {formatDate(match.startTime)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Clock
+                            size={16}
+                            className="text-slate-400 shrink-0"
+                          />
+                          <span className="text-sm font-medium">
+                            {formatTime(match.startTime)} -{" "}
+                            {formatTime(match.endTime)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-2">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <Users size={14} />
+                            <span>
+                              {match.currentPlayers}/{match.maxPlayers} người
+                            </span>
+                          </div>
+                          <span className="text-emerald-600">
+                            Còn {match.remainingSlots} slot
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-indigo-500 h-full transition-all duration-700 rounded-full"
+                            style={{
+                              width: `${Math.min(
+                                (match.currentPlayers /
+                                  (match.maxPlayers || 1)) *
+                                  100,
+                                100,
+                              )}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* --- KHỐI FOOTER CHỨA ACTION BUTTON (Dừng sự kiện click mở Modal) --- */}
-                <div className="flex justify-between items-center border-t p-6 pt-4 mt-auto">
-                  <div>
-                    {match.courtPrice &&
-                    match.courtPrice !== null &&
-                    match.courtPrice.toString() !== "null" &&
-                    match.courtPrice.toString() !== "undefined" ? (
-                      <p className="font-bold text-green-600 text-lg">
-                        {Number(match.courtPrice).toLocaleString()}đ
-                      </p>
-                    ) : (
-                      <p className="font-bold text-gray-400 text-sm">
-                        Sân tự thỏa thuận
-                      </p>
-                    )}
-                    <p
-                      className="text-[10px] text-gray-400 font-bold uppercase mt-0.5 cursor-pointer hover:text-blue-600 hover:underline transition-colors"
-                      title="Xem hồ sơ người tạo"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Ngăn mở Modal khi bấm vào tên Host
-                        const hostUser = match.participants?.find(
-                          (p: any) => p.userName === match.hostName,
-                        );
-                        const hostId =
-                          (match as any).hostId || hostUser?.userId;
-                        if (hostId) navigate(`/player/${hostId}`);
-                        else
-                          toast.info(
-                            "Không tìm thấy thông tin hồ sơ của Host!",
+                  <div className="flex justify-between items-center border-t border-slate-100 bg-slate-50/80 p-4 mt-auto">
+                    <div>
+                      {isValidPrice(match.courtPrice) ? (
+                        <p className="font-bold text-slate-800 text-base">
+                          {Number(match.courtPrice).toLocaleString()}đ
+                        </p>
+                      ) : (
+                        <p className="font-medium text-slate-500 text-sm">
+                          Sân tự thỏa thuận
+                        </p>
+                      )}
+                      <p
+                        className="text-[12px] text-slate-500 font-medium mt-0.5 cursor-pointer hover:text-indigo-600 hover:underline transition-colors flex items-center gap-1"
+                        title="Xem hồ sơ người tạo"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const hostUser = match.participants?.find(
+                            (p: any) => p.userName === match.hostName,
                           );
-                      }}
-                    >
-                      Host: {match.hostName}
-                    </p>
-                  </div>
+                          const hostId =
+                            (match as any).hostId || hostUser?.userId;
+                          if (hostId) navigate(`/player/${hostId}`);
+                          else
+                            message.info(
+                              "Không tìm thấy thông tin hồ sơ của Host!",
+                            );
+                        }}
+                      >
+                        Host:{" "}
+                        <span className="text-indigo-600 font-semibold">
+                          {match.hostName}
+                        </span>
+                      </p>
+                    </div>
 
-                  {/* ĐÃ SỬA: Bọc nút Chat và nút Action vào một Flexbox */}
-                  <div className="flex items-center gap-2">
-                    {/* Nút Chat */}
-                    <button
-                      onClick={(e) => handleChatClick(e, match)}
-                      className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-colors shadow-sm"
-                      title="Chat với chủ phòng"
-                    >
-                      <MessageCircle size={20} />
-                    </button>
-
-                    {/* GỌI HÀM RENDER NÚT ĐỘNG */}
-                    {renderActionButton(match)}
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        onClick={(e) => handleChatClick(e, match)}
+                        className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all shadow-sm"
+                        title="Chat với chủ phòng"
+                      >
+                        <MessageCircle size={18} />
+                      </button>
+                      {renderActionButton(match)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

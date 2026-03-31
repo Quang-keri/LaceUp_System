@@ -57,40 +57,31 @@ public class RoleServiceImpl implements RoleService {
 
     @Transactional
     @Override
-    public RoleResponse updateRole(Long roleId, RoleRequest request) {
+    public void updateRole(Long roleId, RoleRequest request) {
         Role role = getRoleEntity(roleId);
         role.setRoleName(request.getRoleName());
         role.setDescription(request.getDescription());
-        return roleMapper.toRoleResponse(roleRepository.save(role));
+        roleMapper.toRoleResponse(roleRepository.save(role));
     }
 
     @Transactional
     @Override
     public void updateStatus(Long roleId, boolean active) {
         Role role = getRoleEntity(roleId);
-        role.setActive(false);
+        role.setActive(active);
         roleRepository.save(role);
     }
 
-    // --- FEATURE 1: Thêm/Xóa Permissions cho Role ---
-
     @Transactional
     @Override
-    public RoleResponse addPermissionsToRole(Long roleId, Set<Integer> permissionIds) {
+    public RoleResponse updatePermissionsOfRole(Long roleId, Set<Integer> permissionIds) {
         Role role = getRoleEntity(roleId);
-        List<Permission> permissions = permissionRepository.findAllById(permissionIds);
 
-        role.getPermissions().addAll(permissions);
-        return roleMapper.toRoleResponse(roleRepository.save(role));
-    }
+        List<Permission> newPermissions = permissionRepository.findAllById(permissionIds);
 
-    @Transactional
-    @Override
-    public RoleResponse removePermissionsFromRole(Long roleId, Set<Integer> permissionIds) {
-        Role role = getRoleEntity(roleId);
-        if (role.getPermissions() != null && !role.getPermissions().isEmpty()) {
-            role.getPermissions().removeIf(p -> permissionIds.contains(p.getPermissionId()));
-        }
+        role.getPermissions().clear();
+        role.getPermissions().addAll(newPermissions);
+
         return roleMapper.toRoleResponse(roleRepository.save(role));
     }
 

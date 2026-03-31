@@ -5,8 +5,8 @@ import {
   EnvironmentOutlined,
   TrophyOutlined,
 } from "@ant-design/icons";
-import { matchService } from "../../../service/match/matchService"; // Sửa đường dẫn nếu cần
-import { toast } from "react-toastify";
+import { matchService } from "../../../service/match/matchService";
+import { message } from "antd";
 import dayjs from "dayjs";
 
 const { Text } = Typography;
@@ -29,7 +29,7 @@ const PlayerMatchHistory: React.FC<PlayerMatchHistoryProps> = ({ userId }) => {
         const data = response.result?.data;
         setMatches(data);
       } catch (error) {
-        toast.error("Không thể tải lịch sử đấu");
+        message.error("Không thể tải lịch sử đấu");
       } finally {
         setLoading(false);
       }

@@ -33,6 +33,9 @@ export const matchService = {
     startDate?: string;
     endDate?: string;
     matchType?: string;
+    city?: string;
+    district?: string;
+    ward?: string;
   }): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
     const response = await api.get(`${API_BASE_URL}/open`, {
       params,

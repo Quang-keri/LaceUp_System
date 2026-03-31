@@ -35,4 +35,5 @@ public class UserResponse {
     private Integer rankPoint;
     private boolean isDepositConfirmed;
     private BigDecimal fakeMoney;
+    private List<CategoryRankResponse> categoryRank;
 }

@@ -9,4 +9,7 @@ public interface KnowledgeService {
     void trainAiWithRentalAreas();
 
     void resetAiMemory();
+
+    @Transactional
+    void trainAiWithAvailableMatches();
 }

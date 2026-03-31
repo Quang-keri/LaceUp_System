@@ -26,7 +26,8 @@ public interface MatchService {
             String keyword,
             LocalDateTime startDate,
             LocalDateTime endDate,
-            MatchType matchType);
+            MatchType matchType,
+            String ward, String district, String city);
 
     MatchResponse getMatchDetail(UUID matchId);
 
