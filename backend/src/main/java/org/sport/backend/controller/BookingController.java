@@ -8,12 +8,18 @@ import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
+import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
 import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
+import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
+import org.sport.backend.entity.ServiceItem;
+import org.sport.backend.repository.ServiceItemRepository;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.InvoiceService;
+import org.sport.backend.service.ServiceItemService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,16 +28,35 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/bookings")
 @Tag(name = "10. Booking")
-@RequiredArgsConstructor
+
 public class BookingController {
 
-    private final BookingService bookingService;
-    private final InvoiceService invoiceService;
+    @Autowired
+    private BookingService bookingService;
+    @Autowired
+    private InvoiceService invoiceService;
+
+
+    @PostMapping("/{bookingId}/services")
+    public ResponseEntity<ApiResponse<Void>> addExtraServicesToBooking(
+            @PathVariable UUID bookingId,
+            @RequestBody AddExtraServicesRequest request) {
+        try {
+            bookingService.addExtraServices(bookingId, request);
+            return ResponseEntity.ok(ApiResponse.success(200, "Thêm dịch vụ thành công", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error(400, "Lỗi thêm dịch vụ: " + e.getMessage()));
+        }
+    }
+
+
 
     @PostMapping("/check-availability")
     public ApiResponse<CheckAvailabilityResponse> checkAvailability(

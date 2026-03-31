@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Row, Col, ConfigProvider, Table, message } from "antd";
-import { toast } from "react-toastify";
 
 import { useAuth } from "../../../context/AuthContext";
 import rentalService from "../../../service/rental/rentalService";
@@ -127,7 +126,6 @@ export default function RentalAreaDetailPage() {
   };
 
   const handleChatClick = () => {
-
     if (!data) {
       message.info("Đang tải dữ liệu, vui lòng đợi trong giây lát");
       return;
@@ -227,7 +225,7 @@ export default function RentalAreaDetailPage() {
                 {data.rentalName}
               </h1>
               <p className="text-gray-500 text-sm line-clamp-1">
-                {`${data.address.street}, ${data.address.ward}, ${data.address.district}, ${data.address.city.cityName}`}
+                {`${data.address.street}, ${data.address.ward}, ${data.address.district}, ${data.address.city?.cityName}`}
               </p>
             </div>
 

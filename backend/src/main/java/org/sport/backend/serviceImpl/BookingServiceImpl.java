@@ -4,6 +4,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.*;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
+import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
 import org.sport.backend.dto.request.slot.UpdateSlotRequest;
 import org.sport.backend.dto.response.booking.BookingIntentResponse;
@@ -61,6 +62,60 @@ public class BookingServiceImpl implements BookingService {
     private PaymentRepository paymentRepository;
     @Autowired
     private AddressMapper addressMapper;
+    @Autowired
+    private BookingServiceItemRepository bookingServiceItemRepository;
+    @Autowired
+    private ServiceItemRepository serviceItemRepository;
+
+    @Override
+    @Transactional
+    public void addExtraServices(UUID bookingId, AddExtraServicesRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Booking với ID: " + bookingId));
+
+        BigDecimal totalExtraCost = BigDecimal.ZERO;
+
+        for (AddExtraServicesRequest.ServiceItemRequest itemReq : request.getItems()) {
+            ServiceItem serviceItem = serviceItemRepository.findById(itemReq.getServiceId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ: " + itemReq.getServiceId()));
+
+            if (serviceItem.getQuantity() < itemReq.getQuantity()) {
+                throw new RuntimeException("Số lượng dịch vụ " + serviceItem.getServiceName() + " không đủ để cung cấp. Vui lòng giảm số lượng hoặc chọn dịch vụ khác.");
+            }
+
+            //Chỗ này update sau Quang chưa làm hết luồng này
+            serviceItem.setQuantity(serviceItem.getQuantity() - itemReq.getQuantity());
+            serviceItemRepository.save(serviceItem);
+
+            BookingServiceItem bsi = BookingServiceItem.builder()
+                    .booking(booking)
+                    .serviceItem(serviceItem)
+                    .quantity(itemReq.getQuantity())
+                    .price(serviceItem.getPriceSell())
+                    .build();
+
+            bookingServiceItemRepository.save(bsi);
+
+
+            BigDecimal itemTotal = serviceItem.getPriceSell().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            totalExtraCost = totalExtraCost.add(itemTotal);
+        }
+
+
+        BigDecimal currentTotal = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
+        booking.setTotalPrice(currentTotal.add(totalExtraCost));
+
+
+        BigDecimal currentRemaining = booking.getRemainingAmount() != null ? booking.getRemainingAmount() : BigDecimal.ZERO;
+        booking.setRemainingAmount(currentRemaining.add(totalExtraCost));
+
+
+        if (booking.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0 && booking.getBookingStatus() == BookingStatus.COMPLETED) {
+            booking.setBookingStatus(BookingStatus.BOOKED);
+        }
+
+        bookingRepository.save(booking);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -81,7 +136,12 @@ public class BookingServiceImpl implements BookingService {
         }
         LocalTime reqStartTime = request.getStartTime().toLocalTime();
         LocalTime reqEndTime = request.getEndTime().toLocalTime();
-
+        LocalTime openTime = rentalArea.getOpenTime();
+        LocalTime closeTime = rentalArea.getCloseTime();
+        System.err.println("Request Start: " + reqStartTime);
+        System.err.println("Request End: " + reqEndTime);
+        System.err.println("Rental Open: " + openTime);
+        System.err.println("Rental Close: " + closeTime);
         if (reqStartTime.isBefore(rentalArea.getOpenTime()) || reqEndTime.isAfter(rentalArea.getCloseTime())) {
             return new CheckAvailabilityResponse(
                     false,
@@ -124,7 +184,6 @@ public class BookingServiceImpl implements BookingService {
 
         return new CheckAvailabilityResponse(true, "Sân khả dụng", availableCount);
     }
-
 
 
     @Override
@@ -281,7 +340,7 @@ public class BookingServiceImpl implements BookingService {
 
             CourtPrice rule = pickBestRule(rules, cursor);
 
-            // Tính điểm kết thúc của rule hiện tại
+
             LocalDateTime ruleEnd = LocalDateTime.of(cursor.toLocalDate(), rule.getEndTime());
 
             if (rule.getEndTime().equals(LocalTime.MIN)) {
@@ -499,7 +558,15 @@ public class BookingServiceImpl implements BookingService {
                         .slotStatus(slot.getSlotStatus())
                         .build())
                 .toList();
-
+        List<BookingResponse.BookingServiceResponse> extraServiceResponses = bookingServiceItemRepository.findByBooking(booking)
+                .stream()
+                .map(bsi -> BookingResponse.BookingServiceResponse.builder()
+                        .serviceId(bsi.getServiceItem().getServiceItemId())
+                        .serviceName(bsi.getServiceItem().getServiceName())
+                        .quantity(bsi.getQuantity())
+                        .price(bsi.getPrice())
+                        .build())
+                .toList();
         return BookingResponse.builder()
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice())
@@ -522,6 +589,7 @@ public class BookingServiceImpl implements BookingService {
                 .depositAmount(booking.getDepositAmount())
                 .remainingAmount(booking.getRemainingAmount())
                 .paymentMethod(paymentMethod)
+                .extraServiceResponses(extraServiceResponses)
                 .build();
     }
 

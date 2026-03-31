@@ -1,4 +1,5 @@
 import api from "../config/axios";
+import type { ApiResponse } from "../types/ApiResponse";
 
 export interface ServiceItemRequest {
   rentalAreaId: string;
@@ -13,6 +14,8 @@ export interface ServiceItemRequest {
 }
 
 class ServiceItemService {
+
+
   async createServiceItem(data: ServiceItemRequest) {
     const formData = new FormData();
 
@@ -29,11 +32,9 @@ class ServiceItemService {
 
     if (data.serviceNote) formData.append("serviceNote", data.serviceNote);
 
-
     if (data.images && data.images.length > 0) {
       data.images.forEach((file: any) => {
         if (file.originFileObj) {
-         
           formData.append("imageUrls", file.originFileObj);
         }
       });

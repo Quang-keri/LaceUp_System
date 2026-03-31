@@ -25,7 +25,7 @@ public class SlotController {
     private final SlotService slotService;
 
     @GetMapping("/rental/{rentalAreaId}/courts")
-    @PreAuthorize("hasAuthority('VIEW_COURTS')")
+//    @PreAuthorize("hasAuthority('VIEW_COURTS')")
     public ApiResponse<List<CourtResponse>> getCourtsByRental(
             @PathVariable UUID rentalAreaId) {
         return ApiResponse.success(
@@ -35,7 +35,7 @@ public class SlotController {
     }
 
     @PostMapping("/{slotId}/extend/check")
-    @PreAuthorize("hasAuthority('EXTEND_SLOT')")
+//    @PreAuthorize("hasAuthority('EXTEND_SLOT')")
     public ApiResponse<ExtendCheckResponse> checkExtend(
             @PathVariable UUID slotId,
             @RequestBody ExtendRequest request) {
@@ -43,7 +43,7 @@ public class SlotController {
                 slotService.checkExtend(slotId, request));
     }
     @PostMapping("/{slotId}/extend/confirm")
-    @PreAuthorize("hasAuthority('EXTEND_SLOT')")
+//    @PreAuthorize("hasAuthority('EXTEND_SLOT')")
     public ResponseEntity<ApiResponse<Void>> confirmExtend(
             @PathVariable UUID slotId,
             @RequestBody ExtendRequest request) {
@@ -51,7 +51,7 @@ public class SlotController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
     @PostMapping("/{slotId}/swap/check")
-    @PreAuthorize("hasAuthority('SWAP_SLOT')")
+//    @PreAuthorize("hasAuthority('SWAP_SLOT')")
     public ApiResponse<SwapCheckResponse> checkSwap(
             @PathVariable UUID slotId,
             @RequestBody SwapRequest request) {
@@ -59,7 +59,7 @@ public class SlotController {
     }
 
     @PostMapping("/{slotId}/swap/confirm")
-    @PreAuthorize("hasAuthority('SWAP_SLOT')")
+//    @PreAuthorize("hasAuthority('SWAP_SLOT')")
     public ApiResponse<Void> confirmSwap(
             @PathVariable UUID slotId,
             @RequestBody SwapRequest request) {

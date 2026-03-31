@@ -53,45 +53,31 @@ const RentalAreaManagement: React.FC = () => {
 
       setTotalElements(resultData?.totalElements || 0);
 
-      const mapped = items.map((r: any) => {
-        // Lấy danh sách sân từ courtResponses hoặc courts
-        const rawCourts = r.courtResponses || r.courts || [];
+    const mapped = items.map((r: any) => {
+  // Lấy danh sách sân từ courtResponses
+  const rawCourts = r.courtResponses || r.courts || [];
 
-        return {
-          id: r.rentalAreaId,
-          name: r.rentalAreaName,
-          ownerName: r.contactName || r.owner?.email || "N/A",
-          ownerPhone: r.owner?.phone || r.contactPhone || "N/A",
-          address: r.address
-            ? `${r.address.street || ""}, ${r.address.ward || ""}, ${
-                r.address.district || ""
-              }${r.address.city ? `, ${r.address.city.cityName}` : ""}`
-            : "Chưa cập nhật",
-          verificationStatus: r.verificationStatus,
-          status: r.status,
-          courtCount: rawCourts.length,
-          images: r.images ? r.images.map((img: any) => img.imageUrl) : [],
-          // Map dữ liệu sân chi tiết
-          courts: rawCourts.map((c: any) => ({
-            courtId: c.courtId,
-            courtName: c.courtName,
-            priceRange:
-              c.minPrice && c.maxPrice
-                ? `${c.minPrice.toLocaleString()}đ - ${c.maxPrice.toLocaleString()}đ`
-                : "Chưa có giá",
-            amenities: c.amenities?.map((a: any) => a.amenityName) || [],
-            images: c.images?.map((img: any) => img.imageUrl) || [],
-            courtCopiesCount: c.courtCopies?.length || 0,
-            priceRules: c.priceRules || [],
-          })),
-          legalInfo: {
-            taxId: r.taxId || "N/A",
-            license: r.license || "N/A",
-            note: r.note || "Không có ghi chú",
-            images: r.images || [],
-          },
-        };
-      });
+  return {
+    ...r,
+    id: r.rentalAreaId,
+    name: r.rentalAreaName,
+    ownerName: r.contactName || r.owner?.email || "N/A",
+    ownerPhone: r.contactPhone || r.owner?.phone || "N/A", // Ưu tiên số điện thoại liên hệ trực tiếp
+    addressString: r.address
+      ? `${r.address.street || ""}, ${r.address.ward || ""}, ${
+          r.address.district || ""
+        }${r.address.city ? `, ${r.address.city.cityName}` : ""}`
+      : "Chưa cập nhật",
+    courtCount: rawCourts.length,
+    courts: rawCourts, // QUAN TRỌNG: Gán rawCourts vào đây để Modal đọc được
+    legalInfo: {
+      taxId: r.taxId || "N/A",
+      license: r.license || "N/A",
+      note: r.note || "Không có ghi chú",
+      images: r.images || [],
+    },
+  };
+});
 
       setData(mapped);
     } catch (err) {
@@ -145,7 +131,12 @@ const RentalAreaManagement: React.FC = () => {
       ),
     },
     { title: "Chủ sở hữu", dataIndex: "ownerName", key: "ownerName" },
-    { title: "Địa chỉ", dataIndex: "address", key: "address", ellipsis: true },
+    {
+      title: "Địa chỉ",
+      dataIndex: "addressString", // Sử dụng addressString đã map
+      key: "addressString",
+      ellipsis: true,
+    },
     {
       title: "Số sân",
       dataIndex: "courtCount",
@@ -180,7 +171,7 @@ const RentalAreaManagement: React.FC = () => {
               type="text"
               icon={<EyeOutlined />}
               onClick={() => {
-                setSelectedArea(record);
+                setSelectedArea(record); // Lúc này record đã chứa đầy đủ serviceItems, address, owner...
                 setIsDetailModalOpen(true);
               }}
             />
@@ -194,8 +185,7 @@ const RentalAreaManagement: React.FC = () => {
                 onClick={() => handleApprove(record.id)}
                 style={{ background: "#52c41a", borderColor: "#52c41a" }}
               >
-                {" "}
-                Duyệt{" "}
+                Duyệt
               </Button>
               <Button
                 danger
@@ -206,8 +196,7 @@ const RentalAreaManagement: React.FC = () => {
                   setRejectModalVisible(true);
                 }}
               >
-                {" "}
-                Từ chối{" "}
+                Từ chối
               </Button>
             </>
           )}

@@ -23,7 +23,7 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
     color: "default",
   };
 
-  // ✅ PAYMENT LOGIC CHUẨN (fix gia hạn)
+ 
   const total = booking.totalPrice || 0;
   const deposit = booking.depositAmount || 0;
   const remaining = booking.remainingAmount ?? Math.max(total - deposit, 0);
@@ -76,21 +76,21 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
           <Tag color={status.color}>{status.label}</Tag>
         </Descriptions.Item>
 
-        {/* 💰 Tổng */}
+      
         <Descriptions.Item label="Tổng tiền">
           <b style={{ color: "#1677ff", fontSize: 16 }}>
             {total.toLocaleString("vi-VN")} VND
           </b>
         </Descriptions.Item>
 
-        {/* 💵 Đã trả */}
+       
         <Descriptions.Item label="Đã thanh toán">
           <span style={{ color: "#52c41a", fontWeight: 500 }}>
             {paid.toLocaleString("vi-VN")} VND
           </span>
         </Descriptions.Item>
 
-        {/* 💸 Còn lại */}
+        
         <Descriptions.Item label="Còn lại cần thu">
           <b style={{ color: "#ff4d4f", fontSize: 16 }}>
             {remaining.toLocaleString("vi-VN")} VND
@@ -98,7 +98,7 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
         </Descriptions.Item>
       </Descriptions>
 
-      {/* 📊 PROGRESS BAR */}
+    
       <div style={{ marginTop: 12 }}>
         <div
           style={{

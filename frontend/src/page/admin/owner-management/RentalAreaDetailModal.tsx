@@ -28,6 +28,14 @@ interface Props {
   onApprove: (id: string) => void;
 }
 
+// Hàm format tiền tệ VNĐ
+const formatVND = (price: number) => {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(price || 0);
+};
+
 const RentalAreaDetailModal: React.FC<Props> = ({
   open,
   selectedArea,
@@ -42,9 +50,9 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       dataIndex: "images",
       key: "images",
       width: 100,
-      render: (imgs: string[]) => (
+      render: (imgs: any[]) => (
         <Image
-          src={imgs[0]}
+          src={imgs?.[0]?.imageUrl} // FIX: Lấy field imageUrl từ object
           width={80}
           height={60}
           style={{ objectFit: "cover", borderRadius: 4 }}
@@ -59,29 +67,48 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       render: (name: string) => <Text strong>{name}</Text>,
     },
     {
-      title: "Số lượng sân thực tế",
-      dataIndex: "courtCopiesCount",
+      title: "Số lượng sân",
       key: "courtCopiesCount",
       align: "center" as const,
-      render: (count: number) => <Tag color="blue">{count} sân</Tag>,
+      // FIX: Đếm số lượng object trong mảng courtCopies
+      render: (_: any, record: any) => (
+        <Tag color="blue">{record.courtCopies?.length || 0} sân</Tag>
+      ),
     },
     {
       title: "Khoảng giá",
-      dataIndex: "priceRange",
       key: "priceRange",
-      render: (price: string) => <Text type="danger">{price}</Text>,
+      // FIX: Lấy minPrice và maxPrice từ JSON
+      render: (_: any, record: any) => {
+        if (!record.minPrice && !record.maxPrice)
+          return <Text type="secondary">Chưa cập nhật</Text>;
+        if (record.minPrice === record.maxPrice) {
+          return <Text type="danger">{formatVND(record.minPrice)}</Text>;
+        }
+        return (
+          <Text type="danger">
+            {formatVND(record.minPrice)} - {formatVND(record.maxPrice)}
+          </Text>
+        );
+      },
     },
     {
-      title: "Tiện ích",
+      title: "Tiện ích sân",
       dataIndex: "amenities",
       key: "amenities",
-      render: (amenities: string[]) => (
+      // FIX: Map amenityName từ object
+      render: (amenities: any[]) => (
         <Space wrap size={[0, 4]}>
-          {amenities.map((a) => (
-            <Tag key={a} color="cyan" style={{ fontSize: "11px" }}>
-              {a}
+          {amenities?.map((a) => (
+            <Tag key={a.amenityId} color="cyan" style={{ fontSize: "11px" }}>
+              {a.amenityName}
             </Tag>
           ))}
+          {(!amenities || amenities.length === 0) && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Không có
+            </Text>
+          )}
         </Space>
       ),
     },
@@ -109,8 +136,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
             style={{ background: "#52c41a", borderColor: "#52c41a" }}
             onClick={() => onApprove(selectedArea.id)}
           >
-            {" "}
-            Phê duyệt cơ sở{" "}
+            Phê duyệt cơ sở
           </Button>
         ),
       ]}
@@ -134,7 +160,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
             <Descriptions.Item
               label={
                 <span>
-                  <HomeOutlined /> Chủ sở hữu
+                  <HomeOutlined /> Liên hệ
                 </span>
               }
             >
@@ -143,11 +169,11 @@ const RentalAreaDetailModal: React.FC<Props> = ({
             <Descriptions.Item
               label={
                 <span>
-                  <PhoneOutlined /> Liên hệ
+                  <PhoneOutlined /> Số điện thoại
                 </span>
               }
             >
-              {selectedArea.ownerPhone}
+              <Text strong>{selectedArea.ownerPhone}</Text>
             </Descriptions.Item>
             <Descriptions.Item
               label={
@@ -157,7 +183,34 @@ const RentalAreaDetailModal: React.FC<Props> = ({
               }
               span={2}
             >
-              {selectedArea.address}
+              {selectedArea.addressString || selectedArea.address}
+            </Descriptions.Item>
+
+            {/* HIỂN THỊ DỊCH VỤ TIỆN ÍCH CÓ GIÁ TIỀN & SỐ LƯỢNG */}
+            <Descriptions.Item label="Dịch vụ tại cơ sở" span={2}>
+              {selectedArea.serviceItems &&
+              selectedArea.serviceItems.length > 0 ? (
+                <Space wrap size={[0, 8]}>
+                  {selectedArea.serviceItems.map((service: any) => (
+                    <Tag
+                      key={service.id}
+                      color="purple"
+                      style={{ padding: "4px 8px", fontSize: 13 }}
+                    >
+                      <b>{service.serviceName}</b>
+                      <Text
+                        type="secondary"
+                        style={{ marginLeft: 4, fontSize: 12 }}
+                      >
+                        (Kho: {service.quantity} |{" "}
+                        {formatVND(service.priceSell)}/{service.rentalDuration})
+                      </Text>
+                    </Tag>
+                  ))}
+                </Space>
+              ) : (
+                <Text type="secondary">Chưa cập nhật dịch vụ</Text>
+              )}
             </Descriptions.Item>
           </Descriptions>
 
@@ -165,20 +218,61 @@ const RentalAreaDetailModal: React.FC<Props> = ({
             <Title level={5}>Hình ảnh không gian</Title>
             {selectedArea.images?.length > 0 ? (
               <Image.PreviewGroup>
-                <Space wrap>
-                  {selectedArea.images.map((url: string, index: number) => (
-                    <Image
-                      key={index}
-                      src={url}
-                      width={160}
-                      height={110}
-                      style={{
-                        objectFit: "cover",
-                        borderRadius: 8,
-                        border: "1px solid #f0f0f0",
-                      }}
-                    />
-                  ))}
+                <Space wrap size={[12, 12]}>
+                  {selectedArea.images.map((img: any, index: number) => {
+                    const maxVisible = 4; // Số lượng ảnh tối đa hiển thị trên Modal
+                    const isHidden = index >= maxVisible;
+                    const isLastVisible = index === maxVisible - 1;
+                    const remainingCount =
+                      selectedArea.images.length - maxVisible;
+
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          display: isHidden ? "none" : "block", // Ẩn các ảnh vượt quá giới hạn
+                          position: "relative",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Image
+                          src={img.imageUrl}
+                          width={160}
+                          height={110}
+                          style={{
+                            objectFit: "cover",
+                            borderRadius: 8,
+                            border: "1px solid #f0f0f0",
+                          }}
+                          fallback="https://via.placeholder.com/160x110?text=Lỗi+Ảnh"
+                        />
+
+                        {/* Lớp phủ đen "+N" hiển thị đè lên ảnh cuối cùng */}
+                        {isLastVisible && remainingCount > 0 && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              backgroundColor: "rgba(0, 0, 0, 0.5)",
+                              color: "#fff",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "20px",
+                              fontWeight: "bold",
+                              borderRadius: 8,
+                              pointerEvents: "none", // Bỏ qua click để Image vẫn nhận được thao tác mở lightbox
+                            }}
+                          >
+                            +{remainingCount}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </Space>
               </Image.PreviewGroup>
             ) : (
@@ -235,14 +329,15 @@ const RentalAreaDetailModal: React.FC<Props> = ({
           <div style={{ marginTop: 20 }}>
             <Text strong>Ảnh chụp chứng từ/Giấy phép:</Text>
             <div style={{ marginTop: 12 }}>
-              {/* Giả định ảnh pháp lý nằm trong mảng images của cơ sở hoặc riêng */}
               <Image.PreviewGroup>
-                {selectedArea.images?.slice(0, 2).map((url: any, i: number) => (
+                {/* FIX: Map imageUrl */}
+                {selectedArea.images?.slice(0, 2).map((img: any, i: number) => (
                   <Image
                     key={i}
-                    src={url}
+                    src={img.imageUrl}
                     width={200}
                     style={{ marginRight: 10, borderRadius: 4 }}
+                    fallback="https://via.placeholder.com/200x150?text=Lỗi+Ảnh"
                   />
                 ))}
               </Image.PreviewGroup>

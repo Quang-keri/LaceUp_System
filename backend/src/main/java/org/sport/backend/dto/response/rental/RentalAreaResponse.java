@@ -7,6 +7,7 @@ import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
+import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Court;
 
@@ -34,4 +35,5 @@ public class RentalAreaResponse {
     private Boolean isActive;
     private VerificationStatus verificationStatus;
     private List<CourtResponse> courtResponses;
+    private  List<ServiceItemResponse> serviceItems;
 }

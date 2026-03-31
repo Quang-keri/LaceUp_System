@@ -3,6 +3,24 @@ import type { BookingListResponse, BookingResponse } from "../types/booking";
 import type { ApiResponse } from "../types/ApiResponse";
 
 class BookingService {
+  async getServicesByRentalArea(rentalAreaId: string) {
+    const response = await api.get<ApiResponse<any[]>>(
+      `/rental-areas/${rentalAreaId}/services`,
+    );
+    return response.data;
+  }
+  async addExtraServices(
+    bookingId: string,
+    items: { 
+       serviceId: string;
+       quantity: number }[],
+  ) {
+    const response = await api.post(`/bookings/${bookingId}/services`, {
+      items: items, 
+    });
+    return response.data;
+  }
+
   async createBooking(data: any) {
     const res = await api.post("/bookings/intent", data);
     return res.data;
@@ -75,9 +93,8 @@ class BookingService {
   }
 
   async collectRemainingPayment(bookingId: string) {
-  
     const response = await api.put<ApiResponse<any>>(
-      `/bookings/${bookingId}/collect-payment`
+      `/bookings/${bookingId}/collect-payment`,
     );
     return response.data;
   }
@@ -113,10 +130,15 @@ class BookingService {
     return response.data;
   }
 
-  async checkAvailability(payload: { courtId: string, startTime: string, endTime: string, quantity: number }) {
-  const response = await api.post("/bookings/check-availability", payload);
-  return response.data;
-}
+  async checkAvailability(payload: {
+    courtId: string;
+    startTime: string;
+    endTime: string;
+    quantity: number;
+  }) {
+    const response = await api.post("/bookings/check-availability", payload);
+    return response.data;
+  }
 }
 
 export default new BookingService();

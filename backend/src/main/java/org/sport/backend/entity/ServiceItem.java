@@ -27,7 +27,6 @@ public class ServiceItem {
     @JoinColumn(name = "rental_area_id")
     private RentalArea rentalArea;
 
-
     @ManyToOne
     @JoinColumn(name = "item_group_id")
     private ItemGroup itemGroup;

@@ -17,6 +17,7 @@ import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
 import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.*;
@@ -82,6 +83,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     @Autowired
     private RoleRepository roleRepository;
 
+    @Autowired
+    private ServiceItemRepository serviceItemRepository;
 
     @Override
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
@@ -92,9 +95,9 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         }
 
         User owner = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        Role role =roleRepository.findByRoleName("OWNER").orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+        Role role = roleRepository.findByRoleName("OWNER").orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
         System.err.println("Owner role: " + owner.getRole().getRoleName());
-        if(!owner.getRole().getRoleName().equals("OWNER")){
+        if (!owner.getRole().getRoleName().equals("OWNER")) {
             owner.setRole(role);
             userRepository.save(owner);
         }
@@ -193,7 +196,20 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .map(this::mapToResponseCourt)
                 .toList();
 
-        UserResponse userResponse = UserResponse.builder()
+        List<ServiceItem> serviceItemResponses =  serviceItemRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId());
+        List<ServiceItemResponse> serviceItems = serviceItemResponses.stream().map(
+                item -> ServiceItemResponse.builder()
+                        .id(item.getServiceItemId())
+                        .serviceName(item.getServiceName())
+                        .quantity(item.getQuantity())
+                        .rentalDuration(item.getRentalDuration())
+                        .priceSell(item.getPriceSell())
+                        .priceOriginal(item.getPriceOriginal())
+                        .serviceNote(item.getServiceNote())
+                        .build()
+        ).toList();
+
+                UserResponse userResponse = UserResponse.builder()
                 .userId(rentalArea.getOwner().getUserId())
                 .email(rentalArea.getOwner().getEmail())
                 .dateOfBirth(rentalArea.getOwner().getDateOfBirth())
@@ -212,8 +228,10 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .city(cityResponse)
                 .courtResponses(courtResponses)
                 .verificationStatus(rentalArea.getVerificationStatus())
+                .serviceItems(serviceItems)
                 .build();
     }
+
     private CourtResponse mapToResponseCourt(Court court) {
 
         List<CourtImage> images =
@@ -292,6 +310,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .amenities(amenityResponses)
                 .build();
     }
+
     @Override
     public PageResponse<RentalAreaResponse> getAllRentalAreas(
             int page,
@@ -606,6 +625,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         rentalArea.setDeletedAt(LocalDateTime.now());
         rentalAreaRepository.save(rentalArea);
     }
+
     @Override
     @Transactional
     public void approveRentalArea(UUID rentalAreaId) {

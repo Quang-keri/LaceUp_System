@@ -12,4 +12,6 @@ public interface ServiceItemService {
     ServiceItemResponse update(UUID id, ServiceItemRequest req);
     ServiceItemResponse get(UUID id);
     List<ServiceItemResponse> getAll();
+
+    List<ServiceItemResponse> getByRentalArea(UUID rentalAreaId);
 }

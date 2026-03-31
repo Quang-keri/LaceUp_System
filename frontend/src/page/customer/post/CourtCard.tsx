@@ -17,7 +17,7 @@ export default function CourtCard({ post, onClick }: any) {
       <h2 className="text-base font-semibold line-clamp-1">{post.title}</h2>
 
       <p className="text-gray-500 text-sm line-clamp-1">
-        {`${post.address.street}, ${post.address.ward}, ${post.address.district}, ${post.address.city.cityName}`}
+        {`${post.address.street}, ${post.address.ward}, ${post.address.district}, ${post.address.city?.cityName}`}
       </p>
 
       <p className="text-gray-500 text-sm">{post.courtName}</p>

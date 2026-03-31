@@ -10,8 +10,12 @@ import org.sport.backend.dto.request.rental.RejectRentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.service.RentalAreaService;
+import org.sport.backend.service.ServiceItemService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,11 +27,21 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/rental-areas")
 @Tag(name = "9. Rental Area")
-@RequiredArgsConstructor
+
 public class RentalAreaController {
 
-    private final RentalAreaService rentalAreaService;
+    @Autowired
+    private  RentalAreaService rentalAreaService;
+    @Autowired
+    private ServiceItemService serviceItemService;
 
+    @GetMapping("/{rentalAreaId}/services")
+    public ResponseEntity<ApiResponse<List<ServiceItemResponse>>> getServicesByRentalArea(
+            @PathVariable UUID rentalAreaId) {
+
+        List<ServiceItemResponse> services = serviceItemService.getByRentalArea(rentalAreaId);
+        return ResponseEntity.ok(ApiResponse.success(200, "Success", services));
+    }
     @PutMapping("/{rentalAreaId}/approve")
     public ApiResponse<Void> approveRentalArea(@PathVariable UUID rentalAreaId) {
         rentalAreaService.approveRentalArea(rentalAreaId);

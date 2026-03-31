@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class ServiceItemServiceImpl implements ServiceItemService {
 
     @Autowired
-    private ServiceItemRepository repo;
+    private ServiceItemRepository serviceItemRepository;
 
     @Autowired
     private ItemGroupRepository itemGroupRepo;
@@ -56,7 +56,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         item.setItemGroup(group);
         item.setRentalArea(rentalArea);
 
-        repo.save(item);
+        serviceItemRepository.save(item);
 
         if (req.getImageUrls() != null && !req.getImageUrls().isEmpty()) {
             String folder = "items/" + item.getServiceItemId();
@@ -71,7 +71,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
                 images.add(img);
             }
             item.setImages(images);
-            repo.save(item);
+            serviceItemRepository.save(item);
         }
 
         return map(item);
@@ -80,7 +80,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     @Override
     @Transactional
     public ServiceItemResponse update(UUID id, ServiceItemRequest req) {
-        ServiceItem item = repo.findById(id)
+        ServiceItem item = serviceItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("ServiceItem not found"));
 
         ItemGroup group = itemGroupRepo.findById(req.getItemGroupId())
@@ -124,22 +124,34 @@ public class ServiceItemServiceImpl implements ServiceItemService {
             }
         }
 
-        repo.save(item);
+        serviceItemRepository.save(item);
         return map(item);
     }
 
     @Override
     public ServiceItemResponse get(UUID id) {
-        ServiceItem item = repo.findById(id)
+        ServiceItem item = serviceItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("ServiceItem not found"));
         return map(item);
     }
 
     @Override
     public List<ServiceItemResponse> getAll() {
-        List<ServiceItem> items = repo.findAll();
+        List<ServiceItem> items = serviceItemRepository.findAll();
         return items.stream().map(this::map).collect(Collectors.toList());
 
+    }
+
+    @Override
+    public List<ServiceItemResponse> getByRentalArea(UUID rentalAreaId) {
+
+        List<ServiceItem> items = serviceItemRepository
+                .findByRentalArea_RentalAreaId(rentalAreaId);
+
+        List <ServiceItemResponse> res = items.stream()
+                .map(this::map)
+                .collect(Collectors.toList());
+        return  res;
     }
 
     private ServiceItemResponse map(ServiceItem item) {

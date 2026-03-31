@@ -22,6 +22,9 @@ public class ServiceItemController {
     private ServiceItemService serviceItemService;
 
 
+
+
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<ServiceItemResponse> createServiceItem(@ModelAttribute ServiceItemRequest request) {
         ServiceItemResponse response = serviceItemService.create(request);
