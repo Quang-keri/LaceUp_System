@@ -20,7 +20,7 @@ public class CourtPriceController {
     private final CourtPriceService courtPriceService;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CREATE_COURT_PRICE')")
+//    @PreAuthorize("hasAuthority('CREATE_COURT_PRICE')")
     public ApiResponse<CourtPriceResponse> create(
             @RequestBody @Valid CourtPriceRequest request
     ) {

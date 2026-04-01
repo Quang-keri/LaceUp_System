@@ -37,7 +37,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     );
 
     Optional<Payment> findFirstByBookingOrderByTransactionDateDesc(Booking booking);
-    Optional<Payment> findByPayosOrderCode(Long payosOrderCode);
+    Optional<Payment> findByOrderCode(Long orderCode);
 
     @Query("SELECT DISTINCT b.rentalArea.rentalAreaId FROM Payment p " +
             "JOIN p.booking b " +

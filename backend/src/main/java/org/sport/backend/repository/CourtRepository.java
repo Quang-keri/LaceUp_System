@@ -15,4 +15,6 @@ public interface CourtRepository extends JpaRepository<Court, UUID>, JpaSpecific
     List<Court> findByRentalArea(RentalArea rentalArea);
 
     List<Court> findAllByRentalArea(RentalArea area);
+
+    List<Court>findByRentalArea_RentalAreaId(UUID rentalAreaId);
 }

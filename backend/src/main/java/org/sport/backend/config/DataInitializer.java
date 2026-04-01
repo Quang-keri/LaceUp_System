@@ -38,7 +38,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserAchievementRepository userAchievementRepository;
     private final UserCategoryRankRepository userCategoryRankRepository;
     private final PasswordEncoder passwordEncoder;
-
+    private  final ItemGroupRepository itemGroupRepository;
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
@@ -173,8 +173,25 @@ public class DataInitializer implements CommandLineRunner {
         if (bookingRepository.count() == 0) seedBookingAndPaymentData();
         if (postRepository.count() == 0) seedPostData();
         if (rentalAreaRepository.count() <= 1) seedMultipleRentalAreasAndPosts(courtImagesList.subList(2, 6));
-    }
+        if(itemGroupRepository.count() == 0){
+            seedItemGroup();
+        }
 
+    }
+    private void seedItemGroup(){
+        ItemGroup group1 = new ItemGroup();
+        group1.setName("Đồ ăn / Thức uống");
+
+        ItemGroup group2 = new ItemGroup();
+        group2.setName("Thiết bị thuê (Vợt, Bóng...)");
+
+        ItemGroup group3 = new ItemGroup();
+        group3.setName("Dịch vụ khác (Trọng tài, Nhặt bóng...)");
+
+        itemGroupRepository.save(group1);
+        itemGroupRepository.save(group2);
+        itemGroupRepository.save(group3);
+    }
     private void seedPermissions() {
         List<Permission> permissions = List.of(
                 Permission.builder().permissionName("VIEW_USERS").description("Xem danh sách người dùng").build(),
@@ -399,6 +416,9 @@ public class DataInitializer implements CommandLineRunner {
                     .owner(owner)
                     .isActive(true)
                     .status(RentalAreaStatus.ACTIVE)
+                    .verificationStatus(VerificationStatus.VERIFIED)
+                    .openTime(LocalTime.of(5,00))
+                    .closeTime(LocalTime.of(23,00))
                     .build();
             rentalAreaRepository.save(area);
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.sport.backend.config.VnPayConfig;
 import org.sport.backend.constant.BookingIntentStatus;
 import org.sport.backend.constant.PaymentMethod;
 import org.sport.backend.constant.PaymentStatus;
@@ -66,7 +67,8 @@ public class PaymentServiceImpl implements PaymentService {
     private PayOsProperties payOsProperties;
     @Autowired
     private ObjectProvider<PayOS> payOSProvider;
-
+    @Autowired
+    private VnPayConfig vnPayConfig;
 
     @Override
     public CheckoutResponse checkout(CheckoutRequest checkoutRequest) {
@@ -110,33 +112,26 @@ public class PaymentServiceImpl implements PaymentService {
 
         PaymentMethod method = checkoutRequest.getPaymentMethod();
 
-        // ví đang để tạm
-        // if (method == PaymentMethod.WALLET) {
-        //     return handleWalletCheckout(intent, currentUser);
-        // }
 
-        if (method == PaymentMethod.BANK_TRANSFER || method == PaymentMethod.PAY_OS) {
-            boolean isDeposit = Boolean.TRUE.equals(checkoutRequest.getIsDeposit());
-            BigDecimal amountToPay;
-            PaymentType paymentType;
+        boolean isDeposit = Boolean.TRUE.equals(checkoutRequest.getIsDeposit());
+        BigDecimal amountToPay = isDeposit
+                ? intent.getPreviewPrice().multiply(new BigDecimal("0.50")).setScale(0, RoundingMode.HALF_UP)
+                : intent.getPreviewPrice();
+        PaymentType paymentType = isDeposit ? PaymentType.DEPOSIT : PaymentType.FULL;
 
-            if (isDeposit) {
+        log.info("Bắt đầu checkout: Method={}, BookingIntent={}, Amount={}, Type={}",
+                method, intent.getBookingIntentId(), amountToPay, paymentType);
 
-                amountToPay = intent.getPreviewPrice()
-                        .multiply(new BigDecimal("0.50"))
-                        .setScale(0, RoundingMode.HALF_UP);
-                paymentType = PaymentType.DEPOSIT;
-            } else {
-                amountToPay = intent.getPreviewPrice();
-                paymentType = PaymentType.FULL;
-            }
-
-            log.info("Bắt đầu checkout PayOS: BookingIntent={}, Amount={}, Type={}",
-                    intent.getBookingIntentId(), amountToPay, paymentType);
-
+        if (method == PaymentMethod.PAY_OS) {
             return handlePayOsCheckout(intent, currentUser, method, amountToPay, paymentType);
         }
-        throw new RuntimeException("Phương thức thanh toán chưa được hỗ trợ");
+        if (method == PaymentMethod.VN_PAY) {
+            return handleVnPayCheckout(intent, currentUser, method, amountToPay, paymentType);
+        }
+        if (method == PaymentMethod.CASH || method == PaymentMethod.PAY_LATER) {
+            return handlePayLaterCheckout(intent, currentUser, method, amountToPay, paymentType);
+        }
+        throw new RuntimeException("Phương thức thanh toán chưa được hỗ trợ: " + method);
     }
 
     @Override
@@ -154,7 +149,7 @@ public class PaymentServiceImpl implements PaymentService {
             }
 
             long orderCode = Long.parseLong(orderCodeValue);
-            Optional<Payment> optionalPayment = paymentRepository.findByPayosOrderCode(orderCode);
+            Optional<Payment> optionalPayment = paymentRepository.findByOrderCode(orderCode);
             if (optionalPayment.isEmpty()) {
                 return Map.of("code", "00", "message", "payment not found");
             }
@@ -186,7 +181,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (orderCode == null || orderCode.isBlank()) {
             throw new RuntimeException("orderCode không hợp lệ");
         }
-        Payment payment = paymentRepository.findByPayosOrderCode(Long.parseLong(orderCode))
+        Payment payment = paymentRepository.findByOrderCode(Long.parseLong(orderCode))
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy payment"));
 
         if (payment.getBooking() != null && payment.getPaymentStatus() == PaymentStatus.SUCCESS) {
@@ -230,31 +225,155 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
     }
 
+    private CheckoutResponse handleVnPayCheckout(BookingIntent intent, User user, PaymentMethod method, BigDecimal amountToPay, PaymentType paymentType) {
+        long orderCode = generateUniqueOrderCode();
 
-    // [TẠM ẨN HÀM WALLET]
-    // ==========================================
-    /*
-    private CheckoutResponse handleWalletCheckout(BookingIntent intent, User user) {
-        // ... Code xử lý wallet cũ của bạn ...
-        return null;
+        Payment payment = Payment.builder()
+                .bookingIntent(intent)
+                .amount(amountToPay)
+                .paymentMethod(method)
+                .paymentType(paymentType)
+                .paymentStatus(PaymentStatus.PENDING)
+                .transactionDate(LocalDateTime.now())
+                .user(user)
+                .orderCode(orderCode)
+                .build();
+        paymentRepository.save(payment);
+
+        try {
+            String description = "Thanh toan booking " + intent.getBookingIntentId().toString().substring(0, 8);
+            String paymentUrl = vnPayConfig.createPaymentUrl(orderCode, amountToPay.longValue(), description);
+
+            return CheckoutResponse.builder()
+                    .mode("REDIRECT")
+                    .paymentStatus(PaymentStatus.PENDING)
+                    .paymentUrl(paymentUrl)
+                    .orderCode(String.valueOf(orderCode))
+                    .message("Tạo link thanh toán VNPay thành công")
+                    .build();
+        } catch (Exception e) {
+            payment.setPaymentStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            throw new RuntimeException("Không thể tạo link thanh toán VNPay", e);
+        }
     }
-    */
+
+    @Override
+    @Transactional
+    public CheckoutResponse handleVnPayReturn(Map<String, String> fields) {
+
+        boolean isValidSignature = vnPayConfig.verifySignature(fields);
+        if (!isValidSignature) {
+            throw new RuntimeException("Chữ ký VNPay không hợp lệ hoặc dữ liệu bị can thiệp");
+        }
 
 
-    //2
+        String vnp_ResponseCode = fields.get("vnp_ResponseCode");
+        String vnp_TxnRef = fields.get("vnp_TxnRef");
+
+        if (vnp_TxnRef == null || vnp_TxnRef.isBlank()) {
+            throw new RuntimeException("Không tìm thấy mã giao dịch (vnp_TxnRef)");
+        }
+
+        long orderCode = Long.parseLong(vnp_TxnRef);
+        Payment payment = paymentRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch với orderCode: " + orderCode));
+
+        if ("00".equals(vnp_ResponseCode)) {
+
+            if (payment.getPaymentStatus() == PaymentStatus.PENDING) {
+                // Tái sử dụng hàm finalize booking của bạn
+                finalizePaidBookingPayment(payment);
+            }
+
+            return CheckoutResponse.builder()
+                    .mode("BOOKED")
+                    .paymentStatus(PaymentStatus.SUCCESS)
+                    .bookingId(payment.getBooking() != null ? payment.getBooking().getBookingId() : null)
+                    .orderCode(String.valueOf(orderCode))
+                    .message("Thanh toán VNPay thành công")
+                    .build();
+        } else {
+            // Thanh toán thất bại hoặc bị hủy
+            if (payment.getPaymentStatus() == PaymentStatus.PENDING) {
+                payment.setPaymentStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+            }
+
+            return CheckoutResponse.builder()
+                    .mode("FAILED")
+                    .paymentStatus(PaymentStatus.FAILED)
+                    .orderCode(String.valueOf(orderCode))
+                    .message("Thanh toán VNPay không thành công (Mã lỗi: " + vnp_ResponseCode + ")")
+                    .build();
+        }
+    }
+    private CheckoutResponse handlePayLaterCheckout(BookingIntent intent, User user, PaymentMethod method, BigDecimal amountToPay, PaymentType paymentType) {
+        long orderCode = generateUniqueOrderCode();
+
+        Payment payment = Payment.builder()
+                .bookingIntent(intent)
+                .amount(amountToPay)
+                .paymentMethod(method)
+                .paymentType(paymentType)
+                .paymentStatus(PaymentStatus.PENDING)
+                .transactionDate(LocalDateTime.now())
+                .user(user)
+                .orderCode(orderCode)
+                .build();
+        paymentRepository.save(payment);
+
+        // Tạo Booking chính thức nhưng giữ nguyên trạng thái chưa thanh toán
+        finalizeUnpaidBooking(payment);
+
+        return CheckoutResponse.builder()
+                .mode("BOOKED")
+                .paymentStatus(PaymentStatus.PENDING)
+                .bookingId(payment.getBooking().getBookingId())
+                .orderCode(String.valueOf(orderCode))
+                .message("Đặt sân thành công, vui lòng thanh toán tại sân")
+                .build();
+    }
+
+    // Hàm phụ trợ tạo booking cho phương thức thanh toán tại chỗ (không set PaymentStatus = SUCCESS)
+    private void finalizeUnpaidBooking(Payment payment) {
+        try {
+            BookingIntent intent = payment.getBookingIntent();
+            BookingResponse bookingResponse = bookingService.confirmBooking(intent.getBookingIntentId(), payment);
+
+            intent.setStatus(BookingIntentStatus.CONFIRMED);
+            bookingIntentRepository.save(intent);
+
+            Booking booking = bookingRepository.findById(bookingResponse.getBookingId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy booking vừa tạo"));
+
+            BigDecimal totalPrice = intent.getPreviewPrice();
+            booking.setTotalPrice(totalPrice);
+            booking.setDepositAmount(BigDecimal.ZERO);
+            booking.setRemainingAmount(totalPrice);
+
+            bookingRepository.save(booking);
+
+            payment.setBooking(booking);
+            paymentRepository.save(payment);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi xác nhận đặt sân thanh toán tại chỗ", e);
+        }
+    }
+
     private CheckoutResponse handlePayOsCheckout(BookingIntent intent, User user, PaymentMethod method, BigDecimal amountToPay, PaymentType paymentType) {
         PayOS payOS = requirePayOsClient();
         long orderCode = generateUniqueOrderCode();
 
         Payment payment = Payment.builder()
                 .bookingIntent(intent)
-                .amount(amountToPay) // Lưu đúng số tiền (Cọc hoặc Full)
+                .amount(amountToPay)
                 .paymentMethod(method)
                 .paymentType(paymentType)
                 .paymentStatus(PaymentStatus.PENDING)
                 .transactionDate(LocalDateTime.now())
                 .user(user)
-                .payosOrderCode(orderCode)
+                .orderCode(orderCode)
                 .build();
         paymentRepository.save(payment);
 
@@ -291,6 +410,7 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (Exception e) {
             payment.setPaymentStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
+            log.error("Lỗi tạo link PayOS: ", e);
             throw new RuntimeException("Không thể tạo link thanh toán PAYOS");
         }
     }
@@ -340,28 +460,6 @@ public class PaymentServiceImpl implements PaymentService {
             paymentRepository.save(payment);
 
 
-            // [TẠM ẨN WALLET]
-            // ==========================================
-            /*
-            Wallet renterWallet = walletRepository.findByUser(payment.getUser())
-                    .orElseGet(() -> walletRepository.save(Wallet.builder()
-                            .user(payment.getUser())
-                            .balance(BigDecimal.ZERO)
-                            .frozenAmount(BigDecimal.ZERO)
-                            .walletStatus(WalletStatus.ACTIVE)
-                            .build()));
-            BigDecimal sameBalance = renterWallet.getBalance();
-            createWalletPaymentTransactionSafely(
-                    renterWallet,
-                    booking.getBookingId(),
-                    payment.getAmount(),
-                    sameBalance,
-                    sameBalance,
-                    "Thanh toan booking qua PayOS",
-                    "booking_checkout_payos"
-            );
-            */
-
         } catch (Exception e) { // Đổi catch Throwable chung để bắt được lỗi NotFound
             throw new RuntimeException("Không thể tạo booking/invoice cho thanh toán PayOS", e);
         }
@@ -369,11 +467,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     private boolean tryFinalizeByPayOsPaymentStatus(Payment payment) {
         PayOS payOS = requirePayOsClient();
-        if (payOS == null || payment.getPayosOrderCode() == null) {
+        if (payOS == null || payment.getOrderCode() == null) {
             return false;
         }
         try {
-            Object linkData = payOS.paymentRequests().get(payment.getPayosOrderCode());
+            Object linkData = payOS.paymentRequests().get(payment.getOrderCode());
             Map<String, Object> data = objectMapper.convertValue(linkData, Map.class);
             String status = String.valueOf(data.getOrDefault("status", ""));
             if (!"PAID".equalsIgnoreCase(status)) {
@@ -382,7 +480,7 @@ public class PaymentServiceImpl implements PaymentService {
             finalizePaidBookingPayment(payment);
             return true;
         } catch (Exception e) {
-            log.warn("Cannot verify PAYOS payment status from result page. orderCode={}", payment.getPayosOrderCode(), e);
+            log.warn("Cannot verify PAYOS payment status from result page. orderCode={}", payment.getOrderCode(), e);
             return false;
         }
     }
@@ -439,7 +537,7 @@ public class PaymentServiceImpl implements PaymentService {
     private long generateUniqueOrderCode() {
         long orderCode = System.currentTimeMillis() / 1000;
         int attempts = 0;
-        while (paymentRepository.findByPayosOrderCode(orderCode).isPresent()) {
+        while (paymentRepository.findByOrderCode(orderCode).isPresent()) {
             orderCode++;
             attempts++;
             if (attempts > 10_000) {
@@ -468,7 +566,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String buildInvoiceViewUrl(java.util.UUID bookingId) {
-        String fallback = "http://localhost:9999/bookings/" + bookingId + "/invoice/view";
+        String fallback = "http://localhost:8080/bookings/" + bookingId + "/invoice/view";
         String base = payOsProperties.getReturnUrl();
         if (base == null || base.isBlank()) {
             return fallback;

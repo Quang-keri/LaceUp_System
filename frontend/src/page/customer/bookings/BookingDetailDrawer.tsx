@@ -135,9 +135,10 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
                 </Space>
               </Descriptions.Item>
 
-              <Descriptions.Item label="Ghi chú" span={2}>
+              {/* // ko hiển thị ghi chú nữa vì để cho owner xử lý thêm  */}
+              {/* <Descriptions.Item label="Ghi chú" span={2}>
                 {booking.note || "-"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
             </Descriptions>
           </Card>
 

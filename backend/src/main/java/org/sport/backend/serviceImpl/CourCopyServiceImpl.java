@@ -45,6 +45,7 @@ public class CourCopyServiceImpl implements CourtCopyService {
                 .courtCode(copyRequest.getCourtCode())
                 .courtCopyStatus(CourtCopyStatus.ACTIVE)
                 .court(court)
+                .location(copyRequest.getLocation())
                 .build();
 
         courtCopyRepository.save(courtCopy);

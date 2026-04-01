@@ -27,7 +27,7 @@ public class CourtController {
     private final CourtService courtService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('CREATE_COURT')")
+//    @PreAuthorize("hasAuthority('CREATE_COURT')")
     public ApiResponse<CourtResponse> createCourt(
             @Valid @ModelAttribute CourtRequest request
     ) {

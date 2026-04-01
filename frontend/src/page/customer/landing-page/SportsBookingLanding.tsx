@@ -7,6 +7,7 @@ import "./FishAnimation.scss";
 import tennis from "../../../assets/tennis.jpg";
 import payos from "../../../assets/payos_2.jpg";
 import comnunity from "../../../assets/comunity.png";
+import { Link } from "react-router-dom";
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
 // Định nghĩa dữ liệu cho các Content Sections
@@ -273,10 +274,8 @@ export default function SportsBookingLanding() {
           </svg>
         </div>
       </div>
-      {/* ĐỔI 3: Cấu trúc Content Sections để chứa ảnh & text */}
+
       <div className="relative z-10 py-20">
-        {" "}
-        {/* Thêm padding trên dưới cho cả vùng chứa */}
         {sectionData.map((item, i) => (
           <section
             key={i}
@@ -284,7 +283,6 @@ export default function SportsBookingLanding() {
             className="scroll-section py-12 md:py-20 flex items-center justify-center px-6"
           >
             <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16 max-w-6xl w-full">
-              {/* KHỐI ẢNH: Thu nhỏ lại một chút để thanh thoát hơn */}
               <div className="content-image flex-1 w-full max-w-sm md:max-w-md">
                 <img
                   src={item.imageSrc}
@@ -293,7 +291,6 @@ export default function SportsBookingLanding() {
                 />
               </div>
 
-              {/* KHỐI VĂN BẢN: Giảm padding p-12 xuống p-8 hoặc p-10 */}
               <div className="content-text bg-white flex-1 p-8 md:p-12 rounded-[2.5rem] shadow-[0_10px_40px_rgba(145,86,241,0.05)] border border-white text-center md:text-left backdrop-blur-md">
                 <h2 className="text-3xl md:text-5xl font-bold text-[#9156F1] mb-4 tracking-tighter">
                   {item.t}
@@ -307,10 +304,12 @@ export default function SportsBookingLanding() {
         ))}
       </div>
       <div className="h-[50vh] flex flex-col items-center justify-center relative z-10">
-        <h2 className="text-4xl font-black mb-8">Sẵn sàng ra sân?</h2>
-        <button className="bg-gradient-to-r from-[#9156F1] to-[#D4A3E8] text-white px-12 py-5 rounded-full font-bold text-xl shadow-xl shadow-[#9156F1]/20 hover:scale-105 transition">
-          ĐẶT SÂN NGAY
-        </button>
+        <h2 className="text-4xl font-black mb-8">Bạn là chủ sân ?</h2>
+        <Link to="/create-rental-area">
+          <button className="bg-gradient-to-r from-[#9156F1] to-[#D4A3E8] text-white px-12 py-5 rounded-full font-bold text-xl shadow-xl shadow-[#9156F1]/20 hover:scale-105 transition">
+            Đăng sân của bạn ngay
+          </button>
+        </Link>
       </div>
     </div>
   );

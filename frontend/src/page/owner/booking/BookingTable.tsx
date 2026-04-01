@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { Dropdown } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
+
 // Đã bổ sung cả BOOKED và CONFIRMED để tránh lỗi miss data từ API
 const statusColorMap: Record<string, string> = {
   BOOKED: "blue",
@@ -22,7 +23,7 @@ const statusLabelMap: Record<string, string> = {
 const methodLabelMap: Record<string, string> = {
   CASH: "Tiền mặt",
   PAY_OS: "PAY OS",
-  VN_PAY: "Chuyển khoản",
+  VN_PAY: "VN Pay",
   BANKING: "Chuyển khoản",
 };
 
@@ -36,6 +37,7 @@ interface Props {
   onUpdateStatus: (booking: BookingResponse) => void;
   onCollectPayment: (booking: BookingResponse) => void;
   onPrintInvoice: (booking: BookingResponse) => void;
+  onAddService: (booking: BookingResponse) => void; // Khai báo prop mới
 }
 
 export default function BookingTable({
@@ -48,6 +50,7 @@ export default function BookingTable({
   onUpdateStatus,
   onCollectPayment,
   onPrintInvoice,
+  onAddService, // Nhận prop mới
 }: Props) {
   const columns = [
     {
@@ -180,7 +183,6 @@ export default function BookingTable({
         const total = record.totalPrice || 0;
         const deposit = record.depositAmount || 0;
         const remaining = record.remainingAmount ?? total - deposit;
-        const isFullyPaid = remaining <= 0;
 
         // Định nghĩa menu dropdown
         const items: MenuProps["items"] = [
@@ -195,6 +197,11 @@ export default function BookingTable({
             onClick: () => onEditSlot(record),
           },
           {
+            key: "addService",
+            label: "Thêm dịch vụ", // NÚT THÊM DỊCH VỤ Ở ĐÂY
+            onClick: () => onAddService(record),
+          },
+          {
             key: "status",
             label: "Cập nhật trạng thái",
             onClick: () => onUpdateStatus(record),
@@ -206,13 +213,11 @@ export default function BookingTable({
             key: "payment",
             label: `Thanh toán nốt (${remaining.toLocaleString("vi-VN")}đ)`,
             danger: true,
-
             onClick: () => onCollectPayment(record),
           },
           {
             key: "invoice",
             label: "In hóa đơn (PDF)",
-
             onClick: () => onPrintInvoice(record),
           },
         ];

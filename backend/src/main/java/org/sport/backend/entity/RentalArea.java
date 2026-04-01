@@ -4,11 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.RentalAreaStatus;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,32 +21,36 @@ import java.util.UUID;
 @SuperBuilder
 @Entity
 @Table(name = "rental_areas")
-@FieldDefaults(level = AccessLevel.PRIVATE)
+
 public class RentalArea extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "rental_area_id")
-    UUID rentalAreaId;
+    private UUID rentalAreaId;
 
     @Column(name = "rental_area_name", length = 150)
-    String rentalAreaName;
+    private String rentalAreaName;
 
     @Embedded
-    Address address;
+    private  Address address;
 
     @Column(name = "contact_name", length = 100)
-    String contactName;
+    private String contactName;
 
     @Column(name = "contact_phone", length = 20)
-    String contactPhone;
+    private  String contactPhone;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    RentalAreaStatus status;
+    private RentalAreaStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", length = 30)
+    private VerificationStatus verificationStatus;
 
     @Column(name = "deleted_at")
-    LocalDateTime deletedAt;
+    private LocalDateTime deletedAt;
 
     private Double rating;
 
@@ -62,13 +68,26 @@ public class RentalArea extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
-    User owner;
+    private  User owner;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
-    List<Court> courts;
+    private List<Court> courts;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
-    List<Booking> bookings;
+    private List<Booking> bookings;
 
+
+
+    @Column(name = "facebook_link", length = 255)
+    private String facebookLink;
+
+    @Column(name = "gmail", length = 255)
+    private String gmail;
+
+    @Column(name = "reason")
+    private String reason;
+
+    @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RentalAreaImage> images = new ArrayList<>();
 
 }

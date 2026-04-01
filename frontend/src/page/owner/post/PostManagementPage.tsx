@@ -134,7 +134,7 @@ export default function PostManagementPage() {
                     <Text type="secondary">{post.address.street}</Text>
                     <Text type="secondary">{post.address.ward}</Text>
                     <Text type="secondary">{post.address.district}</Text>
-                    <Text type="secondary">{post.address.city.cityName}</Text>
+                    <Text type="secondary">{post.address.city?.cityName}</Text>
                     <Text type="secondary">{post.courtName}</Text>
                     <div className="mt-2 flex justify-between items-center">
                       <Text className="text-red-500 font-bold text-lg">

@@ -42,7 +42,7 @@ const MyRanks: React.FC = () => {
 
         <Col xs={24} md={16} lg={18}>
           <Card
-            title={<Title level={4} style={{ margin: 0 }}>📊 Xếp hạng từng bộ môn</Title>}
+            title={<Title level={4} style={{ margin: 0 }}> Xếp hạng từng bộ môn</Title>}
             bordered={false}
             style={{ borderRadius: "12px", minHeight: "400px" }}
           >

@@ -5,5 +5,6 @@ public enum PaymentMethod {
     BANK_TRANSFER,
     WALLET,
     PAY_OS,
-    VN_PAY
+    VN_PAY,
+    PAY_LATER
 }
