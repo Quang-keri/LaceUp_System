@@ -183,4 +183,22 @@ public class ServiceItemServiceImpl implements ServiceItemService {
 
         return res;
     }
+
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+        ServiceItem item = serviceItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("ServiceItem not found"));
+
+        if (item.getImages() != null) {
+            for (ServiceItemImage img : item.getImages()) {
+                try {
+                    cloudinaryService.deleteByPublicId(img.getPublicId());
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        serviceItemRepository.delete(item);
+    }
 }

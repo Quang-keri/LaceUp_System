@@ -33,6 +33,7 @@ import ConfirmRegister from "../page/customer/login-page/ConfirmRegister.tsx";
 import MatchPage from "../page/customer/match/MatchPage.tsx";
 import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
+import ServiceItemManagementPage from "../page/owner/service/ServiceItemManagementPage.tsx";
 import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
 import NotificationPage from "../page/customer/notification/NotificationPage.tsx";
 import MyMatchPage from "../page/customer/profile-page/MyMatchPage.tsx";
@@ -178,6 +179,7 @@ export const router = createBrowserRouter([
       { path: "bookings/calendar", element: <ManageSchedulePage /> },
       { path: "posts", element: <PostManagementPage /> },
       { path: "matches", element: <MatchManagement /> },
+      { path: "service-items", element: <ServiceItemManagementPage /> },
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
       { path: "profile", element: <OwnerProfilePage /> },

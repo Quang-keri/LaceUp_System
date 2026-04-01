@@ -14,4 +14,5 @@ public interface ServiceItemService {
     List<ServiceItemResponse> getAll();
 
     List<ServiceItemResponse> getByRentalArea(UUID rentalAreaId);
+    void delete(UUID id);
 }

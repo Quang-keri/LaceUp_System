@@ -7,6 +7,12 @@ import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.request.serviceItem.ServiceItemRequest;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.service.ServiceItemService;
+import org.sport.backend.entity.RentalArea;
+import org.sport.backend.repository.RentalAreaRepository;
+import org.sport.backend.repository.UserRepository;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +26,12 @@ public class ServiceItemController {
 
     @Autowired
     private ServiceItemService serviceItemService;
+
+    @Autowired
+    private RentalAreaRepository rentalAreaRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
 
 
@@ -44,6 +56,32 @@ public class ServiceItemController {
     public ApiResponse<ServiceItemResponse> getServiceItem(@PathVariable UUID id) {
         ServiceItemResponse response = serviceItemService.get(id);
         return ApiResponse.success(200, "Get service item successfully", response);
+    }
+
+    @GetMapping("/owner")
+    public ApiResponse<List<ServiceItemResponse>> getOwnerServiceItems(Principal principal) {
+        String email = principal == null ? null : principal.getName();
+        if (email == null) return ApiResponse.success(401, "Unauthorized", List.of());
+
+        var userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) return ApiResponse.success(404, "User not found", List.of());
+
+        List<ServiceItemResponse> result = new ArrayList<>();
+
+        List<RentalArea> rentals = rentalAreaRepository.findAll();
+        for (RentalArea r : rentals) {
+            if (r.getOwner() != null && r.getOwner().getEmail().equals(email)) {
+                result.addAll(serviceItemService.getByRentalArea(r.getRentalAreaId()));
+            }
+        }
+
+        return ApiResponse.success(200, "Success", result);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteServiceItem(@PathVariable UUID id) {
+        serviceItemService.delete(id);
+        return ApiResponse.<Void>builder().code(200).message("Delete service item successfully").build();
     }
 
     @GetMapping
