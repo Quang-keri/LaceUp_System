@@ -148,7 +148,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}/dashboard")
-    @PreAuthorize("hasAuthority('UPDATE_USER_STATUS')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserDashboardResponse>> getUserDashboard(
             @PathVariable UUID userId) {
         log.info("Lấy thông tin dashboard thống kê của user: {}", userId);

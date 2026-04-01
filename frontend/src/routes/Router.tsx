@@ -53,6 +53,7 @@ import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLan
 import BuildingEditPage from "../page/owner/building/BuildingEditPage.tsx";
 import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
 import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
+import MyRanks from "../page/customer/profile-page/MyRankPage.tsx";
 import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManagement.tsx";
 
 const MyDashboardWrapper = () => {
@@ -77,7 +78,7 @@ export const router = createBrowserRouter([
       { index: true, element: <LandingPage /> },
       {
         path: "/create-rental-area",
-        element: <CreateRentalAreaPage />, // Thêm route này
+        element: <CreateRentalAreaPage />,
       },
       { path: "trang-chu", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
@@ -109,6 +110,7 @@ export const router = createBrowserRouter([
           { path: "profile", element: <ProfilePage /> },
           { path: "my-matches", element: <MyMatchPage /> },
           { path: "achievements", element: <MyAchievements /> },
+          { path: "my-ranks", element: <MyRanks /> },
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {
@@ -136,7 +138,6 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <AdminDashboard /> },
-
       { path: "users", element: <UserManagement /> },
       { path: "roles", element: <RoleManagement /> },
       { path: "owners", element: <RentalAreaManagement /> },

@@ -23,7 +23,7 @@ import {
 } from "@ant-design/icons";
 import { useAuth } from "../../../context/AuthContext.tsx";
 import matchService from "../../../service/match/matchService.ts";
-import { toast } from "react-toastify";
+import { message } from "antd";
 import { matchResultService } from "../../../service/match/matchResultService.ts";
 
 import UserSidebar from "../../../components/sidebar/UserSidebar.tsx";
@@ -31,11 +31,14 @@ import UserSidebar from "../../../components/sidebar/UserSidebar.tsx";
 const { Title, Text } = Typography;
 
 const MyMatchPage: React.FC = () => {
-  const { user, isLoading } = useAuth(); // <--- Lấy thông tin user hiện tại
+  const { user, isLoading } = useAuth();
   const selectedMenu = "2";
 
   const [matches, setMatches] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [confirmingDepositId, setConfirmingDepositId] = useState<string | null>(
+    null,
+  );
 
   // States cho Modal Chốt kết quả (Phe thắng/Host)
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -47,18 +50,17 @@ const MyMatchPage: React.FC = () => {
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [pendingResult, setPendingResult] = useState<any>(null);
   const [loadingApproveResult, setLoadingApproveResult] = useState(false);
-  // Thêm state để nhận biết người đang xem Modal có phải là người gửi kết quả không
   const [isSubmitter, setIsSubmitter] = useState(false);
 
   const fetchMyMatches = async () => {
     setLoadingData(true);
     try {
       const response = await matchService.getMyMatches(1, 50);
-      if (response.code === 1000 || response.code === 0) {
+      if (response.code === 200) {
         setMatches(response.result.data || []);
       }
     } catch (error) {
-      toast.error("Không thể tải danh sách trận đấu");
+      message.error("Không thể tải danh sách trận đấu");
     } finally {
       setLoadingData(false);
     }
@@ -67,6 +69,22 @@ const MyMatchPage: React.FC = () => {
   useEffect(() => {
     fetchMyMatches();
   }, []);
+
+  // ---------------- XÁC NHẬN CỌC ----------------
+  const handleConfirmDeposit = async (matchId: string) => {
+    setConfirmingDepositId(matchId);
+    try {
+      const response = await matchService.confirmDeposit(matchId);
+      if (response.code === 200) {
+        message.success("Đã xác nhận cọc thành công!");
+        fetchMyMatches();
+      }
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi xác nhận cọc");
+    } finally {
+      setConfirmingDepositId(null);
+    }
+  };
 
   // ---------------- XỬ LÝ CHỐT KẾT QUẢ (HOST/PHE THẮNG) ----------------
   const openResultModal = (match: any) => {
@@ -79,7 +97,7 @@ const MyMatchPage: React.FC = () => {
     if (!selectedMatch) return;
 
     if (winnerIds.length === 0) {
-      return toast.warning("Vui lòng chọn ít nhất 1 người thắng!");
+      return message.warning("Vui lòng chọn ít nhất 1 người thắng!");
     }
 
     const loserIds = (selectedMatch.participants || [])
@@ -92,11 +110,11 @@ const MyMatchPage: React.FC = () => {
         winnerIds: winnerIds,
         loserIds: loserIds,
       });
-      toast.success("Chốt kết quả thành công, chờ đối thủ duyệt!");
+      message.success("Chốt kết quả thành công, chờ đối thủ duyệt!");
       setIsResultModalOpen(false);
       fetchMyMatches();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi cập nhật kết quả");
+      message.error(error.response?.data?.message || "Lỗi cập nhật kết quả");
     } finally {
       setSubmittingResult(false);
     }
@@ -107,7 +125,7 @@ const MyMatchPage: React.FC = () => {
     setSelectedMatch(match);
     setIsApproveModalOpen(true);
     setLoadingApproveResult(true);
-    setIsSubmitter(false); // Reset cờ
+    setIsSubmitter(false);
     try {
       const res = await matchResultService.getResultsByMatch(match.matchId);
       const results = res.result;
@@ -116,16 +134,15 @@ const MyMatchPage: React.FC = () => {
         const resultItem = results[0];
         setPendingResult(resultItem);
 
-        // KIỂM TRA: Xem người đang đăng nhập có phải là người đã ấn chốt kết quả (submitterId) không?
         if (resultItem.submitterId === user?.userId) {
           setIsSubmitter(true);
         }
       } else {
-        toast.warning("Không tìm thấy kết quả chờ duyệt!");
+        message.warning("Không tìm thấy kết quả chờ duyệt!");
         setIsApproveModalOpen(false);
       }
     } catch (error) {
-      toast.error("Không thể tải thông tin kết quả");
+      message.error("Không thể tải thông tin kết quả");
       setIsApproveModalOpen(false);
     } finally {
       setLoadingApproveResult(false);
@@ -135,18 +152,18 @@ const MyMatchPage: React.FC = () => {
   const handleRespondResult = async (isAccepted: boolean) => {
     const targetResultId = pendingResult?.id || pendingResult?.resultId;
     if (!targetResultId)
-      return toast.error("Không tìm thấy mã kết quả hợp lệ!");
+      return message.error("Không tìm thấy mã kết quả hợp lệ!");
 
     setSubmittingResult(true);
     try {
       await matchResultService.respondToResult(targetResultId, isAccepted);
-      toast.success(
+      message.success(
         isAccepted ? "Đã xác nhận kết quả thành công!" : "Đã từ chối kết quả!",
       );
       setIsApproveModalOpen(false);
       fetchMyMatches();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Lỗi xử lý kết quả");
+      message.error(error.response?.data?.message || "Lỗi xử lý kết quả");
     } finally {
       setSubmittingResult(false);
     }
@@ -187,8 +204,10 @@ const MyMatchPage: React.FC = () => {
       case "CONFIRMED":
       case "FULL":
         return <Tag color="green">Sắp diễn ra</Tag>;
+      case "WAITING_DEPOSIT":
+        return <Tag color="warning">Chờ chốt cọc</Tag>;
       case "WAITING_RESULT_APPROVAL":
-        return <Tag color="orange">Chờ đối thủ duyệt KQ</Tag>; // Đổi text một chút cho rõ ràng
+        return <Tag color="orange">Chờ đối thủ duyệt KQ</Tag>;
       case "COMPLETED":
         return <Tag color="default">Đã hoàn thành</Tag>;
       default:
@@ -204,105 +223,146 @@ const MyMatchPage: React.FC = () => {
         <List
           loading={loadingData}
           dataSource={matches.filter((m) =>
-            ["OPEN", "CONFIRMED", "FULL", "WAITING_RESULT_APPROVAL"].includes(
-              m.status,
-            ),
+            [
+              "OPEN",
+              "CONFIRMED",
+              "FULL",
+              "WAITING_DEPOSIT", // <--- Thêm trạng thái này vào filter
+              "WAITING_RESULT_APPROVAL",
+            ].includes(m.status),
           )}
-          renderItem={(match) => (
-            <Card
-              size="small"
-              style={{
-                marginBottom: 16,
-                borderRadius: "12px",
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-              }}
-            >
-              <Row align="middle" justify="space-between">
-                <Col xs={24} md={18}>
-                  <Space direction="vertical" size={2}>
-                    <Space>
-                      <Title level={5} style={{ margin: 0 }}>
-                        {match.title || `Giao lưu ${match.categoryName}`}
-                      </Title>
-                      {renderStatusTag(match.status)}
-                      {renderMatchTypeTag(
-                        match.matchType,
-                        match.minRank,
-                        match.maxRank,
-                        match.winnerPercent,
-                      )}
-                    </Space>
-                    <Space
-                      style={{
-                        color: "#64748b",
-                        fontSize: "14px",
-                        marginTop: 8,
-                      }}
-                      wrap
-                    >
-                      <span
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                      >
-                        <CalendarOutlined />{" "}
-                        {new Date(match.startTime).toLocaleDateString("vi-VN")}{" "}
-                        ({match.startTime.split("T")[1]?.substring(0, 5)})
-                      </span>
-                      <Divider type="vertical" />
-                      <span
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                        }}
-                      >
-                        <ManOutlined />{" "}
-                        {match.courtName || match.address || "Tự thỏa thuận"}
-                      </span>
-                    </Space>
-                  </Space>
-                </Col>
+          renderItem={(match) => {
+            const myParticipantInfo = match.participants?.find(
+              (p: any) => p.userId === user?.userId,
+            );
 
-                <Col
-                  xs={24}
-                  md={6}
-                  style={{ textAlign: "right", marginTop: "10px" }}
-                >
-                  {match.status === "WAITING_RESULT_APPROVAL" ? (
-                    <Button
-                      type="primary"
-                      // Nếu Backend có trả về match.submitterId ở đây thì check luôn,
-                      // nếu không thì cứ cho nút vàng "Xem trạng thái duyệt"
-                      onClick={() => openApproveModal(match)}
-                      style={{ borderRadius: "8px", background: "#f59e0b" }}
-                    >
-                      Xem trạng thái duyệt
-                    </Button>
-                  ) : match.matchType === "RANKED" ||
-                    match.matchType === "BET" ? (
-                    <Button
-                      type="primary"
-                      onClick={() => openResultModal(match)}
-                      style={{ borderRadius: "8px", background: "#16a34a" }}
-                    >
-                      Chốt kết quả
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => openResultModal(match)}
-                      style={{ borderRadius: "8px" }}
-                    >
-                      Xem chi tiết
-                    </Button>
-                  )}
-                </Col>
-              </Row>
-            </Card>
-          )}
+            return (
+              <Card
+                size="small"
+                style={{
+                  marginBottom: 16,
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+                }}
+              >
+                <Row align="middle" justify="space-between">
+                  <Col xs={24} md={18}>
+                    <Space direction="vertical" size={2}>
+                      <Space>
+                        <Title level={5} style={{ margin: 0 }}>
+                          {match.title || `Giao lưu ${match.categoryName}`}
+                        </Title>
+                        {renderStatusTag(match.status)}
+                        {renderMatchTypeTag(
+                          match.matchType,
+                          match.minRank,
+                          match.maxRank,
+                          match.winnerPercent,
+                        )}
+                      </Space>
+                      <Space
+                        style={{
+                          color: "#64748b",
+                          fontSize: "14px",
+                          marginTop: 8,
+                        }}
+                        wrap
+                      >
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <CalendarOutlined />{" "}
+                          {formatMatchDate(match.startTime)} (
+                          {formatMatchTime(match.startTime)})
+                        </span>
+                        <Divider type="vertical" />
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <ManOutlined />{" "}
+                          {match.courtName ||
+                            (typeof match.address === "object"
+                              ? `${match.address.ward}, ${match.address.district}`
+                              : match.address) ||
+                            "Tự thỏa thuận"}
+                        </span>
+                      </Space>
+                    </Space>
+                  </Col>
+
+                  <Col
+                    xs={24}
+                    md={6}
+                    style={{ textAlign: "right", marginTop: "10px" }}
+                  >
+                    {match.status === "WAITING_DEPOSIT" ? (
+                      myParticipantInfo?.depositConfirmed ? (
+                        <Button
+                          disabled
+                          style={{
+                            borderRadius: "8px",
+                            background: "#f0fdf4",
+                            color: "#16a34a",
+                            borderColor: "#bbf7d0",
+                          }}
+                        >
+                          Đã xác nhận cọc
+                        </Button>
+                      ) : (
+                        <Button
+                          type="primary"
+                          loading={confirmingDepositId === match.matchId}
+                          onClick={() => handleConfirmDeposit(match.matchId)}
+                          style={{
+                            borderRadius: "8px",
+                            background: "#f97316",
+                            borderColor: "#f97316",
+                          }}
+                        >
+                          Xác nhận cọc
+                        </Button>
+                      )
+                    ) : match.status === "WAITING_RESULT_APPROVAL" ? (
+                      <Button
+                        type="primary"
+                        onClick={() => openApproveModal(match)}
+                        style={{ borderRadius: "8px", background: "#f59e0b" }}
+                      >
+                        Xem trạng thái duyệt
+                      </Button>
+                    ) : (match.matchType === "RANKED" ||
+                        match.matchType === "BET") &&
+                      (match.status === "FULL" ||
+                        match.status === "CONFIRMED") ? (
+                      <Button
+                        type="primary"
+                        onClick={() => openResultModal(match)}
+                        style={{ borderRadius: "8px", background: "#16a34a" }}
+                      >
+                        Chốt kết quả
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => openResultModal(match)}
+                        style={{ borderRadius: "8px" }}
+                      >
+                        Xem chi tiết
+                      </Button>
+                    )}
+                  </Col>
+                </Row>
+              </Card>
+            );
+          }}
         />
       ),
     },
@@ -360,6 +420,26 @@ const MyMatchPage: React.FC = () => {
     },
   ];
 
+  const formatMatchDate = (timeArray: any) => {
+    if (Array.isArray(timeArray)) {
+      const [year, month, day] = timeArray;
+      return `${day.toString().padStart(2, "0")}/${month
+        .toString()
+        .padStart(2, "0")}/${year}`;
+    }
+    return "N/A";
+  };
+
+  const formatMatchTime = (timeArray: any) => {
+    if (Array.isArray(timeArray)) {
+      const [, , , hour, minute] = timeArray;
+      return `${hour.toString().padStart(2, "0")}:${minute
+        .toString()
+        .padStart(2, "0")}`;
+    }
+    return "--:--";
+  };
+
   return (
     <div
       style={{
@@ -389,7 +469,6 @@ const MyMatchPage: React.FC = () => {
       </Row>
 
       {/* MODAL 1: CHỐT KẾT QUẢ / XEM CHI TIẾT */}
-      {/* ... (Giữ nguyên phần code của Modal này) ... */}
       <Modal
         title={
           <div className="text-xl font-bold text-gray-800">
@@ -517,8 +596,8 @@ const MyMatchPage: React.FC = () => {
         title={
           <div className="text-xl font-bold text-orange-600">
             {isSubmitter
-              ? "⏳ Trạng thái kết quả"
-              : "⚖️ Duyệt kết quả trận đấu"}
+              ? " Trạng thái kết quả"
+              : " Duyệt kết quả trận đấu"}
           </div>
         }
         open={isApproveModalOpen}
@@ -534,7 +613,6 @@ const MyMatchPage: React.FC = () => {
           </div>
         ) : (
           <div className="mt-4">
-            {/* NẾU LÀ NGƯỜI ĐÃ CHỐT KQ -> CHỈ HIỆN THÔNG BÁO CHỜ */}
             {isSubmitter ? (
               <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl text-center">
                 <p className="text-4xl mb-3">🕒</p>
@@ -554,7 +632,6 @@ const MyMatchPage: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              /* NẾU LÀ NGƯỜI THUA/ĐỐI THỦ -> HIỆN NÚT XÁC NHẬN/TỪ CHỐI */
               <>
                 <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl mb-6">
                   <p className="text-sm text-gray-600 text-center">

@@ -32,7 +32,7 @@ public class MatchRegistration extends BaseEntity {
     private User user;
 
     @Column(name = "is_deposit_confirmed")
-    private  Boolean isDepositConfirmed = false;
+    private Boolean isDepositConfirmed = false;
 
     private LocalDateTime registeredAt;
 }

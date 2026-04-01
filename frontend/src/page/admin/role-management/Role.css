@@ -1,0 +1,36 @@
+/* Đảm bảo Group và Collapse luôn full chiều ngang */
+.ant-checkbox-group {
+  display: block !important;
+  width: 100% !important;
+}
+
+.role-collapse-custom {
+  background: transparent !important;
+  border: none !important;
+  width: 100% !important;
+}
+
+/* Từng item Panel */
+.role-collapse-custom > .ant-collapse-item {
+  background-color: #ffffff !important;
+  border: 1px solid #f0f0f0 !important;
+  border-radius: 8px !important;
+  margin-bottom: 12px !important; /* Tạo khoảng cách giữa các hàng */
+  overflow: hidden;
+  width: 100% !important; /* Ép nó không được hẹp lại */
+}
+
+/* Header fix */
+.role-collapse-custom > .ant-collapse-item > .ant-collapse-header {
+  padding: 12px 16px !important;
+  align-items: center !important;
+}
+
+/* Nội dung bên trong */
+.role-collapse-custom .ant-collapse-content {
+  border-top: 1px solid #f0f0f0 !important;
+}
+
+.role-collapse-custom .ant-collapse-content-box {
+  padding: 16px !important;
+}

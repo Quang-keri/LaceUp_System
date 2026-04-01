@@ -28,4 +28,12 @@ public class KnowledgeController {
         knowledgeService.trainAiWithRentalAreas();
         return ResponseEntity.ok("AI đã học xong danh sách sân hiện tại!");
     }
+
+    @PostMapping("/train-matches")
+    @Operation(summary = "Quét và nạp danh sách các kèo đang thiếu người vào AI")
+    public ResponseEntity<String> trainMatches() {
+        knowledgeService.trainAiWithAvailableMatches();
+        return ResponseEntity.ok("AI đã học xong danh sách kèo tìm người!");
+    }
+    
 }

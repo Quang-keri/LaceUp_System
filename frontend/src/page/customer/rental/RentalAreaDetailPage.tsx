@@ -10,6 +10,8 @@ import CourtBookingPanel from "./CourtBookingPanel";
 import OtherCourtsList from "./OtherCourtsList";
 import BookingConfirmModal from "../bookings/BookingConfirmModal";
 
+import CreateMatchForm from "./CreateMatchForm";
+
 export default function RentalAreaDetailPage() {
   const { user } = useAuth();
   const { id } = useParams();
@@ -311,6 +313,8 @@ export default function RentalAreaDetailPage() {
                   court={activeCourt}
                   onBook={handleDirectBooking}
                 />
+
+                <CreateMatchForm court={activeCourt} address={data?.address} />
               </div>
             </Col>
           </Row>

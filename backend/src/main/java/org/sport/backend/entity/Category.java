@@ -26,4 +26,7 @@ public class Category extends BaseEntity {
 
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     List<Court> courts;
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserCategoryRank> userRanks;
 }

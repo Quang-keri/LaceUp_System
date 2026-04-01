@@ -246,7 +246,7 @@ export default function CourtList({ courts, onAddCourt }: any) {
       <Modal
         title={
           <div className="text-lg font-bold text-gray-800">
-            🏸 Thiết lập kèo ghép khách
+             Thiết lập kèo ghép khách
           </div>
         }
         open={openMatchModal}

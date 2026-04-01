@@ -7,12 +7,13 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
+import org.sport.backend.dto.response.user.CategoryRankResponse;
 import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Permission;
 import org.sport.backend.entity.Role;
 import org.sport.backend.entity.User;
-import org.sport.backend.entity.UserStats;
+import org.sport.backend.entity.UserCategoryRank;
 import org.sport.backend.entity.mongo.PasswordResetToken;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
@@ -20,7 +21,6 @@ import org.sport.backend.mapper.UserMapper;
 import org.sport.backend.repository.PermissionRepository;
 import org.sport.backend.repository.RoleRepository;
 import org.sport.backend.repository.UserRepository;
-import org.sport.backend.repository.UserStatsRepository;
 import org.sport.backend.repository.mongo.PasswordResetTokenRepository;
 import org.sport.backend.security.CustomUserDetails;
 import org.sport.backend.service.EmailService;
@@ -47,7 +47,6 @@ import java.util.*;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final UserStatsRepository userStatsRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -233,30 +232,63 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public UserDashboardResponse getUserDashboard(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        UserStats stats = userStatsRepository.findById(userId).orElse(new UserStats());
+        // Các biến dùng để cộng dồn thống kê tổng quan
+        int globalTotalMatches = 0;
+        int globalTotalWins = 0;
 
-        double winRate = 0.0;
-        if (stats.getTotalMatches() > 0) {
-            winRate = Math.round(((double) stats.getTotalWins() / stats.getTotalMatches() * 100) * 10.0) / 10.0;
+        List<CategoryRankResponse> categoryRanksList = new ArrayList<>();
+
+        // Duyệt qua từng rank của người dùng
+        for (UserCategoryRank rank : user.getCategoryRanks()) {
+            // Cộng dồn vào biến tổng
+            globalTotalMatches += rank.getTotalMatches();
+            globalTotalWins += rank.getTotalWins();
+
+            // Tính tỉ lệ thắng riêng cho môn thể thao này
+            double catWinRate = 0.0;
+            if (rank.getTotalMatches() > 0) {
+                catWinRate = Math.round(((double) rank.getTotalWins() / rank.getTotalMatches() * 100) * 10.0) / 10.0;
+            }
+
+            Integer leaderboardPosition = null; // Thêm logic lấy vị trí bảng xếp hạng nếu cần
+
+            // Thêm vào danh sách trả về
+            categoryRanksList.add(CategoryRankResponse.builder()
+                    .categoryId(rank.getCategory().getCategoryId())
+                    .categoryName(rank.getCategory().getCategoryName())
+                    .rankPoint(rank.getRankPoint())
+                    .displayRank(rank.resolveDisplayRank(leaderboardPosition))
+                    .totalMatches(rank.getTotalMatches())
+                    .totalWins(rank.getTotalWins())
+                    .currentWinStreak(rank.getCurrentWinStreak())
+                    .winRate(catWinRate)
+                    .build());
         }
 
-        Integer leaderboardPosition = null;
+        // Tính tỉ lệ thắng tổng quan cho toàn bộ tài khoản
+        double globalWinRate = 0.0;
+        if (globalTotalMatches > 0) {
+            globalWinRate = Math.round(((double) globalTotalWins / globalTotalMatches * 100) * 10.0) / 10.0;
+        }
 
+        // Trả kết quả về cho Controller
         return UserDashboardResponse.builder()
                 .userId(user.getUserId())
                 .userName(user.getUserName())
                 // .avatarUrl(user.getAvatarUrl())
-                .rankPoint(user.getRankPoint() != null ? user.getRankPoint() : 0)
-                .displayRank(user.resolveDisplayRank(leaderboardPosition))
-                .totalMatches(stats.getTotalMatches())
-                .totalWins(stats.getTotalWins())
-                .currentWinStreak(stats.getCurrentWinStreak())
-                .maxWinStreak(stats.getMaxWinStreak())
-                .winRate(winRate)
+
+                // Stats tổng quan đã được cộng dồn
+                .totalMatches(globalTotalMatches)
+                .totalWins(globalTotalWins)
+                .winRate(globalWinRate)
+
+                // Danh sách chi tiết
+                .categoryRanks(categoryRanksList)
                 .build();
     }
 
@@ -291,7 +323,7 @@ public class UserServiceImpl implements UserService {
 
         if (principal instanceof CustomUserDetails customUserDetails) {
             email = customUserDetails.getUsername();
-        } else if (principal instanceof String s) {
+        } else if (principal instanceof String) {
             // Thông thường getName() sẽ là email do JwtAuthenticationFilter set
             email = authentication.getName();
         } else {

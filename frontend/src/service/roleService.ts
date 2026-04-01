@@ -6,7 +6,7 @@ const API_BASE_URL = '/roles';
 
 export const roleService = {
 
-  
+    // --- CRUD APIs ---
 
     getAllRoles: async (): Promise<ApiResponse<RoleResponse[]>> => {
         const response = await api.get(API_BASE_URL);
@@ -34,21 +34,11 @@ export const roleService = {
         });
     },
 
-    // --- Role-Permission APIs ---
-
-
-    addPermissionsToRole: async (roleId: number, permissionIds: number[]): Promise<ApiResponse<RoleResponse>> => {
-        const response = await api.post(`${API_BASE_URL}/${roleId}/permissions`, permissionIds);
+    updateRolePermissions: async (roleId: number, permissionIds: number[]): Promise<ApiResponse<RoleResponse>> => {
+        const response = await api.put(`${API_BASE_URL}/${roleId}/permissions`, permissionIds);
         return response.data;
     },
 
-    removePermissionsFromRole: async (roleId: number, permissionIds: number[]): Promise<ApiResponse<RoleResponse>> => {
-        // Đối với phương thức DELETE có body, truyền qua property 'data'
-        const response = await api.delete(`${API_BASE_URL}/${roleId}/permissions`, {
-            data: permissionIds
-        });
-        return response.data;
-    }
 };
 
 export default roleService;
