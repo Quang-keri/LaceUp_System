@@ -52,14 +52,14 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     @Override
     public void saveMessage(MessageRequest request, String currentUser) {
-        User sender = userService.findByUserId(UUID.fromString(currentUser));
+        User sender = userService.findByEmail(currentUser);
         createAndBroadcastMessage(sender, request, null);
     }
 
     @Transactional
     @Override
     public MessageResponse saveMessageWithFile(MessageRequest request, String currentUser, MultipartFile file) {
-        User sender = userService.findByUserId(UUID.fromString(currentUser));
+        User sender = userService.findByEmail(currentUser);
         String imageUrl = null;
 
         if (file != null && !file.isEmpty()) {
@@ -131,9 +131,9 @@ public class ChatServiceImpl implements ChatService {
         });
         messageRepository.saveAll(unreadMessages);
 
-        UUID originalSenderId = unreadMessages.getFirst().getSender().getUserId();
+        String originalSenderEmail = unreadMessages.getFirst().getSender().getEmail();
         messagingTemplate.convertAndSendToUser(
-                originalSenderId.toString(),
+                originalSenderEmail,
                 "/queue/read-receipt",
                 new ReadReceiptResponse(conversationId, userId)
         );
@@ -164,7 +164,7 @@ public class ChatServiceImpl implements ChatService {
 
         MessageResponse response = chatMapper.toMessageResponse(saved);
 
-        broadcastMessage(response, sender.getUserId(), recipient.getUserId());
+        broadcastMessage(response, sender.getEmail(), recipient.getEmail());
 
         notificationService.createAndSendNotification(sender, recipient, NotificationType.CHAT, response.getContent());
 
@@ -197,16 +197,16 @@ public class ChatServiceImpl implements ChatService {
         return conversationRepository.save(conversation);
     }
 
-    private void broadcastMessage(MessageResponse response, UUID senderId, UUID recipientId) {
+    private void broadcastMessage(MessageResponse response, String senderEmail, String recipientEmail) {
 
         messagingTemplate.convertAndSendToUser(
-                recipientId.toString(),
+                recipientEmail,
                 "/queue/messages",
                 response
         );
 
         messagingTemplate.convertAndSendToUser(
-                senderId.toString(),
+                senderEmail,
                 "/queue/messages",
                 response
         );

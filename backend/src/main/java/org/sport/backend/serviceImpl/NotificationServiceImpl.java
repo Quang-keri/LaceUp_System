@@ -45,7 +45,7 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationResponse response = notificationMapper.toResponse(notification);
 
         messagingTemplate.convertAndSendToUser(
-                recipient.getUserId().toString(),
+                recipient.getEmail(),
                 "/queue/notifications",
                 response
         );

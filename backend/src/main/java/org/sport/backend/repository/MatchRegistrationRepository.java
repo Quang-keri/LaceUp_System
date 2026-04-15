@@ -15,4 +15,6 @@ public interface MatchRegistrationRepository extends JpaRepository<MatchRegistra
     List<MatchRegistration> findByMatch(Match match);
 
     Optional<MatchRegistration> findByMatchAndUser(Match match, User user);
+
+    Optional<MatchRegistration> findByMatchAndUser_UserId(Match match, UUID submitterId);
 }

@@ -4,13 +4,14 @@ import type { ApiResponse } from "../../types/ApiResponse.ts";
 const API_BASE_URL = "/match-results";
 
 export const matchResultService = {
+
   submitMatchResult: async (
     matchId: string,
-    data: { winnerIds: string[]; loserIds: string[] }
+    winningTeamNumber: number
   ): Promise<ApiResponse<any>> => {
     const payload = {
       matchId,
-      ...data,
+      winningTeamNumber,
     };
     const response = await api.post(`${API_BASE_URL}/submit`, payload);
     return response.data;

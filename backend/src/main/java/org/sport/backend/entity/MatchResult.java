@@ -30,6 +30,9 @@ public class MatchResult extends BaseEntity {
 
     private UUID submitterId;
 
+    @Column(name = "winning_team_number")
+    private Integer winningTeamNumber;
+
     @ElementCollection
     private List<UUID> winnerIds;
 

@@ -16,8 +16,8 @@ export interface UserResponse {
   active: boolean;
   permissions?: string[];
   extraPermissions?: PermissionResponse[];
-  fakeMoney?: number;
   isDepositConfirmed?: boolean;
+  teamNumber?: number | null;
   categoryRanks?: CategoryRankResponse[];
 }
 

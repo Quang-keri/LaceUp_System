@@ -251,7 +251,7 @@ public class DataInitializer implements CommandLineRunner {
         Role staffRole = Role.builder().roleName("STAFF").description("Nhân viên quản lý sân").active(true).permissions(staffPerms).build();
 
         Set<Permission> ownerPerms = getPermissions(permMap,
-                "VIEW_DASHBOARD_ADMIN", "CREATE_RENTAL_AREA", "UPDATE_RENTAL_AREA", "DELETE_RENTAL_AREA", "CREATE_COURT", "UPDATE_COURT", "DELETE_COURT", "CREATE_COURT_COPY", "UPDATE_COURT_COPY", "CREATE_COURT_PRICE", "UPDATE_COURT_PRICE", "DELETE_COURT_PRICE", "VIEW_BOOKINGS", "MANAGE_BOOKING", "MANAGE_FINANCE", "VIEW_PAYOUT", "VIEW_COMMISSION", "USE_CHAT", "CREATE_POST", "UPDATE_POST", "DELETE_POST", "VIEW_OWNER_MATCHES");
+                "VIEW_DASHBOARD_OWNER", "CREATE_RENTAL_AREA", "UPDATE_RENTAL_AREA", "DELETE_RENTAL_AREA", "CREATE_COURT", "UPDATE_COURT", "DELETE_COURT", "CREATE_COURT_COPY", "UPDATE_COURT_COPY", "CREATE_COURT_PRICE", "UPDATE_COURT_PRICE", "DELETE_COURT_PRICE", "VIEW_BOOKINGS", "MANAGE_BOOKING", "MANAGE_FINANCE", "VIEW_PAYOUT", "VIEW_COMMISSION", "USE_CHAT", "CREATE_POST", "UPDATE_POST", "DELETE_POST", "VIEW_OWNER_MATCHES");
         Role ownerRole = Role.builder().roleName("OWNER").description("Chủ sân").active(true).permissions(ownerPerms).build();
 
         Set<Permission> renterPerms = getPermissions(permMap,

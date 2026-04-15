@@ -61,6 +61,7 @@ export const useChat = (
           ...msg,
           sender: msg.senderId === currentUserId ? "user" : "other",
           isRead: msg.status === "READ",
+          createdAt: parseDate(msg.createdAt),
         }));
 
         setMessages((prev) => {
@@ -91,6 +92,7 @@ export const useChat = (
     loadConversations();
 
     const unsubscribeNewMsg = websocketService.onNewMessage((data: any) => {
+      console.log("[WS RECEIVE] Nhận tin nhắn mới từ server:", data);
       const incomingConvId = data.conversationId
         ? String(data.conversationId)
         : null;
@@ -99,6 +101,12 @@ export const useChat = (
         : null;
 
       const currentSelectedChat = selectedChatRef.current;
+
+      console.log("[DEBUG] So sánh ID:", {
+        incomingConvId,
+        currentConvId,
+        match: incomingConvId === currentConvId,
+      });
 
       const isMatchID = currentConvId === incomingConvId;
       const isNewChatMatch =
@@ -128,10 +136,20 @@ export const useChat = (
         };
 
         setMessages((prev) => {
+          console.log(
+            "[DEBUG] Danh sách tin nhắn trước khi update:",
+            prev.length,
+          );
           const isExisting = prev.some(
             (m) => String(m.messageId) === String(incoming.messageId),
           );
-          if (isExisting) return prev;
+          if (isExisting) {
+            console.warn(
+              "[WARN] Tin nhắn bị bỏ qua do trùng messageId:",
+              incoming.messageId,
+            );
+            return prev;
+          }
 
           const isMeMsg = String(data.senderId) === String(currentUserId);
           let tempRemoved = false;
@@ -189,7 +207,6 @@ export const useChat = (
   }, [currentUserId]);
 
   const handleSendMessage = async () => {
-
     if (!newMessage.trim() && selectedFiles.length === 0) return;
     if (!selectedChat || !currentUserId) {
       console.error("LỖI: Thiếu selectedChat hoặc currentUserId");
@@ -221,10 +238,7 @@ export const useChat = (
         };
 
         const fileToSend = selectedFiles[0].file;
-        await chatService.sendMessageWithImage(
-          messageRequest,
-          fileToSend,
-        );
+        await chatService.sendMessageWithImage(messageRequest, fileToSend);
 
         setNewMessage("");
         setSelectedFiles([]);
@@ -241,6 +255,8 @@ export const useChat = (
           content,
           conversationId: targetConversationId,
         };
+
+        console.log("[WS SEND] Đang gửi tin nhắn qua WebSocket:", wsPayload);
 
         websocketService.send("/app/chat", wsPayload);
 
@@ -291,6 +307,23 @@ export const useChat = (
     }
   };
 
+  const parseDate = (dateData: any): string => {
+    if (!dateData) return new Date().toISOString();
+
+    if (Array.isArray(dateData)) {
+      const [year, month, day, hour, minute, second] = dateData;
+      return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
+        2,
+        "0",
+      )}T${String(hour || 0).padStart(2, "0")}:${String(minute || 0).padStart(
+        2,
+        "0",
+      )}:${String(second || 0).padStart(2, "0")}`;
+    }
+
+    return String(dateData);
+  };
+
   return {
     conversations,
     messages,
@@ -312,5 +345,6 @@ export const useChat = (
     hasMore,
     loadMoreMessages,
     isFetchingMore,
+    parseDate,
   };
 };

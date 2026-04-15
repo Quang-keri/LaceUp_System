@@ -31,6 +31,9 @@ public class MatchRegistration extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(name = "team_number")
+    private Integer teamNumber;
+
     @Column(name = "is_deposit_confirmed")
     private Boolean isDepositConfirmed = false;
 

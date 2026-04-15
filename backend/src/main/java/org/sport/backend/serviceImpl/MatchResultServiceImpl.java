@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,11 +57,35 @@ public class MatchResultServiceImpl implements MatchResultService {
             throw new RuntimeException("Đang có một kết quả chờ duyệt. Vui lòng xác nhận kết quả đó trước!");
         }
 
+        // --- BẮT ĐẦU LOGIC XỬ LÝ ĐỘI THẮNG ---
+        List<MatchRegistration> registrations = registrationRepository.findByMatch(match);
+        List<UUID> winnerIds = new ArrayList<>();
+        List<UUID> loserIds = new ArrayList<>();
+
+        Integer winningTeam = request.getWinningTeamNumber();
+        if (winningTeam == null || (winningTeam != 1 && winningTeam != 2)) {
+            throw new RuntimeException("Vui lòng chọn hợp lệ Đội 1 hoặc Đội 2 thắng!");
+        }
+
+        for (MatchRegistration reg : registrations) {
+            if (reg.getTeamNumber() == null) {
+                throw new RuntimeException("Trận đấu này chưa được Host chia đội hoàn tất!");
+            }
+
+            if (reg.getTeamNumber().equals(winningTeam)) {
+                winnerIds.add(reg.getUser().getUserId());
+            } else {
+                loserIds.add(reg.getUser().getUserId());
+            }
+        }
+        // --- KẾT THÚC LOGIC LỌC ---
+
         MatchResult result = MatchResult.builder()
                 .match(match)
                 .submitterId(currentUser.getUserId())
-                .winnerIds(request.getWinnerIds())
-                .loserIds(request.getLoserIds())
+                .winningTeamNumber(winningTeam) // Lưu lại Đội thắng
+                .winnerIds(winnerIds)           // Vẫn lưu list ID để tái sử dụng logic tính Rank phía dưới
+                .loserIds(loserIds)             // Vẫn lưu list ID
                 .status(ResultStatus.PENDING)
                 .build();
 
@@ -84,12 +109,15 @@ public class MatchResultServiceImpl implements MatchResultService {
 
         Match match = result.getMatch();
 
-        if (currentUser.getUserId().equals(result.getSubmitterId())) {
-            throw new RuntimeException("Bạn không thể tự duyệt kết quả do mình gửi!");
-        }
+        MatchRegistration currentReg = registrationRepository.findByMatchAndUser(match, currentUser)
+                .orElseThrow(() -> new RuntimeException("Chỉ người tham gia mới được duyệt kết quả!"));
 
-        if (!registrationRepository.existsByMatchAndUser(match, currentUser)) {
-            throw new RuntimeException("Chỉ người tham gia mới được duyệt kết quả!");
+        MatchRegistration submitterReg = registrationRepository.findByMatchAndUser_UserId(match, result.getSubmitterId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người gửi kết quả"));
+
+        // CHẶN ĐỒNG ĐỘI TỰ DUYỆT (Bao gồm cả chính mình)
+        if (currentReg.getTeamNumber() != null && currentReg.getTeamNumber().equals(submitterReg.getTeamNumber())) {
+            throw new RuntimeException("Chỉ người thuộc đội đối thủ mới có quyền duyệt kết quả này!");
         }
 
         if (isAccepted) {

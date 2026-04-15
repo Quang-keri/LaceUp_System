@@ -51,6 +51,8 @@ public interface MatchMapper {
 
                                     userRes.setDepositConfirmed(reg.getIsDepositConfirmed());
 
+                                    userRes.setTeamNumber(reg.getTeamNumber());
+
                                     return userRes;
                                 })
                                 .collect(Collectors.toList()))
@@ -92,8 +94,8 @@ public interface MatchMapper {
 
         System.out.println("--- Danh sách các mốc giá đang có ---");
         for (CourtPrice cp : match.getCourt().getCourtPrices()) {
-            System.out.println(String.format("   + ID: %s | Start: %s | End: %s | Price: %s | Priority: %s",
-                    cp.getCourtPriceId(), cp.getStartTime(), cp.getEndTime(), cp.getPricePerHour(), cp.getPriority()));
+            System.out.printf("   + ID: %s | Start: %s | End: %s | Price: %s | Priority: %s%n",
+                    cp.getCourtPriceId(), cp.getStartTime(), cp.getEndTime(), cp.getPricePerHour(), cp.getPriority());
         }
         System.out.println("-------------------------------------");
 
