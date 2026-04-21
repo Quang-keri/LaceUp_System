@@ -9,15 +9,32 @@ export default function BookingConfirmModal({
   setUserInfo,
   onConfirm,
 }: any) {
-  const timeToMinutes = (timeStr: string) => {
-    if (!timeStr) return 0;
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    return hours * 60 + (minutes || 0);
+  const timeToMinutes = (timeValue: any) => {
+    if (!timeValue) return 0;
+
+    // 1. Nếu dữ liệu đã là chuỗi chuẩn (VD: "08:30")
+    if (typeof timeValue === "string") {
+      const [hours, minutes] = timeValue.split(":").map(Number);
+      return (hours || 0) * 60 + (minutes || 0);
+    }
+
+    if (
+      typeof timeValue === "object" &&
+      typeof timeValue.format === "function"
+    ) {
+      const timeStr = timeValue.format("HH:mm");
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return (hours || 0) * 60 + (minutes || 0);
+    }
+
+    if (timeValue instanceof Date) {
+      return timeValue.getHours() * 60 + timeValue.getMinutes();
+    }
+
+    return 0;
   };
 
-  // Hàm tính giá tiền động (Dự kiến) cho từng khung sân
   const calculateItemPrice = (item: any) => {
-    // 1. Nếu sân không cấu hình rules phức tạp, xài giá mặc định
     const fallbackPrice =
       item.court.pricePerHour || item.court.minPrice || item.court.price || 0;
 
@@ -28,22 +45,18 @@ export default function BookingConfirmModal({
       return hours * item.quantity * fallbackPrice;
     }
 
-    // 2. Nếu có rules, bắt đầu tính giá động
     const reqStartMin = timeToMinutes(item.startTime);
     const reqEndMin = timeToMinutes(item.endTime);
 
-    // Xác định xem ngày khách chọn có phải cuối tuần (Thứ 7 - 6, Chủ nhật - 0)
     const dayOfWeek = dayjs(item.date).day();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    // Sắp xếp rules theo priority giảm dần (Rule đặc biệt > Cuối tuần > Ngày thường)
     const sortedRules = [...item.court.priceRules].sort(
       (a: any, b: any) => b.priority - a.priority,
     );
 
     let totalPriceForOneCourt = 0;
 
-    // Chạy vòng lặp duyệt từng phút khách thuê để tính tiền chính xác nếu vắt ngang 2 khung giờ
     for (let min = reqStartMin; min < reqEndMin; min++) {
       let appliedRule = null;
 
@@ -55,13 +68,12 @@ export default function BookingConfirmModal({
           if (rule.priceType === "NORMAL" && isWeekend) continue;
         }
 
-        // Kiểm tra điều kiện Giờ
         const ruleStartMin = timeToMinutes(rule.startTime);
         const ruleEndMin = timeToMinutes(rule.endTime);
 
         if (min >= ruleStartMin && min < ruleEndMin) {
           appliedRule = rule;
-          break; // Tìm thấy rule ưu tiên cao nhất, thoát vòng lặp rule để sang phút tiếp theo
+          break;
         }
       }
 

@@ -33,6 +33,7 @@ import ConfirmRegister from "../page/customer/login-page/ConfirmRegister.tsx";
 import MatchPage from "../page/customer/match/MatchPage.tsx";
 import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
+import ServiceItemManagementPage from "../page/owner/service/ServiceItemManagementPage.tsx";
 import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
 import NotificationPage from "../page/customer/notification/NotificationPage.tsx";
 import MyMatchPage from "../page/customer/profile-page/MyMatchPage.tsx";
@@ -51,7 +52,10 @@ import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
 import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx";
 import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
 import BuildingEditPage from "../page/owner/building/BuildingEditPage.tsx";
+import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
+import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
 import MyRanks from "../page/customer/profile-page/MyRankPage.tsx";
+import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManagement.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -73,6 +77,10 @@ export const router = createBrowserRouter([
     element: <DefaultLayout />,
     children: [
       { index: true, element: <LandingPage /> },
+      {
+        path: "/create-rental-area",
+        element: <CreateRentalAreaPage />,
+      },
       { path: "trang-chu", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
       { path: "/register", element: <RegisterPage /> },
@@ -84,6 +92,11 @@ export const router = createBrowserRouter([
         path: "payment/booking-result",
         element: <BookingPaymentResultPage />,
         handle: { breadcrumb: "Kết quả thanh toán booking" },
+      },
+      {
+        path: "payment/vnpay-return",
+        element: <VnPayReturnPage />,
+        handle: { breadcrumb: "Kết quả thanh toán VNPay" },
       },
       { path: "player/:id", element: <PlayerPublicPage /> },
 
@@ -128,6 +141,7 @@ export const router = createBrowserRouter([
       { index: true, element: <AdminDashboard /> },
       { path: "users", element: <UserManagement /> },
       { path: "roles", element: <RoleManagement /> },
+      { path: "owners", element: <RentalAreaManagement /> },
       { path: "permissions", element: <PermissionManagement /> },
       { path: "court-types", element: <CategoryManagement /> },
       { path: "bookings/list", element: <BookingManagement /> },
@@ -165,6 +179,7 @@ export const router = createBrowserRouter([
       { path: "bookings/calendar", element: <ManageSchedulePage /> },
       { path: "posts", element: <PostManagementPage /> },
       { path: "matches", element: <MatchManagement /> },
+      { path: "service-items", element: <ServiceItemManagementPage /> },
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
       { path: "profile", element: <OwnerProfilePage /> },

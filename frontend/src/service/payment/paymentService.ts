@@ -33,6 +33,12 @@ class PaymentService {
     });
     return res;
   }
+
+  async handleVnPayReturn(queryString: string) {
+  
+    const res = await api.get(`/payments/vnpay/return${queryString}`);
+    return res;
+  }
 }
 
 export default new PaymentService();

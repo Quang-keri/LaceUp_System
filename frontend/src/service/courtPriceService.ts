@@ -2,6 +2,7 @@ import api from "../config/axios";
 import type { ApiResponse } from "../types/ApiResponse";
 
 export interface CourtPriceRequest {
+   courtId: string;
   startTime?: string;
   endTime?: string;
   pricePerHour?: number;

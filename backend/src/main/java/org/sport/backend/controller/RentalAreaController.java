@@ -3,13 +3,19 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.RentalAreaStatus;
+import org.sport.backend.dto.request.rental.RejectRentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.service.RentalAreaService;
+import org.sport.backend.service.ServiceItemService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,13 +27,47 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/rental-areas")
 @Tag(name = "9. Rental Area")
-@RequiredArgsConstructor
+
 public class RentalAreaController {
 
-    private final RentalAreaService rentalAreaService;
+    @Autowired
+    private  RentalAreaService rentalAreaService;
+    @Autowired
+    private ServiceItemService serviceItemService;
+
+    @GetMapping("/{rentalAreaId}/services")
+    public ResponseEntity<ApiResponse<List<ServiceItemResponse>>> getServicesByRentalArea(
+            @PathVariable UUID rentalAreaId) {
+
+        List<ServiceItemResponse> services = serviceItemService.getByRentalArea(rentalAreaId);
+        return ResponseEntity.ok(ApiResponse.success(200, "Success", services));
+    }
+    @PutMapping("/{rentalAreaId}/approve")
+    public ApiResponse<Void> approveRentalArea(@PathVariable UUID rentalAreaId) {
+        rentalAreaService.approveRentalArea(rentalAreaId);
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Đã phê duyệt cơ sở thành công")
+                .build();
+    }
+
+    @PutMapping("/{rentalAreaId}/reject")
+    public ApiResponse<Void> rejectRentalArea(
+            @PathVariable UUID rentalAreaId,
+            @RequestBody(required = false) RejectRentalAreaRequest request) {
+
+        String reason = (request != null) ? request.getReason() : null;
+        rentalAreaService.rejectRentalArea(rentalAreaId, reason);
+
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Đã từ chối cơ sở thành công")
+                .build();
+    }
+
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
+//    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
     public ApiResponse<?> createRentalArea(
             @Valid @ModelAttribute RentalAreaRequest request
     ) {
@@ -49,7 +89,7 @@ public class RentalAreaController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) UUID cityId,
-            @RequestParam(required = false) RentalAreaStatus status,
+            @RequestParam(required = false) VerificationStatus verificationStatus,
             @RequestParam(required = false) LocalDateTime fromDate,
             @RequestParam(required = false) LocalDateTime toDate
     ) {
@@ -62,7 +102,7 @@ public class RentalAreaController {
                         size,
                         keyword,
                         cityId,
-                        status,
+                        verificationStatus,
                         fromDate,
                         toDate
                 )
@@ -80,7 +120,7 @@ public class RentalAreaController {
     }
 
     @GetMapping("/my-rentals")
-    @PreAuthorize("isAuthenticated()")
+//    @PreAuthorize("isAuthenticated()")
     public ApiResponse<?> getMyRentalAreas(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,

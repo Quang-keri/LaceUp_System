@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,15 +24,20 @@ public class RentalAreaRequest {
     private String ward;
     @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
     private String district;
-    @NotNull(message = "thành phố không bỏ trống")
-    private Long cityId;
 
+    private Long cityId;
+    private String cityName;
 
     @NotNull(message = "tên liên hệ không bỏ trống")
     private String contactName;
 
     @NotNull(message = "số điện thoại không bỏ trống")
     private String contactPhone;
-
+    private String latitude;
+    private String longitude;
+    private LocalTime openTime;
+    private LocalTime closeTime;
+    private String facebookLink;
+    private String gmailLink;
     private List<MultipartFile> images;
 }

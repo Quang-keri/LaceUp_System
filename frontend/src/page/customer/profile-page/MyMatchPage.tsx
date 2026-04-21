@@ -884,8 +884,8 @@ const MyMatchPage: React.FC = () => {
         title={
           <div className="text-xl font-bold text-orange-600">
             {isSubmitter
-              ? "⏳ Trạng thái kết quả"
-              : "⚖️ Duyệt kết quả trận đấu"}
+              ? " Trạng thái kết quả"
+              : " Duyệt kết quả trận đấu"}
           </div>
         }
         open={isApproveModalOpen}

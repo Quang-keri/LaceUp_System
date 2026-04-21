@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.sport.backend.dto.request.court_copy.CourtCopyRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -22,13 +23,11 @@ public class CourtRequest {
     private String courtName;
     @NotNull(message = "loại sân không bỏ trống")
     private Integer categoryId;
-    @NotNull(message = "giá sân không bỏ trống")
-    private BigDecimal pricePerHour;
     @NotNull(message = "mã nhà không bỏ trống")
     private UUID rentalAreaId;
     @NotNull(message = "mã phòng không bỏ trống")
     @Size(min = 1, message = "phải có ít nhất 1 mã phòng")
-    private List<String> courtCodes;
+    private List<CourtCopyRequest> courtCopyRequests;
     private Set<Long> amenityIds;
     private List<MultipartFile> images;
 }

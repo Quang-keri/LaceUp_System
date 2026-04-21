@@ -6,6 +6,7 @@ import org.sport.backend.constant.CourtStatus;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.court.CourtRequest;
 import org.sport.backend.dto.request.court.CourtUpdateRequest;
+import org.sport.backend.dto.request.court_copy.CourtCopyRequest;
 import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.court.CourtImageResponse;
@@ -99,11 +100,12 @@ public class CourtServiceImpl implements CourtService {
 
         List<CourtCopy> courtCopies = new ArrayList<>();
 
-        for (String code : request.getCourtCodes()) {
+        for (CourtCopyRequest copyRequest : request.getCourtCopyRequests()) {
 
             CourtCopy courtCopy = CourtCopy.builder()
-                    .courtCode(code)
+                    .courtCode(copyRequest.getCourtCode())
                     .courtCopyStatus(CourtCopyStatus.ACTIVE)
+                    .location(copyRequest.getLocation())
                     .court(court)
                     .build();
 

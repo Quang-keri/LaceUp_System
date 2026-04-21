@@ -16,6 +16,7 @@ public class CourtCopyRequest {
     private UUID courtId;
     @NotNull(message = "số sân không bỏ trống")
     private String courtCode;
-
+    @NotNull(message = "địa điểm không bỏ trống")
+    private String location;
 
 }

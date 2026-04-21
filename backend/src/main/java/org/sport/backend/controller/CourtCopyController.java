@@ -26,7 +26,7 @@ public class CourtCopyController {
     private final CourtCopyService courtCopyService;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CREATE_COURT_COPY')")
+//    @PreAuthorize("hasAuthority('CREATE_COURT_COPY')")
     public ApiResponse<CourtCopyResponse> createCourtCopy(
             @Valid @RequestBody CourtCopyRequest request) {
         try {

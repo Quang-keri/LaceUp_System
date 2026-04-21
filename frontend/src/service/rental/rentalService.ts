@@ -8,6 +8,8 @@ import type {
 import type { ApiResponse } from "../../types/ApiResponse";
 
 class RentalService {
+ 
+
   async getRentalAreaById(rentalAreaId: string) {
     const response = await api.get<ApiResponse<RentalAreaResponse>>(
       `/rental-areas/${rentalAreaId}`,
@@ -38,14 +40,14 @@ class RentalService {
     size: number = 10,
     keyword?: string,
     cityId?: number,
-    status?: string,
+    verificationStatus?: string,
   ) {
     const params = new URLSearchParams();
     params.append("page", page.toString());
     params.append("size", size.toString());
     if (keyword) params.append("keyword", keyword);
     if (cityId) params.append("cityId", cityId.toString());
-    if (status) params.append("status", status);
+    if (verificationStatus) params.append("verificationStatus", verificationStatus);
 
     const response = await api.get<ApiResponse<RentalAreaListResponse>>(
       `/rental-areas?${params.toString()}`,
@@ -53,36 +55,37 @@ class RentalService {
     return response.data;
   }
 
-  async createRentalArea(request: CreateRentalAreaRequest, images: File[]) {
+  async createRentalArea(values: any) {
     const formData = new FormData();
-    formData.append("rentalAreaName", request.rentalAreaName);
-    formData.append("street", request.address?.street || "");
-    formData.append("ward", request.address?.ward || "");
-    formData.append("district", request.address?.district || "");
-    formData.append("contactName", request.contactName);
-    formData.append("contactPhone", request.contactPhone);
-    formData.append("cityId", request.cityId.toString());
-    formData.append("openTime", request.openTime || "");
-    formData.append("closeTime", request.closeTime || "");
 
-    // Use userId from request (passed from component via useAuth context)
-    if (request.userId) {
-      formData.append("userId", request.userId);
+    formData.append("userId", values.userId);
+    formData.append("rentalAreaName", values.rentalAreaName);
+    formData.append("street", values.street);
+    formData.append("ward", values.ward);
+    formData.append("district", values.district);
+
+    formData.append("cityName", values.cityName);
+    formData.append("contactName", values.contactName);
+    formData.append("contactPhone", values.contactPhone);
+    formData.append("gmail", values.gmail || "");
+    if (values.latitude) formData.append("latitude", String(values.latitude));
+    if (values.longitude)
+      formData.append("longitude", String(values.longitude));
+    formData.append("openTime", values.openTime);
+    formData.append("closeTime", values.closeTime);
+    formData.append("facebookLink", values.facebookLink || "");
+    if (values.images && Array.isArray(values.images)) {
+      values.images.forEach((file: any) => {
+        const fileObj = file.originFileObj || file;
+        if (fileObj instanceof File || fileObj instanceof Blob) {
+          formData.append("images", fileObj);
+        }
+      });
     }
 
-    images.forEach((image) => {
-      formData.append("images", image);
+    const response = await api.post("/rental-areas", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
-
-    const response = await api.post<ApiResponse<RentalAreaResponse>>(
-      "/rental-areas",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      },
-    );
     return response.data;
   }
 
@@ -123,6 +126,25 @@ class RentalService {
   async deleteRentalArea(rentalAreaId: string) {
     const response = await api.delete<ApiResponse<void>>(
       `/rental-areas/${rentalAreaId}`,
+    );
+    return response.data;
+  }
+
+  async approveRentalArea(rentalAreaId: string) {
+    // Backend may expose an admin endpoint or a rental-areas/{id}/approve
+    // Adjust the path if your API uses a different route.
+    const response = await api.put<ApiResponse<void>>(
+      `/rental-areas/${rentalAreaId}/approve`,
+    );
+    return response.data;
+  }
+
+  async rejectRentalArea(rentalAreaId: string, reason?: string) {
+   
+    const payload = reason ? { reason } : {};
+    const response = await api.put<ApiResponse<void>>(
+      `/rental-areas/${rentalAreaId}/reject`,
+      payload,
     );
     return response.data;
   }

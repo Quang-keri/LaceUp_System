@@ -60,8 +60,8 @@ public class Payment extends BaseEntity {
     @Column(name = "transaction_code")
     private String transactionCode;
 
-    @Column(name = "payos_order_code", unique = true)
-    Long payosOrderCode;
+    @Column(name = "order_code", unique = true)
+    Long orderCode;
 
     @Column(name = "payos_payment_link_id")
     String payosPaymentLinkId;

@@ -117,6 +117,27 @@ public class InvoiceServiceImpl implements InvoiceService {
                 }
             }
             document.add(table);
+            if (booking.getExtraServiceResponses() != null && !booking.getExtraServiceResponses().isEmpty()) {
+                document.add(new Paragraph("\nDịch vụ phát sinh").setFont(boldFont).setFontSize(12));
+
+                float[] serviceColumnWidths = {5, 2, 4};
+                Table serviceTable = new Table(UnitValue.createPercentArray(serviceColumnWidths)).useAllAvailableWidth();
+
+                // Headers
+                serviceTable.addHeaderCell(new Cell().add(new Paragraph("Tên dịch vụ").setFont(boldFont)).setBackgroundColor(ColorConstants.LIGHT_GRAY));
+                serviceTable.addHeaderCell(new Cell().add(new Paragraph("SL").setFont(boldFont)).setTextAlignment(TextAlignment.CENTER).setBackgroundColor(ColorConstants.LIGHT_GRAY));
+                serviceTable.addHeaderCell(new Cell().add(new Paragraph("Thành tiền").setFont(boldFont)).setTextAlignment(TextAlignment.RIGHT).setBackgroundColor(ColorConstants.LIGHT_GRAY));
+
+                // Rows
+                for (BookingResponse.BookingServiceResponse service : booking.getExtraServiceResponses()) {
+                    BigDecimal rowTotal = service.getPrice().multiply(BigDecimal.valueOf(service.getQuantity()));
+
+                    serviceTable.addCell(new Cell().add(new Paragraph(service.getServiceName())));
+                    serviceTable.addCell(new Cell().add(new Paragraph(String.valueOf(service.getQuantity()))).setTextAlignment(TextAlignment.CENTER));
+                    serviceTable.addCell(new Cell().add(new Paragraph(df.format(rowTotal))).setTextAlignment(TextAlignment.RIGHT));
+                }
+                document.add(serviceTable);
+            }
 
 
             document.add(new Paragraph("\n"));

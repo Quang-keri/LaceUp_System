@@ -28,7 +28,7 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CREATE_POST')")
+//    @PreAuthorize("hasAuthority('CREATE_POST')")
     public ApiResponse<PostResponse> createPost(
             @Valid @RequestBody CreatePostRequest request
 

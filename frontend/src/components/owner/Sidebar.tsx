@@ -81,8 +81,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/owner/area/list",
       ),
       getItem(
-        <Link to="/owner/area/devices">Thiết bị và tiện ích </Link>,
-        "/owner/area/list",
+        <Link to="/owner/service-items">Thiết bị và tiện ích </Link>,
+        "/owner/service-items",
       ),
     ]),
 
@@ -162,24 +162,26 @@ const Sidebar: React.FC<SidebarProps> = ({
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
       }}
     >
-      <div
-        className={`h-16 flex items-center justify-center border-b transition-colors ${
-          isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
-        }`}
-      >
-        <div className="flex items-center gap-2 overflow-hidden px-4">
-          <img rel="icon" src="/logo.png" alt="Logo" className="w-12 h-12" />
-          {!collapsed && (
-            <div
-              className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
-                isDark ? "text-white" : "text-gray-800"
-              }`}
-            >
-              Lace Up
-            </div>
-          )}
+      <Link to="/trang-chu">
+        <div
+          className={`h-16 flex items-center justify-center border-b transition-colors ${
+            isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
+          }`}
+        >
+          <div className="flex items-center gap-2 overflow-hidden px-4">
+            <img rel="icon" src="/logo.png" alt="Logo" className="w-12 h-12" />
+            {!collapsed && (
+              <div
+                className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
+                  isDark ? "text-white" : "text-gray-800"
+                }`}
+              >
+                Lace Up
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </Link>
 
       <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">
         <Menu

@@ -26,6 +26,9 @@ public class CourtCopy extends BaseEntity {
     @Column(name = "court_code",length = 50,nullable = false,unique = true)
     private String courtCode;
 
+    @Column(name = "location", length = 200)
+    private String location;
+
     @Column(name = "court_copy_status")
     @Enumerated(EnumType.STRING)
     private CourtCopyStatus courtCopyStatus;

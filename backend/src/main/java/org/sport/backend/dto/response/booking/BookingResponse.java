@@ -35,5 +35,17 @@ public class BookingResponse {
     private String paymentMethod;
     private BigDecimal depositAmount;
     private BigDecimal remainingAmount;
+    private List<BookingResponse.BookingServiceResponse> extraServiceResponses;
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class BookingServiceResponse {
+        private UUID serviceId;
+        private String serviceName;
+        private Integer quantity;
+        private BigDecimal price;
+    }
 
 }

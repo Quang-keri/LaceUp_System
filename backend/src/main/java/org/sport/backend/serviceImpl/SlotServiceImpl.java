@@ -1,5 +1,6 @@
 package org.sport.backend.serviceImpl;
 
+import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.slot.ExtendRequest;
 import org.sport.backend.dto.request.slot.SwapRequest;
 import org.sport.backend.dto.response.court.CourtResponse;
@@ -92,6 +93,23 @@ public class SlotServiceImpl implements SlotService {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
 
+        if(slot != null && slot.getBooking() != null) {
+            Booking booking = slot.getBooking();
+            if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+                return ExtendCheckResponse.builder()
+                        .available(false)
+                        .conflictReason("Không thể gia hạn vì booking đã bị hủy")
+                        .build();
+            }
+            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
+                return ExtendCheckResponse.builder()
+                        .available(false)
+                        .conflictReason("Không thể gia hạn vì booking đã hoàn thành")
+                        .build();
+            }
+        }
+
+
         LocalDateTime newEnd = computeNewEnd(slot.getEndTime(), req);
 
         boolean conflict = slotRepository.existsConflictSlot(
@@ -121,7 +139,15 @@ public class SlotServiceImpl implements SlotService {
     public void confirmExtend(UUID slotId, ExtendRequest req) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
-
+        if(slot != null && slot.getBooking() != null) {
+            Booking booking = slot.getBooking();
+            if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+                throw new RuntimeException("Không thể gia hạn vì booking đã bị hủy");
+            }
+            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
+                throw new RuntimeException("Không thể gia hạn vì booking đã hoàn thành");
+            }
+        }
         LocalDateTime oldEnd = slot.getEndTime();
         LocalDateTime newEnd = computeNewEnd(oldEnd, req);
 
@@ -176,7 +202,15 @@ public class SlotServiceImpl implements SlotService {
     public SwapCheckResponse checkSwap(UUID slotId, SwapRequest req) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
-
+        if(slot != null && slot.getBooking() != null) {
+            Booking booking = slot.getBooking();
+            if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+                throw new RuntimeException("Không thể gia hạn vì booking đã bị hủy");
+            }
+            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
+                throw new RuntimeException("Không thể gia hạn vì booking đã hoàn thành");
+            }
+        }
         // 1. Backend TỰ ĐỘNG ép buộc thời gian mới = thời lượng cũ
         long oldDuration = ChronoUnit.MINUTES.between(slot.getStartTime(), slot.getEndTime());
         LocalDateTime newEnd = req.getNewStartTime().plusMinutes(oldDuration);
@@ -204,7 +238,15 @@ public class SlotServiceImpl implements SlotService {
     public void confirmSwap(UUID slotId, SwapRequest req) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
-
+        if(slot != null && slot.getBooking() != null) {
+            Booking booking = slot.getBooking();
+            if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+                throw new RuntimeException("Không thể gia hạn vì booking đã bị hủy");
+            }
+            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
+                throw new RuntimeException("Không thể gia hạn vì booking đã hoàn thành");
+            }
+        }
         long durationMinutes = ChronoUnit.MINUTES.between(slot.getStartTime(), slot.getEndTime());
         LocalDateTime newEnd = req.getNewStartTime().plusMinutes(durationMinutes);
 
