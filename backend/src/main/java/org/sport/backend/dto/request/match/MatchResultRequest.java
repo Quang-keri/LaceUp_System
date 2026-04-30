@@ -7,6 +7,5 @@ import java.util.UUID;
 @Data
 public class MatchResultRequest {
     private UUID matchId;
-    private List<UUID> winnerIds;
-    private List<UUID> loserIds;
+    private Integer winningTeamNumber;
 }

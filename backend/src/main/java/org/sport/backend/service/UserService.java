@@ -45,6 +45,8 @@ public interface UserService {
 
     User findByUserId(UUID id);
 
+    User findByEmail(String email);
+
     User getCurrentUserEntity();
 
     UserDashboardResponse getUserDashboard(UUID userId);

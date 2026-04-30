@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
+import org.sport.backend.dto.request.chat.DivideTeamRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 
@@ -15,6 +16,9 @@ public interface MatchService {
     MatchResponse createMatch(MatchRequest request);
 
     void joinMatch(UUID matchId);
+
+    @Transactional
+    void divideTeams(UUID matchId, DivideTeamRequest request);
 
     @Transactional
     void confirmDeposit(UUID matchId);

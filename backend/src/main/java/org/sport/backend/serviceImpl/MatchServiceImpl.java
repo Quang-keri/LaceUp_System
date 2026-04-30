@@ -7,6 +7,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.constant.RecurringType;
+import org.sport.backend.dto.request.chat.DivideTeamRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.entity.*;
@@ -171,6 +172,40 @@ public class MatchServiceImpl implements MatchService {
         }
 
         matchRepository.save(match);
+    }
+
+    @Transactional
+    @Override
+    public void divideTeams(UUID matchId, DivideTeamRequest request) {
+        User currentUser = userService.getCurrentUserEntity();
+        Match match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
+
+        boolean isParticipant = registrationRepository.existsByMatchAndUser(match, currentUser);
+        if (!isParticipant && !match.getHost().getUserId().equals(currentUser.getUserId())) {
+            throw new RuntimeException("Chỉ người tham gia mới được chọn đội!");
+        }
+
+        // Tùy logic của bạn: Có thể yêu cầu trận đấu phải FULL hoặc CONFIRMED mới được chia đội
+        if (match.getStatus() == MatchStatus.OPEN) {
+            throw new RuntimeException("Trận đấu chưa đủ người để chia đội!");
+        }
+
+        List<MatchRegistration> registrations = registrationRepository.findByMatch(match);
+
+        // Gắn Team Number cho từng người chơi
+        for (MatchRegistration reg : registrations) {
+            UUID userId = reg.getUser().getUserId();
+
+            if (request.getTeam1UserIds() != null && request.getTeam1UserIds().contains(userId)) {
+                reg.setTeamNumber(1);
+            } else if (request.getTeam2UserIds() != null && request.getTeam2UserIds().contains(userId)) {
+                reg.setTeamNumber(2);
+            }
+        }
+
+        registrationRepository.saveAll(registrations);
+        log.info("Host {} đã chia đội cho trận đấu {}", currentUser.getUserName(), matchId);
     }
 
     @Transactional

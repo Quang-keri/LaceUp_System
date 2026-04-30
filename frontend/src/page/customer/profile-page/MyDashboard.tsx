@@ -194,7 +194,7 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ userId }) => {
 
           <Card
             title={
-              <span className="text-xl font-bold">🎖️ Thành Tựu Mới Nhất</span>
+              <span className="text-xl font-bold"> Thành Tựu Mới Nhất</span>
             }
             bordered={false}
             style={{ borderRadius: "12px", minHeight: "200px" }}

@@ -11,15 +11,16 @@ import {
   Spin,
   Tabs,
   Modal,
-  Checkbox,
   Avatar,
   Button,
+  Radio,
 } from "antd";
 import {
   CalendarOutlined,
   ManOutlined,
   TrophyOutlined,
   DollarOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../../../context/AuthContext.tsx";
 import matchService from "../../../service/match/matchService.ts";
@@ -40,11 +41,24 @@ const MyMatchPage: React.FC = () => {
     null,
   );
 
-  // States cho Modal Chốt kết quả (Phe thắng/Host)
+  // States cho Modal Chốt kết quả & Chia đội
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
-  const [winnerIds, setWinnerIds] = useState<string[]>([]);
+
+  const [winningTeamNumber, setWinningTeamNumber] = useState<number | null>(
+    null,
+  );
   const [submittingResult, setSubmittingResult] = useState(false);
+
+  // States lấy kết quả trận đã kết thúc
+  const [matchResultData, setMatchResultData] = useState<any>(null);
+  const [loadingResult, setLoadingResult] = useState(false);
+
+  // States cho mọi người tự chọn đội
+  const [teamAssignments, setTeamAssignments] = useState<
+    Record<string, number>
+  >({});
+  const [loadingDivide, setLoadingDivide] = useState(false);
 
   // States cho Modal Duyệt kết quả (Phe thua)
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -70,7 +84,23 @@ const MyMatchPage: React.FC = () => {
     fetchMyMatches();
   }, []);
 
-  // ---------------- XÁC NHẬN CỌC ----------------
+  // Đồng bộ lại Selected Match
+  useEffect(() => {
+    if (selectedMatch) {
+      const updatedMatch = matches.find(
+        (m) => m.matchId === selectedMatch.matchId,
+      );
+      if (updatedMatch) {
+        setSelectedMatch(updatedMatch);
+        const currentAssignments: Record<string, number> = {};
+        updatedMatch.participants?.forEach((p: any) => {
+          if (p.teamNumber) currentAssignments[p.userId] = p.teamNumber;
+        });
+        setTeamAssignments(currentAssignments);
+      }
+    }
+  }, [matches]);
+
   const handleConfirmDeposit = async (matchId: string) => {
     setConfirmingDepositId(matchId);
     try {
@@ -86,30 +116,76 @@ const MyMatchPage: React.FC = () => {
     }
   };
 
-  // ---------------- XỬ LÝ CHỐT KẾT QUẢ (HOST/PHE THẮNG) ----------------
-  const openResultModal = (match: any) => {
+  // Mở modal chi tiết & Tự động gọi API lấy kết quả nếu trận COMPLETED
+  const openResultModal = async (match: any) => {
     setSelectedMatch(match);
-    setWinnerIds([]);
+    setWinningTeamNumber(null);
+    setMatchResultData(null); // Reset dữ liệu cũ
+
+    const initial: Record<string, number> = {};
+    match.participants?.forEach((p: any) => {
+      if (p.teamNumber) initial[p.userId] = p.teamNumber;
+    });
+    setTeamAssignments(initial);
+
     setIsResultModalOpen(true);
+
+    // GỌI API LẤY KẾT QUẢ CHO TRẬN HOÀN THÀNH
+    if (match.status === "COMPLETED") {
+      setLoadingResult(true);
+      try {
+        const res = await matchResultService.getResultsByMatch(match.matchId);
+        if (res.result && res.result.length > 0) {
+          setMatchResultData(res.result[0]);
+        }
+      } catch (error) {
+        console.error("Lỗi lấy thông tin kết quả:", error);
+      } finally {
+        setLoadingResult(false);
+      }
+    }
+  };
+
+  const handleSaveMyTeam = async () => {
+    const team1UserIds = Object.keys(teamAssignments).filter(
+      (id) => teamAssignments[id] === 1,
+    );
+    const team2UserIds = Object.keys(teamAssignments).filter(
+      (id) => teamAssignments[id] === 2,
+    );
+
+    const maxPerTeam = Math.ceil((selectedMatch?.maxPlayers || 4) / 2);
+    if (team1UserIds.length > maxPerTeam)
+      return message.warning(`Đội 1 đã đầy! Tối đa ${maxPerTeam} người/đội.`);
+    if (team2UserIds.length > maxPerTeam)
+      return message.warning(`Đội 2 đã đầy! Tối đa ${maxPerTeam} người/đội.`);
+
+    setLoadingDivide(true);
+    try {
+      await matchService.divideTeams(selectedMatch.matchId, {
+        team1UserIds,
+        team2UserIds,
+      });
+      message.success("Đã cập nhật đội của bạn thành công!");
+      fetchMyMatches();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi lưu đội");
+    } finally {
+      setLoadingDivide(false);
+    }
   };
 
   const handleSubmitResult = async () => {
     if (!selectedMatch) return;
-
-    if (winnerIds.length === 0) {
-      return message.warning("Vui lòng chọn ít nhất 1 người thắng!");
-    }
-
-    const loserIds = (selectedMatch.participants || [])
-      .map((p: any) => p.userId)
-      .filter((id: string) => !winnerIds.includes(id));
+    if (!winningTeamNumber)
+      return message.warning("Vui lòng chọn đội chiến thắng!");
 
     setSubmittingResult(true);
     try {
-      await matchResultService.submitMatchResult(selectedMatch.matchId, {
-        winnerIds: winnerIds,
-        loserIds: loserIds,
-      });
+      await matchResultService.submitMatchResult(
+        selectedMatch.matchId,
+        winningTeamNumber,
+      );
       message.success("Chốt kết quả thành công, chờ đối thủ duyệt!");
       setIsResultModalOpen(false);
       fetchMyMatches();
@@ -120,7 +196,6 @@ const MyMatchPage: React.FC = () => {
     }
   };
 
-  // ---------------- XỬ LÝ DUYỆT KẾT QUẢ (PHE THUA / ĐỐI THỦ) ----------------
   const openApproveModal = async (match: any) => {
     setSelectedMatch(match);
     setIsApproveModalOpen(true);
@@ -128,15 +203,9 @@ const MyMatchPage: React.FC = () => {
     setIsSubmitter(false);
     try {
       const res = await matchResultService.getResultsByMatch(match.matchId);
-      const results = res.result;
-
-      if (results && results.length > 0) {
-        const resultItem = results[0];
-        setPendingResult(resultItem);
-
-        if (resultItem.submitterId === user?.userId) {
-          setIsSubmitter(true);
-        }
+      if (res.result && res.result.length > 0) {
+        setPendingResult(res.result[0]);
+        if (res.result[0].submitterId === user?.userId) setIsSubmitter(true);
       } else {
         message.warning("Không tìm thấy kết quả chờ duyệt!");
         setIsApproveModalOpen(false);
@@ -169,13 +238,12 @@ const MyMatchPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading)
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
         <Spin size="large" />
       </div>
     );
-  }
 
   const renderMatchTypeTag = (
     type: string,
@@ -227,7 +295,7 @@ const MyMatchPage: React.FC = () => {
               "OPEN",
               "CONFIRMED",
               "FULL",
-              "WAITING_DEPOSIT", // <--- Thêm trạng thái này vào filter
+              "WAITING_DEPOSIT",
               "WAITING_RESULT_APPROVAL",
             ].includes(m.status),
           )}
@@ -277,8 +345,15 @@ const MyMatchPage: React.FC = () => {
                           }}
                         >
                           <CalendarOutlined />{" "}
-                          {formatMatchDate(match.startTime)} (
-                          {formatMatchTime(match.startTime)})
+                          {Array.isArray(match.startTime)
+                            ? `${match.startTime[2]
+                                .toString()
+                                .padStart(2, "0")}/${match.startTime[1]
+                                .toString()
+                                .padStart(2, "0")}/${match.startTime[0]}`
+                            : new Date(match.startTime).toLocaleDateString(
+                                "vi-VN",
+                              )}
                         </span>
                         <Divider type="vertical" />
                         <span
@@ -348,7 +423,7 @@ const MyMatchPage: React.FC = () => {
                         onClick={() => openResultModal(match)}
                         style={{ borderRadius: "8px", background: "#16a34a" }}
                       >
-                        Chốt kết quả
+                        Chốt kết quả / Chọn đội
                       </Button>
                     ) : (
                       <Button
@@ -402,8 +477,16 @@ const MyMatchPage: React.FC = () => {
                       )}
                     </Space>
                     <Text type="secondary" style={{ fontSize: "13px" }}>
-                      {new Date(match.startTime).toLocaleDateString("vi-VN")} •{" "}
-                      {match.courtName || match.address}
+                      {Array.isArray(match.startTime)
+                        ? `${match.startTime[2]
+                            .toString()
+                            .padStart(2, "0")}/${match.startTime[1]
+                            .toString()
+                            .padStart(2, "0")}/${match.startTime[0]}`
+                        : new Date(match.startTime).toLocaleDateString(
+                            "vi-VN",
+                          )}{" "}
+                      • {match.courtName || match.address}
                     </Text>
                   </Space>
                 </Col>
@@ -419,26 +502,6 @@ const MyMatchPage: React.FC = () => {
       ),
     },
   ];
-
-  const formatMatchDate = (timeArray: any) => {
-    if (Array.isArray(timeArray)) {
-      const [year, month, day] = timeArray;
-      return `${day.toString().padStart(2, "0")}/${month
-        .toString()
-        .padStart(2, "0")}/${year}`;
-    }
-    return "N/A";
-  };
-
-  const formatMatchTime = (timeArray: any) => {
-    if (Array.isArray(timeArray)) {
-      const [, , , hour, minute] = timeArray;
-      return `${hour.toString().padStart(2, "0")}:${minute
-        .toString()
-        .padStart(2, "0")}`;
-    }
-    return "--:--";
-  };
 
   return (
     <div
@@ -468,130 +531,355 @@ const MyMatchPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* MODAL 1: CHỐT KẾT QUẢ / XEM CHI TIẾT */}
+      {/* MODAL 1: XEM CHI TIẾT / CHỌN ĐỘI / CHỐT KẾT QUẢ */}
       <Modal
         title={
           <div className="text-xl font-bold text-gray-800">
-            {selectedMatch?.matchType === "NORMAL"
-              ? "Chi tiết người tham gia"
-              : "🏆 Chốt kết quả trận đấu"}
+            {selectedMatch?.status === "COMPLETED"
+              ? "Chi tiết kết quả"
+              : selectedMatch?.matchType === "NORMAL"
+              ? "Chi tiết trận đấu"
+              : "🏆 Chốt kết quả & Đội hình"}
           </div>
         }
         open={isResultModalOpen}
         onCancel={() => setIsResultModalOpen(false)}
         footer={null}
-        width={500}
+        width={550}
         centered
       >
         {selectedMatch && (
           <div className="mt-4">
-            <div className="bg-gray-50 p-4 rounded-xl mb-6">
+            {/* THÔNG TIN TRẬN */}
+            <div className="bg-gray-50 p-4 rounded-xl mb-6 border border-gray-100">
               <p className="text-sm text-gray-500 mb-1">Trận đấu</p>
               <p className="font-bold text-gray-800 text-base">
                 {selectedMatch.title ||
                   `Giao lưu ${selectedMatch.categoryName}`}
               </p>
-
               {selectedMatch.matchType === "BET" && (
                 <p className="text-yellow-600 text-sm mt-2 font-semibold">
-                  💰 Kèo chia tiền: Phe thắng trả {selectedMatch.winnerPercent}
+                  Kèo chia tiền: Phe thắng trả {selectedMatch.winnerPercent}
                   %, Phe thua trả {100 - selectedMatch.winnerPercent}%
                 </p>
               )}
             </div>
 
-            <p className="font-bold text-gray-800 mb-3">
-              Danh sách người chơi ({selectedMatch.participants?.length || 0}/
-              {selectedMatch.maxPlayers})
-            </p>
-
             <div className="w-full">
-              <List
-                dataSource={selectedMatch.participants || []}
-                renderItem={(player: any) => (
-                  <List.Item
-                    className={`transition-colors rounded-xl px-4 py-2 mb-2 border ${
-                      winnerIds.includes(player.userId)
-                        ? "bg-blue-50 border-blue-200"
-                        : "bg-white border-gray-100 hover:border-gray-200"
-                    }`}
-                    actions={[
-                      (selectedMatch.matchType === "RANKED" ||
-                        selectedMatch.matchType === "BET") &&
-                      selectedMatch.status !== "COMPLETED" ? (
-                        <Checkbox
-                          checked={winnerIds.includes(player.userId)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setWinnerIds([...winnerIds, player.userId]);
-                            } else {
-                              setWinnerIds(
-                                winnerIds.filter((id) => id !== player.userId),
-                              );
-                            }
-                          }}
-                        >
-                          <span
-                            className={
-                              winnerIds.includes(player.userId)
-                                ? "text-blue-600 font-bold"
-                                : "text-gray-500"
-                            }
-                          >
-                            Phe Thắng
-                          </span>
-                        </Checkbox>
-                      ) : selectedMatch.status === "COMPLETED" ? (
-                        <span className="text-gray-400 text-sm italic">
-                          Đã chốt
-                        </span>
-                      ) : null,
-                    ]}
-                  >
-                    <List.Item.Meta
-                      avatar={
-                        <Avatar src={player.avatarUrl} className="bg-blue-600">
-                          {player.userName?.charAt(0)}
-                        </Avatar>
-                      }
-                      title={
-                        <span className="font-semibold text-gray-800 break-words">
-                          {player.userName}
-                        </span>
-                      }
-                      description={
-                        <span className="text-xs text-gray-500">
-                          Rank: {player.rankPoint || 3000}
-                        </span>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
-            </div>
+              {(() => {
+                const team1 =
+                  selectedMatch.participants?.filter(
+                    (p: any) => p.teamNumber === 1,
+                  ) || [];
+                const team2 =
+                  selectedMatch.participants?.filter(
+                    (p: any) => p.teamNumber === 2,
+                  ) || [];
+                const unassigned =
+                  selectedMatch.participants?.filter(
+                    (p: any) => !p.teamNumber,
+                  ) || [];
+                const isNeedSubmit =
+                  (selectedMatch.matchType === "RANKED" ||
+                    selectedMatch.matchType === "BET") &&
+                  selectedMatch.status !== "COMPLETED";
 
-            {(selectedMatch.matchType === "RANKED" ||
-              selectedMatch.matchType === "BET") &&
-              selectedMatch.status !== "COMPLETED" && (
-                <div className="mt-8 flex justify-end gap-3">
-                  <Button onClick={() => setIsResultModalOpen(false)}>
-                    Đóng
-                  </Button>
-                  <Button
-                    type="primary"
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={handleSubmitResult}
-                    loading={submittingResult}
-                  >
-                    Lưu kết quả
-                  </Button>
-                </div>
-              )}
+                const maxPerTeam = Math.ceil(
+                  (selectedMatch.maxPlayers || 4) / 2,
+                );
+                const currentTeam1Count = Object.values(teamAssignments).filter(
+                  (t) => t === 1,
+                ).length;
+                const currentTeam2Count = Object.values(teamAssignments).filter(
+                  (t) => t === 2,
+                ).length;
+                const isTeam1Full = currentTeam1Count >= maxPerTeam;
+                const isTeam2Full = currentTeam2Count >= maxPerTeam;
+
+                const myParticipantInfo = selectedMatch.participants?.find(
+                  (p: any) => p.userId === user?.userId,
+                );
+                const isMyTeamChanged =
+                  teamAssignments[user?.userId as string] !==
+                  myParticipantInfo?.teamNumber;
+
+                // LOGIC TÌM ĐỘI CHIẾN THẮNG
+                let finalWinningTeam: number | null = null;
+                if (matchResultData) {
+                  if (matchResultData.winningTeamNumber) {
+                    finalWinningTeam = matchResultData.winningTeamNumber;
+                  } else if (
+                    matchResultData.winnerIds &&
+                    matchResultData.winnerIds.length > 0
+                  ) {
+                    const sampleWinner = selectedMatch.participants?.find(
+                      (p: any) => p.userId === matchResultData.winnerIds[0],
+                    );
+                    finalWinningTeam = sampleWinner?.teamNumber || null;
+                  }
+                }
+
+                return (
+                  <>
+                    {/* KHU VỰC HIỂN THỊ ĐỘI CHIẾN THẮNG (KHI COMPLETED) */}
+                    {selectedMatch.status === "COMPLETED" &&
+                      (loadingResult ? (
+                        <div className="flex justify-center p-4 mb-4">
+                          <Spin />
+                        </div>
+                      ) : finalWinningTeam ? (
+                        <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6 text-center shadow-sm">
+                          <p className="text-3xl mb-1 m-0"></p>
+                          <p className="font-extrabold text-green-700 text-lg m-0 uppercase tracking-wide">
+                            Đội {finalWinningTeam} Chiến Thắng
+                          </p>
+                        </div>
+                      ) : null)}
+
+                    {/* BẢNG CHỌN ĐỘI THẮNG ĐỂ CHỐT KẾT QUẢ */}
+                    {isNeedSubmit && unassigned.length === 0 && (
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-bold text-gray-800 m-0">
+                            Vui lòng chọn đội chiến thắng:
+                          </p>
+                        </div>
+                        <div className="flex gap-4">
+                          <div
+                            onClick={() => setWinningTeamNumber(1)}
+                            className={`flex-1 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                              winningTeamNumber === 1
+                                ? "border-blue-500 bg-blue-50 shadow-sm"
+                                : "border-gray-100 bg-white hover:border-blue-200"
+                            }`}
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <span
+                                className={`font-bold text-base ${
+                                  winningTeamNumber === 1
+                                    ? "text-blue-700"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                Đội 1
+                              </span>
+                              <Radio checked={winningTeamNumber === 1} />
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {team1.map((p: any) => p.userName).join(", ")}
+                            </div>
+                          </div>
+                          <div
+                            onClick={() => setWinningTeamNumber(2)}
+                            className={`flex-1 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                              winningTeamNumber === 2
+                                ? "border-purple-500 bg-purple-50 shadow-sm"
+                                : "border-gray-100 bg-white hover:border-purple-200"
+                            }`}
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <span
+                                className={`font-bold text-base ${
+                                  winningTeamNumber === 2
+                                    ? "text-purple-700"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                Đội 2
+                              </span>
+                              <Radio checked={winningTeamNumber === 2} />
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {team2.map((p: any) => p.userName).join(", ")}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CẢNH BÁO NẾU CÓ NGƯỜI CHƯA CHỌN ĐỘI */}
+                    {isNeedSubmit && unassigned.length > 0 && (
+                      <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl mb-4 text-orange-700 flex items-start gap-2">
+                        <WarningOutlined className="mt-1" />
+                        <p className="text-sm m-0 leading-tight">
+                          Đang có {unassigned.length} người chơi chưa chọn đội.{" "}
+                          <br />
+                          <span className="font-semibold">
+                            Bắt buộc tất cả phải chọn đội thì mới có thể chốt
+                            kết quả!
+                          </span>
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="font-bold text-gray-800 m-0">
+                        Danh sách người chơi
+                      </p>
+                      <Text className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-full text-xs">
+                        {selectedMatch.currentPlayers} /{" "}
+                        {selectedMatch.maxPlayers}
+                      </Text>
+                    </div>
+
+                    {/* LIST NGƯỜI CHƠI */}
+                    <div className="bg-gray-50 rounded-xl border border-gray-100 p-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                      <List
+                        dataSource={selectedMatch.participants || []}
+                        renderItem={(player: any) => {
+                          const isMe = player.userId === user?.userId;
+
+                          // Kiểm tra người này thắng hay thua
+                          const isPlayerWinner =
+                            finalWinningTeam &&
+                            player.teamNumber === finalWinningTeam;
+                          const isPlayerLoser =
+                            finalWinningTeam &&
+                            player.teamNumber &&
+                            player.teamNumber !== finalWinningTeam;
+
+                          return (
+                            <List.Item
+                              className={`border border-gray-200 transition-colors rounded-lg px-3 py-2 mb-2 flex-col items-start ${
+                                isMe
+                                  ? "bg-indigo-50 border-indigo-200"
+                                  : "bg-white"
+                              }`}
+                            >
+                              <div className="flex w-full justify-between items-center">
+                                <List.Item.Meta
+                                  avatar={
+                                    <Avatar className="bg-blue-600">
+                                      {player.userName?.charAt(0)}
+                                    </Avatar>
+                                  }
+                                  title={
+                                    <span className="font-semibold text-gray-800 flex items-center gap-2">
+                                      {player.userName}{" "}
+                                      {isMe && (
+                                        <span className="text-indigo-600 text-xs">
+                                          (Bạn)
+                                        </span>
+                                      )}
+                                    </span>
+                                  }
+                                  description={
+                                    <span className="text-xs text-gray-500">
+                                      Rank: {player.rankPoint || 3000}
+                                    </span>
+                                  }
+                                />
+
+                                {/* CHỖ CHỌN ĐỘI HOẶC HIỆN KẾT QUẢ THẮNG/THUA */}
+                                <div className="ml-2 shrink-0 flex items-center gap-2">
+                                  {isMe &&
+                                  selectedMatch.status !== "COMPLETED" ? (
+                                    <Radio.Group
+                                      size="small"
+                                      buttonStyle="solid"
+                                      value={teamAssignments[player.userId]}
+                                      onChange={(e) =>
+                                        setTeamAssignments((prev) => ({
+                                          ...prev,
+                                          [player.userId]: e.target.value,
+                                        }))
+                                      }
+                                    >
+                                      <Radio.Button
+                                        value={1}
+                                        className="text-xs"
+                                        disabled={
+                                          teamAssignments[player.userId] !==
+                                            1 && isTeam1Full
+                                        }
+                                      >
+                                        Đội 1
+                                      </Radio.Button>
+                                      <Radio.Button
+                                        value={2}
+                                        className="text-xs"
+                                        disabled={
+                                          teamAssignments[player.userId] !==
+                                            2 && isTeam2Full
+                                        }
+                                      >
+                                        Đội 2
+                                      </Radio.Button>
+                                    </Radio.Group>
+                                  ) : player.teamNumber ? (
+                                    <Tag
+                                      color={
+                                        player.teamNumber === 1
+                                          ? "blue"
+                                          : "purple"
+                                      }
+                                      className="m-0 font-bold"
+                                    >
+                                      Đội {player.teamNumber}
+                                    </Tag>
+                                  ) : (
+                                    <span className="text-xs text-gray-400 italic">
+                                      Chưa chọn
+                                    </span>
+                                  )}
+
+                                  {/* TAG THẮNG/THUA NẾU TRẬN ĐÃ KẾT THÚC */}
+                                  {selectedMatch.status === "COMPLETED" &&
+                                    (isPlayerWinner ? (
+                                      <span className="text-green-700 font-extrabold text-[11px] bg-green-100 border border-green-300 px-2 py-1 rounded-full shadow-sm ml-2 tracking-wide">
+                                        THẮNG
+                                      </span>
+                                    ) : isPlayerLoser ? (
+                                      <span className="text-red-600 font-extrabold text-[11px] bg-red-50 border border-red-200 px-2 py-1 rounded-full shadow-sm ml-2 tracking-wide">
+                                        THUA
+                                      </span>
+                                    ) : null)}
+                                </div>
+                              </div>
+                            </List.Item>
+                          );
+                        }}
+                      />
+                    </div>
+
+                    {/* FOOTER NÚT BẤM */}
+                    <div className="mt-6 flex justify-end gap-3">
+                      <Button onClick={() => setIsResultModalOpen(false)}>
+                        Đóng
+                      </Button>
+
+                      {isMyTeamChanged ? (
+                        <Button
+                          type="primary"
+                          className="bg-indigo-600 hover:bg-indigo-700"
+                          onClick={handleSaveMyTeam}
+                          loading={loadingDivide}
+                        >
+                          Xác nhận đội của tôi
+                        </Button>
+                      ) : (
+                        isNeedSubmit &&
+                        unassigned.length === 0 && (
+                          <Button
+                            type="primary"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={handleSubmitResult}
+                            loading={submittingResult}
+                          >
+                            Xác nhận kết quả
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         )}
       </Modal>
 
-      {/* MODAL 2: DUYỆT KẾT QUẢ / HOẶC THÔNG BÁO CHỜ DUYỆT */}
+      {/* MODAL 2: DUYỆT KẾT QUẢ */}
       <Modal
         title={
           <div className="text-xl font-bold text-orange-600">
@@ -609,7 +897,7 @@ const MyMatchPage: React.FC = () => {
         {loadingApproveResult ? (
           <div style={{ textAlign: "center", padding: "40px" }}>
             <Spin />
-            <p className="mt-2 text-gray-500">Đang tải thông tin kết quả...</p>
+            <p className="mt-2 text-gray-500">Đang tải...</p>
           </div>
         ) : (
           <div className="mt-4">
@@ -620,8 +908,7 @@ const MyMatchPage: React.FC = () => {
                   Bạn đã gửi kết quả thành công!
                 </p>
                 <p className="text-sm text-blue-600">
-                  Vui lòng chờ đối thủ xác nhận để hệ thống hoàn tất việc cộng
-                  điểm/trừ tiền.
+                  Vui lòng chờ đối thủ xác nhận.
                 </p>
                 <Button
                   type="primary"
@@ -636,11 +923,9 @@ const MyMatchPage: React.FC = () => {
                 <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl mb-6">
                   <p className="text-sm text-gray-600 text-center">
                     Đối thủ đã gửi yêu cầu chốt kết quả trận đấu{" "}
-                    <strong>{selectedMatch?.title}</strong>. Vui lòng xác nhận
-                    để hoàn tất hệ thống tính điểm/trừ tiền.
+                    <strong>{selectedMatch?.title}</strong>. Vui lòng xác nhận.
                   </p>
                 </div>
-
                 <div className="flex justify-end gap-3 mt-6">
                   <Button
                     danger

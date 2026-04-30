@@ -7,6 +7,7 @@ import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
+import org.sport.backend.dto.request.chat.DivideTeamRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.service.MatchService;
@@ -48,6 +49,18 @@ public class MatchController {
         return ResponseEntity.ok(ApiResponse.success(
                 200,
                 "Bạn đã tham gia trận đấu thành công!",
+                null));
+    }
+
+    @PostMapping("/{matchId}/divide-teams")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> divideTeams(
+            @PathVariable UUID matchId,
+            @RequestBody DivideTeamRequest request) {
+        matchService.divideTeams(matchId, request);
+        return ResponseEntity.ok(ApiResponse.success(
+                200,
+                "Chia đội thành công!",
                 null));
     }
 

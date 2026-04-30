@@ -18,6 +18,14 @@ export const matchService = {
     return response.data;
   },
 
+  divideTeams: async (
+    matchId: string,
+    data: { team1UserIds: string[]; team2UserIds: string[] }
+  ): Promise<ApiResponse<void>> => {
+    const response = await api.post(`${API_BASE_URL}/${matchId}/divide-teams`, data);
+    return response.data;
+  },
+
   confirmDeposit: async (matchId: string): Promise<ApiResponse<string>> => {
     const response = await api.post(
       `${API_BASE_URL}/${matchId}/confirm-deposit`,

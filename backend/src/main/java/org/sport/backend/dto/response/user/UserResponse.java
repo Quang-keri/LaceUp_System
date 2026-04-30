@@ -36,4 +36,5 @@ public class UserResponse {
     private boolean isDepositConfirmed;
     private BigDecimal fakeMoney;
     private List<CategoryRankResponse> categoryRank;
+    private Integer teamNumber;
 }
