@@ -42,6 +42,7 @@ public class RentalAreaController {
         List<ServiceItemResponse> services = serviceItemService.getByRentalArea(rentalAreaId);
         return ResponseEntity.ok(ApiResponse.success(200, "Success", services));
     }
+
     @PutMapping("/{rentalAreaId}/approve")
     public ApiResponse<Void> approveRentalArea(@PathVariable UUID rentalAreaId) {
         rentalAreaService.approveRentalArea(rentalAreaId);
@@ -64,7 +65,6 @@ public class RentalAreaController {
                 .message("Đã từ chối cơ sở thành công")
                 .build();
     }
-
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 //    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")

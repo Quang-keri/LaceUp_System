@@ -1,75 +1,49 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
+import '../config/api_client.dart';
 
-// Thay thế AppConstants bằng file chứa biến môi trường/URL của bạn
-import '../utils/constants.dart';
+// Nhớ tạo UserModel tương tự như PostResponse nhé!
+// import '../models/user.dart';
 
 class UserService {
-  final String _baseUrl = '${AppConstants.baseUrl}/users';
+  final String _endpoint = '/users';
 
-  // Lấy token từ local storage (tương đương với interceptor trong axios)
-  Future<Map<String, String>> _getHeaders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken');
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
-  }
-
-  // Lấy thông tin cá nhân (getMyInfo)
-  Future<Map<String, dynamic>> getMyInfo() async {
+  // Lấy thông tin cá nhân
+  Future<dynamic> getMyInfo() async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/my-info'),
-        headers: await _getHeaders(),
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200) {
-        return {'success': true, 'data': data['result']};
-      }
-      return {'success': false, 'message': data['message']};
-    } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+      final response = await apiClient.get('$_endpoint/my-info');
+      // Tốt nhất là: return UserModel.fromJson(response.data['result']);
+      return response.data['result'];
+    } on DioException catch (e) {
+      // Bắt lỗi Dio cụ thể
+      throw Exception(e.response?.data['message'] ?? 'Lỗi kết nối máy chủ');
     }
   }
 
-  // Cập nhật thông tin user (updateUser)
-  Future<Map<String, dynamic>> updateUser(
+  // Cập nhật thông tin user
+  Future<dynamic> updateUser(
     String userId,
     Map<String, dynamic> updateData,
   ) async {
     try {
-      final response = await http.put(
-        Uri.parse('$_baseUrl/$userId'),
-        headers: await _getHeaders(),
-        body: jsonEncode(updateData),
+      final response = await apiClient.put(
+        '$_endpoint/$userId',
+        data: updateData,
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200) {
-        return {'success': true, 'data': data['result']};
-      }
-      return {'success': false, 'message': data['message']};
+      return response.data['result'];
     } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+      throw Exception('Không thể cập nhật: $e');
     }
   }
 
-  // Lấy Dashboard (getUserDashboard)
-  Future<Map<String, dynamic>> getUserDashboard(String userId) async {
+  // Lấy Dashboard
+  Future<dynamic> getUserDashboard(String userId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/$userId/dashboard'),
-        headers: await _getHeaders(),
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200) {
-        return {'success': true, 'data': data['result']};
-      }
-      return {'success': false, 'message': data['message']};
+      final response = await apiClient.get('$_endpoint/$userId/dashboard');
+      return response.data['result'];
     } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối: $e'};
+      throw Exception('Không thể lấy dashboard: $e');
     }
   }
 }
+
+final userService = UserService();
