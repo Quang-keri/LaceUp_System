@@ -6,6 +6,8 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
+import org.sport.backend.dto.response.news.NewsImageResponse;
 
 @Getter
 @Setter
@@ -19,4 +21,6 @@ public class NewsResponse {
     private String createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String visibility;
+    private List<NewsImageResponse> images;
 }

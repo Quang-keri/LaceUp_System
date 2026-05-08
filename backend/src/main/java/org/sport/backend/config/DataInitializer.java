@@ -302,6 +302,8 @@ public class DataInitializer implements CommandLineRunner {
                 .rentalAreaName("Hệ thống Sân Cầu Lông Pro - Quận 9")
                 .address(Address.builder().street("456 Lê Văn Việt").district("Quận 9").ward("Hiệp Phú").city(city).build())
                 .owner(owner)
+                .openTime(LocalTime.of(5, 0))
+                .closeTime(LocalTime.of(22, 0))
                 .isActive(true)
                 .status(RentalAreaStatus.ACTIVE)
                 .createdAt(LocalDateTime.now().minusMonths(2))

@@ -24,7 +24,7 @@ export default function LandingPage() {
 
   return (
     <div className="relative overflow-hidden">
-      {/* 1. WELCOME PAGE OVERLAY */}
+      
       {!isStarted && (
         <div
           ref={welcomeRef}

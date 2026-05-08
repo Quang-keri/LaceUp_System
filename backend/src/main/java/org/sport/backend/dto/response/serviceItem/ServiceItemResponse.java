@@ -22,5 +22,7 @@ public class ServiceItemResponse {
     private Long itemGroupId;
     private String itemGroupName;
     private UUID rentalAreaId;
+    private String manufacturer;
     private List<String> images;
+
 }

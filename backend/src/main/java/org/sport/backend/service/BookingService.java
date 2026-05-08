@@ -3,6 +3,7 @@ package org.sport.backend.service;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
+import org.sport.backend.dto.request.booking.OwnerBookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
@@ -15,7 +16,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public interface BookingService {
-
+    BookingResponse createOwnerBooking(OwnerBookingRequest request);
     void addExtraServices(UUID bookingId, AddExtraServicesRequest request);
     CheckAvailabilityResponse checkAvailability(SlotRequest request);
     BookingIntentResponse createBookingIntent(BookingRequest request);

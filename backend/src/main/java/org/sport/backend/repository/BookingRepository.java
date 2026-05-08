@@ -1,6 +1,9 @@
 package org.sport.backend.repository;
 
+import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.entity.Booking;
+import org.sport.backend.entity.RentalArea;
+import org.sport.backend.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -45,4 +48,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("endDate") LocalDateTime endDate,
             @Param("ownerId") UUID ownerId
     );
+
+
+    boolean existsByRenterAndRentalAreaAndBookingStatus(User renter, RentalArea rentalArea, BookingStatus bookingStatus);
+        boolean existsByBookerPhoneAndRentalAreaAndBookingStatus(String bookerPhone, RentalArea rentalArea, BookingStatus bookingStatus);
 }

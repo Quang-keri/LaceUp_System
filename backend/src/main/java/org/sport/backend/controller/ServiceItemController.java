@@ -2,6 +2,7 @@ package org.sport.backend.controller;
 
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.request.serviceItem.ServiceItemRequest;
@@ -14,6 +15,10 @@ import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,7 +43,7 @@ public class ServiceItemController {
 
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<ServiceItemResponse> createServiceItem(@ModelAttribute ServiceItemRequest request) {
+    public ApiResponse<ServiceItemResponse> createServiceItem(@Valid @ModelAttribute ServiceItemRequest request) {
         ServiceItemResponse response = serviceItemService.create(request);
         return ApiResponse.success(201, "Create service item successfully", response);
     }
@@ -75,7 +80,7 @@ public class ServiceItemController {
             }
         }
 
-        return ApiResponse.success(200, "Success", result);
+        return ApiResponse.success(200, "Get all service items of owner successfully", result);
     }
 
     @DeleteMapping("/{id}")
@@ -88,5 +93,22 @@ public class ServiceItemController {
     public ApiResponse<List<ServiceItemResponse>> getAllServiceItems() {
         List<ServiceItemResponse> responses = serviceItemService.getAll();
         return ApiResponse.success(200, "Get all service item successfully", responses);
+    }
+
+    @GetMapping("/owner/search")
+    public ApiResponse<Page<ServiceItemResponse>> searchOwnerServiceItems(
+            Principal principal,
+            @RequestParam(required = false, defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        String email = principal == null ? null : principal.getName();
+        if (email == null) return ApiResponse.success(401, "Unauthorized", null);
+
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("serviceName").ascending());
+        Page<ServiceItemResponse> result = serviceItemService.searchItems(email, keyword, pageable);
+
+        return ApiResponse.success(200, "Search successful", result);
     }
 }

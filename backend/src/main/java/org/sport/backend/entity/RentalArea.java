@@ -76,8 +76,6 @@ public class RentalArea extends BaseEntity {
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     private List<Booking> bookings;
 
-
-
     @Column(name = "facebook_link", length = 255)
     private String facebookLink;
 
@@ -89,5 +87,8 @@ public class RentalArea extends BaseEntity {
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RentalAreaImage> images = new ArrayList<>();
+
+    @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews = new ArrayList<>();
 
 }

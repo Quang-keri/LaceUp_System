@@ -10,12 +10,11 @@ import comnunity from "../../../assets/comunity.png";
 import { Link } from "react-router-dom";
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
-// Định nghĩa dữ liệu cho các Content Sections
 const sectionData = [
   {
     t: "Sân bãi chuẩn quốc tế",
     c: "Hệ thống thảm và ánh sáng chuyên nghiệp.",
-    // ĐỔI 1: Tự thêm đường dẫn ảnh vào đây (ví dụ: /images/court.jpg)
+
     imageSrc: tennis,
   },
   {

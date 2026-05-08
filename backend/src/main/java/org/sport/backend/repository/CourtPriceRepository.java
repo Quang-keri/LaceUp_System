@@ -67,4 +67,28 @@ public interface CourtPriceRepository extends JpaRepository<CourtPrice, UUID>, J
         ORDER BY cp.priority DESC NULLS LAST
     """)
     List<CourtPrice> findByCourtIdOrderByPriorityDesc(@Param("courtId") UUID courtId);
+    @Query("SELECT cp FROM CourtPrice cp WHERE cp.court.courtId = :courtId AND cp.specificDate = :date ORDER BY cp.startTime ASC")
+    List<CourtPrice> findByCourtIdAndSpecificDate(
+            @Param("courtId") UUID courtId,
+            @Param("date") LocalDate date
+    );
+
+    @Query("SELECT cp FROM CourtPrice cp WHERE cp.court.courtId = :courtId AND cp.specificDate IS NULL ORDER BY cp.startTime ASC")
+    List<CourtPrice> findDefaultPricesByCourtId(@Param("courtId") UUID courtId);
+
+    default List<CourtPrice> findValidPricesForCourtAndDate(UUID courtId, LocalDate bookingDate) {
+        List<CourtPrice> specificDatePrices = findByCourtIdAndSpecificDate(courtId, bookingDate);
+
+        if (specificDatePrices != null && !specificDatePrices.isEmpty()) {
+            return specificDatePrices;
+        }
+
+        List<CourtPrice> defaultPrices = findDefaultPricesByCourtId(courtId);
+
+        if (defaultPrices == null || defaultPrices.isEmpty()) {
+            throw new RuntimeException("Chưa cài đặt cấu hình giá cho sân!");
+        }
+
+        return defaultPrices;
+    }
 }

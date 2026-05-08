@@ -1,11 +1,14 @@
 import React from "react";
 import { Table, Button } from "antd";
 
+
 interface ServiceItemTableProps {
   items: any[];
   loading: boolean;
+  pagination: any;
   onEdit: (record: any) => void;
   onDelete: (id: string) => void;
+  onView: (record: any) => void;
 }
 
 const ServiceItemTable: React.FC<ServiceItemTableProps> = ({
@@ -13,6 +16,8 @@ const ServiceItemTable: React.FC<ServiceItemTableProps> = ({
   loading,
   onEdit,
   onDelete,
+  onView,
+  pagination,
 }) => {
   const columns = [
     {
@@ -57,6 +62,7 @@ const ServiceItemTable: React.FC<ServiceItemTableProps> = ({
           <Button danger onClick={() => onDelete(record.id)}>
             Xóa
           </Button>
+          <Button onClick={() => onView(record)}>Xem</Button>
         </div>
       ),
     },
@@ -68,6 +74,7 @@ const ServiceItemTable: React.FC<ServiceItemTableProps> = ({
       dataSource={items}
       columns={columns}
       loading={loading}
+      pagination={pagination}
     />
   );
 };
