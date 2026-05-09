@@ -1,109 +1,235 @@
-import React from "react";
-import { Layout, Button, Avatar, Dropdown, type MenuProps } from "antd";
+import React, { useState, useEffect } from "react";
+import {
+  Layout,
+  Button,
+  Avatar,
+  Dropdown,
+  Menu,
+  type MenuProps,
+  ConfigProvider,
+} from "antd";
+import { Link, useLocation } from "react-router-dom";
 import {
   BulbOutlined,
   BulbFilled,
   UserOutlined,
-  MenuUnfoldOutlined,
-  MenuFoldOutlined,
+  EyeOutlined,
+  AppstoreOutlined,
+  InboxOutlined,
+  SwapOutlined,
+  TeamOutlined,
+  BarChartOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import type { UserResponse } from "../../types/user.ts";
 
 const { Header } = Layout;
 
 interface AdminHeaderProps {
-  collapsed: boolean;
-  toggleCollapsed: () => void;
   adminUser: UserResponse | null;
   isDark: boolean;
   onThemeToggle: () => void;
+  onLogout: () => void;
 }
 
 const OwnerHeader: React.FC<AdminHeaderProps> = ({
-  collapsed,
-  toggleCollapsed,
   adminUser,
   isDark,
   onThemeToggle,
+  onLogout,
 }) => {
-  const displayName = adminUser?.userName || "Admin";
+  const location = useLocation();
+  const [activeKey, setActiveKey] = useState<string>(location.pathname);
+
+  useEffect(() => {
+    setActiveKey(location.pathname);
+  }, [location.pathname]);
+
+  const displayName = adminUser?.userName || "Admin Sân Cầu Lông";
 
   const userMenu: MenuProps["items"] = [
     { key: "1", label: "Hồ sơ cá nhân" },
-    { key: "2", label: "Cài đặt" },
+    { key: "2", label: "Cài đặt cơ sở" },
+    { type: "divider" },
+    { key: "logout", label: "Đăng xuất", danger: true, onClick: onLogout },
+  ];
+
+  const menuItems: MenuProps["items"] = [
+    {
+      key: "/owner/dashboard",
+      icon: <EyeOutlined />,
+      label: <Link to="/owner/dashboard">Tổng quan</Link>,
+    },
+    {
+      key: "submenu-bookings",
+      icon: <AppstoreOutlined />,
+      label: "Lịch đặt sân",
+      children: [
+        {
+          key: "/owner/bookings/management",
+          label: <Link to="/owner/bookings/management">Đơn đặt</Link>,
+        },
+        {
+          key: "/owner/bookings/calendar",
+          label: <Link to="/owner/bookings/calendar">Lịch hẹn</Link>,
+        },
+      ],
+    },
+
+    {
+      key: "sub_area",
+      icon: <InboxOutlined />,
+      label: <Link to="/owner/courts">Sân</Link>,
+    },
+    {
+      key: "/owner/service-items",
+      icon: <InboxOutlined />,
+      label: <Link to="/owner/service-items">Hàng hóa & Dịch vụ</Link>,
+    },
+    {
+      key: "/owner/transactions",
+      icon: <SwapOutlined />,
+      label: <Link to="/owner/transactions">Giao dịch</Link>,
+    },
+    {
+      key: "submenu-users",
+      icon: <TeamOutlined />,
+      label: "Đối tác & Nhân viên",
+      children: [
+        {
+          key: "/owner/users/customers",
+          label: <Link to="/owner/users/customers">Khách hàng</Link>,
+        },
+        {
+          key: "/owner/users/staffs",
+          label: <Link to="/owner/users/staffs">Nhân viên</Link>,
+        },
+      ],
+    },
+    {
+      key: "submenu-reports",
+      icon: <BarChartOutlined />,
+      label: "Báo cáo",
+      children: [
+        {
+          key: "/owner/invoices",
+          label: <Link to="/owner/invoices">Hóa đơn</Link>,
+        },
+        {
+          key: "/owner/wallet-overview",
+          label: <Link to="/owner/wallet-overview">Tổng quan tài chính</Link>,
+        },
+      ],
+    },
+    {
+      key: "/owner/settings",
+      icon: <SettingOutlined />,
+      label: <Link to="/owner/settings">Thiết lập</Link>,
+    },
   ];
 
   return (
-    <Header
-      className={`px-4 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md transition-all duration-200 border-b ${
-        isDark
-          ? "bg-[#001529]/90 border-gray-700 text-white"
-          : "bg-white/90 border-gray-200 text-gray-800"
-      }`}
-      style={{
-        paddingInline: 16,
-        height: 64,
-        lineHeight: "64px",
-        background: isDark ? undefined : "rgba(255, 255, 255, 0.9)",
-      }}
-    >
-      <div className="flex items-center gap-4">
-        <Button
-          type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          onClick={toggleCollapsed}
-          className="flex items-center justify-center"
-          style={{
-            fontSize: "16px",
-            width: 40,
-            height: 40,
-            color: isDark ? "#fff" : "rgba(0, 0, 0, 0.85)",
-          }}
-        />
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Button
-          shape="circle"
-          onClick={onThemeToggle}
-          icon={
-            isDark ? (
-              <BulbFilled className="text-yellow-400" />
-            ) : (
-              <BulbOutlined className="text-gray-600" />
-            )
-          }
-          className={
-            isDark
-              ? "bg-gray-700 border-gray-600 text-white"
-              : "border-gray-300"
-          }
-          title={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-        />
-
-        <Dropdown menu={{ items: userMenu }} placement="bottomRight">
-          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-            <div
-              className={`text-right hidden sm:block leading-tight ${
-                isDark ? "text-gray-200" : "text-gray-800"
+    <div className="flex flex-col w-full z-10 shadow-md">
+      <Header
+        className={`px-4 flex items-center justify-between transition-all duration-300 border-b ${
+          isDark ? "border-[#303030]" : "border-gray-200"
+        }`}
+        style={{
+          height: 50,
+          lineHeight: "50px",
+          paddingInline: 16,
+          backgroundColor: isDark ? "#141414" : "#ffffff",
+        }}
+      >
+        <Link to={"/trang-chu"}>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" className="w-8 h-8" />
+            <span
+              className={`font-bold text-lg tracking-tight transition-colors duration-300 ${
+                isDark ? "text-white" : "text-[#007acc]"
               }`}
             >
-              <div className="font-semibold text-sm">{displayName}</div>
-              <div
-                className={`text-xs ${isDark ? "opacity-60" : "text-gray-500"}`}
-              >
-                {adminUser?.role || "User"}
-              </div>
-            </div>
-            <Avatar
-              size="large"
-              icon={<UserOutlined />}
-              className="bg-blue-600 flex items-center justify-center"
-            />
+              Lace Up | Quản lí sân
+            </span>
           </div>
-        </Dropdown>
+        </Link>
+        <div className="flex items-center gap-4">
+          <Button
+            shape="circle"
+            type="text"
+            onClick={onThemeToggle}
+            className={`flex items-center justify-center hover:bg-opacity-20 ${
+              isDark
+                ? "text-yellow-400 hover:bg-gray-600"
+                : "text-gray-600 hover:bg-gray-200"
+            }`}
+            icon={isDark ? <BulbFilled /> : <BulbOutlined />}
+          />
+
+          <Dropdown
+            menu={{ items: userMenu }}
+            placement="bottomRight"
+            trigger={["click"]}
+          >
+            <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+              <span
+                className={`font-medium text-sm hidden sm:block ${
+                  isDark ? "text-gray-200" : "text-gray-700"
+                }`}
+              >
+                {displayName}
+              </span>
+              <Avatar
+                size="small"
+                icon={<UserOutlined />}
+                className={isDark ? "bg-gray-600" : "bg-[#007acc]"}
+              />
+            </div>
+          </Dropdown>
+        </div>
+      </Header>
+
+      <div
+        className={`transition-colors duration-300 ${
+          isDark ? "bg-[#1f1f1f] border-b border-[#303030]" : "bg-[#007acc]"
+        }`}
+      >
+        <ConfigProvider
+          theme={{
+            components: {
+              Menu: {
+                darkItemBg: "transparent",
+
+                darkSubMenuItemBg: isDark ? "#1f1f1f" : "#007acc",
+
+                popupBg: isDark ? "#000000" : "#007acc",
+
+                darkItemSelectedBg: isDark ? "#1677ff" : "#005a9e",
+
+                darkItemHoverBg: isDark
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.15)",
+
+                horizontalLineHeight: "46px",
+              },
+            },
+          }}
+        >
+          <Menu
+            mode="horizontal"
+            theme="dark"
+            selectedKeys={[activeKey]}
+            items={menuItems}
+            className="container mx-auto font-medium text-[15px]"
+            style={{
+              background: "transparent",
+              borderBottom: "none",
+              lineHeight: "46px",
+            }}
+          />
+        </ConfigProvider>
       </div>
-    </Header>
+    </div>
   );
 };
 

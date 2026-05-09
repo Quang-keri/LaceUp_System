@@ -49,15 +49,11 @@ class CourtService {
   }
 
   async createCourt(courtData: any, images: any[]) {
-    // Sửa tham số thứ 2 thành images
     const formData = new FormData();
-
-    // Lấy rentalAreaId từ bên trong courtData
     formData.append("rentalAreaId", courtData.rentalAreaId);
     formData.append("courtName", courtData.courtName);
     formData.append("categoryId", String(courtData.categoryId));
 
-    // Nếu có giá tiền thì append vào
     if (courtData.pricePerHour) {
       formData.append("pricePerHour", String(courtData.pricePerHour));
     }

@@ -179,6 +179,10 @@ export const router = createBrowserRouter([
         element: <CourtManagementPage />,
       },
       {
+        path: "courts",
+        element: <CourtManagementPage />,
+      },
+      {
         path: "buildings/create",
         element: <BuildingFormPage />,
       },

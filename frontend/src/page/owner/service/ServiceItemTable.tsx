@@ -1,7 +1,6 @@
 import React from "react";
 import { Table, Button } from "antd";
 
-
 interface ServiceItemTableProps {
   items: any[];
   loading: boolean;
@@ -10,7 +9,9 @@ interface ServiceItemTableProps {
   onDelete: (id: string) => void;
   onView: (record: any) => void;
 }
-
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat("vi-VN").format(value) + " VND";
+};
 const ServiceItemTable: React.FC<ServiceItemTableProps> = ({
   items,
   loading,
@@ -48,9 +49,20 @@ const ServiceItemTable: React.FC<ServiceItemTableProps> = ({
         ),
     },
     { title: "Tên dịch vụ", dataIndex: "serviceName", key: "serviceName" },
-    { title: "Giá bán", dataIndex: "priceSell", key: "priceSell" },
+    {
+      title: "Giá bán",
+      dataIndex: "priceSell",
+      key: "priceSell",
+      render: (value: number) => formatCurrency(value),
+    },
+    {
+      title: "Giá vốn",
+      dataIndex: "priceOriginal",
+      key: "priceOriginal",
+      render: (value: number) => formatCurrency(value),
+    },
     { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
-    { title: "Thời gian", dataIndex: "rentalDuration", key: "rentalDuration" },
+
     {
       title: "Hành động",
       key: "action",
