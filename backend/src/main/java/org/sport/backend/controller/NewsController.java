@@ -1,5 +1,6 @@
 package org.sport.backend.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.base.PageResponse;
@@ -18,16 +19,21 @@ public class NewsController {
 
     private final NewsService newsService;
 
-    @PostMapping
+    @PostMapping(consumes = {"multipart/form-data"})
     @PreAuthorize("hasAuthority('CREATE_NEWS')")
     public ApiResponse<NewsResponse> create(
-            @RequestBody NewsRequest request
+            @Valid @ModelAttribute NewsRequest request
     ) {
-        return ApiResponse.success(
-                201,
-                "Create news successfully",
-                newsService.create(request)
-        );
+        return ApiResponse.success(201, "Create news successfully", newsService.create(request));
+    }
+
+    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PreAuthorize("hasAuthority('UPDATE_NEWS')")
+    public ApiResponse<NewsResponse> update(
+            @PathVariable UUID id,
+            @Valid @ModelAttribute NewsRequest request
+    ) {
+        return ApiResponse.success(200, "Update news successfully", newsService.update(id, request));
     }
 
     @GetMapping
@@ -52,17 +58,6 @@ public class NewsController {
                 newsService.getById(id));
     }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('UPDATE_NEWS')")
-    public ApiResponse<NewsResponse> update(
-            @PathVariable UUID id,
-            @RequestBody NewsRequest request
-    ) {
-        return ApiResponse.success(
-                200,
-                "Update news by id successfully",
-                newsService.update(id, request));
-    }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('DELETE_NEWS')")

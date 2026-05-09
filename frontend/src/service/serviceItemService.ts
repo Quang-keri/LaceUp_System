@@ -14,6 +14,13 @@ export interface ServiceItemRequest {
 }
 
 class ServiceItemService {
+  async searchOwnerServiceItems(keyword: string, page: number, size: number) {
+    const res = await api.get(`/service-items/owner/search`, {
+      params: { keyword, page: page - 1, size },
+    });
+    return res.data;
+  }
+
   async createServiceItem(data: ServiceItemRequest) {
     const formData = new FormData();
 
@@ -32,15 +39,11 @@ class ServiceItemService {
 
     if (data.images && data.images.length > 0) {
       data.images.forEach((file: any) => {
-        if (file.originFileObj) {
-          formData.append("imageUrls", file.originFileObj);
-        }
+        formData.append("imageUrls", file); // Key "imageUrls" khớp với backend
       });
     }
 
-    const res = await api.post("/service-items", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await api.post("/service-items", formData);
     return res.data;
   }
 
@@ -62,15 +65,11 @@ class ServiceItemService {
 
     if (data.images && data.images.length > 0) {
       data.images.forEach((file: any) => {
-        if (file.originFileObj) {
-          formData.append("imageUrls", file.originFileObj);
-        }
+        formData.append("imageUrls", file);
       });
     }
 
-    const res = await api.put(`/service-items/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await api.put(`/service-items/${id}`, formData);
     return res.data;
   }
 

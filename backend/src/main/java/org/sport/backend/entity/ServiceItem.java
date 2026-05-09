@@ -37,6 +37,8 @@ public class ServiceItem {
 
     private String rentalDuration;
 
+    private String manufacturer;
+
     @Column(precision = 12, scale = 2)
     private BigDecimal priceSell;
 

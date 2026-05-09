@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, type MenuProps } from "antd";
+import { ConfigProvider, Layout, Menu, type MenuProps } from "antd";
 import { Link, useLocation } from "react-router-dom";
 import {
   AppstoreOutlined,
@@ -9,6 +9,9 @@ import {
   SettingOutlined,
   LogoutOutlined,
   StarOutlined,
+  BankOutlined,
+  UserOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import type { UserResponse } from "../../types/user.ts";
 
@@ -58,8 +61,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const items: MenuItem[] = [
     getItem(
-      <Link to="/owner">Báo cáo và thống kê</Link>,
-      "/owner",
+      <Link to="/owner/dashboard">Báo cáo và thống kê</Link>,
+      "/owner/dashboard",
       <AppstoreOutlined />,
     ),
 
@@ -75,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     ]),
 
     //
-    getItem("Quản lý Cơ sở", "sub_area", <CalendarOutlined />, [
+    getItem("Quản lý Cơ sở", "sub_area", <HomeOutlined />, [
       getItem(
         <Link to="/owner/buildings/list">Chi nhánh</Link>,
         "/owner/area/list",
@@ -85,7 +88,20 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/owner/service-items",
       ),
     ]),
-
+    getItem("Giao dịch", "sub_transaction", <BankOutlined />, [
+      getItem(
+        <Link to="/owner/all-transactions">Tất cả</Link>,
+        "/owner/all-transactions",
+      ),
+      getItem(
+        <Link to="/owner/all-transactions">Nhập hàng</Link>,
+        "/owner/purchase-pay-in",
+      ),
+      getItem(
+        <Link to="/owner/all-transactions">Chi trả</Link>,
+        "/owner/purchase-pay-out",
+      ),
+    ]),
     getItem("Quản lý nội dung", "sub_content", <ShopOutlined />, [
       getItem(<Link to="/owner/posts">Quản lý bài đăng</Link>, "/owner/posts"),
       getItem(
@@ -94,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     ]),
 
-    getItem("Quản lý người dùng", "sub_users", <CalendarOutlined />, [
+    getItem("Quản lý người dùng", "sub_users", <UserOutlined />, [
       getItem(
         <Link to="/owner/users/customers">Khách hàng </Link>,
         "/owner/users/customers",

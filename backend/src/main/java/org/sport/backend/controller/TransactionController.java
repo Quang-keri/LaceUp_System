@@ -1,0 +1,47 @@
+package org.sport.backend.controller;
+
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.TransactionType;
+import org.sport.backend.dto.base.ApiResponse;
+import org.sport.backend.dto.base.PageResponse;
+import org.sport.backend.dto.request.transaction.TransactionRequest;
+import org.sport.backend.dto.response.transaction.TransactionResponse;
+
+import org.sport.backend.service.TransactionService;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/transactions")
+@RequiredArgsConstructor
+public class TransactionController {
+
+    private final TransactionService transactionService;
+
+    @GetMapping
+    public ApiResponse<PageResponse<TransactionResponse>> getTransactions(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) TransactionType type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        return ApiResponse.success(200,"Get all transactions successfully",transactionService.getTransactions(page, size, keyword, type, startDate, endDate));
+    }
+
+    @PostMapping
+    public ApiResponse<TransactionResponse> create(@RequestBody TransactionRequest request) {
+        return ApiResponse.success(201,"Create transaction successfully",transactionService.createTransaction(request));
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<TransactionResponse> update(@PathVariable UUID id, @RequestBody TransactionRequest request) {
+        return ApiResponse.success(200,"Update transaction",transactionService.updateTransaction(id, request));
+    }
+
+
+}

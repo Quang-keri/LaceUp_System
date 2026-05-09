@@ -14,6 +14,8 @@ import org.sport.backend.repository.ServiceItemRepository;
 import org.sport.backend.service.CloudinaryService;
 import org.sport.backend.service.ServiceItemService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,10 +57,11 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         item.setServiceNote(req.getServiceNote());
         item.setItemGroup(group);
         item.setRentalArea(rentalArea);
-
+        item.setManufacturer(req.getManufacturer());
         serviceItemRepository.save(item);
 
         if (req.getImageUrls() != null && !req.getImageUrls().isEmpty()) {
+            System.err.println("ảnh dây "+ req.getImageUrls().size());
             String folder = "items/" + item.getServiceItemId();
             List<CloudinaryUploadResult> uploaded = cloudinaryService.uploadImages(req.getImageUrls(), folder);
             List<ServiceItemImage> images = new ArrayList<>();
@@ -96,6 +99,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         item.setPriceOriginal(req.getPriceOriginal());
         item.setServiceNote(req.getServiceNote());
         item.setItemGroup(group);
+        item.setManufacturer(req.getManufacturer());
         item.setRentalArea(rentalArea);
         if (req.getImageUrls() != null && !req.getImageUrls().isEmpty()) {
 
@@ -200,5 +204,11 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         }
 
         serviceItemRepository.delete(item);
+    }
+
+    @Override
+    public Page<ServiceItemResponse> searchItems(String email, String keyword, Pageable pageable) {
+        Page<ServiceItem> pageData = serviceItemRepository.searchByOwnerEmailAndKeyword(email, keyword, pageable);
+        return pageData.map(this::map);
     }
 }

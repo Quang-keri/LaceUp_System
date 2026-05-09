@@ -11,6 +11,7 @@ import OtherCourtsList from "./OtherCourtsList";
 import BookingConfirmModal from "../bookings/BookingConfirmModal";
 
 import CreateMatchForm from "./CreateMatchForm";
+import ReviewSection from "../../../components/review/ReviewSection";
 
 export default function RentalAreaDetailPage() {
   const { user } = useAuth();
@@ -305,6 +306,7 @@ export default function RentalAreaDetailPage() {
                   onSelectCourt={setActiveCourt}
                 />
               </div>
+              <ReviewSection rentalAreaId={id!} />
             </Col>
 
             <Col xs={24} lg={8}>

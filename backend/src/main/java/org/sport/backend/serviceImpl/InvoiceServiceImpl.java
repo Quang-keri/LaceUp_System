@@ -2,7 +2,6 @@ package org.sport.backend.serviceImpl;
 
 import com.itextpdf.io.font.PdfEncodings;
 import com.itextpdf.kernel.colors.ColorConstants;
-import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
 import com.itextpdf.kernel.font.PdfFontFactory;
 import com.itextpdf.kernel.geom.PageSize;
@@ -10,12 +9,12 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.DashedBorder;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
-import com.itextpdf.layout.properties.VerticalAlignment;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.service.InvoiceService;
@@ -30,12 +29,7 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class InvoiceServiceImpl implements InvoiceService {
 
-
     private static final String FONT_PATH = "src/main/resources/fonts/NotoSans-Regular.ttf";
-
-
-    private static final DeviceRgb BRAND_COLOR = new DeviceRgb(44, 62, 80);
-    private static final DeviceRgb SUCCESS_COLOR = new DeviceRgb(39, 174, 96);
 
     @Override
     public byte[] generateInvoicePdf(BookingResponse booking) {
@@ -43,140 +37,129 @@ public class InvoiceServiceImpl implements InvoiceService {
 
             PdfWriter writer = new PdfWriter(baos);
             PdfDocument pdf = new PdfDocument(writer);
-            Document document = new Document(pdf, PageSize.A4);
-            document.setMargins(30, 36, 30, 36);
 
+            Document document = new Document(pdf, PageSize.A4);
+            document.setMargins(40, 50, 40, 50);
 
             PdfFont font = PdfFontFactory.createFont(FONT_PATH, PdfEncodings.IDENTITY_H);
-            PdfFont boldFont = PdfFontFactory.createFont(FONT_PATH, PdfEncodings.IDENTITY_H);
+            PdfFont boldFont = PdfFontFactory.createFont(FONT_PATH, PdfEncodings.IDENTITY_H); // Nếu có NotoSans-Bold thì thay vào đây, tạm thời iText sẽ tự đậm nếu cần hoặc ta dùng giả lập đậm.
             document.setFont(font);
-
+            document.setFontSize(11);
 
             DecimalFormat df = new DecimalFormat("#,###");
+            Border dashedBorder = new DashedBorder(ColorConstants.BLACK, 1f);
+            Border noBorder = Border.NO_BORDER;
 
 
-            Table headerTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth();
-            headerTable.setBorder(Border.NO_BORDER);
-
-            headerTable.addCell(new Cell().add(new Paragraph("HỆ THỐNG LACE UP")
-                            .setFont(boldFont).setFontSize(24).setFontColor(BRAND_COLOR))
-                    .setBorder(Border.NO_BORDER));
-
-            headerTable.addCell(new Cell().add(new Paragraph("HÓA ĐƠN DỊCH VỤ")
-                            .setFont(boldFont).setFontSize(18).setTextAlignment(TextAlignment.RIGHT))
-                    .setBorder(Border.NO_BORDER).setVerticalAlignment(VerticalAlignment.BOTTOM));
-
-            document.add(headerTable);
-            document.add(new Paragraph("\n"));
-
-
-            Table infoTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth();
-
-
-            Cell customerCell = new Cell().add(new Paragraph("Khách hàng: ").setFont(boldFont)
-                            .add(new Paragraph(booking.getUserName() != null ? booking.getUserName() : "Khách vãng lai").setFont(font)))
-                    .add(new Paragraph("Điện thoại: ").setFont(boldFont)
-                            .add(new Paragraph(booking.getPhoneNumber() != null ? booking.getPhoneNumber() : "---").setFont(font)))
-                    .setBorder(Border.NO_BORDER);
+            document.add(new Paragraph("HỆ THỐNG QUẢN LÝ LACE UP")
+                    .setFont(boldFont).setFontSize(16).setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
+            document.add(new Paragraph("Địa chỉ: "+booking.getRentalArea().getAddress().getStreet() + ", " + booking.getRentalArea().getAddress().getWard() + ", " + booking.getRentalArea().getAddress().getDistrict() + ", " + booking.getRentalArea().getCity())
+                    .setFont(font).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
+            document.add(new Paragraph("Điện thoại: "+booking.getRentalArea().getOwner().getPhone())
+                    .setFont(font).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setMarginBottom(15));
 
 
             String shortId = booking.getBookingId().toString().split("-")[0].toUpperCase();
-            Cell bookingCell = new Cell().add(new Paragraph("Mã đơn: #" + shortId).setFont(font))
-                    .add(new Paragraph("Ngày in: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))).setFont(font))
-                    .setTextAlignment(TextAlignment.RIGHT)
-                    .setBorder(Border.NO_BORDER);
+            String formattedDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
-            infoTable.addCell(customerCell);
-            infoTable.addCell(bookingCell);
-            document.add(infoTable);
+            Table metaTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth();
+            metaTable.setMarginBottom(20);
+
+            Cell leftMeta = new Cell().add(new Paragraph("Mã đặt sân: #" + shortId + "\nNgày xuất: " + formattedDate).setMargin(0))
+                    .setBorder(noBorder).setBorderTop(dashedBorder).setBorderBottom(dashedBorder).setPaddingTop(8).setPaddingBottom(8).setFontSize(10);
+
+            Cell rightMeta = new Cell().add(new Paragraph("Người xuất phiếu: chủ sân").setMargin(0))
+                    .setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderTop(dashedBorder).setBorderBottom(dashedBorder).setPaddingTop(8).setPaddingBottom(8).setFontSize(10);
+
+            metaTable.addCell(leftMeta);
+            metaTable.addCell(rightMeta);
+            document.add(metaTable);
+
+
+            document.add(new Paragraph("PHIẾU ĐẶT SÂN")
+                    .setFont(boldFont).setFontSize(16).setTextAlignment(TextAlignment.CENTER).setMarginBottom(15));
+
+
+            document.add(new Paragraph("Khách hàng: " + (booking.getUserName() != null ? booking.getUserName() : "Khách lẻ")).setMargin(0).setFontSize(10));
+            document.add(new Paragraph("Điện thoại: " + (booking.getPhoneNumber() != null ? booking.getPhoneNumber() : "---")).setMargin(0).setFontSize(10));
             document.add(new Paragraph("\n"));
 
 
-            float[] columnWidths = {3, 4, 4, 3};
-            Table table = new Table(UnitValue.createPercentArray(columnWidths)).useAllAvailableWidth();
+            Table table = new Table(UnitValue.createPercentArray(new float[]{4, 1, 2, 2})).useAllAvailableWidth();
+            table.setMarginBottom(20);
 
 
-            String[] headers = {"Sân", "Bắt đầu", "Kết thúc", "Giá (VNĐ)"};
-            for (String h : headers) {
-                table.addHeaderCell(new Cell().add(new Paragraph(h).setFont(boldFont).setFontColor(ColorConstants.WHITE))
-                        .setBackgroundColor(BRAND_COLOR)
-                        .setPadding(8)
-                        .setTextAlignment(TextAlignment.CENTER));
+            String[] headers = {"Nội dung", "SL", "Đơn giá", "Thành tiền"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell hCell = new Cell().add(new Paragraph(headers[i]).setFont(boldFont).setFontSize(10))
+                        .setBorder(noBorder).setBorderTop(dashedBorder).setBorderBottom(dashedBorder).setPaddingTop(5).setPaddingBottom(5);
+                if (i == 1) hCell.setTextAlignment(TextAlignment.CENTER);
+                if (i >= 2) hCell.setTextAlignment(TextAlignment.RIGHT);
+                table.addHeaderCell(hCell);
             }
 
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            DateTimeFormatter timeOnlyFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
             if (booking.getSlots() != null) {
                 for (SlotResponse slot : booking.getSlots()) {
                     BigDecimal slotPrice = slot.getPrice() != null ? slot.getPrice() : BigDecimal.ZERO;
+                    String timeRange = slot.getStartTime().format(timeFormatter) + " - " + slot.getEndTime().format(timeOnlyFormatter);
 
-                    table.addCell(new Cell().add(new Paragraph(slot.getCourtCode())).setTextAlignment(TextAlignment.CENTER).setPadding(5));
-                    table.addCell(new Cell().add(new Paragraph(slot.getStartTime().format(timeFormatter))).setTextAlignment(TextAlignment.CENTER));
-                    table.addCell(new Cell().add(new Paragraph(slot.getEndTime().format(timeFormatter))).setTextAlignment(TextAlignment.CENTER));
-                    table.addCell(new Cell().add(new Paragraph(df.format(slotPrice))).setTextAlignment(TextAlignment.RIGHT).setPaddingRight(10));
+                    Cell c1 = new Cell().add(new Paragraph(slot.getCourtCode()).setFont(boldFont).setFontSize(10).setMargin(0))
+                            .add(new Paragraph(timeRange).setFontSize(9).setMargin(0))
+                            .setBorder(noBorder).setBorderBottom(dashedBorder).setPaddingTop(5).setPaddingBottom(5);
+                    Cell c2 = new Cell().add(new Paragraph("1").setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setBorder(noBorder).setBorderBottom(dashedBorder);
+                    Cell c3 = new Cell().add(new Paragraph(df.format(slotPrice)).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
+                    Cell c4 = new Cell().add(new Paragraph(df.format(slotPrice)).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
+
+                    table.addCell(c1); table.addCell(c2); table.addCell(c3); table.addCell(c4);
                 }
             }
-            document.add(table);
+
             if (booking.getExtraServiceResponses() != null && !booking.getExtraServiceResponses().isEmpty()) {
-                document.add(new Paragraph("\nDịch vụ phát sinh").setFont(boldFont).setFontSize(12));
-
-                float[] serviceColumnWidths = {5, 2, 4};
-                Table serviceTable = new Table(UnitValue.createPercentArray(serviceColumnWidths)).useAllAvailableWidth();
-
-                // Headers
-                serviceTable.addHeaderCell(new Cell().add(new Paragraph("Tên dịch vụ").setFont(boldFont)).setBackgroundColor(ColorConstants.LIGHT_GRAY));
-                serviceTable.addHeaderCell(new Cell().add(new Paragraph("SL").setFont(boldFont)).setTextAlignment(TextAlignment.CENTER).setBackgroundColor(ColorConstants.LIGHT_GRAY));
-                serviceTable.addHeaderCell(new Cell().add(new Paragraph("Thành tiền").setFont(boldFont)).setTextAlignment(TextAlignment.RIGHT).setBackgroundColor(ColorConstants.LIGHT_GRAY));
-
-                // Rows
                 for (BookingResponse.BookingServiceResponse service : booking.getExtraServiceResponses()) {
                     BigDecimal rowTotal = service.getPrice().multiply(BigDecimal.valueOf(service.getQuantity()));
 
-                    serviceTable.addCell(new Cell().add(new Paragraph(service.getServiceName())));
-                    serviceTable.addCell(new Cell().add(new Paragraph(String.valueOf(service.getQuantity()))).setTextAlignment(TextAlignment.CENTER));
-                    serviceTable.addCell(new Cell().add(new Paragraph(df.format(rowTotal))).setTextAlignment(TextAlignment.RIGHT));
+                    Cell c1 = new Cell().add(new Paragraph(service.getServiceName()).setFont(boldFont).setFontSize(10).setMargin(0))
+                            .setBorder(noBorder).setBorderBottom(dashedBorder).setPaddingTop(5).setPaddingBottom(5);
+                    Cell c2 = new Cell().add(new Paragraph(String.valueOf(service.getQuantity())).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setBorder(noBorder).setBorderBottom(dashedBorder);
+                    Cell c3 = new Cell().add(new Paragraph(df.format(service.getPrice())).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
+                    Cell c4 = new Cell().add(new Paragraph(df.format(rowTotal)).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
+
+                    table.addCell(c1); table.addCell(c2); table.addCell(c3); table.addCell(c4);
                 }
-                document.add(serviceTable);
             }
-
-
-            document.add(new Paragraph("\n"));
-            Table summaryTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth();
-            summaryTable.setBorder(Border.NO_BORDER);
-
-            summaryTable.addCell(new Cell().add(new Paragraph("Ghi chú: ...........................................")
-                            .setFont(font).setItalic())
-                    .setBorder(Border.NO_BORDER));
-
+            document.add(table);
 
             BigDecimal total = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
             BigDecimal remaining = booking.getRemainingAmount() != null ? booking.getRemainingAmount() : BigDecimal.ZERO;
             BigDecimal paid = total.subtract(remaining);
 
-            Cell moneyCell = new Cell()
-                    .add(new Paragraph("Tổng cộng: " + df.format(total) + " VNĐ").setFont(boldFont).setFontSize(14))
-                    .add(new Paragraph("Đã thanh toán: " + df.format(paid) + " VNĐ").setFont(font).setFontColor(SUCCESS_COLOR))
-                    .add(new Paragraph("Còn lại: " + df.format(remaining) + " VNĐ")
-                            .setFont(boldFont)
-                            .setFontColor(remaining.compareTo(BigDecimal.ZERO) > 0 ? ColorConstants.RED : BRAND_COLOR))
-                    .setTextAlignment(TextAlignment.RIGHT)
-                    .setBorder(Border.NO_BORDER);
+            Table summaryTable = new Table(UnitValue.createPercentArray(new float[]{5, 5})).useAllAvailableWidth();
 
-            summaryTable.addCell(moneyCell);
+            Cell emptyCell = new Cell().setBorder(noBorder); // Ô trống bên trái
+
+            Table mathTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth();
+
+            mathTable.addCell(new Cell().add(new Paragraph("Tổng tiền hàng:").setMargin(0)).setBorder(noBorder).setFontSize(10));
+            mathTable.addCell(new Cell().add(new Paragraph(df.format(total)).setMargin(0)).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setFontSize(10).setFont(boldFont));
+
+            mathTable.addCell(new Cell().add(new Paragraph("Đã thanh toán:").setMargin(0)).setBorder(noBorder).setFontSize(10));
+            mathTable.addCell(new Cell().add(new Paragraph(df.format(paid)).setMargin(0)).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setFontSize(10));
+
+            mathTable.addCell(new Cell().add(new Paragraph("Còn lại:").setFont(boldFont).setMargin(0)).setBorder(noBorder).setBorderTop(dashedBorder).setFontSize(10).setPaddingTop(3));
+            mathTable.addCell(new Cell().add(new Paragraph(df.format(remaining)).setFont(boldFont).setMargin(0)).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderTop(dashedBorder).setFontSize(10).setPaddingTop(3));
+
+            summaryTable.addCell(emptyCell);
+            summaryTable.addCell(new Cell().add(mathTable).setBorder(noBorder));
+
             document.add(summaryTable);
 
-
-            document.add(new Paragraph("\n\n"));
-            if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
-                document.add(new Paragraph("--- ĐÃ THANH TOÁN XONG ---")
-                        .setFont(boldFont).setFontColor(SUCCESS_COLOR)
-                        .setTextAlignment(TextAlignment.CENTER));
-            }
-
-            document.add(new Paragraph("Cảm ơn quý khách đã tin tưởng LACE UP!")
-                    .setItalic()
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(30));
+            document.add(new Paragraph("\n\n Trong vô vàng lựa chọn cảm ơn ơn bạn đã chọn chúng tôi , chúc bạn sức khỏe và có những trải nghiệm tuyệt vời tại Lace Up")
+                    .setFont(font).setFontSize(10).setItalic().setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
+            document.add(new Paragraph("Hệ thống Lace Up")
+                    .setFont(font).setFontSize(8).setFontColor(ColorConstants.GRAY).setTextAlignment(TextAlignment.CENTER));
 
             document.close();
             return baos.toByteArray();
