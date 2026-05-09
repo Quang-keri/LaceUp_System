@@ -42,13 +42,13 @@ export default function OwnerLayout() {
       }}
     >
       <Layout className="h-screen overflow-hidden flex flex-row">
-        <Sidebar
+        {/* <Sidebar
           collapsed={collapsed}
           toggleCollapsed={() => setCollapsed(!collapsed)}
           isDark={isDark}
           user={user}
           handleLogout={handleLogoutClick}
-        />
+        /> */}
 
         <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
           <OwnerHeader

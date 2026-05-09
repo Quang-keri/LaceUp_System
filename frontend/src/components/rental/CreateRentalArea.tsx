@@ -98,16 +98,16 @@ const FormContainer: React.FC = () => {
         );
 
         const courtPayload = {
+          rentalAreaId: rentalAreaId,
           courtName: courtType.courtName,
           categoryId: courtType.categoryId,
           amenityIds: courtType.amenityIds || [],
           courtCopyRequests: courtCopyRequests,
-          images: courtType.courtImages,
         };
 
         const courtResponse = await courtService.createCourt(
           courtPayload,
-          rentalAreaId,
+          courtType.courtImages,
         );
         const courtId = courtResponse.result?.courtId || courtResponse.courtId;
 
@@ -152,12 +152,16 @@ const FormContainer: React.FC = () => {
           rentalAreaId: rentalAreaId,
           businessLicenseNumber: completeData.legalInfo.businessLicense || "",
           taxId: completeData.legalInfo.taxCode || "",
+          companyName: completeData.legalInfo.companyName || "",
+          responsiblePersonName:
+            completeData.legalInfo.responsiblePersonName || "",
+          address: completeData.legalInfo.address || "",
           legalNote: completeData.legalInfo.legalNote || "",
           imageFiles: completeData.legalInfo.legalImages || [],
         });
       }
 
-      setSuccess(true); 
+      setSuccess(true);
       message.success(
         "Tạo cơ sở thành công! Giờ đây hãy tới trang quản lí cơ sở !",
       );

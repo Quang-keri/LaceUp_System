@@ -2,6 +2,7 @@ package org.sport.backend.serviceImpl;
 
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.legal.LegalProfileRequest;
+import org.sport.backend.dto.response.legal.LegalImageResponse;
 import org.sport.backend.dto.response.legal.LegalProfileResponse;
 import org.sport.backend.entity.LegalImage;
 import org.sport.backend.entity.LegalProfile;
@@ -44,6 +45,9 @@ public class LegalProfileServiceImpl implements LegalProfileService {
         profile.setBusinessLicenseNumber(req.getBusinessLicenseNumber());
         profile.setTaxId(req.getTaxId());
         profile.setLegalNote(req.getLegalNote());
+        profile.setCompanyName(req.getCompanyName());
+        profile.setResponsiblePersonName(req.getResponsiblePersonName());
+        profile.setAddress(req.getAddress());
         profile.setRentalArea(rentalArea);
         repo.save(profile);
 
@@ -126,20 +130,32 @@ public class LegalProfileServiceImpl implements LegalProfileService {
 
     private LegalProfileResponse map(LegalProfile profile) {
         LegalProfileResponse res = new LegalProfileResponse();
+
         res.setId(profile.getId());
         res.setBusinessLicenseNumber(profile.getBusinessLicenseNumber());
         res.setTaxId(profile.getTaxId());
         res.setLegalNote(profile.getLegalNote());
-            if(profile.getRentalArea() != null) {
-                res.setRentalAreaId(profile.getRentalArea().getRentalAreaId());
-            }
-        List<String> imageUrls = new ArrayList<>();
+
+        if (profile.getRentalArea() != null) {
+            res.setRentalAreaId(
+                    profile.getRentalArea().getRentalAreaId()
+            );
+        }
+
+        List<LegalImageResponse> images = new ArrayList<>();
+
         if (profile.getImages() != null) {
             for (LegalImage img : profile.getImages()) {
-                imageUrls.add(img.getImageUrl());
+                images.add(
+                        LegalImageResponse.builder()
+                                .legalImageId(img.getId())
+                                .imageUrl(img.getImageUrl())
+                                .build()
+                );
             }
         }
-        res.setImages(imageUrls);
+
+        res.setImages(images);
 
         return res;
     }

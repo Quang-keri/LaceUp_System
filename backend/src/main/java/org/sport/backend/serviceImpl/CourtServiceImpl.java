@@ -9,6 +9,7 @@ import org.sport.backend.dto.request.court.CourtUpdateRequest;
 import org.sport.backend.dto.request.court_copy.CourtCopyRequest;
 import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.booking.BookingShortResponse;
+import org.sport.backend.dto.response.category.CategoryResponse;
 import org.sport.backend.dto.response.court.CourtImageResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
@@ -426,11 +427,16 @@ public class CourtServiceImpl implements CourtService {
             maxPrice = range[1] != null ? (BigDecimal) range[1] : null;
         }
 
+        CategoryResponse categoryResponse = CategoryResponse.builder()
+                .categoryId(court.getCategory().getCategoryId())
+                .categoryName(court.getCategory().getCategoryName())
+                .build();
+
 
         return CourtResponse.builder()
                 .courtId(court.getCourtId())
                 .courtName(court.getCourtName())
-
+                .category(categoryResponse)
                 .status(court.getCourtStatus())
                 .rentalAreaId(court.getRentalArea().getRentalAreaId())
                 .minPrice(minPrice)

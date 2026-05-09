@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Form, Input, Button, Upload, Card } from "antd";
+import { Form, Input, Button, Upload, Card, Row, Col } from "antd";
 import {
   UploadOutlined,
   LeftOutlined,
@@ -9,9 +9,8 @@ import { useRentalForm } from "../../context/RentalFormContext";
 
 interface Step5Props {
   prev: () => void;
-  // submit nhận dữ liệu mới nhất trực tiếp từ Form để tránh delay của Context
   submit: (finalLegalData: any) => void;
-  loading?: boolean; // Hiệu ứng chờ khi đang gọi API ở trang cha
+  loading?: boolean;
 }
 
 export default function Step5Legal({
@@ -22,14 +21,12 @@ export default function Step5Legal({
   const { formData, updateFormData } = useRentalForm();
   const [form] = Form.useForm();
 
-  // 1. Đồng bộ dữ liệu từ Context vào Form khi khởi tạo (nếu có dữ liệu cũ)
   useEffect(() => {
     if (formData.legalInfo) {
       form.setFieldsValue(formData.legalInfo);
     }
   }, [formData.legalInfo, form]);
 
-  // 2. Chuẩn hóa danh sách file cho Ant Design Upload
   const normFile = (e: any) => {
     if (Array.isArray(e)) {
       return e;
@@ -37,17 +34,11 @@ export default function Step5Legal({
     return e?.fileList;
   };
 
-  // 3. Xử lý khi nhấn "Hoàn tất & Tạo khu vực"
   const onFinish = (values: any) => {
-    // Lưu vào Context (để nếu API lỗi, quay lại vẫn còn dữ liệu)
     updateFormData("legalInfo", values);
-
-    // Gửi TRỰC TIẾP 'values' lên hàm submit của cha
-    // Đây là chìa khóa để giải quyết việc "ấn lần 2 mới lưu"
     submit(values);
   };
 
-  // 4. Xử lý khi nhấn "Quay lại"
   const handlePrev = () => {
     const currentValues = form.getFieldsValue();
     updateFormData("legalInfo", currentValues);
@@ -62,45 +53,96 @@ export default function Step5Legal({
         onFinish={onFinish}
         initialValues={formData.legalInfo}
       >
-        <Form.Item
-          name="businessLicense"
-          label="Số giấy phép kinh doanh (Tùy chọn)"
-        >
-          <Input placeholder="Nhập số giấy phép kinh doanh" size="large" />
-        </Form.Item>
+        {/* Sử dụng Row và Col để chia Grid, gutter để tạo khoảng cách giữa các cột/hàng */}
+        <Row gutter={[16, 0]}>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="companyName"
+              label="Tên công ty/Cơ sở kinh doanh (Tùy chọn)"
+            >
+              <Input
+                placeholder="Nhập tên công ty hoặc cơ sở kinh doanh"
+                size="large"
+              />
+            </Form.Item>
+          </Col>
 
-        <Form.Item name="taxCode" label="Mã số thuế doanh nghiệp (Tùy chọn)">
-          <Input placeholder="Nhập mã số thuế" size="large" />
-        </Form.Item>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="responsiblePersonName"
+              label="Tên người đại diện pháp luật (Tùy chọn)"
+            >
+              <Input
+                placeholder="Nhập tên người chịu trách nhiệm pháp lý"
+                size="large"
+              />
+            </Form.Item>
+          </Col>
 
-        <Form.Item
-          name="legalNote"
-          label="Ghi chú pháp lý hoặc nội quy khu vực (Tùy chọn)"
-        >
-          <Input.TextArea
-            rows={4}
-            placeholder="Ví dụ: Giấy phép đang trong quá trình gia hạn, hoặc các quy định riêng của sân..."
-          />
-        </Form.Item>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="address"
+              label="Địa chỉ đăng ký kinh doanh (Tùy chọn)"
+            >
+              <Input
+                placeholder="Nhập địa chỉ ghi trên giấy phép"
+                size="large"
+              />
+            </Form.Item>
+          </Col>
 
-        <Form.Item
-          name="legalImages"
-          label="Hình ảnh giấy tờ pháp lý (Tối đa 3 ảnh)"
-          valuePropName="fileList"
-          getValueFromEvent={normFile}
-        >
-          <Upload
-            listType="picture-card"
-            maxCount={3}
-            multiple
-            beforeUpload={() => false} // Không tự động upload lên server ngay
-          >
-            <div>
-              <UploadOutlined />
-              <div style={{ marginTop: 8 }}>Tải ảnh lên</div>
-            </div>
-          </Upload>
-        </Form.Item>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="businessLicense"
+              label="Số giấy phép kinh doanh (Tùy chọn)"
+            >
+              <Input placeholder="Nhập số giấy phép kinh doanh" size="large" />
+            </Form.Item>
+          </Col>
+
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="taxCode"
+              label="Mã số thuế doanh nghiệp (Tùy chọn)"
+            >
+              <Input placeholder="Nhập mã số thuế" size="large" />
+            </Form.Item>
+          </Col>
+
+          {/* Ghi chú và Hình ảnh để full chiều rộng (span 24) cho đẹp UI */}
+          <Col span={24}>
+            <Form.Item
+              name="legalNote"
+              label="Ghi chú pháp lý hoặc nội quy khu vực (Tùy chọn)"
+            >
+              <Input.TextArea
+                rows={4}
+                placeholder="Ví dụ: Giấy phép đang trong quá trình gia hạn, hoặc các quy định riêng của sân..."
+              />
+            </Form.Item>
+          </Col>
+
+          <Col span={24}>
+            <Form.Item
+              name="legalImages"
+              label="Hình ảnh giấy tờ pháp lý (Tối đa 3 ảnh)"
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+            >
+              <Upload
+                listType="picture-card"
+                maxCount={3}
+                multiple
+                beforeUpload={() => false}
+              >
+                <div>
+                  <UploadOutlined />
+                  <div style={{ marginTop: 8 }}>Tải ảnh lên</div>
+                </div>
+              </Upload>
+            </Form.Item>
+          </Col>
+        </Row>
 
         <div
           style={{
@@ -114,7 +156,7 @@ export default function Step5Legal({
             onClick={handlePrev}
             icon={<LeftOutlined />}
             size="large"
-            disabled={loading} // Khóa nút khi đang gửi data
+            disabled={loading}
             style={{ width: "150px" }}
           >
             Quay lại
@@ -125,13 +167,12 @@ export default function Step5Legal({
             htmlType="submit"
             icon={<CheckCircleOutlined />}
             size="large"
-            loading={loading} 
-            style={{
-              background: "#9156F1",
-              borderColor: "#9156F1",
-            }}
+            loading={loading}
+            style={{ background: "#9156F1", borderColor: "#9156F1" }}
           >
-            {loading ? "Đang xử lý vui lòng đợi 30 giây..." : "Hoàn tất & Tạo khu vực"}
+            {loading
+              ? "Đang xử lý vui lòng đợi 30 giây..."
+              : "Hoàn tất & Tạo khu vực"}
           </Button>
         </div>
       </Form>

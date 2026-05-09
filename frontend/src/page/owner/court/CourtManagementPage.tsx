@@ -1,64 +1,136 @@
-import { useEffect, useState } from "react";
-import { Card, Button, Space, Skeleton, message } from "antd";
-import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons";
-import { useParams, useNavigate } from "react-router-dom";
-import CourtCardList from "./CourtCardList";
+import { useEffect, useState, useMemo } from "react";
+import {
+  Card,
+  Button,
+  Space,
+  Skeleton,
+  message,
+  Layout,
+  Input,
+  Radio,
+  Table,
+  Dropdown,
+  Tabs,
+  Popconfirm,
+  Tag,
+  Typography,
+  Select,
+} from "antd";
+import type { MenuProps } from "antd";
+import {
+  PlusOutlined,
+  DownOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  DollarOutlined,
+  AppstoreAddOutlined,
+} from "@ant-design/icons";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
 import rentalService from "../../../service/rental/rentalService";
 import courtService from "../../../service/courtService";
 
-// import CourtTable from "./CourtTable";
 import CreateCourtModal from "./CreateCourtModal";
 import UpdateCourtModal from "./UpdateCourtModal";
-
-import type { CourtResponse, CategoryResponse } from "../../../types/court";
-import type { RentalAreaResponse } from "../../../types/rental";
 import UpdateCourtPriceModal from "../court-price/UpdateCourtPriceModal";
+import CourtCopyModal from "./CourtCopyModal";
+import BookingDetailModal from "./BookingDetailModal";
 
+import type {
+  CourtResponse,
+  CategoryResponse,
+  CourtCopyResponse,
+  SlotResponse,
+} from "../../../types/court";
+import type { RentalAreaResponse } from "../../../types/rental";
+
+const { Sider, Content } = Layout;
+const { Text } = Typography;
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat("vi-VN").format(value) + " VND";
+};
 export default function CourtManagementPage() {
-  const { buildingId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialBranchId = searchParams.get("branchId");
 
+  // Data States
+  const [branches, setBranches] = useState<RentalAreaResponse[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(
+    initialBranchId || undefined,
+  );
   const [courts, setCourts] = useState<CourtResponse[]>([]);
-  const [building, setBuilding] = useState<RentalAreaResponse | null>(null);
-  const [categories, setCategories] = useState<CategoryResponse[]>([]);
-
+  const [categories, setCategoriessetCategories] = useState<CategoryResponse[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
 
+  // Filter States (Sidebar)
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ALL");
+
+  // Modal States - Courts
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCourt, setEditingCourt] = useState<CourtResponse | null>(null);
-
   const [priceModalOpen, setPriceModalOpen] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState<CourtResponse | null>(
     null,
   );
 
+  // Modal States - Sub Courts (Court Copies)
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [editingCopy, setEditingCopy] = useState<CourtCopyResponse | null>(
+    null,
+  );
+  const [selectedParentCourtId, setSelectedParentCourtId] =
+    useState<string>("");
+
+  // Booking view for Sub Courts
+  const [bookingDetailOpen, setBookingDetailOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<SlotResponse | undefined>();
+  const [selectedCopy, setSelectedCopy] = useState<
+    CourtCopyResponse | undefined
+  >();
+
+  // 1. Tải danh sách chi nhánh khi vào trang
   useEffect(() => {
-    if (!buildingId) return;
-
-    loadBuilding();
-    loadCourts();
+    loadBranches();
     loadCategories();
-  }, [buildingId]);
+  }, []);
 
-  const loadBuilding = async () => {
+  // 2. Tải danh sách sân MỖI KHI đổi chi nhánh
+  useEffect(() => {
+    if (selectedBranchId) {
+      loadCourts(selectedBranchId);
+      // Update URL để nếu F5 lại trang vẫn giữ nguyên nhánh đang xem
+      setSearchParams({ branchId: selectedBranchId });
+    } else {
+      setCourts([]);
+    }
+  }, [selectedBranchId]);
+
+  const loadBranches = async () => {
     try {
-      const res = await rentalService.getRentalAreaById(buildingId!);
-      setBuilding(res.result);
+      // Giả sử gọi page 1, size 100 để lấy hết chi nhánh làm dropdown
+      const res = await rentalService.getMyRentalAreas(1, 100);
+      const data = res.result?.data || [];
+      setBranches(data);
+
+      // Nếu không có initialBranchId từ URL, tự động chọn chi nhánh đầu tiên
+      if (data.length > 0 && !initialBranchId) {
+        setSelectedBranchId(data[0].rentalAreaId);
+      }
     } catch {
-      message.error("Không tải được thông tin tòa nhà");
+      message.error("Lỗi khi tải danh sách chi nhánh");
     }
   };
 
-  const loadCourts = async () => {
-    if (!buildingId) return;
-
+  const loadCourts = async (branchId: string) => {
     setLoading(true);
-
     try {
       const res = await courtService.getMyCourts(1, 100);
-
       const filtered = (res.result.data || []).filter(
-        (court) => court.rentalAreaId === buildingId,
+        (court) => court.rentalAreaId === branchId,
       );
       setCourts(filtered);
     } catch {
@@ -71,98 +143,446 @@ export default function CourtManagementPage() {
   const loadCategories = async () => {
     try {
       const res = await courtService.getCategories();
-
       setCategories(res.result.data);
     } catch {
-      message.error("Không tải được loại sân");
+      // message.error("Không tải được loại sân");
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeleteCourt = async (id: string) => {
     try {
       await courtService.deleteCourt(id);
       message.success("Xóa sân thành công");
-      loadCourts();
+      if (selectedBranchId) loadCourts(selectedBranchId);
     } catch {
       message.error("Xóa sân thất bại");
     }
   };
 
-  if (!building) return <Skeleton active />;
+  const handleDeleteCopy = async (copyId: string) => {
+    try {
+      await courtService.deleteCourtCopy(copyId);
+      message.success("Xóa sân con thành công");
+      if (selectedBranchId) loadCourts(selectedBranchId);
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || "Xóa sân con thất bại");
+    }
+  };
 
-  return (
-    <div className="p-4">
-      <Card
-        title={
-          <Space>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate("/owner/buildings/list")}
-            />
-            <div>
-              <div>Quản lý sân</div>
-              <div style={{ fontSize: 12 }}>{building.rentalAreaName}</div>
-            </div>
-          </Space>
+  // Lọc sân
+  const filteredCourts = useMemo(() => {
+    return courts.filter((court) => {
+      const matchSearch = court.courtName
+        ?.toLowerCase()
+        .includes(searchKeyword.toLowerCase());
+      const matchStatus =
+        filterStatus === "ALL" ? true : court.status === filterStatus;
+      return matchSearch && matchStatus;
+    });
+  }, [courts, searchKeyword, filterStatus]);
+
+  // Sinh danh sách sân con
+  const allCourtCopies = useMemo(() => {
+    return filteredCourts.flatMap((c) =>
+      (c.courtCopies || []).map((copy) => ({
+        ...copy,
+        parentCourtName: c.courtName,
+        parentCourtId: c.courtId,
+      })),
+    );
+  }, [filteredCourts]);
+
+  // Dropdown nút Thêm Mới
+  const menuItems: MenuProps["items"] = [
+    {
+      key: "create-court",
+      label: "Tạo sân mới",
+      icon: <PlusOutlined />,
+      disabled: !selectedBranchId,
+      onClick: () => {
+        setEditingCourt(null);
+        setModalOpen(true);
+      },
+    },
+    {
+      key: "create-sub-court",
+      label: "Tạo sân con",
+      icon: <AppstoreAddOutlined />,
+      disabled: courts.length === 0,
+      onClick: () => {
+        if (courts.length > 0) {
+          setSelectedParentCourtId(courts[0].courtId);
+          setEditingCopy(null);
+          setCopyModalOpen(true);
+        } else {
+          message.warning("Vui lòng tạo Sân trước khi tạo Sân con!");
         }
-        extra={
+      },
+    },
+  ];
+
+  const courtColumns = [
+    {
+      title: "Mã sân",
+      dataIndex: "courtId",
+      render: (id: string) => id?.substring(0, 8).toUpperCase(),
+    },
+    {
+      title: "Tên sân",
+      dataIndex: "courtName",
+      render: (text: string, record: CourtResponse) => (
+        <a
+          onClick={() => navigate(`/owner/courts/${record.courtId}`)}
+          style={{ fontWeight: 500 }}
+        >
+          {text}
+        </a>
+      ),
+    },
+
+    {
+      title: "Loại sân",
+      dataIndex: ["category", "categoryName"],
+      key: "categoryName",
+    },
+    {
+      title: "Giá theo giờ",
+      dataIndex: "minPrice",
+      render: (value: number) => formatCurrency(value),
+    },
+    {
+      title: "SL sân con",
+      key: "copiesCount",
+      render: (_: any, record: CourtResponse) =>
+        record.courtCopies?.length || 0,
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      render: (status: string) => (
+        <Text type={status === "ACTIVE" ? "success" : "danger"}>
+          {status === "ACTIVE" ? "Đang kinh doanh" : "Ngừng kinh doanh"}
+        </Text>
+      ),
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_: any, record: CourtResponse) => (
+        <Space size="small">
           <Button
-            icon={<PlusOutlined />}
-            type="primary"
+            size="small"
+            icon={<EditOutlined />}
             onClick={() => {
-              setEditingCourt(null);
+              setEditingCourt(record);
               setModalOpen(true);
             }}
           >
-            Tạo sân
+            Sửa
           </Button>
-        }
-      >
-        <CourtCardList
-          courts={courts}
-          loading={loading}
-          onEdit={(court) => {
-            setEditingCourt(court);
-            setModalOpen(true);
-          }}
-          onUpdatePrice={(court) => {
-            setSelectedCourt(court);
-            setPriceModalOpen(true);
-          }}
-          onManage={(court) => {
-            navigate(`/owner/courts/${court.courtId}/copies`);
-          }}
-          onView={(court) => {
-            navigate(`/owner/courts/${court.courtId}`);
-          }}
-          onDelete={(courtId: string) => handleDelete(courtId)}
+          {/* // <Button
+                  onClick={() =>
+                    navigate(`/owner/courts/${court.courtId}/prices`)
+                  }
+                >
+                  Quản lý giá
+                </Button> */}
+          <Button
+            size="small"
+            icon={<DollarOutlined />}
+            // onClick={() => {
+            //   setSelectedCourt(record);
+            //   setPriceModalOpen(true);
+            // }}
+            onClick={() => navigate(`/owner/courts/${record.courtId}/prices`)}
+          >
+            Giá sân
+          </Button>
+          <Button
+            size="small"
+            type="dashed"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setSelectedParentCourtId(record.courtId);
+              setEditingCopy(null);
+              setCopyModalOpen(true);
+            }}
+          >
+            Thêm sân con
+          </Button>
+          <Popconfirm
+            title="Xóa sân?"
+            onConfirm={() => handleDeleteCourt(record.courtId)}
+          >
+            <Button danger size="small" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  const copyColumns = [
+    {
+      title: "Mã sân con",
+      dataIndex: "courtCode",
+      key: "courtCode",
+    },
+    {
+      title: "Thuộc sân",
+      dataIndex: "parentCourtName",
+      key: "parentCourtName",
+      render: (text: string) => <Tag color="blue">{text}</Tag>,
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => (
+        <Text type={status === "ACTIVE" ? "success" : "danger"}>
+          {status === "ACTIVE" ? "Đang kinh doanh" : "Ngừng kinh doanh"}
+        </Text>
+      ),
+    },
+    {
+      title: "Tổng slot",
+      key: "totalSlots",
+      render: (_: any, record: any) => record.slots?.length || 0,
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      render: (_: any, record: any) => (
+        <Space>
+          <Button
+            size="small"
+            onClick={() => {
+              setSelectedParentCourtId(record.parentCourtId);
+              setEditingCopy(record);
+              setCopyModalOpen(true);
+            }}
+          >
+            Sửa
+          </Button>
+          <Popconfirm
+            title="Xóa sân con?"
+            onConfirm={() => handleDeleteCopy(record.courtCopyId)}
+          >
+            <Button size="small" danger>
+              Xóa
+            </Button>
+          </Popconfirm>
+          <Button
+            size="small"
+            type="primary"
+            onClick={() =>
+              navigate(
+                `/owner/bookings/management?courtId=${record.parentCourtId}`,
+              )
+            }
+          >
+            Xem lịch
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        padding: "20px",
+        backgroundColor: "#f0f2f5",
+        minHeight: "100vh",
+      }}
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h2 style={{ margin: 0, fontSize: "24px", fontWeight: 600 }}>
+          Quản lý Sân & Sân con
+        </h2>
+        <Space>
+          <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
+            <Button
+              type="primary"
+              style={{
+                backgroundColor: "#4caf50",
+                borderColor: "#4caf50",
+                height: 38,
+                borderRadius: 4,
+              }}
+            >
+              <PlusOutlined /> Thêm mới <DownOutlined />
+            </Button>
+          </Dropdown>
+        </Space>
+      </div>
+
+      <Layout style={{ backgroundColor: "transparent" }}>
+        <Sider
+          width={280}
+          style={{ background: "transparent", marginRight: 20 }}
+        >
+          <Card
+            size="small"
+            className="mb-4"
+            bodyStyle={{ padding: 16 }}
+            style={{ borderRadius: 8 }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
+              Tìm kiếm
+            </div>
+            <Input
+              placeholder="Tìm kiếm tên sân..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              allowClear
+              style={{ padding: "8px 12px" }}
+            />
+          </Card>
+
+          <Card
+            size="small"
+            className="mb-4"
+            bodyStyle={{ padding: 16 }}
+            style={{ borderRadius: 8 }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
+              Chọn Chi nhánh
+            </div>
+            {branches.length === 0 ? (
+              <Skeleton.Input active block />
+            ) : (
+              <Select
+                showSearch
+                style={{ width: "100%" }}
+                placeholder="Chọn chi nhánh"
+                value={selectedBranchId}
+                onChange={(value) => setSelectedBranchId(value)}
+                filterOption={(input, option) =>
+                  (option?.label ?? "")
+                    .toString()
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                options={branches.map((b) => ({
+                  label: b.rentalAreaName,
+                  value: b.rentalAreaId,
+                }))}
+              />
+            )}
+          </Card>
+
+          <Card
+            size="small"
+            bodyStyle={{ padding: 16 }}
+            style={{ borderRadius: 8 }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
+              Trạng thái
+            </div>
+            <Radio.Group
+              onChange={(e) => setFilterStatus(e.target.value)}
+              value={filterStatus}
+              style={{ display: "flex", flexDirection: "column", gap: 12 }}
+            >
+              <Radio value="ALL">Tất cả</Radio>
+              <Radio value="ACTIVE">Đang kinh doanh</Radio>
+              <Radio value="INACTIVE">Ngừng kinh doanh</Radio>
+            </Radio.Group>
+          </Card>
+        </Sider>
+
+        <Content>
+          <Card
+            bodyStyle={{ padding: 0 }}
+            style={{ borderRadius: 8, overflow: "hidden" }}
+          >
+            <Tabs
+              type="card"
+              items={[
+                {
+                  label: `Danh sách sân (${filteredCourts.length})`,
+                  key: "1",
+                  children: (
+                    <Table
+                      columns={courtColumns}
+                      dataSource={filteredCourts}
+                      rowKey="courtId"
+                      loading={loading}
+                      pagination={{ pageSize: 10 }}
+                    />
+                  ),
+                },
+                {
+                  label: `Danh sách sân con (${allCourtCopies.length})`,
+                  key: "2",
+                  children: (
+                    <Table
+                      columns={copyColumns}
+                      dataSource={allCourtCopies}
+                      rowKey="courtCopyId"
+                      loading={loading}
+                      pagination={{ pageSize: 10 }}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        </Content>
+      </Layout>
+
+      {/* --- MODALS CHO SÂN --- */}
+      {selectedBranchId && (
+        <CreateCourtModal
+          open={modalOpen && !editingCourt}
+          onClose={() => setModalOpen(false)}
+          categories={categories}
+          buildingId={selectedBranchId}
+          onSuccess={() => loadCourts(selectedBranchId)}
         />
-      </Card>
+      )}
 
-      <CreateCourtModal
-        open={modalOpen && !editingCourt}
-        onClose={() => setModalOpen(false)}
-        categories={categories}
-        buildingId={buildingId!}
-        onSuccess={loadCourts}
-      />
+      {selectedBranchId && (
+        <UpdateCourtModal
+          open={modalOpen && !!editingCourt}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingCourt(null);
+          }}
+          categories={categories}
+          court={editingCourt}
+          onSuccess={() => loadCourts(selectedBranchId)}
+        />
+      )}
 
-      <UpdateCourtModal
-        open={modalOpen && !!editingCourt}
-        onClose={() => {
-          setModalOpen(false);
-          setEditingCourt(null);
-        }}
-        categories={categories}
-        court={editingCourt}
-        onSuccess={loadCourts}
-      />
+      {selectedBranchId && (
+        <UpdateCourtPriceModal
+          open={priceModalOpen}
+          onClose={() => setPriceModalOpen(false)}
+          court={selectedCourt}
+          onSuccess={() => loadCourts(selectedBranchId)}
+        />
+      )}
 
-      <UpdateCourtPriceModal
-        open={priceModalOpen}
-        onClose={() => setPriceModalOpen(false)}
-        court={selectedCourt}
-        onSuccess={loadCourts}
+      {/* --- MODALS CHO SÂN CON --- */}
+      {selectedBranchId && (
+        <CourtCopyModal
+          open={copyModalOpen}
+          onClose={() => {
+            setCopyModalOpen(false);
+            setEditingCopy(null);
+          }}
+          copy={editingCopy}
+          courtId={selectedParentCourtId}
+          onSuccess={() => loadCourts(selectedBranchId)}
+        />
+      )}
+
+      <BookingDetailModal
+        open={bookingDetailOpen}
+        onClose={() => setBookingDetailOpen(false)}
+        slot={selectedSlot}
+        courtCopy={selectedCopy}
       />
     </div>
   );

@@ -230,7 +230,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
                       <div
                         key={index}
                         style={{
-                          display: isHidden ? "none" : "block", // Ẩn các ảnh vượt quá giới hạn
+                          display: isHidden ? "none" : "block",
                           position: "relative",
                           cursor: "pointer",
                         }}
@@ -247,7 +247,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
                           fallback="https://via.placeholder.com/160x110?text=Lỗi+Ảnh"
                         />
 
-                        {/* Lớp phủ đen "+N" hiển thị đè lên ảnh cuối cùng */}
                         {isLastVisible && remainingCount > 0 && (
                           <div
                             style={{
@@ -264,7 +263,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
                               fontSize: "20px",
                               fontWeight: "bold",
                               borderRadius: 8,
-                              pointerEvents: "none", // Bỏ qua click để Image vẫn nhận được thao tác mở lightbox
+                              pointerEvents: "none",
                             }}
                           >
                             +{remainingCount}
@@ -284,7 +283,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
           </div>
         </Tabs.TabPane>
 
-        {/* TAB 2: DANH SÁCH SÂN CON */}
         <Tabs.TabPane
           tab={
             <span>
@@ -305,7 +303,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
           />
         </Tabs.TabPane>
 
-        {/* TAB 3: PHÁP LÝ */}
         <Tabs.TabPane
           tab={
             <span>
@@ -316,31 +313,45 @@ const RentalAreaDetailModal: React.FC<Props> = ({
         >
           <Descriptions bordered column={1} size="small">
             <Descriptions.Item label="Mã số thuế">
-              {selectedArea.legalInfo?.taxId}
+              {selectedArea.legalProfileResponse?.taxId}
             </Descriptions.Item>
             <Descriptions.Item label="Giấy phép KD">
-              {selectedArea.legalInfo?.license}
+              {selectedArea.legalProfileResponse?.businessLicenseNumber}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tên doanh nghiệp">
+              {selectedArea.legalProfileResponse?.companyName}
+            </Descriptions.Item>
+            <Descriptions.Item label="Người đại diện pháp lý">
+              {selectedArea.legalProfileResponse?.responsiblePersonName}
+            </Descriptions.Item>
+            <Descriptions.Item label="Địa chỉ kinh doanh">
+              {selectedArea.legalProfileResponse?.address}
             </Descriptions.Item>
             <Descriptions.Item label="Ghi chú">
-              {selectedArea.legalInfo?.note}
+              {selectedArea.legalProfileResponse?.legalNote || "Không có"}
             </Descriptions.Item>
           </Descriptions>
 
           <div style={{ marginTop: 20 }}>
             <Text strong>Ảnh chụp chứng từ/Giấy phép:</Text>
             <div style={{ marginTop: 12 }}>
-              <Image.PreviewGroup>
-                {/* FIX: Map imageUrl */}
-                {selectedArea.images?.slice(0, 2).map((img: any, i: number) => (
-                  <Image
-                    key={i}
-                    src={img.imageUrl}
-                    width={200}
-                    style={{ marginRight: 10, borderRadius: 4 }}
-                    fallback="https://via.placeholder.com/200x150?text=Lỗi+Ảnh"
-                  />
-                ))}
-              </Image.PreviewGroup>
+              {selectedArea.legalProfileResponse?.images?.length > 0 ? (
+                <Image.PreviewGroup>
+                  {selectedArea.legalProfileResponse.images.map(
+                    (img: any, i: number) => (
+                      <Image
+                        key={i}
+                        src={img.imageUrl}
+                        width={200}
+                        style={{ marginRight: 10, borderRadius: 4 }}
+                        fallback="https://via.placeholder.com/200x150?text=Lỗi+Ảnh"
+                      />
+                    ),
+                  )}
+                </Image.PreviewGroup>
+              ) : (
+                <Text type="secondary">Chưa cập nhật ảnh pháp lý</Text>
+              )}
             </div>
           </div>
         </Tabs.TabPane>
