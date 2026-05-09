@@ -25,8 +25,9 @@ import {
   Pie,
   Legend,
   CartesianGrid,
-  AreaChart,
   Area,
+  ComposedChart,
+  Line,
 } from "recharts";
 import {
   TrendingUp,
@@ -40,20 +41,27 @@ import {
 } from "lucide-react";
 import reportService from "../../../service/reportService.ts";
 import type { DashboardData } from "../../../types/dashboard.ts";
+import { useOutletContext } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
-// Style dùng chung cho tất cả các Tooltip của biểu đồ
-const commonTooltipStyle = {
-  borderRadius: 8,
-  border: "none",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-};
-
 const AdminDashboard: React.FC = () => {
+
+  const { isDark } = useOutletContext<{ isDark: boolean }>();
+  
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardData | null>(null);
   const [range, setRange] = useState("this_month");
+
+  const chartTextColor = isDark ? "rgba(255, 255, 255, 0.65)" : "#666";
+  const chartGridColor = isDark ? "#303030" : "#f0f0f0";
+  const commonTooltipStyle = {
+    borderRadius: 8,
+    border: isDark ? "1px solid #303030" : "none",
+    backgroundColor: isDark ? "#141414" : "#fff",
+    color: isDark ? "#fff" : "#000",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -82,12 +90,13 @@ const AdminDashboard: React.FC = () => {
     );
   if (!stats) return <div>Không có dữ liệu hiển thị.</div>;
 
-  const COLORS: Record<string, string> = {
-    BOOKED: "#1890ff",
-    COMPLETED: "#52c41a",
-    CANCELLED: "#ff4d4f",
-    FAILED: "#fa8c16",
+  const STATUS_COLORS: Record<string, string> = {
+    BOOKED: "#9254de",
+    COMPLETED: "#722ed1",
+    CANCELLED: "#fa8c16",
+    PENDING: "#fadb14",
     SUCCESS: "#52c41a",
+    FAILED: "#ff4d4f",
   };
 
   const translate = (key: string) => {
@@ -95,21 +104,29 @@ const AdminDashboard: React.FC = () => {
       BOOKED: "Đã đặt",
       COMPLETED: "Hoàn thành",
       CANCELLED: "Đã hủy",
+      PENDING: "Đang chờ",
       SUCCESS: "Thành công",
       FAILED: "Thất bại",
     };
     return map[key] || key;
   };
 
-  const bookingChartData = Object.entries(stats.bookingStats).map(
-    ([name, value]) => ({
+  const bookingChartData = Object.entries(stats.bookingStats)
+    .filter(([_, value]) => (value as number) > 0)
+    .map(([name, value]) => ({
       name: translate(name),
       originalName: name,
-      value,
-    }),
-  );
+      value: value as number,
+    }));
 
-  // --- MOCK DATA (Thay bằng API thật) ---
+  const paymentChartData = Object.entries(stats.paymentStats)
+    .filter(([_, value]) => (value as number) > 0)
+    .map(([name, value]) => ({
+      name: translate(name),
+      originalName: name,
+      value: value as number,
+    }));
+
   const recentBookingsMock = [
     {
       key: "1",
@@ -163,7 +180,7 @@ const AdminDashboard: React.FC = () => {
       dataIndex: "status",
       key: "status",
       render: (status: string) => (
-        <Tag color={COLORS[status] || "default"}>
+        <Tag color={STATUS_COLORS[status] || "default"}>
           {translate(status).toUpperCase()}
         </Tag>
       ),
@@ -178,9 +195,15 @@ const AdminDashboard: React.FC = () => {
     },
   ];
 
+  const customTooltipFormatter = (val: number, name: string) => {
+    if (name === "revenue")
+      return [new Intl.NumberFormat("vi-VN").format(val) + " ₫", "Doanh thu"];
+    if (name === "bookingCount") return [val + " lượt", "Số lượt đặt"];
+    return [val, name];
+  };
+
   return (
-    <div style={{ padding: "24px", background: "#f0f2f5", minHeight: "100vh" }}>
-      {/* Header & Filter */}
+    <div style={{ padding: "24px" }}>
       <div
         style={{
           display: "flex",
@@ -189,7 +212,11 @@ const AdminDashboard: React.FC = () => {
           marginBottom: 24,
         }}
       >
-        <Title level={3} style={{ margin: 0 }}>
+        {/* SỬA: Màu chữ của Title thay đổi theo isDark */}
+        <Title
+          level={3}
+          style={{ margin: 0, color: isDark ? "#fff" : "inherit" }}
+        >
           Tổng quan hệ thống
         </Title>
         <Select
@@ -212,7 +239,6 @@ const AdminDashboard: React.FC = () => {
         />
       </div>
 
-      {/* Row 1: Key Metrics - Dùng flex 20% để 5 thẻ chia đều bằng nhau tuyệt đối */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
           <Card bordered={false} style={{ height: "100%" }}>
@@ -296,36 +322,65 @@ const AdminDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Row 2: Biến động doanh thu (Chia đều 12-12) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
-          <Card title="Biến động doanh thu 7 ngày gần đây" bordered={false}>
+          <Card title="Biến động 7 ngày gần đây" bordered={false}>
             <div style={{ width: "100%", height: 350 }}>
               <ResponsiveContainer>
-                <BarChart data={stats.dailyRevenue7d}>
+                <BarChart data={stats.dailyStats7d}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="#f0f0f0"
+                    stroke={chartGridColor} // SỬA màu lưới
                   />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    stroke={chartTextColor}
+                  />
+
                   <YAxis
+                    yAxisId="left"
                     tickFormatter={(v) => `${v / 1000}k`}
                     axisLine={false}
                     tickLine={false}
+                    stroke={chartTextColor} // SỬA màu chữ
                   />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    allowDecimals={false}
+                    axisLine={false}
+                    tickLine={false}
+                    stroke={chartTextColor} // SỬA màu chữ
+                  />
+
                   <Tooltip
                     contentStyle={commonTooltipStyle}
-                    formatter={(val: number) => [
-                      new Intl.NumberFormat("vi-VN").format(val) + " ₫",
-                      "Doanh thu",
-                    ]}
+                    formatter={customTooltipFormatter}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    wrapperStyle={{ color: chartTextColor }}
+                  />
+
+                  <Bar
+                    yAxisId="left"
+                    dataKey="revenue"
+                    name="Doanh thu"
+                    fill="#722ed1"
+                    radius={[4, 4, 0, 0]}
+                    barSize={20}
                   />
                   <Bar
-                    dataKey="revenue"
-                    fill="#13c2c2"
+                    yAxisId="right"
+                    dataKey="bookingCount"
+                    name="Số lượt đặt"
+                    fill="#fa8c16"
                     radius={[4, 4, 0, 0]}
-                    barSize={40}
+                    barSize={20}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -334,105 +389,140 @@ const AdminDashboard: React.FC = () => {
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card title="Phân tích doanh thu theo tháng" bordered={false}>
+          <Card title="Phân tích tổng quan theo tháng" bordered={false}>
             <div style={{ width: "100%", height: 350 }}>
               <ResponsiveContainer>
-                <AreaChart data={stats.monthlyRevenue}>
+                <ComposedChart data={stats.monthlyStats}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1890ff" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#1890ff" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#722ed1" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#722ed1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="#f0f0f0"
+                    stroke={chartGridColor} // SỬA màu lưới
                   />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="month"
+                    axisLine={false}
+                    tickLine={false}
+                    stroke={chartTextColor}
+                  />
+
                   <YAxis
+                    yAxisId="left"
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => `${v / 1000000}M`}
+                    stroke={chartTextColor} // SỬA màu chữ
                   />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    allowDecimals={false}
+                    axisLine={false}
+                    tickLine={false}
+                    stroke={chartTextColor} // SỬA màu chữ
+                  />
+
                   <Tooltip
                     contentStyle={commonTooltipStyle}
-                    formatter={(val: number) => [
-                      new Intl.NumberFormat("vi-VN").format(val) + " VNĐ",
-                      "Doanh thu",
-                    ]}
+                    formatter={customTooltipFormatter}
                   />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    wrapperStyle={{ color: chartTextColor }}
+                  />
+
                   <Area
+                    yAxisId="left"
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#1890ff"
+                    name="Doanh thu"
+                    stroke="#722ed1"
                     strokeWidth={3}
                     fillOpacity={1}
                     fill="url(#colorRev)"
                   />
-                </AreaChart>
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="bookingCount"
+                    name="Số lượt đặt"
+                    stroke="#fa8c16"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           </Card>
         </Col>
       </Row>
 
-      {/* Row 3: Trạng thái đặt sân (Chia đều 12-12) */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
-          <Card title="Trạng thái đặt sân (Số lượng)" bordered={false}>
-            <div style={{ width: "100%", height: 350 }}>
-              <ResponsiveContainer>
-                <BarChart data={bookingChartData} margin={{ top: 20 }}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f0f0f0"
-                  />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis
-                    allowDecimals={false}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f5f5f5" }}
-                    contentStyle={commonTooltipStyle}
-                  />
-                  <Bar dataKey="value" barSize={40} radius={[4, 4, 0, 0]}>
-                    {bookingChartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[entry.originalName] || "#ccc"}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Phân bổ trạng thái" bordered={false}>
+          <Card title="Trạng thái đặt sân" bordered={false}>
             <div style={{ width: "100%", height: 350 }}>
               <ResponsiveContainer>
                 <PieChart>
                   <Pie
-                    data={bookingChartData.filter((d) => d.value > 0)}
+                    data={bookingChartData}
                     innerRadius={85}
                     outerRadius={110}
                     paddingAngle={5}
                     dataKey="value"
+                    stroke={isDark ? "none" : "#fff"} // SỬA viền Pie theo theme
                   >
                     {bookingChartData.map((entry, index) => (
                       <Cell
-                        key={`pie-${index}`}
-                        fill={COLORS[entry.originalName]}
+                        key={`pie-booking-${index}`}
+                        fill={STATUS_COLORS[entry.originalName] || "#ccc"}
                       />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={commonTooltipStyle} />
-                  <Legend verticalAlign="bottom" height={36} />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    wrapperStyle={{ color: chartTextColor }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={12}>
+          <Card title="Trạng thái thanh toán" bordered={false}>
+            <div style={{ width: "100%", height: 350 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={paymentChartData}
+                    innerRadius={85}
+                    outerRadius={110}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke={isDark ? "none" : "#fff"} // SỬA viền Pie theo theme
+                  >
+                    {paymentChartData.map((entry, index) => (
+                      <Cell
+                        key={`pie-payment-${index}`}
+                        fill={STATUS_COLORS[entry.originalName] || "#ccc"}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={commonTooltipStyle} />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    wrapperStyle={{ color: chartTextColor }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -440,7 +530,6 @@ const AdminDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Row 4: Bảng dữ liệu chi tiết & Top danh mục */}
       <Row gutter={[16, 16]} align="stretch">
         <Col xs={24} lg={16}>
           <Card
@@ -489,8 +578,10 @@ const AdminDashboard: React.FC = () => {
                               ? "#fa8c16"
                               : index === 2
                               ? "#fadb14"
-                              : "#d9d9d9",
-                          color: index < 3 ? "#fff" : "#000",
+                              : isDark
+                              ? "#434343"
+                              : "#d9d9d9", // SỬA: Màu avatar top dưới
+                          color: index < 3 ? "#fff" : isDark ? "#fff" : "#000",
                         }}
                       >
                         {index + 1}

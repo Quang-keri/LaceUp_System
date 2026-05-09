@@ -348,27 +348,55 @@ public class DataInitializer implements CommandLineRunner {
         if (courtCopies.isEmpty()) return;
 
         Random random = new Random();
+
+        // Lấy danh sách tất cả các enum status
+        BookingStatus[] bookingStatuses = BookingStatus.values();
+        PaymentStatus[] paymentStatuses = PaymentStatus.values();
+
         for (int i = 1; i <= 20; i++) {
             LocalDateTime createdAt = LocalDateTime.now().minusDays(random.nextInt(30)).minusHours(i);
             LocalDateTime startTime = createdAt.plusDays(1).withHour(9 + (i % 10)).withMinute(0);
             LocalDateTime endTime = startTime.plusHours(2);
             BigDecimal totalPrice = BigDecimal.valueOf(160000);
 
+            // 1. Random trạng thái của Booking
+            BookingStatus randomBookingStatus = bookingStatuses[random.nextInt(bookingStatuses.length)];
+
             Booking booking = Booking.builder()
-                    .bookingTitle("Booking by Renter " + i).bookingStatus(BookingStatus.COMPLETED).bookingType(BookingType.ONLINE)
-                    .totalPrice(totalPrice).depositAmount(totalPrice.divide(BigDecimal.valueOf(2))).remainingAmount(totalPrice.divide(BigDecimal.valueOf(2)))
-                    .startTime(startTime).endTime(endTime).bookerName(renter.getUserName()).bookerPhone(renter.getPhone())
-                    .rentalArea(area).renter(renter).createdAt(createdAt).build();
+                    .bookingTitle("Booking by Renter " + i)
+                    .bookingStatus(randomBookingStatus) // <-- Set status ngẫu nhiên
+                    .bookingType(BookingType.ONLINE)
+                    .totalPrice(totalPrice)
+                    .depositAmount(totalPrice.divide(BigDecimal.valueOf(2)))
+                    .remainingAmount(totalPrice.divide(BigDecimal.valueOf(2)))
+                    .startTime(startTime).endTime(endTime)
+                    .bookerName(renter.getUserName())
+                    .bookerPhone(renter.getPhone())
+                    .rentalArea(area).renter(renter).createdAt(createdAt)
+                    .build();
             booking = bookingRepository.save(booking);
 
             CourtCopy selectedCourt = courtCopies.get(random.nextInt(courtCopies.size()));
 
             slotRepository.save(Slot.builder().booking(booking).courtCopy(selectedCourt).startTime(startTime).endTime(endTime).build());
 
-            paymentRepository.save(Payment.builder()
-                    .booking(booking).user(renter).amount(totalPrice).transactionDate(createdAt.plusMinutes(15))
-                    .paymentMethod(PaymentMethod.VN_PAY).paymentStatus(PaymentStatus.COMPLETED).paymentType(PaymentType.FULL)
-                    .transactionCode("PAY_" + UUID.randomUUID().toString().substring(0, 10).toUpperCase()).build());
+            // 2. Chỉ tạo Payment nếu Booking thành công (BOOKED hoặc COMPLETED)
+            if (randomBookingStatus == BookingStatus.BOOKED || randomBookingStatus == BookingStatus.COMPLETED) {
+
+                // Random trạng thái của Payment
+                PaymentStatus randomPaymentStatus = paymentStatuses[random.nextInt(paymentStatuses.length)];
+
+                paymentRepository.save(Payment.builder()
+                        .booking(booking)
+                        .user(renter)
+                        .amount(totalPrice)
+                        .transactionDate(createdAt.plusMinutes(15))
+                        .paymentMethod(PaymentMethod.VN_PAY)
+                        .paymentStatus(randomPaymentStatus) // <-- Set status ngẫu nhiên
+                        .paymentType(PaymentType.FULL)
+                        .transactionCode("PAY_" + UUID.randomUUID().toString().substring(0, 10).toUpperCase())
+                        .build());
+            }
         }
     }
 

@@ -139,6 +139,22 @@ class BookingService {
     const response = await api.post("/bookings/check-availability", payload);
     return response.data;
   }
+
+  async exportBookingsExcel(params: {
+    rentalId?: string;
+    bookingStatus?: string;
+    keyword?: string;
+    from?: string;
+    to?: string;
+  }) {
+    // Sử dụng instance 'api' đã import từ config/axios
+    const response = await api.get(`/bookings/export/excel`, {
+      params,
+      responseType: 'blob', // Bắt buộc để nhận dữ liệu nhị phân từ backend
+    });
+    return response;
+  }
+  
 }
 
 export default new BookingService();

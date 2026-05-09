@@ -83,7 +83,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
     // 2. Quản lý Sân & Cơ sở (Thay cho Rooms)
     getItem("Quản lý sân bãi", "sub_courts", <ShopOutlined />, [
-      getItem(<Link to="/admin/owners">Quản lí các cơ sở</Link>, "/admin/owners"),
+      getItem(
+        <Link to="/admin/owners">Quản lí các cơ sở</Link>,
+        "/admin/owners",
+      ),
       getItem(<Link to="/admin/courts">Danh sách sân</Link>, "/admin/courts"),
       getItem(
         <Link to="/admin/court-types">Loại sân</Link>,
@@ -156,45 +159,62 @@ const Sidebar: React.FC<SidebarProps> = ({
       collapsible
       collapsed={collapsed}
       width={260}
+      collapsedWidth={80} // Đảm bảo width khi thu gọn chuẩn là 80px
       theme={isDark ? "dark" : "light"}
       className="shadow-md z-20"
       style={{
+        overflow: "hidden",
+        height: "100vh",
+        position: "fixed", // QUAN TRỌNG NHẤT: Ghim chết Sidebar
+        left: 0,
+        top: 0,
+        bottom: 0,
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
+        background: isDark ? "#001529" : "#ffffff",
       }}
     >
-      <Link to="/trang-chu">
-        {" "}
-        <div
-          className={`h-16 flex items-center justify-center border-b transition-colors ${
-            isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
-          }`}
-        >
-          <div className="flex items-center gap-2 overflow-hidden px-4">
-            <img rel="icon" src="/logo.png" alt="Logo" className="w-12 h-12" />
-            {!collapsed && (
-              <div
-                className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
-                  isDark ? "text-white" : "text-gray-800"
-                }`}
-              >
-                Lace Up
-              </div>
-            )}
+      <div className="flex flex-col h-full w-full">
+        <Link to="/trang-chu" className="block flex-none">
+          <div
+            className={`h-16 flex items-center justify-center border-b transition-colors ${
+              isDark
+                ? "border-gray-700 bg-[#001529]"
+                : "border-gray-200 bg-white"
+            }`}
+          >
+            <div className="flex items-center gap-2 overflow-hidden px-4">
+              <img
+                rel="icon"
+                src="/logo.png"
+                alt="Logo"
+                className="w-12 h-12"
+              />
+              {!collapsed && (
+                <div
+                  className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
+                    isDark ? "text-white" : "text-gray-800"
+                  }`}
+                >
+                  Lace Up
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </Link>
+        </Link>
 
-      <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">
-        <Menu
-          mode="inline"
-          selectedKeys={[activeKey]}
-          openKeys={openKeys}
-          onOpenChange={onOpenChange}
-          items={items}
-          onClick={handleMenuClick}
-          theme={isDark ? "dark" : "light"}
-          style={{ border: "none", background: "transparent" }}
-        />
+        {/* Nội dung Menu cuộn độc lập bên trong */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
+          <Menu
+            mode="inline"
+            selectedKeys={[activeKey]}
+            openKeys={openKeys}
+            onOpenChange={onOpenChange}
+            items={items}
+            onClick={handleMenuClick}
+            theme={isDark ? "dark" : "light"}
+            style={{ border: "none", background: "transparent" }}
+          />
+        </div>
       </div>
     </Sider>
   );

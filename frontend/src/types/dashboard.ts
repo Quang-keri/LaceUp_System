@@ -1,19 +1,23 @@
 export type BookingStatusType = "BOOKED" | "COMPLETED" | "CANCELLED";
-export type PaymentStatusType = "BOOKED" | "COMPLETED" | "CANCELLED" | "FAILED";
+export type PaymentStatusType = "PENDING" | "SUCCESS" | "BOOKED" | "COMPLETED" | "CANCELLED" | "FAILED";
 
-export interface MonthlyRevenueData {
-  month: string;
+export interface PeriodStatsData {
+  date?: string;
+  month?: string;
   revenue: number;
+  bookingCount: number;
 }
 
 export interface DashboardData {
   bookingStats: Record<BookingStatusType, number>;
   paymentStats: Record<PaymentStatusType, number>;
   totalRevenue: number;
-  monthlyRevenue: MonthlyRevenueData[];
+
+  monthlyStats: PeriodStatsData[];
+  dailyStats7d: PeriodStatsData[];
+
   newUsersCount: number;
   topCourts: Array<{ courtName: string; bookingCount: number }>;
-  dailyRevenue7d: { date: string; revenue: number }[];
   peakHour: string;
   occupancyRate: number;
   revenueGrowth: number;

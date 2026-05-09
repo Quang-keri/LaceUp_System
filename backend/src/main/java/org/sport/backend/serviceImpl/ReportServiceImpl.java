@@ -53,10 +53,15 @@ public class ReportServiceImpl implements ReportService {
         fullDashboard.put("bookingStats", getBookingStats(startDate, endDate, ownerId));
         fullDashboard.put("paymentStats", getPaymentStats(startDate, endDate, ownerId));
         fullDashboard.put("totalRevenue", getTotalRevenue(startDate, endDate, ownerId));
-        fullDashboard.put("monthlyRevenue", getMonthlyRevenue(ownerId));
+
+        // Đã đổi tên hàm và key để chứa cả booking count
+        fullDashboard.put("monthlyStats", getMonthlyStats(ownerId));
         fullDashboard.put("topCourts", getTopCourts(startDate, endDate, ownerId));
         fullDashboard.put("newUsersCount", userRepository.countNewUsers(startDate, endDate));
-        fullDashboard.put("dailyRevenue7d", getDailyRevenueLast7Days(ownerId));
+
+        // Đã đổi tên hàm và key để chứa cả booking count
+        fullDashboard.put("dailyStats7d", getDailyStatsLast7Days(ownerId));
+
         fullDashboard.put("peakHour", getPeakBookingHour(startDate, endDate, ownerId));
         fullDashboard.put("occupancyRate", calculateOccupancyRate(startDate, endDate, ownerId));
         fullDashboard.put("revenueGrowth", calculateRevenueGrowthPercentage(ownerId));
@@ -64,7 +69,7 @@ public class ReportServiceImpl implements ReportService {
         return fullDashboard;
     }
 
-    private List<Map<String, Object>> getMonthlyRevenue(UUID ownerId) {
+    private List<Map<String, Object>> getMonthlyStats(UUID ownerId) {
         List<Map<String, Object>> monthlyData = new ArrayList<>();
         int currentYear = LocalDateTime.now().getYear();
 
@@ -74,9 +79,13 @@ public class ReportServiceImpl implements ReportService {
 
             BigDecimal revenue = paymentRepository.getTotalRevenue(startOfMonth, endOfMonth, ownerId);
 
+            // Gọi thêm repository để đếm số booking trong tháng
+            Long bookingCount = bookingRepository.countBookingsInRange(startOfMonth, endOfMonth, ownerId);
+
             Map<String, Object> dataPoint = new HashMap<>();
             dataPoint.put("month", "Tháng " + month);
             dataPoint.put("revenue", revenue != null ? revenue : BigDecimal.ZERO);
+            dataPoint.put("bookingCount", bookingCount != null ? bookingCount : 0L); // Thêm data mới
             monthlyData.add(dataPoint);
         }
         return monthlyData;
@@ -166,9 +175,8 @@ public class ReportServiceImpl implements ReportService {
         }).collect(Collectors.toList());
     }
 
-    // 1. Tính doanh thu 7 ngày gần nhất
-    private List<Map<String, Object>> getDailyRevenueLast7Days(UUID ownerId) {
-        List<Map<String, Object>> last7DaysRevenue = new ArrayList<>();
+    private List<Map<String, Object>> getDailyStatsLast7Days(UUID ownerId) {
+        List<Map<String, Object>> last7DaysStats = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
             LocalDateTime d = LocalDateTime.now().minusDays(i);
             LocalDateTime start = d.toLocalDate().atStartOfDay();
@@ -176,15 +184,18 @@ public class ReportServiceImpl implements ReportService {
 
             BigDecimal rev = paymentRepository.getTotalRevenue(start, end, ownerId);
 
+            // Gọi thêm repository để đếm số booking trong ngày
+            Long bookingCount = bookingRepository.countBookingsInRange(start, end, ownerId);
+
             Map<String, Object> point = new HashMap<>();
             point.put("date", d.getDayOfMonth() + "/" + d.getMonthValue());
             point.put("revenue", rev != null ? rev : BigDecimal.ZERO);
-            last7DaysRevenue.add(point);
+            point.put("bookingCount", bookingCount != null ? bookingCount : 0L); // Thêm data mới
+            last7DaysStats.add(point);
         }
-        return last7DaysRevenue;
+        return last7DaysStats;
     }
 
-    // 2. Lấy khung giờ cao điểm
     private String getPeakBookingHour(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
         List<Object[]> peakHoursRaw = bookingRepository.findPeakBookingHours(startDate, endDate, ownerId);
         if (peakHoursRaw != null && !peakHoursRaw.isEmpty()) {
@@ -194,7 +205,6 @@ public class ReportServiceImpl implements ReportService {
         return "N/A";
     }
 
-    // 3. Tính tỷ lệ lấp đầy sân
     private Double calculateOccupancyRate(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
         Long bookedSlots = slotRepository.countByStatusAndDate(SlotStatus.BOOKED, startDate, endDate, ownerId);
         Long totalSlots = slotRepository.countTotalSlots(startDate, endDate, ownerId);
@@ -205,7 +215,6 @@ public class ReportServiceImpl implements ReportService {
         return Math.round(rate * 10) / 10.0; // Làm tròn 1 chữ số thập phân
     }
 
-    // 4. Tính % tăng trưởng so với tháng trước
     private Double calculateRevenueGrowthPercentage(UUID ownerId) {
         LocalDateTime now = LocalDateTime.now();
 

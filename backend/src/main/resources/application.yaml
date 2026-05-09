@@ -101,3 +101,12 @@ app:
     vector:
       threshold: 0.1
       top-k: 5
+
+momo:
+  partner-code: ${MOMO_PARTNER_CODE}
+  redirect-url: ${MOMO_REDIRECT_URL}
+  endpoint: ${MOMO_ENDPOINT}
+  ipn-url: ${MOMO_IPN_URL}
+  access-key: ${MOMO_ACCESS_KEY}
+  secret-key: ${MOMO_SECRET_KEY}
+  request-type: ${MOMO_REQUEST_TYPE}

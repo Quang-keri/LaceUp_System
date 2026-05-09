@@ -10,9 +10,7 @@ const { Content } = Layout;
 const THEME_KEY = "adminTheme";
 
 export default function OwnerLayout() {
-  // 1. Lấy cả user và logout từ context
   const { user, logout } = useAuth();
-
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -25,7 +23,6 @@ export default function OwnerLayout() {
     document.body.setAttribute("data-theme", themeValue);
   }, [isDark]);
 
-  // 2. Tạo hàm handleLogoutClick giống bên Admin
   const handleLogoutClick = async () => {
     await logout();
   };
@@ -41,7 +38,8 @@ export default function OwnerLayout() {
         },
       }}
     >
-      <Layout className="h-screen overflow-hidden flex flex-row">
+      {/* KHÓA CUỘN TOÀN TRANG (Bỏ flex flex-row) */}
+      <Layout className="h-screen overflow-hidden">
         <Sidebar
           collapsed={collapsed}
           toggleCollapsed={() => setCollapsed(!collapsed)}
@@ -50,7 +48,11 @@ export default function OwnerLayout() {
           handleLogout={handleLogoutClick}
         />
 
-        <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
+        {/* THÊM MARGIN LEFT ĐỘNG CHỪA CHỖ CHO SIDEBAR FIXED */}
+        <Layout
+          className="transition-all duration-200 flex flex-col h-screen"
+          style={{ marginLeft: collapsed ? 80 : 260 }}
+        >
           <OwnerHeader
             collapsed={collapsed}
             toggleCollapsed={() => setCollapsed(!collapsed)}
@@ -61,7 +63,7 @@ export default function OwnerLayout() {
 
           <Content
             className={`flex-1 p-3 overflow-y-auto transition-colors duration-200 ${
-              isDark ? "bg-[#141414]" : "bg-[#ffff]"
+              isDark ? "bg-[#141414]" : "bg-[#ffffff]"
             }`}
           >
             <Outlet context={{ isDark }} />

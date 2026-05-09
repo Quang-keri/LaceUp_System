@@ -45,4 +45,7 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("endDate") LocalDateTime endDate,
             @Param("ownerId") UUID ownerId
     );
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.createdAt >= :startDate AND b.createdAt <= :endDate AND (:ownerId IS NULL OR b.rentalArea.owner.userId = :ownerId)")
+    Long countBookingsInRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, @Param("ownerId") UUID ownerId);
 }
