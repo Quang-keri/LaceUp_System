@@ -21,10 +21,14 @@ export default function CreateCourtModal({
         return;
       }
 
-      const courtCodes = values.courtCodes
+      // 1. Lấy location từ form values thay vì fix cứng "Khu vực chung"
+      const courtCopyRequests = values.courtCodes
         .split(",")
-        .map((c: string) => c.trim())
-        .filter((c: string) => c);
+        .map((c: string) => ({
+          courtCode: c.trim(),
+          location: values.location?.trim(), // <-- Gán giá trị người dùng nhập vào đây
+        }))
+        .filter((c: any) => c.courtCode);
 
       const images = fileList.map((f) => f.originFileObj);
 
@@ -34,7 +38,7 @@ export default function CreateCourtModal({
           categoryId: values.categoryId,
           pricePerHour: values.price,
           rentalAreaId: buildingId,
-          courtCodes,
+          courtCopyRequests,
         },
         images,
       );
@@ -64,17 +68,18 @@ export default function CreateCourtModal({
         <Form.Item
           label="Tên sân"
           name="courtName"
-          rules={[{ required: true }]}
+          rules={[{ required: true, message: "Vui lòng nhập tên sân" }]}
         >
-          <Input />
+          <Input placeholder="Ví dụ: Sân Pickleball 123..." />
         </Form.Item>
 
         <Form.Item
           label="Loại sân"
           name="categoryId"
-          rules={[{ required: true }]}
+          rules={[{ required: true, message: "Vui lòng chọn loại sân" }]}
         >
           <Select
+            placeholder="Chọn loại sân"
             options={categories.map((c: any) => ({
               label: c.categoryName,
               value: c.categoryId,
@@ -82,17 +87,35 @@ export default function CreateCourtModal({
           />
         </Form.Item>
 
-        <Form.Item label="Giá / giờ" name="price" rules={[{ required: true }]}>
-          <InputNumber style={{ width: "100%" }} min={0} />
+        <Form.Item
+          label="Giá / giờ"
+          name="price"
+          rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+        >
+          <InputNumber
+            style={{ width: "100%" }}
+            min={0}
+            placeholder="Ví dụ: 100000"
+          />
+        </Form.Item>
+
+        {/* THÊM TRƯỜNG VỊ TRÍ (LOCATION) Ở ĐÂY */}
+        <Form.Item
+          label="Vị trí / Khu vực"
+          name="location"
+          tooltip="Ví dụ: Trong nhà, Ngoài trời, Khu A, Tầng 2..."
+          rules={[{ required: true, message: "Vui lòng nhập vị trí sân" }]}
+        >
+          <Input placeholder="Nhập vị trí (VD: Trong nhà, Khu A...)" />
         </Form.Item>
 
         <Form.Item
           label="Mã sân"
           name="courtCodes"
-          tooltip="Ví dụ: A,B,C (mỗi mã là 1 CourtCopy)"
-          rules={[{ required: true }]}
+          tooltip="Ví dụ: A,B,C (mỗi mã là 1 sân con). Tất cả sân con này sẽ dùng chung Vị trí đã nhập ở trên."
+          rules={[{ required: true, message: "Vui lòng nhập mã sân" }]}
         >
-          <Input />
+          <Input placeholder="Ví dụ: Sân số 1, Sân số 2..." />
         </Form.Item>
 
         <Form.Item label="Ảnh sân (2-3 ảnh)">

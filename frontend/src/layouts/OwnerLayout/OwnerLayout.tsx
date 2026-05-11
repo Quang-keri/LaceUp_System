@@ -38,21 +38,16 @@ export default function OwnerLayout() {
         },
       }}
     >
-      {/* KHÓA CUỘN TOÀN TRANG (Bỏ flex flex-row) */}
-      <Layout className="h-screen overflow-hidden">
-        <Sidebar
+      <Layout className="h-screen overflow-hidden flex flex-row">
+        {/* <Sidebar
           collapsed={collapsed}
           toggleCollapsed={() => setCollapsed(!collapsed)}
           isDark={isDark}
           user={user}
           handleLogout={handleLogoutClick}
-        />
+        /> */}
 
-        {/* THÊM MARGIN LEFT ĐỘNG CHỪA CHỖ CHO SIDEBAR FIXED */}
-        <Layout
-          className="transition-all duration-200 flex flex-col h-screen"
-          style={{ marginLeft: collapsed ? 80 : 260 }}
-        >
+        <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
           <OwnerHeader
             collapsed={collapsed}
             toggleCollapsed={() => setCollapsed(!collapsed)}
@@ -63,7 +58,7 @@ export default function OwnerLayout() {
 
           <Content
             className={`flex-1 p-3 overflow-y-auto transition-colors duration-200 ${
-              isDark ? "bg-[#141414]" : "bg-[#ffffff]"
+              isDark ? "bg-[#141414]" : "bg-[#ffff]"
             }`}
           >
             <Outlet context={{ isDark }} />

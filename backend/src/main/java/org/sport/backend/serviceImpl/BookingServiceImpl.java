@@ -3,6 +3,7 @@ package org.sport.backend.serviceImpl;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.*;
 import org.sport.backend.dto.request.booking.BookingRequest;
+import org.sport.backend.dto.request.booking.OwnerBookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
@@ -66,6 +67,142 @@ public class BookingServiceImpl implements BookingService {
     private BookingServiceItemRepository bookingServiceItemRepository;
     @Autowired
     private ServiceItemRepository serviceItemRepository;
+
+
+
+    @Override
+    @Transactional
+    public BookingResponse createOwnerBooking(OwnerBookingRequest request) {
+        Booking booking = Booking.builder()
+                .bookerName(request.getCustomerName())
+                .bookerPhone(request.getPhone())
+                .note(request.getNote())
+                .bookingStatus(BookingStatus.BOOKED)
+                .build();
+
+        // We'll determine rental area and booking time range from slots
+        LocalDateTime earliest = null;
+        LocalDateTime latest = null;
+
+        booking = bookingRepository.save(booking);
+
+        BigDecimal calculatedTotalPrice = BigDecimal.ZERO;
+
+                for (SlotRequest slotReq : request.getSlots()) {
+            CourtCopy courtCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sân với ID: " + slotReq.getCourtCopyId()));
+
+                        // Ensure booking is associated with the rental area and renter (owner) so it appears in rental listings
+                        if (booking.getRentalArea() == null && courtCopy.getCourt() != null && courtCopy.getCourt().getRentalArea() != null) {
+                                booking.setRentalArea(courtCopy.getCourt().getRentalArea());
+                        }
+                        if (booking.getRenter() == null) {
+                                try {
+                                        booking.setRenter(userService.getCurrentUserEntity());
+                                } catch (Exception ignored) {
+                                }
+                        }
+
+            List<Slot> conflicts = slotRepository.findConflictSlot(
+                    courtCopy.getCourtCopyId(),
+                    slotReq.getStartTime(),
+                    slotReq.getEndTime()
+            );
+            if (!conflicts.isEmpty()) {
+                throw new RuntimeException("Sân " + courtCopy.getCourtCode() + " đã bị đặt trong khung giờ "
+                        + slotReq.getStartTime().toLocalTime() + " - " + slotReq.getEndTime().toLocalTime());
+            }
+
+            BigDecimal slotPrice = calculateSlotPrice(
+                    courtCopy.getCourt().getCourtId(),
+                    slotReq.getStartTime(),
+                    slotReq.getEndTime()
+            );
+            calculatedTotalPrice = calculatedTotalPrice.add(slotPrice);
+
+                        Slot slot = Slot.builder()
+                    .startTime(slotReq.getStartTime())
+                    .endTime(slotReq.getEndTime())
+                    .price(slotPrice)
+                    .slotStatus(SlotStatus.BOOKED)
+                    .courtCopy(courtCopy)
+                    .booking(booking)
+                    .build();
+
+            slotRepository.save(slot);
+                        if (earliest == null || slotReq.getStartTime().isBefore(earliest)) earliest = slotReq.getStartTime();
+                        if (latest == null || slotReq.getEndTime().isAfter(latest)) latest = slotReq.getEndTime();
+        }
+
+                if (earliest != null) booking.setStartTime(earliest);
+                if (latest != null) booking.setEndTime(latest);
+
+        BigDecimal deposit = request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal remaining = calculatedTotalPrice.subtract(deposit);
+
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            remaining = BigDecimal.ZERO;
+        }
+
+        booking.setTotalPrice(calculatedTotalPrice);
+        booking.setDepositAmount(deposit);
+        booking.setRemainingAmount(remaining);
+
+        if (remaining.compareTo(BigDecimal.ZERO) == 0) {
+            booking.setBookingStatus(BookingStatus.COMPLETED);
+        } else {
+            booking.setBookingStatus(BookingStatus.BOOKED);
+        }
+
+        bookingRepository.save(booking);
+
+        if (deposit.compareTo(BigDecimal.ZERO) > 0) {
+            Payment payment = Payment.builder()
+                    .amount(deposit)
+                    .transactionDate(LocalDateTime.now())
+                    .paymentStatus(org.sport.backend.constant.PaymentStatus.SUCCESS)
+                    .paymentType(deposit.compareTo(calculatedTotalPrice) >= 0
+                            ? org.sport.backend.constant.PaymentType.FULL
+                            : org.sport.backend.constant.PaymentType.DEPOSIT)
+                    .booking(booking)
+                    .build();
+
+            paymentRepository.save(payment);
+        }
+
+        return mapToBookingResponse(booking);
+    }
+    public BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime) {
+        LocalDate bookingDate = startTime.toLocalDate();
+        LocalTime start = startTime.toLocalTime();
+        LocalTime end = endTime.toLocalTime();
+
+        List<CourtPrice> prices = courtPriceRepository.findValidPricesForCourtAndDate(courtId, bookingDate);
+
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        LocalTime currentTime = start;
+
+        while (currentTime.isBefore(end)) {
+            // Tìm khung giá chứa currentTime
+            LocalTime finalCurrentTime = currentTime;
+            CourtPrice currentPriceBracket = prices.stream()
+                    .filter(p -> !finalCurrentTime.isBefore(p.getStartTime()) && finalCurrentTime.isBefore(p.getEndTime()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy cấu hình giá cho khung giờ: " + finalCurrentTime));
+
+            LocalTime overlapEnd = end.isBefore(currentPriceBracket.getEndTime()) ? end : currentPriceBracket.getEndTime();
+
+            long minutes = Duration.between(currentTime, overlapEnd).toMinutes();
+            BigDecimal hoursDuration = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
+
+            BigDecimal segmentPrice = hoursDuration.multiply(currentPriceBracket.getPricePerHour());
+            totalPrice = totalPrice.add(segmentPrice);
+
+            currentTime = overlapEnd;
+        }
+
+        return totalPrice;
+    }
 
     @Override
     @Transactional
@@ -473,15 +610,15 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Hold expired");
         }
         BigDecimal totalPrice = intent.getPreviewPrice();
-        BigDecimal paidAmount = payment.getAmount(); // Lấy số tiền thực tế từ Payment (có thể là 30% cọc hoặc 100%)
+        BigDecimal paidAmount = payment.getAmount();
         BigDecimal remainingAmount = totalPrice.subtract(paidAmount);
         Booking booking = Booking.builder()
                 .bookingStatus(BookingStatus.BOOKED)
                 .renter(intent.getUser() != null ? intent.getUser() : null)
                 .bookerName(intent.getBookerName())
                 .bookerPhone(intent.getBookerPhone())
-                .depositAmount(paidAmount)           //  Lưu tiền cọc
-                .remainingAmount(remainingAmount)// Lưu tiền còn nợ
+                .depositAmount(paidAmount)
+                .remainingAmount(remainingAmount)
                 .totalPrice(intent.getPreviewPrice())
                 .startTime(intent.getStartTime())
                 .endTime(intent.getEndTime())
@@ -957,5 +1094,78 @@ public class BookingServiceImpl implements BookingService {
         }
 
         bookingRepository.save(booking);
+    }
+
+    private BookingResponse mapToBookingResponse(Booking booking) {
+        if (booking == null) {
+            return null;
+        }
+        List<SlotResponse> slotResponses = new ArrayList<>();
+        LocalDateTime bookingStart = null;
+        LocalDateTime bookingEnd = null;
+        RentalAreaResponse rentalAreaResponse = null;
+
+        if (booking.getSlots() != null && !booking.getSlots().isEmpty()) {
+            slotResponses = booking.getSlots().stream()
+                    .map(slot -> SlotResponse.builder()
+                            .slotId(slot.getSlotId())
+                            .courtCopyId(slot.getCourtCopy().getCourtCopyId())
+                            .startTime(slot.getStartTime())
+                            .endTime(slot.getEndTime())
+                            .price(slot.getPrice())
+                            .build())
+                    .toList();
+
+            bookingStart = booking.getSlots().stream()
+                    .map(Slot::getStartTime)
+                    .min(LocalDateTime::compareTo)
+                    .orElse(null);
+
+            bookingEnd = booking.getSlots().stream()
+                    .map(Slot::getEndTime)
+                    .max(LocalDateTime::compareTo)
+                    .orElse(null);
+
+            RentalArea rentalArea = booking.getSlots().get(0).getCourtCopy().getCourt().getRentalArea();
+            if (rentalArea != null) {
+                rentalAreaResponse = RentalAreaResponse.builder()
+                        .rentalAreaId(rentalArea.getRentalAreaId())
+                        .rentalAreaName(rentalArea.getRentalAreaName())
+                        .build();
+            }
+        }
+
+        List<BookingResponse.BookingServiceResponse> extraServiceResponses = new ArrayList<>();
+
+//        if (booking.getBookingServiceItems() != null && !booking.getBookingServiceItems().isEmpty()) {
+//            extraServiceResponses = booking.getBookingServiceItems().stream()
+//                    .map(bsi -> BookingResponse.BookingServiceResponse.builder()
+//                            .serviceId(bsi.getServiceItem().getServiceId())
+//                            .serviceName(bsi.getServiceItem().getServiceName())
+//                            .quantity(bsi.getQuantity())
+//                            .price(bsi.getPrice()) // Đây là giá lúc bán lưu trong BookingServiceItem
+//                            .build())
+//                    .toList();
+//        }
+
+
+        return BookingResponse.builder()
+                .bookingId(booking.getBookingId())
+                .totalPrice(booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO)
+                .bookingStatus(booking.getBookingStatus())
+                .status(booking.getBookingStatus()) // Bạn đang có 2 field giống nhau trong DTO là bookingStatus và status
+                .startTime(bookingStart)
+                .endTime(bookingEnd)
+                .slots(slotResponses)
+                .createdAt(booking.getCreatedAt())
+                .rentalArea(rentalAreaResponse)
+                .userName(booking.getBookerName())
+                .phoneNumber(booking.getBookerPhone())
+                .note(booking.getNote())
+                // .paymentMethod(booking.getPaymentMethod().name()) // Mở comment nếu Entity Booking có lưu PaymentMethod
+                .depositAmount(booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO)
+                .remainingAmount(booking.getRemainingAmount() != null ? booking.getRemainingAmount() : BigDecimal.ZERO)
+                .extraServiceResponses(extraServiceResponses)
+                .build();
     }
 }

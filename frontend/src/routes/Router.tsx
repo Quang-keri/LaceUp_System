@@ -3,6 +3,7 @@ import DefaultLayout from "../layouts/DefaultLayout/DefaultLayout";
 import LoginPage from "../page/customer/login-page/LoginPage.tsx";
 import PostPage from "../page/customer/post/PostPage.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
+import CustomerNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
 import { ProtectedRouter } from "./ProtectedRouter.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
@@ -56,6 +57,9 @@ import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
 import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
 import MyRanks from "../page/customer/profile-page/MyRankPage.tsx";
 import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManagement.tsx";
+import NewsPage from "../page/admin/news/NewsPage.tsx";
+import UserNewsPage from "../page/customer/news/UserNewsPage.tsx";
+import UserNewsDetail from "../page/customer/news/UserNewsDetail.tsx";
 import CustomerManagementPage from "../page/owner/customer-management/CustomerManagementPage.tsx";
 import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 
@@ -85,6 +89,9 @@ export const router = createBrowserRouter([
       },
       { path: "trang-chu", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
+
+      { path: "tin-tuc", element: <UserNewsPage /> },
+      { path: "tin-tuc/:id", element: <UserNewsDetail /> },
       { path: "/register", element: <RegisterPage /> },
       { path: "register/confirm", element: <ConfirmRegister /> },
       { path: "danh-sach-san", element: <PostPage /> },
@@ -147,7 +154,8 @@ export const router = createBrowserRouter([
       { path: "permissions", element: <PermissionManagement /> },
       { path: "court-types", element: <CategoryManagement /> },
       { path: "bookings/list", element: <BookingManagement /> },
-      { path: "settlements", element: <SettlementManagement /> },
+
+      { path: "news", element: <NewsPage /> },
       {
         path: "settlements/:rentalAreaId/history",
         element: <PayoutHistory />,
@@ -166,10 +174,15 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <OwnerDashboard /> },
+      { path: "dashboard", element: <OwnerDashboard /> },
       { path: "buildings/list", element: <BuildingListPage /> },
       { path: "buildings/edit/:buildingId", element: <BuildingEditPage /> },
       {
         path: "buildings/:buildingId/courts",
+        element: <CourtManagementPage />,
+      },
+      {
+        path: "courts",
         element: <CourtManagementPage />,
       },
       {

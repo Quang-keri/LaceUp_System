@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, type MenuProps } from "antd";
+import { ConfigProvider, Layout, Menu, type MenuProps } from "antd";
 import { Link, useLocation } from "react-router-dom";
 import {
   AppstoreOutlined,
@@ -9,6 +9,9 @@ import {
   SettingOutlined,
   LogoutOutlined,
   StarOutlined,
+  BankOutlined,
+  UserOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import type { UserResponse } from "../../types/user.ts";
 
@@ -34,7 +37,7 @@ interface SidebarProps {
   collapsed: boolean;
   toggleCollapsed: () => void;
   isDark: boolean;
-  user: UserResponse | null;
+  adminUser: UserResponse | null;
   handleLogout: () => void;
 }
 
@@ -57,8 +60,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const items: MenuItem[] = [
     getItem(
-      <Link to="/owner">Báo cáo và thống kê</Link>,
-      "/owner",
+      <Link to="/owner/dashboard">Báo cáo và thống kê</Link>,
+      "/owner/dashboard",
       <AppstoreOutlined />,
     ),
 
@@ -73,7 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     ]),
 
-    getItem("Quản lý Cơ sở", "sub_area", <CalendarOutlined />, [
+    getItem("Quản lý Cơ sở", "sub_area", <HomeOutlined />, [
       getItem(
         <Link to="/owner/buildings/list">Chi nhánh</Link>,
         "/owner/area/list",
@@ -83,7 +86,20 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/owner/service-items",
       ),
     ]),
-
+    getItem("Giao dịch", "sub_transaction", <BankOutlined />, [
+      getItem(
+        <Link to="/owner/all-transactions">Tất cả</Link>,
+        "/owner/all-transactions",
+      ),
+      getItem(
+        <Link to="/owner/all-transactions">Nhập hàng</Link>,
+        "/owner/purchase-pay-in",
+      ),
+      getItem(
+        <Link to="/owner/all-transactions">Chi trả</Link>,
+        "/owner/purchase-pay-out",
+      ),
+    ]),
     getItem("Quản lý nội dung", "sub_content", <ShopOutlined />, [
       getItem(<Link to="/owner/posts">Quản lý bài đăng</Link>, "/owner/posts"),
       getItem(
@@ -92,7 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     ]),
 
-    getItem("Quản lý người dùng", "sub_users", <CalendarOutlined />, [
+    getItem("Quản lý người dùng", "sub_users", <UserOutlined />, [
       getItem(
         <Link to="/owner/users/customers">Khách hàng </Link>,
         "/owner/users/customers",
@@ -160,63 +176,44 @@ const Sidebar: React.FC<SidebarProps> = ({
       collapsible
       collapsed={collapsed}
       width={260}
-      collapsedWidth={80} // Thêm để width khi thu gọn chuẩn
       theme={isDark ? "dark" : "light"}
       className="shadow-md z-20"
       style={{
-        overflow: "hidden",
-        height: "100vh",
-        position: "fixed", // GHIM CỐ ĐỊNH SIDEBAR
-        left: 0,
-        top: 0,
-        bottom: 0,
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
-        background: isDark ? "#001529" : "#ffffff",
       }}
     >
-      {/* BỌC TOÀN BỘ VÀO KHUNG FLEX ĐỂ GIAO DIỆN KHÔNG BỊ VỠ KHI FIXED */}
-      <div className="flex flex-col h-full w-full">
-        <Link to="/trang-chu" className="block flex-none">
-          <div
-            className={`h-16 flex items-center justify-center border-b transition-colors ${
-              isDark
-                ? "border-gray-700 bg-[#001529]"
-                : "border-gray-200 bg-white"
-            }`}
-          >
-            <div className="flex items-center gap-2 overflow-hidden px-4">
-              <img
-                rel="icon"
-                src="/logo.png"
-                alt="Logo"
-                className="w-12 h-12"
-              />
-              {!collapsed && (
-                <div
-                  className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
-                    isDark ? "text-white" : "text-gray-800"
-                  }`}
-                >
-                  Lace Up
-                </div>
-              )}
-            </div>
+      <Link to="/trang-chu">
+        <div
+          className={`h-16 flex items-center justify-center border-b transition-colors ${
+            isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
+          }`}
+        >
+          <div className="flex items-center gap-2 overflow-hidden px-4">
+            <img rel="icon" src="/logo.png" alt="Logo" className="w-12 h-12" />
+            {!collapsed && (
+              <div
+                className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
+                  isDark ? "text-white" : "text-gray-800"
+                }`}
+              >
+                Lace Up
+              </div>
+            )}
           </div>
-        </Link>
-
-        {/* THAY CHIỀU CAO CỨNG BẰNG flex-1 */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
-          <Menu
-            mode="inline"
-            selectedKeys={[activeKey]}
-            openKeys={openKeys}
-            onOpenChange={onOpenChange}
-            items={items}
-            onClick={handleMenuClick}
-            theme={isDark ? "dark" : "light"}
-            style={{ border: "none", background: "transparent" }}
-          />
         </div>
+      </Link>
+
+      <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">
+        <Menu
+          mode="inline"
+          selectedKeys={[activeKey]}
+          openKeys={openKeys}
+          onOpenChange={onOpenChange}
+          items={items}
+          onClick={handleMenuClick}
+          theme={isDark ? "dark" : "light"}
+          style={{ border: "none", background: "transparent" }}
+        />
       </div>
     </Sider>
   );

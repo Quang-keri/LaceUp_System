@@ -18,7 +18,7 @@ import {
   LoginOutlined,
   MessageOutlined,
 } from "@ant-design/icons";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -119,8 +119,7 @@ const AppHeader = () => {
           colorPrimary: "#9156F1",
           components: {
             Menu: {
-              // Thêm các biến này để bao phủ toàn bộ các phiên bản Ant Design
-              activeBarColor: "#9156F1", // Cho bản v5.x mới nhất
+              activeBarColor: "#9156F1",
               activeBarHeight: 3,
               itemSelectedColor: "#9156F1",
               itemHoverColor: "#9156F1",
@@ -143,32 +142,34 @@ const AppHeader = () => {
             lineHeight: "70px",
           }}
         >
-          {/* LOGO SECTION */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              cursor: "pointer",
-              height: "100%",
-            }}
-            onClick={() => navigate("/")}
-          >
-            <img src="/logo.png" alt="Logo" style={{ width: 42, height: 42 }} />
-            <span
+          <Link to={"/trang-chu"}>
+            <div
               style={{
-                fontWeight: 800,
-                fontSize: 22,
-
-                color: "#1f1f1f",
-                letterSpacing: "-0.5px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                cursor: "pointer",
+                height: "100%",
               }}
             >
-              Lace<span style={{ color: "#9156F1" }}>Up</span>
-            </span>
-          </div>
+              <img
+                src="/logo.png"
+                alt="Logo"
+                style={{ width: 42, height: 42 }}
+              />
+              <span
+                style={{
+                  fontWeight: 800,
+                  fontSize: 22,
+                  color: "#1f1f1f",
+                  letterSpacing: "-0.5px",
+                }}
+              >
+                Lace<span style={{ color: "#9156F1" }}>Up</span>
+              </span>
+            </div>
+          </Link>
 
-          {/* MENU SECTION */}
           <div
             style={{
               flex: 1,
@@ -193,7 +194,6 @@ const AppHeader = () => {
             />
           </div>
 
-          {/* USER SECTION */}
           <div
             style={{
               display: "flex",

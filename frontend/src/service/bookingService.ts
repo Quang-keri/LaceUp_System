@@ -3,6 +3,22 @@ import type { BookingListResponse, BookingResponse } from "../types/booking";
 import type { ApiResponse } from "../types/ApiResponse";
 
 class BookingService {
+
+async createOwnerBooking(payload: {
+    customerName: string;
+    phone: string;
+    note: string;
+    totalPrice: number;
+    paidAmount: number;
+    slots: { courtCopyId: string; startTime: string; endTime: string }[];
+  }) {
+    const response = await api.post<ApiResponse<BookingResponse>>(
+      "/bookings/owner", 
+      payload
+    );
+    return response.data;
+  }
+
   async getServicesByRentalArea(rentalAreaId: string) {
     const response = await api.get<ApiResponse<any[]>>(
       `/rental-areas/${rentalAreaId}/services`,

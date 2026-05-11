@@ -15,6 +15,9 @@ public class LegalProfileResponse {
     private String businessLicenseNumber;
     private String taxId;
     private String legalNote;
+    private String companyName;
+    private String responsiblePersonName;
+    private String address;
     private UUID rentalAreaId;
-    private List<String> images;
+    private List<LegalImageResponse> images;
 }

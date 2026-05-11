@@ -23,7 +23,15 @@ public class LegalProfile {
     private UUID id;
 
     private String businessLicenseNumber;
+
     private String taxId;
+
+    private String companyName;
+
+    private String responsiblePersonName;
+
+    private String address;
+
     private String legalNote;
     @ManyToOne
     @JoinColumn(name = "rental_area_id")

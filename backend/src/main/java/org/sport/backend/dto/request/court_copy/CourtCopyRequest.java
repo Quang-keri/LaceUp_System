@@ -12,7 +12,7 @@ import java.util.UUID;
 @Builder
 public class CourtCopyRequest {
 
-    @NotNull(message = "mã sân chính không bỏ trống")
+//    @NotNull(message = "mã sân chính không bỏ trống")
     private UUID courtId;
     @NotNull(message = "số sân không bỏ trống")
     private String courtCode;

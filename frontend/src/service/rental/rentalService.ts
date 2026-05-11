@@ -8,8 +8,6 @@ import type {
 import type { ApiResponse } from "../../types/ApiResponse";
 
 class RentalService {
- 
-
   async getRentalAreaById(rentalAreaId: string) {
     const response = await api.get<ApiResponse<RentalAreaResponse>>(
       `/rental-areas/${rentalAreaId}`,
@@ -47,7 +45,8 @@ class RentalService {
     params.append("size", size.toString());
     if (keyword) params.append("keyword", keyword);
     if (cityId) params.append("cityId", cityId.toString());
-    if (verificationStatus) params.append("verificationStatus", verificationStatus);
+    if (verificationStatus)
+      params.append("verificationStatus", verificationStatus);
 
     const response = await api.get<ApiResponse<RentalAreaListResponse>>(
       `/rental-areas?${params.toString()}`,
@@ -140,7 +139,6 @@ class RentalService {
   }
 
   async rejectRentalArea(rentalAreaId: string, reason?: string) {
-   
     const payload = reason ? { reason } : {};
     const response = await api.put<ApiResponse<void>>(
       `/rental-areas/${rentalAreaId}/reject`,

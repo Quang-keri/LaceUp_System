@@ -14,6 +14,8 @@ import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
 import org.sport.backend.dto.response.court_price.CourtPriceResponse;
+import org.sport.backend.dto.response.legal.LegalImageResponse;
+import org.sport.backend.dto.response.legal.LegalProfileResponse;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
 import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
@@ -85,6 +87,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
     @Autowired
     private ServiceItemRepository serviceItemRepository;
+    @Autowired
+    private LegalProfileRepository legalProfileRepository;
 
     @Override
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
@@ -196,7 +200,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .map(this::mapToResponseCourt)
                 .toList();
 
-        List<ServiceItem> serviceItemResponses =  serviceItemRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId());
+        List<ServiceItem> serviceItemResponses = serviceItemRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId());
         List<ServiceItemResponse> serviceItems = serviceItemResponses.stream().map(
                 item -> ServiceItemResponse.builder()
                         .id(item.getServiceItemId())
@@ -209,7 +213,30 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                         .build()
         ).toList();
 
-                UserResponse userResponse = UserResponse.builder()
+        LegalProfile legalProfile = legalProfileRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId()).orElse(null);
+        LegalProfileResponse legalProfileResponse = null;
+        if (legalProfile != null) {
+            legalProfileResponse = LegalProfileResponse.builder()
+                    .id(rentalArea.getRentalAreaId())
+                    .businessLicenseNumber(legalProfile.getBusinessLicenseNumber())
+                    .taxId(legalProfile.getTaxId())
+                    .legalNote(legalProfile.getLegalNote())
+                    .companyName(legalProfile.getCompanyName())
+                    .responsiblePersonName(legalProfile.getResponsiblePersonName())
+                    .address(legalProfile.getAddress())
+                    .rentalAreaId(rentalArea.getRentalAreaId())
+                    .images(
+                            legalProfile.getImages() != null ?
+                                    legalProfile.getImages().stream().map(img -> LegalImageResponse.builder()
+                                            .legalImageId(img.getId())
+                                            .imageUrl(img.getImageUrl())
+                                            .build()).toList()
+                                    : List.of()
+                    )
+                    .build();
+        }
+
+        UserResponse userResponse = UserResponse.builder()
                 .userId(rentalArea.getOwner().getUserId())
                 .email(rentalArea.getOwner().getEmail())
                 .dateOfBirth(rentalArea.getOwner().getDateOfBirth())
@@ -229,6 +256,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .courtResponses(courtResponses)
                 .verificationStatus(rentalArea.getVerificationStatus())
                 .serviceItems(serviceItems)
+                .legalProfileResponse(legalProfileResponse)
                 .build();
     }
 

@@ -7,6 +7,7 @@ import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.booking.BookingRequest;
+import org.sport.backend.dto.request.booking.OwnerBookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
@@ -45,6 +46,22 @@ public class BookingController {
     @Autowired
     private ExcelService excelService;
 
+    @PostMapping("/owner")
+//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')") // Đảm bảo chỉ chủ sân/nhân viên mới được gọi
+    public ApiResponse<BookingResponse> ownerCreateBooking(
+            @Valid @RequestBody OwnerBookingRequest request
+    ) {
+        try {
+            return ApiResponse.success(
+                    201,
+                    "Tạo lịch đặt sân cho khách thành công",
+                    bookingService.createOwnerBooking(request)
+            );
+        } catch (Exception e) {
+            return ApiResponse.error(500, "Lỗi tạo lịch: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/{bookingId}/services")
     public ResponseEntity<ApiResponse<Void>> addExtraServicesToBooking(
             @PathVariable UUID bookingId,
@@ -57,8 +74,6 @@ public class BookingController {
                     ApiResponse.error(400, "Lỗi thêm dịch vụ: " + e.getMessage()));
         }
     }
-
-
 
     @PostMapping("/check-availability")
     public ApiResponse<CheckAvailabilityResponse> checkAvailability(

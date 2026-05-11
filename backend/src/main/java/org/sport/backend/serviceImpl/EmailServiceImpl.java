@@ -110,7 +110,7 @@ public class EmailServiceImpl implements EmailService {
                          <p style="word-break: break-all; color: #4da6ff;">%s</p>
                 \s
                          <p>Lưu ý: Liên kết này sẽ hết hạn sau <strong>5 phút</strong>.</p>
-                         <div class="footer">© 2026 RentRoom - Kết nối tri thức 💗</div>
+                         <div class="footer">© 2026 Lace Up</div>
                      </div>
                  </body>
                  </html>

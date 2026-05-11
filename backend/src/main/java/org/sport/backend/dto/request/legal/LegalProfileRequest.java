@@ -12,5 +12,8 @@ public class LegalProfileRequest {
     private String businessLicenseNumber;
     private String taxId;
     private String legalNote;
+    private String companyName;
+    private String responsiblePersonName;
+    private String address;
     private List<MultipartFile> imageFiles;
 }

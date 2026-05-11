@@ -134,7 +134,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       "/admin/reviews",
       <StarOutlined />,
     ),
-
+    getItem(
+      <Link to="/admin/news">Tin tức & Sự kiện</Link>,
+      "/admin/news",
+      <StarOutlined />,
+    ),
     getItem("Cài đặt hệ thống", "sub_settings", <SettingOutlined />, [
       getItem(
         <Link to="/admin/settings">Cài đặt chung</Link>,

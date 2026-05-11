@@ -48,20 +48,21 @@ class CourtService {
     return response.data;
   }
 
-  async createCourt(courtData: any, rentalAreaId: string) {
+  async createCourt(courtData: any, images: any[]) {
     const formData = new FormData();
-
-    formData.append("rentalAreaId", rentalAreaId);
+    formData.append("rentalAreaId", courtData.rentalAreaId);
     formData.append("courtName", courtData.courtName);
     formData.append("categoryId", String(courtData.categoryId));
 
-  
+    if (courtData.pricePerHour) {
+      formData.append("pricePerHour", String(courtData.pricePerHour));
+    }
+
     if (courtData.amenityIds && Array.isArray(courtData.amenityIds)) {
       courtData.amenityIds.forEach((id: number) => {
         formData.append("amenityIds", String(id));
       });
     }
-
 
     if (
       courtData.courtCopyRequests &&
@@ -79,8 +80,9 @@ class CourtService {
       });
     }
 
-    if (courtData.images && Array.isArray(courtData.images)) {
-      courtData.images.forEach((file: any) => {
+    // Lặp qua tham số images (mảng ảnh) thay vì courtData.images
+    if (images && Array.isArray(images)) {
+      images.forEach((file: any) => {
         const fileToUpload = file.originFileObj || file;
         if (fileToUpload instanceof File || fileToUpload instanceof Blob) {
           formData.append("images", fileToUpload);

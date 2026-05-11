@@ -239,6 +239,7 @@ export default function BookingTable({
       rowKey={(record) => record.bookingId || Math.random().toString()} // Fallback rowKey
       pagination={pagination}
       onChange={onChange}
+      size="small"
     />
   );
 }
