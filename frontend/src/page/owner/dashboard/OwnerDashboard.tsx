@@ -34,40 +34,83 @@ import {
   TrendingUp,
   Trophy,
   Clock,
-  Users,
   ArrowDownRight,
   ArrowUpRight,
-  Percent,
-  Zap,
 } from "lucide-react";
 import reportService from "../../../service/reportService.ts";
 import type { DashboardData } from "../../../types/dashboard.ts";
+import { useOutletContext } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
-const commonTooltipStyle = {
-  borderRadius: 8,
-  border: "none",
-  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-};
-
 const OwnerDashboard: React.FC = () => {
+  const { isDark } = useOutletContext<{ isDark: boolean }>();
+
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardData | null>(null);
-  const [range, setRange] = useState("this_month");
 
+  // State riêng cho Pie Chart
+  const [pieChartType, setPieChartType] = useState<"booking" | "payment">("booking");
+  const [pieRange, setPieRange] = useState("this_month");
+  const [pieStats, setPieStats] = useState<DashboardData | null>(null);
+
+  const chartTextColor = isDark ? "rgba(255, 255, 255, 0.65)" : "#666";
+  const chartGridColor = isDark ? "#303030" : "#f0f0f0";
+  const commonTooltipStyle = {
+    borderRadius: 8,
+    border: isDark ? "1px solid #303030" : "none",
+    backgroundColor: isDark ? "#141414" : "#fff",
+    color: isDark ? "#fff" : "#000",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  };
+
+  const currentYear = new Date().getFullYear();
+  
+  const [overviewYear, setOverviewYear] = useState<number>(currentYear);
+  const [overviewMonth, setOverviewMonth] = useState<number | null>(null); // null = Cả năm
+  const [overviewChartData, setOverviewChartData] = useState<any[]>([]);
+
+  // 1. Gọi API Biểu đồ tổng quan cho OWNER
   useEffect(() => {
-    const loadData = async () => {
+    const loadOverviewChart = async () => {
+      try {
+        const response = await reportService.getOverviewChartOwner(overviewYear, overviewMonth);
+        setOverviewChartData(response.result);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu biểu đồ tổng quan:", error);
+      }
+    };
+    loadOverviewChart();
+  }, [overviewYear, overviewMonth]);
+
+  // 2. Gọi API cho toàn bộ Dashboard OWNER (Mặc định lấy "this_month")
+  useEffect(() => {
+    const loadMainData = async () => {
       setLoading(true);
       try {
-        const response = await reportService.getDashboardOwner(range);
+        const response = await reportService.getDashboardOwner("this_month");
         setStats(response.result);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu tổng quan:", error);
       } finally {
         setLoading(false);
       }
     };
-    loadData();
-  }, [range]);
+    loadMainData();
+  }, []);
+
+  // 3. Gọi API RIÊNG cho phần Pie Chart mỗi khi pieRange thay đổi
+  useEffect(() => {
+    const loadPieData = async () => {
+      try {
+        const response = await reportService.getDashboardOwner(pieRange);
+        setPieStats(response.result);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu Pie Chart:", error);
+      }
+    };
+    loadPieData();
+  }, [pieRange]);
 
   if (loading)
     return (
@@ -83,14 +126,13 @@ const OwnerDashboard: React.FC = () => {
     );
   if (!stats) return <div>Không có dữ liệu hiển thị.</div>;
 
-  // Bảng màu chuẩn Cam - Tím và các trạng thái
   const STATUS_COLORS: Record<string, string> = {
-    BOOKED: "#9254de", // Tím nhạt
-    COMPLETED: "#722ed1", // Tím đậm (Thành công/Hoàn thành)
-    CANCELLED: "#fa8c16", // Cam (Đã hủy)
-    PENDING: "#fadb14", // Vàng (Đang chờ)
-    SUCCESS: "#52c41a", // Xanh lá (Thanh toán thành công)
-    FAILED: "#ff4d4f", // Đỏ (Thất bại)
+    BOOKED: "#1890ff",
+    COMPLETED: "#722ed1",
+    CANCELLED: "#fa8c16",
+    PENDING: "#fadb14",
+    SUCCESS: "#52c41a",
+    FAILED: "#ff4d4f",
   };
 
   const translate = (key: string) => {
@@ -105,23 +147,27 @@ const OwnerDashboard: React.FC = () => {
     return map[key] || key;
   };
 
-  const bookingChartData = Object.entries(stats.bookingStats)
-    .filter(([_, value]) => (value as number) > 0)
-    .map(([name, value]) => ({
-      name: translate(name),
-      originalName: name,
-      value: value as number,
-    }));
+  const currentPieData = pieStats || stats;
 
-  const paymentChartData = Object.entries(stats.paymentStats)
-    .filter(([_, value]) => (value as number) > 0)
-    .map(([name, value]) => ({
-      name: translate(name),
-      originalName: name,
-      value: value as number,
-    }));
+  const bookingChartData = Object.entries(
+    currentPieData?.bookingStats || {},
+  ).map(([name, value]) => ({
+    name: translate(name),
+    originalName: name,
+    value: value as number,
+  }));
 
-  // Mock data tạm cho bảng Lượt đặt mới nhất (Thay bằng API thật nếu có)
+  const paymentChartData = Object.entries(
+    currentPieData?.paymentStats || {},
+  ).map(([name, value]) => ({
+    name: translate(name),
+    originalName: name,
+    value: value as number,
+  }));
+
+  const activePieData = pieChartType === "booking" ? bookingChartData : paymentChartData;
+  const totalPieValue = activePieData.reduce((sum, item) => sum + item.value, 0);
+
   const recentBookingsMock = [
     {
       key: "1",
@@ -131,15 +177,6 @@ const OwnerDashboard: React.FC = () => {
       status: "COMPLETED",
       amount: 300000,
       date: "10 phút trước",
-    },
-    {
-      key: "2",
-      id: "#BK002",
-      customer: "Trần Thị B",
-      room: "Sân bóng số 3",
-      status: "BOOKED",
-      amount: 450000,
-      date: "1 giờ trước",
     },
     {
       key: "3",
@@ -207,30 +244,16 @@ const OwnerDashboard: React.FC = () => {
           marginBottom: 24,
         }}
       >
-        <Title level={3} style={{ margin: 0 }}>
-          Tổng quan cơ sở
+        <Title
+          level={3}
+          style={{ margin: 0, color: isDark ? "#fff" : "inherit" }}
+        >
+          Tổng quan hệ thống
         </Title>
-        <Select
-          value={range}
-          style={{ width: 200 }}
-          onChange={(value) => setRange(value)}
-          options={[
-            { label: "Hôm nay", value: "today" },
-            { label: "Hôm qua", value: "yesterday" },
-            { label: "7 ngày qua", value: "7d" },
-            { label: "30 ngày qua", value: "30d" },
-            { label: "Tuần này", value: "this_week" },
-            { label: "Tuần trước", value: "last_week" },
-            { label: "Tháng này", value: "this_month" },
-            { label: "Tháng trước", value: "last_month" },
-            { label: "Năm nay", value: "this_year" },
-            { label: "Năm trước", value: "last_year" },
-            { label: "Tất cả thời gian", value: "all" },
-          ]}
-        />
       </div>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        {/* CARD 1: DOANH THU */}
         <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
           <Card bordered={false} style={{ height: "100%" }}>
             <Statistic
@@ -241,79 +264,53 @@ const OwnerDashboard: React.FC = () => {
               prefix={<TrendingUp size={18} />}
             />
             <div style={{ marginTop: 8 }}>
-              {stats.revenueGrowth >= 0 ? (
+              {(stats.revenueGrowth || 0) >= 0 ? (
                 <Tag color="success" icon={<ArrowUpRight size={14} />}>
-                  {stats.revenueGrowth.toFixed(1)}% so với kỳ trước
+                  {(stats.revenueGrowth || 0).toFixed(1)}% so với tháng trước
                 </Tag>
               ) : (
                 <Tag color="error" icon={<ArrowDownRight size={14} />}>
-                  {Math.abs(stats.revenueGrowth).toFixed(1)}% so với kỳ trước
+                  {Math.abs(stats.revenueGrowth || 0).toFixed(1)}% so với tháng trước
                 </Tag>
               )}
             </div>
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
-          <Card bordered={false} style={{ height: "100%" }}>
-            <Statistic
-              title={<Text type="secondary">Tỷ lệ lấp đầy</Text>}
-              value={stats.occupancyRate}
-              suffix="%"
-              valueStyle={{ color: "#1890ff" }}
-              prefix={<Percent size={18} style={{ marginRight: 8 }} />}
-            />
-            <Text type="secondary" size="small">
-              Dựa trên tổng slot của cơ sở
-            </Text>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
-          <Card bordered={false} style={{ height: "100%" }}>
-            <Statistic
-              title={<Text type="secondary">Giờ cao điểm</Text>}
-              value={stats.peakHour}
-              valueStyle={{ color: "#fa8c16" }}
-              prefix={<Zap size={18} style={{ marginRight: 8 }} />}
-            />
-            <Text type="secondary" size="small">
-              Lượng đặt sân nhiều nhất
-            </Text>
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
-          <Card bordered={false} style={{ height: "100%" }}>
-            <Statistic
-              title={<Text type="secondary">Khách hàng mới</Text>}
-              value={stats.newUsersCount}
-              valueStyle={{ color: "#722ed1" }}
-              prefix={<Users size={18} style={{ marginRight: 8 }} />}
-            />
-          </Card>
-        </Col>
-
+        {/* CARD 3: TỶ LỆ HỦY */}
         <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
           <Card bordered={false} style={{ height: "100%" }}>
             <Statistic
               title={<Text type="secondary">Tỷ lệ hủy</Text>}
               value={(
-                (((stats.bookingStats.CANCELLED || 0) as number) /
-                  Object.values(stats.bookingStats).reduce(
-                    (a, b) => a + (b as number),
+                (((stats.bookingStats?.CANCELLED || 0) as number) /
+                  Math.max(
                     1,
+                    Object.values(stats.bookingStats || {}).reduce(
+                      (a, b) => a + (b as number),
+                      0,
+                    ),
                   )) *
                 100
               ).toFixed(1)}
               suffix="%"
               valueStyle={{ color: "#ff4d4f" }}
             />
+            <div style={{ marginTop: 8 }}>
+              {(stats.cancellationRateGrowth || 0) <= 0 ? (
+                <Tag color="success" icon={<ArrowDownRight size={14} />}>
+                  {Math.abs(stats.cancellationRateGrowth || 0).toFixed(1)}% so với tháng trước
+                </Tag>
+              ) : (
+                <Tag color="error" icon={<ArrowUpRight size={14} />}>
+                  {(stats.cancellationRateGrowth || 0).toFixed(1)}% so với tháng trước
+                </Tag>
+              )}
+            </div>
           </Card>
         </Col>
       </Row>
 
-      {/* Row 2: Biểu đồ đa trục */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} lg={12}>
           <Card title="Biến động 7 ngày gần đây" bordered={false}>
@@ -323,15 +320,21 @@ const OwnerDashboard: React.FC = () => {
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="#f0f0f0"
+                    stroke={chartGridColor}
                   />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    stroke={chartTextColor}
+                  />
 
                   <YAxis
                     yAxisId="left"
                     tickFormatter={(v) => `${v / 1000}k`}
                     axisLine={false}
                     tickLine={false}
+                    stroke={chartTextColor}
                   />
                   <YAxis
                     yAxisId="right"
@@ -339,13 +342,18 @@ const OwnerDashboard: React.FC = () => {
                     allowDecimals={false}
                     axisLine={false}
                     tickLine={false}
+                    stroke={chartTextColor}
                   />
 
                   <Tooltip
                     contentStyle={commonTooltipStyle}
                     formatter={customTooltipFormatter}
                   />
-                  <Legend verticalAlign="top" height={36} />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    wrapperStyle={{ color: chartTextColor }}
+                  />
 
                   <Bar
                     yAxisId="left"
@@ -370,10 +378,122 @@ const OwnerDashboard: React.FC = () => {
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card title="Phân tích theo tháng" bordered={false}>
+          <Card
+            title="Phân tích chi tiết"
+            bordered={false}
+            extra={
+              <Space>
+                <Select
+                  value={pieChartType}
+                  onChange={setPieChartType}
+                  options={[
+                    { label: "Trạng thái đặt sân", value: "booking" },
+                    { label: "Trạng thái thanh toán", value: "payment" },
+                  ]}
+                  style={{ width: 180 }}
+                />
+
+                <Select
+                  value={pieRange}
+                  style={{ width: 150 }}
+                  onChange={(value) => setPieRange(value)}
+                  options={[
+                    { label: "Hôm nay", value: "today" },
+                    { label: "Hôm qua", value: "yesterday" },
+                    { label: "7 ngày qua", value: "7d" },
+                    { label: "30 ngày qua", value: "30d" },
+                    { label: "Tuần này", value: "this_week" },
+                    { label: "Tuần trước", value: "last_week" },
+                    { label: "Tháng này", value: "this_month" },
+                    { label: "Tháng trước", value: "last_month" },
+                    { label: "Năm nay", value: "this_year" },
+                    { label: "Năm trước", value: "last_year" },
+                    { label: "Tất cả thời gian", value: "all" },
+                  ]}
+                />
+              </Space>
+            }
+          >
+            <div style={{ width: "100%", height: 350 }}>
+              {totalPieValue === 0 ? (
+                <div style={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                  <Empty description="Thời gian này không có dữ liệu" />
+                </div>
+              ) : (
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={activePieData}
+                      innerRadius={85}
+                      outerRadius={110}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke={isDark ? "none" : "#fff"}
+                    >
+                      {activePieData.map((entry, index) => (
+                        <Cell
+                          key={`pie-cell-${index}`}
+                          fill={STATUS_COLORS[entry.originalName] || "#ccc"}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={commonTooltipStyle} />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      wrapperStyle={{ color: chartTextColor }}
+                      formatter={(value, entry: any) => {
+                        return (
+                          <span style={{ color: chartTextColor }}>
+                            {value}: <strong>{entry.payload.value}</strong>
+                          </span>
+                        );
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col span={24}>
+          <Card 
+            title={`Phân tích tổng quan ${overviewMonth ? `Tháng ${overviewMonth}/${overviewYear}` : `Năm ${overviewYear}`}`}
+            bordered={false}
+            extra={
+              <Space>
+                {/* Chọn Tháng */}
+                <Select
+                  value={overviewMonth}
+                  style={{ width: 120 }}
+                  onChange={(value) => setOverviewMonth(value)}
+                  options={[
+                    { label: "Cả năm", value: null },
+                    ...Array.from({ length: 12 }, (_, i) => ({
+                      label: `Tháng ${i + 1}`,
+                      value: i + 1,
+                    })),
+                  ]}
+                />
+                <Select
+                  value={overviewYear}
+                  style={{ width: 100 }}
+                  onChange={(value) => { setOverviewMonth(null); setOverviewYear(value); }}
+                  options={[
+                    { label: currentYear.toString(), value: currentYear },
+                    { label: (currentYear - 1).toString(), value: currentYear - 1 },
+                    { label: (currentYear - 2).toString(), value: currentYear - 2 },
+                  ]}
+                />
+              </Space>
+            }
+          >
             <div style={{ width: "100%", height: 350 }}>
               <ResponsiveContainer>
-                <ComposedChart data={stats.monthlyStats}>
+                <ComposedChart data={overviewChartData}> 
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#722ed1" stopOpacity={0.1} />
@@ -383,15 +503,22 @@ const OwnerDashboard: React.FC = () => {
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
-                    stroke="#f0f0f0"
+                    stroke={chartGridColor}
                   />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                  
+                  <XAxis
+                    dataKey="time"
+                    axisLine={false}
+                    tickLine={false}
+                    stroke={chartTextColor}
+                  />
 
                   <YAxis
                     yAxisId="left"
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => `${v / 1000000}M`}
+                    stroke={chartTextColor}
                   />
                   <YAxis
                     yAxisId="right"
@@ -399,13 +526,18 @@ const OwnerDashboard: React.FC = () => {
                     allowDecimals={false}
                     axisLine={false}
                     tickLine={false}
+                    stroke={chartTextColor}
                   />
 
                   <Tooltip
                     contentStyle={commonTooltipStyle}
                     formatter={customTooltipFormatter}
                   />
-                  <Legend verticalAlign="top" height={36} />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    wrapperStyle={{ color: chartTextColor }}
+                  />
 
                   <Area
                     yAxisId="left"
@@ -434,88 +566,6 @@ const OwnerDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      {/* Row 3: Biểu đồ tròn trạng thái Booking và Payment */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} lg={12}>
-          <Card title="Trạng thái đặt sân" bordered={false}>
-            <div
-              style={{
-                width: "100%",
-                height: 350,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {bookingChartData.length > 0 ? (
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={bookingChartData}
-                      innerRadius={85}
-                      outerRadius={110}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {bookingChartData.map((entry, index) => (
-                        <Cell
-                          key={`pie-booking-${index}`}
-                          fill={STATUS_COLORS[entry.originalName] || "#ccc"}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={commonTooltipStyle} />
-                    <Legend verticalAlign="bottom" height={36} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <Empty description="Chưa có lượt đặt sân nào" />
-              )}
-            </div>
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={12}>
-          <Card title="Trạng thái thanh toán" bordered={false}>
-            <div
-              style={{
-                width: "100%",
-                height: 350,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {paymentChartData.length > 0 ? (
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={paymentChartData}
-                      innerRadius={85}
-                      outerRadius={110}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {paymentChartData.map((entry, index) => (
-                        <Cell
-                          key={`pie-payment-${index}`}
-                          fill={STATUS_COLORS[entry.originalName] || "#ccc"}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={commonTooltipStyle} />
-                    <Legend verticalAlign="bottom" height={36} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <Empty description="Chưa có giao dịch thanh toán nào" />
-              )}
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Row 4: Bảng dữ liệu chi tiết */}
       <Row gutter={[16, 16]} align="stretch">
         <Col xs={24} lg={16}>
           <Card
@@ -564,8 +614,10 @@ const OwnerDashboard: React.FC = () => {
                               ? "#fa8c16"
                               : index === 2
                               ? "#fadb14"
+                              : isDark
+                              ? "#434343"
                               : "#d9d9d9",
-                          color: index < 3 ? "#fff" : "#000",
+                          color: index < 3 ? "#fff" : isDark ? "#fff" : "#000",
                         }}
                       >
                         {index + 1}

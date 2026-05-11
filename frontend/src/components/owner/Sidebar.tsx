@@ -139,6 +139,12 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     ]),
 
+    getItem(
+      <Link to="/owner/reports">Bao cao</Link>,
+      "/owner/reports",
+      <AppstoreOutlined />,
+    ),
+
     getItem("Đăng xuất", "logout", <LogoutOutlined />),
   ];
 

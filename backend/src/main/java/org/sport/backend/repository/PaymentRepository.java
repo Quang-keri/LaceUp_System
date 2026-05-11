@@ -69,4 +69,10 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
+    @Query("SELECT p FROM Payment p WHERE p.transactionDate >= :startOfDay AND p.transactionDate <= :endOfDay AND p.paymentStatus = 'SUCCESS'")
+    List<Payment> findAllPaymentsForReport(
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay
+    );
+
 }

@@ -9,6 +9,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserStatusRequest;
+import org.sport.backend.dto.response.user.ReputationLogResponse;
 import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.service.UserService;
@@ -33,10 +34,11 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserResponse>> getMyInfo() {
         return ResponseEntity.ok(
-                ApiResponse.
-                        success(200,
-                                "Lấy thông tin cá nhân thành công",
-                                userService.getMyInfo())
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Lấy thông tin cá nhân thành công")
+                        .result(userService.getMyInfo())
+                        .build()
         );
     }
 
@@ -44,16 +46,17 @@ public class UserController {
     @PreAuthorize("hasAuthority('CREATE_USER')")
     public ResponseEntity<ApiResponse<UserResponse>> createUser(
             @RequestBody @Valid CreateUserRequest request) {
-
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.success(201,
-                        "Tạo người dùng thành công",
-                        userService.createUser(request))
+                ApiResponse.<UserResponse>builder()
+                        .code(201)
+                        .message("Tạo tài khoản người dùng thành công")
+                        .result(userService.createUser(request))
+                        .build()
         );
     }
 
     @GetMapping
-//    @PreAuthorize("hasAuthority('VIEW_USERS')")
+    @PreAuthorize("hasAuthority('VIEW_USERS')")
     public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllUsers(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -64,7 +67,7 @@ public class UserController {
         return ResponseEntity.ok(
                 ApiResponse.<PageResponse<UserResponse>>builder()
                         .code(200)
-                        .message("Get users success")
+                        .message("Lấy danh sách người dùng thành công")
                         .result(userService.getAllUsers(page - 1, size, role, active, keyword))
                         .build()
         );
@@ -75,18 +78,25 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(
             @PathVariable UUID userId) {
         return ResponseEntity.ok(
-                ApiResponse.success(userService.getUserById(userId))
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Lấy chi tiết người dùng thành công")
+                        .result(userService.getUserById(userId))
+                        .build()
         );
     }
 
     @PutMapping("/{userId}")
-//    @PreAuthorize("hasAuthority('UPDATE_USER')")
+    @PreAuthorize("hasAuthority('UPDATE_USER')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable UUID userId,
             @RequestBody @Valid UpdateUserRequest request) {
         return ResponseEntity.ok(
-                ApiResponse.success("Cập nhật thành công",
-                        userService.updateUser(userId, request))
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Cập nhật thông tin người dùng thành công")
+                        .result(userService.updateUser(userId, request))
+                        .build()
         );
     }
 
@@ -99,7 +109,7 @@ public class UserController {
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .code(200)
-                        .message("Update status user successfully")
+                        .message("Cập nhật trạng thái người dùng thành công")
                         .build()
         );
     }
@@ -110,8 +120,11 @@ public class UserController {
             @PathVariable UUID userId,
             @PathVariable Long roleId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Gán Role thành công",
-                        userService.assignRole(userId, roleId))
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Gán vai trò (Role) cho người dùng thành công")
+                        .result(userService.assignRole(userId, roleId))
+                        .build()
         );
     }
 
@@ -121,8 +134,11 @@ public class UserController {
             @PathVariable UUID userId,
             @RequestBody Set<Integer> permissionIds) {
         return ResponseEntity.ok(
-                ApiResponse.success("Thêm quyền riêng thành công",
-                        userService.addExtraPermissions(userId, permissionIds))
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Thêm quyền riêng cho người dùng thành công")
+                        .result(userService.addExtraPermissions(userId, permissionIds))
+                        .build()
         );
     }
 
@@ -132,8 +148,11 @@ public class UserController {
             @PathVariable UUID userId,
             @RequestBody Set<Integer> permissionIds) {
         return ResponseEntity.ok(
-                ApiResponse.success("Xóa quyền riêng thành công",
-                        userService.removeExtraPermissions(userId, permissionIds))
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Xóa quyền riêng của người dùng thành công")
+                        .result(userService.removeExtraPermissions(userId, permissionIds))
+                        .build()
         );
     }
 
@@ -142,8 +161,11 @@ public class UserController {
     public ResponseEntity<ApiResponse<Set<String>>> getUserAuthorities(
             @PathVariable UUID userId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Lấy danh sách quyền thành công",
-                        userService.getUserAuthorities(userId))
+                ApiResponse.<Set<String>>builder()
+                        .code(200)
+                        .message("Lấy danh sách quyền của người dùng thành công")
+                        .result(userService.getUserAuthorities(userId))
+                        .build()
         );
     }
 
@@ -152,8 +174,62 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserDashboardResponse>> getUserDashboard(
             @PathVariable UUID userId) {
         log.info("Lấy thông tin dashboard thống kê của user: {}", userId);
-        UserDashboardResponse response = userService.getUserDashboard(userId);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(
+                ApiResponse.<UserDashboardResponse>builder()
+                        .code(200)
+                        .message("Lấy bảng thống kê người dùng thành công")
+                        .result(userService.getUserDashboard(userId))
+                        .build()
+        );
     }
 
+    @PostMapping("/{id}/reputation")
+    @PreAuthorize("hasAuthority('UPDATE_CUSTOMER_REPUTTION')")
+    public ResponseEntity<ApiResponse<UserResponse>> updateReputation(
+            @PathVariable UUID id,
+            @RequestParam Integer points,
+            @RequestParam String reason) {
+        return ResponseEntity.ok(
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Cập nhật điểm uy tín thành công")
+                        .result(userService.updateReputation(id, points, reason))
+                        .build()
+        );
+    }
+
+    @GetMapping("/my-customers")
+    @PreAuthorize("hasAuthority('VIEW_CUSTOMER')")
+    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getMyCustomers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tier,
+            @RequestParam(required = false) Integer minScore,
+            @RequestParam(required = false) Integer maxScore) {
+
+        return ResponseEntity.ok(
+                ApiResponse.<PageResponse<UserResponse>>builder()
+                        .code(200)
+                        .message("Lấy danh sách khách hàng thành công")
+                        .result(userService.getCustomersByOwner(page - 1, size, keyword, tier, minScore, maxScore))
+                        .build()
+        );
+    }
+
+    @GetMapping("/{id}/reputation-logs")
+    @PreAuthorize("hasAuthority('VIEW_CUSTOMER_DETAIL')")
+    public ResponseEntity<ApiResponse<PageResponse<ReputationLogResponse>>> getReputationLogs(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                ApiResponse.<PageResponse<ReputationLogResponse>>builder()
+                        .code(200)
+                        .message("Lấy lịch sử thay đổi uy tín thành công")
+                        .result(userService.getReputationLogs(id, page - 1, size))
+                        .build()
+        );
+    }
 }

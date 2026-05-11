@@ -1,5 +1,6 @@
 package org.sport.backend.repository;
 
+import org.sport.backend.constant.MemberTier;
 import org.sport.backend.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,4 +38,28 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt BETWEEN :startDate AND :endDate")
     Long countNewUsers(LocalDateTime startDate, LocalDateTime endDate);
+
+    Page<User> findAllByRole_RoleName(String roleName, Pageable pageable);
+
+    @Query("SELECT DISTINCT u FROM User u " +
+            "JOIN Booking b ON b.renter.userId = u.userId " +
+            "JOIN b.rentalArea ra " +
+            "WHERE ra.owner.userId = :ownerId")
+    Page<User> findCustomersByOwnerId(@Param("ownerId") UUID ownerId, Pageable pageable);
+
+    @Query("SELECT DISTINCT u FROM User u " +
+            "JOIN Booking b ON b.renter.userId = u.userId " +
+            "JOIN b.rentalArea ra " +
+            "WHERE ra.owner.userId = :ownerId " +
+            "AND (:keyword IS NULL OR LOWER(u.userName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR u.phone LIKE CONCAT('%', CAST(:keyword AS string), '%')) " +
+            "AND (:tier IS NULL OR u.memberTier = :tier) " +
+            "AND (:minScore IS NULL OR u.creditScore >= :minScore) " +
+            "AND (:maxScore IS NULL OR u.creditScore <= :maxScore)")
+    Page<User> findCustomersByOwnerIdWithFilters(
+            @Param("ownerId") UUID ownerId,
+            @Param("keyword") String keyword,
+            @Param("tier") MemberTier tier,
+            @Param("minScore") Integer minScore,
+            @Param("maxScore") Integer maxScore,
+            Pageable pageable);
 }

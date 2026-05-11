@@ -56,6 +56,8 @@ import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
 import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
 import MyRanks from "../page/customer/profile-page/MyRankPage.tsx";
 import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManagement.tsx";
+import CustomerManagementPage from "../page/owner/customer-management/CustomerManagementPage.tsx";
+import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -183,6 +185,8 @@ export const router = createBrowserRouter([
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
       { path: "profile", element: <OwnerProfilePage /> },
+      { path: "users/customers", element: <CustomerManagementPage /> },
+      { path: "reports", element: <EndOfDayReport /> },
       {
         path: "notifications",
         element: <NotificationPage />,
