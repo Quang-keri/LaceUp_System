@@ -10,7 +10,7 @@ export default function UserNewsCard({ item }) {
 
   return (
     <Link
-      to={`/tin-tuc/${item.id}`}
+      to={`/news/${item.id}`}
       className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
     >
       {/* Hình ảnh có hiệu ứng zoom nhẹ khi hover */}

@@ -16,4 +16,8 @@ public class ReviewResponse {
     private LocalDateTime createdAt;
     private String userName;
     private String userAvatar;
+    private UUID rentalAreaId;
+    private String rentalName;
+    private String address;
+
 }

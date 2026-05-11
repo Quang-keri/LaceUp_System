@@ -52,7 +52,6 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* 2. MAIN INTERFACE (GSAP LANDING) */}
       <div
         ref={contentRef}
         className={`${!isStarted ? "h-screen overflow-hidden" : ""}`}

@@ -21,7 +21,6 @@ export default function Step2CourtInfo({
   const [categories, setCategories] = useState([]);
   const [amenities, setAmenities] = useState([]);
 
-  // Bắt buộc: Đồng bộ dữ liệu từ Context vào Form khi quay lại bước này
   useEffect(() => {
     form.setFieldsValue({ courts: formData.courts });
   }, [formData.courts, form]);
@@ -50,13 +49,11 @@ export default function Step2CourtInfo({
     return e?.fileList;
   };
 
-  // Hàm xử lý lưu dữ liệu chung cho cả Next và Prev
   const saveData = () => {
     const values = form.getFieldsValue();
     const mergedCourts = (values.courts || []).map(
       (court: any, index: number) => {
         const existing = formData.courts?.[index] || {};
-        // Merge: Giữ lại các field cũ (prices, courtCopies) và ghi đè field mới từ form (bao gồm cả courtImages)
         return { ...existing, ...court };
       },
     );

@@ -1,13 +1,16 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
-
+import { useNavigate } from "react-router-dom";
 import "./FishAnimation.scss";
 import tennis from "../../../assets/tennis.jpg";
 import payos from "../../../assets/payos_2.jpg";
 import comnunity from "../../../assets/comunity.png";
 import { Link } from "react-router-dom";
+import cityService from "../../../service/cityService";
+import categoryService from "../../../service/categoryService";
+
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
 const sectionData = [
@@ -30,6 +33,8 @@ const sectionData = [
 ];
 
 export default function SportsBookingLanding() {
+  const navigate = useNavigate();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const fishRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
@@ -106,13 +111,11 @@ export default function SportsBookingLanding() {
         .to(fishRef.current, { rotateX: 180 }, 1)
         .to(fishRef.current, { z: -300, duration: 2 }, 2.5);
 
-      // ĐỔI 2: Logic GSAP cho Content Sections & Dynamic Images
       const sections = gsap.utils.toArray(".scroll-section");
       sections.forEach((section: any) => {
         const text = section.querySelector(".content-text");
         const image = section.querySelector(".content-image");
 
-        // Khởi tạo text và image ở trạng thái mờ và lệch
         gsap.set(text, { opacity: 0, y: 50 });
         gsap.set(image, { opacity: 0, scale: 0.8, x: -100 });
 
@@ -120,10 +123,8 @@ export default function SportsBookingLanding() {
           trigger: section,
           start: "top center",
           onEnter: () => {
-            // Text fade-in và slide-in từ dưới lên
             gsap.to(text, { opacity: 1, y: 0, duration: 0.8 });
 
-            // Image fade-in, slide-in từ trái sang và scale-up
             gsap.to(image, {
               opacity: 1,
               scale: 1,
@@ -133,21 +134,16 @@ export default function SportsBookingLanding() {
               delay: 0.2,
             });
 
-            // Restart bọt khí
             bubbles.restart();
           },
           onLeave: () => {
-            // Text fade-out
             gsap.to(text, { opacity: 0, y: -50 });
 
-            // Image fade-out nhanh hơn một chút
             gsap.to(image, { opacity: 0, scale: 0.9, x: 50, duration: 0.5 });
           },
           onEnterBack: () => {
-            // Text fade-in khi cuộn ngược lại
             gsap.to(text, { opacity: 1, y: 0 });
 
-            // Image fade-in khi cuộn ngược lại
             gsap.to(image, {
               opacity: 1,
               scale: 1,
@@ -157,7 +153,6 @@ export default function SportsBookingLanding() {
             });
           },
           onUpdate: (self) => {
-            // Quay mặt cá theo hướng cuộn (không đổi)
             gsap.to(fishRef.current, {
               rotationY: self.direction === -1 ? 180 : 0,
               duration: 0.4,
@@ -175,9 +170,49 @@ export default function SportsBookingLanding() {
       document.body.classList.remove("landing-body");
     };
   }, []);
+
+  const [searchForm, setSearchForm] = useState({
+    categoryId: "",
+    cityId: "",
+  });
+  const [cities, setCities] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchCities();
+    fetchCategories();
+  }, []);
+
+  const fetchCities = async () => {
+    try {
+      const res = await cityService.getAll();
+      if (res.result) setCities(res.result);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await categoryService.getAllCategories(1, 100);
+      if (res.result && res.result.data) setCategories(res.result.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (searchForm.categoryId)
+      params.append("categoryIds", searchForm.categoryId);
+    if (searchForm.cityId) params.append("cityIds", searchForm.cityId);
+
+
+    navigate(`/courts?${params.toString()}`);
+  };
+
   return (
     <div ref={containerRef} className="relative text-white overflow-x-hidden">
-      {/* CON CÁ MASCOT */}
       <div className="fish-wrapper fixed inset-0 pointer-events-none z-50 overflow-hidden perspective-[100rem]">
         <div ref={fishRef} className="fish absolute top-0 left-0 w-32 h-32">
           <div className="fish__inner">
@@ -198,7 +233,6 @@ export default function SportsBookingLanding() {
           </div>
         </div>
       </div>
-      {/* HERO SECTION (Giữ nguyên) */}
       <div className="relative z-10 h-screen flex flex-col justify-center items-center px-6">
         <h1 className="text-6xl md:text-8xl font-black text-center mb-6 tracking-tighter">
           <span className="text-[#9156F1]">LACE</span>{" "}
@@ -208,47 +242,52 @@ export default function SportsBookingLanding() {
           Đỉnh cao đặt sân – Cầu lông, Bóng đá & Pickleball
         </p>
         <div className="w-full max-w-4xl bg-white backdrop-blur-md p-5 rounded-[2rem] shadow-[0_15px_40px_rgba(145,86,241,0.08)] border border-white">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Môn chơi */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-2 tracking-wider">
                 Môn chơi
               </label>
-              {/* THÊM text-gray-900 VÀO ĐÂY */}
-              <select className="bg-white text-gray-900 border border-gray-100 rounded-xl p-3 text-sm shadow-sm focus:ring-2 ring-[#9156F1] outline-none cursor-pointer">
-                <option>Cầu lông</option>
-                <option>Bóng đá</option>
-                <option>Pickleball</option>
+              <select
+                value={searchForm.categoryId}
+                onChange={(e) =>
+                  setSearchForm({ ...searchForm, categoryId: e.target.value })
+                }
+                className="bg-white text-gray-900 border border-gray-100 rounded-xl p-3 text-sm shadow-sm focus:ring-2 ring-[#9156F1] outline-none cursor-pointer"
+              >
+                <option value="">Tất cả môn chơi</option>
+                {categories.map((cat: any) => (
+                  <option key={cat.categoryId} value={cat.categoryId}>
+                    {cat.categoryName}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Khu vực */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-2 tracking-wider">
                 Khu vực
               </label>
-              {/* THÊM text-gray-900 VÀO ĐÂY */}
-              <select className="bg-white text-gray-900 border border-gray-100 rounded-xl p-3 text-sm shadow-sm focus:ring-2 ring-[#9156F1] outline-none cursor-pointer">
-                <option>Quận 1, HCM</option>
-                <option>Cầu Giấy, HN</option>
+              <select
+                value={searchForm.cityId}
+                onChange={(e) =>
+                  setSearchForm({ ...searchForm, cityId: e.target.value })
+                }
+                className="bg-white text-gray-900 border border-gray-100 rounded-xl p-3 text-sm shadow-sm focus:ring-2 ring-[#9156F1] outline-none cursor-pointer"
+              >
+                <option value="">Tất cả khu vực</option>
+                {cities.map((city: any) => (
+                  <option key={city.cityId} value={city.cityId}>
+                    {city.cityName}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Ngày chơi */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase text-gray-400 ml-2 tracking-wider">
-                Ngày chơi
-              </label>
-              {/* THÊM text-gray-900 VÀO ĐÂY */}
-              <input
-                type="date"
-                className="bg-white text-gray-900 border border-gray-100 rounded-xl p-3 text-sm shadow-sm focus:ring-2 ring-[#9156F1] outline-none"
-              />
-            </div>
-
-            {/* Nút bấm (Giữ nguyên text-white vì nền nút màu tím) */}
             <div className="flex items-end">
-              <button className="w-full h-[48px] bg-[#9156F1] text-white rounded-xl text-sm font-bold hover:bg-[#7a3ee0] transition-all shadow-md shadow-[#9156F1]/20">
+              <button
+                onClick={handleSearch}
+                className="w-full h-[48px] bg-[#9156F1] text-white rounded-xl text-sm font-bold hover:bg-[#7a3ee0] transition-all shadow-md shadow-[#9156F1]/20"
+              >
                 Tìm sân ngay
               </button>
             </div>
