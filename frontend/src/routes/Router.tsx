@@ -36,6 +36,7 @@ import MatchManagement from "../page/owner/match/MatchManagement.tsx";
 import CourtPricePage from "../page/owner/court-price/CourtPricePage.tsx";
 import ServiceItemManagementPage from "../page/owner/service/ServiceItemManagementPage.tsx";
 import BookingManagement from "../page/admin/booking-management/BookingManagement.tsx";
+import ReviewsManagement from "../page/admin/reviews/ReviewsManagement.tsx";
 import NotificationPage from "../page/customer/notification/NotificationPage.tsx";
 import MyMatchPage from "../page/customer/profile-page/MyMatchPage.tsx";
 import BookingPaymentResultPage from "../page/customer/payment/BookingPaymentResultPage.tsx";
@@ -60,6 +61,12 @@ import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManag
 import NewsPage from "../page/admin/news/NewsPage.tsx";
 import UserNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import UserNewsDetail from "../page/customer/news/UserNewsDetail.tsx";
+
+import PolicyLayout from "../layouts/PolicyLayout.tsx";
+import AboutPage from "../components/Footer/AboutPage.tsx";
+import PoliciesPage from "../components/Footer/PoliciesPage.tsx";
+import TermsPage from "../components/Footer/TermsPage.tsx";
+import AmenityManagement from "../page/admin/amenities/AmenityManagement.tsx";
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
 
@@ -84,15 +91,15 @@ export const router = createBrowserRouter([
         path: "/create-rental-area",
         element: <CreateRentalAreaPage />,
       },
-      { path: "trang-chu", element: <SportsBookingLanding /> },
-      { path: "login", element: <LoginPage /> },
 
-      { path: "tin-tuc", element: <UserNewsPage /> },
-      { path: "tin-tuc/:id", element: <UserNewsDetail /> },
+      { path: "home", element: <SportsBookingLanding /> },
+      { path: "login", element: <LoginPage /> },
+      { path: "news", element: <UserNewsPage /> },
+      { path: "news/:id", element: <UserNewsDetail /> },
       { path: "/register", element: <RegisterPage /> },
       { path: "register/confirm", element: <ConfirmRegister /> },
-      { path: "danh-sach-san", element: <PostPage /> },
-      { path: "cong-dong", element: <MatchPage /> },
+      { path: "courts", element: <PostPage /> },
+      { path: "comunity", element: <MatchPage /> },
       { path: "rental-area/:id", element: <RentalAreaDetailPage /> },
       {
         path: "payment/booking-result",
@@ -153,6 +160,12 @@ export const router = createBrowserRouter([
       { path: "bookings/list", element: <BookingManagement /> },
 
       { path: "news", element: <NewsPage /> },
+      { path: "reviews", element: <ReviewsManagement /> },
+      { path: "amenities", element: <AmenityManagement /> },
+      {
+        path: "settlements",
+        element: <SettlementManagement />,
+      },
       {
         path: "settlements/:rentalAreaId/history",
         element: <PayoutHistory />,
@@ -206,5 +219,24 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: <NotFound />,
+  },
+  {
+    path: "/info",
+    element: <PolicyLayout />,
+
+    children: [
+      {
+        path: "about-us",
+        element: <AboutPage />,
+      },
+      {
+        path: "policies",
+        element: <PoliciesPage />,
+      },
+      {
+        path: "terms",
+        element: <TermsPage />,
+      },
+    ],
   },
 ]);

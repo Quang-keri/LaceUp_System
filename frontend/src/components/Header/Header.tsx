@@ -45,11 +45,11 @@ const AppHeader = () => {
   };
 
   const navItems = [
-    { key: "/trang-chu", label: "Trang chủ" },
-    { key: "/danh-sach-san", label: "Sân" },
-    { key: "/cong-dong", label: "Cộng đồng" },
-    { key: "/tin-tuc", label: "Tin tức" },
-    { key: "/ve-chung-toi", label: "Về chúng tôi" },
+    { key: "/home", label: "Trang chủ" },
+    { key: "/courts", label: "Sân" },
+    { key: "/comunity", label: "Cộng đồng" },
+    { key: "/news", label: "Tin tức" },
+   
   ];
 
   const userMenuItems = isLoggedIn
@@ -142,7 +142,7 @@ const AppHeader = () => {
             lineHeight: "70px",
           }}
         >
-          <Link to={"/trang-chu"}>
+          <Link to={"/home"}>
             <div
               style={{
                 display: "flex",

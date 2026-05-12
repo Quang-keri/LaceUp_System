@@ -6,8 +6,7 @@ import type { PageResponse, PostResponse } from "../../types/post";
 
 class PostService {
   async getPosts(filters: any) {
-    // Hoặc thay 'any' bằng 'FilterState' nếu bạn đã import
-    // Ép kiểu các array thành string (vd: [1,2] -> "1,2") để Spring Boot dễ đọc
+
     const params: any = { ...filters };
 
     if (params.cityIds?.length) params.cityIds = params.cityIds.join(",");
@@ -16,14 +15,12 @@ class PostService {
     if (params.amenityIds?.length)
       params.amenityIds = params.amenityIds.join(",");
 
-    // Xóa các key bị undefined để URL gọn đẹp hơn
     Object.keys(params).forEach((key) => {
       if (params[key] === undefined || params[key] === "") {
         delete params[key];
       }
     });
 
-    // Gọi API thông qua 'api' instance đã config, đồng bộ endpoint là "/posts"
     const response = await api.get("/posts", { params });
     return response.data;
   }

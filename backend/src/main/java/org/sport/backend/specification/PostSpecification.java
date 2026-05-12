@@ -1,5 +1,6 @@
 package org.sport.backend.specification;
 
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 
@@ -8,6 +9,7 @@ import org.sport.backend.dto.request.post.PostFilterRequest;
 import org.sport.backend.entity.*;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,7 +74,26 @@ public class PostSpecification {
 
 
             Join<Post, Court> courtJoin = root.join("court", JoinType.INNER);
+            if (filter.getMinRating() != null && filter.getMinRating() > 0) {
 
+                Join<Court, RentalArea> rentalAreaJoin =
+                        courtJoin.join("rentalArea", JoinType.INNER);
+
+                Join<RentalArea, Review> reviewJoin =
+                        rentalAreaJoin.join("reviews", JoinType.LEFT);
+
+                query.groupBy(root.get("postId"));
+
+                Expression<Double> avgRating =
+                        cb.avg(reviewJoin.get("rating"));
+
+                query.having(
+                        cb.greaterThanOrEqualTo(
+                                cb.coalesce(avgRating, 0.0),
+                                filter.getMinRating().doubleValue()
+                        )
+                );
+            }
 
             if (filter.getTitle() != null && !filter.getTitle().isEmpty()) {
                 predicates.add(cb.like(cb.lower(root.get("title")), "%" + filter.getTitle().toLowerCase() + "%"));
@@ -81,8 +102,14 @@ public class PostSpecification {
 
             if (filter.getCityIds() != null && !filter.getCityIds().isEmpty()) {
                 Join<Court, RentalArea> rentalAreaJoin = courtJoin.join("rentalArea", JoinType.INNER);
-                Join<RentalArea, City> cityJoin = rentalAreaJoin.join("city", JoinType.INNER);
-                predicates.add(cityJoin.get("cityId").in(filter.getCityIds()));
+//
+                predicates.add(
+                        rentalAreaJoin
+                                .get("address")
+                                .get("city")
+                                .get("cityId")
+                                .in(filter.getCityIds())
+                );
             }
 
 
@@ -109,8 +136,30 @@ public class PostSpecification {
                 }
             }
 
+            if ("price_low".equals(filter.getSortBy()) ||
+                    "price_high".equals(filter.getSortBy())) {
 
-            query.distinct(true);
+                Join<Court, CourtPrice> priceJoin =
+                        courtJoin.join("courtPrices", JoinType.LEFT);
+
+                query.groupBy(root.get("postId"));
+
+                Expression<BigDecimal> minPrice =
+                        cb.min(priceJoin.get("pricePerHour"));
+
+                if ("price_low".equals(filter.getSortBy())) {
+                    query.orderBy(cb.asc(minPrice));
+                } else {
+                    query.orderBy(cb.desc(minPrice));
+                }
+            }
+            if (
+                    (filter.getAmenityIds() != null && !filter.getAmenityIds().isEmpty()) ||
+                            (filter.getCategoryIds() != null && !filter.getCategoryIds().isEmpty()) ||
+                            (filter.getCityIds() != null && !filter.getCityIds().isEmpty())
+            ) {
+                query.distinct(true);
+            }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };

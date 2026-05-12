@@ -18,4 +18,13 @@ public interface ReviewRepository extends JpaRepository<Review, UUID>, JpaSpecif
     Page<Review> findByRentalArea_RentalAreaIdOrderByCreatedAtDesc(
             UUID rentalArea_rentalAreaId, Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Query("SELECT AVG(r.rating) FROM Review r")
+    Double getAverageRating();
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(r) FROM Review r WHERE r.createdAt >= :from AND r.createdAt <= :to")
+    Long countByCreatedAtBetween(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(r) FROM Review r WHERE r.rating <= :maxRating")
+    Long countByRatingLessThanEqual(int maxRating);
 }

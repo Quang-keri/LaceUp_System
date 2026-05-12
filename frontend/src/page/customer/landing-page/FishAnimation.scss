@@ -1,11 +1,47 @@
-@import url("https://fonts.googleapis.com/css2?family=Judson&display=swap");
-
 * {
   box-sizing: border-box;
 }
 
 .landing-body {
-  font-family: "Judson", serif;
+  .content {
+    position: relative;
+    z-index: 1;
+    padding-bottom: 100vh;
+  }
+
+  section {
+    height: 100vh;
+    width: 100%;
+    margin-top: 100vh;
+
+    &:nth-child(4n),
+    &:nth-child(4n - 1) {
+      --col: 3;
+    }
+  }
+
+  .section__content {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+
+    @media (min-width: 50rem) {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 25rem));
+      gap: 2rem;
+      padding: 3rem;
+
+      > * {
+        grid-column: var(--col, 1);
+        opacity: 0;
+      }
+    }
+  }
   background: linear-gradient(
     to bottom,
     rgba(99, 167, 191, 1),
@@ -41,10 +77,6 @@
       transparent,
       rgba(0, 0, 0, 0.5)
     );
-  }
-
-  @media (min-width: 40em) {
-    font-size: 2rem;
   }
 }
 
@@ -383,46 +415,6 @@
 @keyframes blink {
   to {
     opacity: 0;
-  }
-}
-
-.content {
-  position: relative;
-  z-index: 1;
-  padding-bottom: 100vh;
-}
-
-section {
-  height: 100vh;
-  width: 100%;
-  margin-top: 100vh;
-
-  &:nth-child(4n),
-  &:nth-child(4n - 1) {
-    --col: 3;
-  }
-}
-
-.section__content {
-  width: 100%;
-  position: fixed;
-  top: 0;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
-
-  @media (min-width: 50rem) {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 25rem));
-    gap: 2rem;
-    padding: 3rem;
-
-    > * {
-      grid-column: var(--col, 1);
-      opacity: 0;
-    }
   }
 }
 

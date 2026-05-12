@@ -12,6 +12,7 @@ import BookingConfirmModal from "../bookings/BookingConfirmModal";
 
 import CreateMatchForm from "./CreateMatchForm";
 import ReviewSection from "../../../components/review/ReviewSection";
+import { FaCheckCircle } from "react-icons/fa";
 
 export default function RentalAreaDetailPage() {
   const { user } = useAuth();
@@ -110,15 +111,12 @@ export default function RentalAreaDetailPage() {
         message.error(res.message || "Đặt sân thất bại");
       }
     } catch (error: any) {
-      // Bắt lỗi Validation (Code 2003) từ Backend
       const errRes = error.response?.data;
 
       if (errRes?.code === 2003 && errRes?.result) {
-        // Lấy thông báo lỗi đầu tiên trong object result (VD: "Không thể đặt phòng trong quá khứ")
         const firstErrorMessage = Object.values(errRes.result)[0] as string;
         message.error(firstErrorMessage);
       } else {
-        // Lỗi 500 hoặc lỗi mạng khác
         message.error(
           errRes?.message || "Hệ thống đang bận, vui lòng thử lại sau",
         );
@@ -143,7 +141,6 @@ export default function RentalAreaDetailPage() {
       return;
     }
 
-    // 3. Dispatch event để mở Modal/Component Chat
     const event = new CustomEvent("OPEN_CHAT_WITH_USER", {
       detail: {
         userId: ownerId,
@@ -154,7 +151,6 @@ export default function RentalAreaDetailPage() {
     window.dispatchEvent(event);
   };
 
-  // Cấu hình cột cho Bảng giá
   const priceColumns = [
     {
       title: "Khung giờ",
@@ -180,7 +176,6 @@ export default function RentalAreaDetailPage() {
     },
   ];
 
-  // Map dữ liệu priceRules từ API
   const getPriceData = (rules: any[]) => {
     if (!rules || rules.length === 0) return [];
 
@@ -261,9 +256,9 @@ export default function RentalAreaDetailPage() {
 
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-2">
-                    <h2 className="text-2xl font-bold text-gray-800">
+                    <h3 className="text-2xl font-bold text-gray-800">
                       {activeCourt.courtName}
-                    </h2>
+                    </h3>
                     <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
                       Tổng cộng: {activeCourt.totalCourts} sân
                     </span>
@@ -272,8 +267,30 @@ export default function RentalAreaDetailPage() {
                     {activeCourt.description ||
                       "Mặt sân đạt chuẩn, hệ thống chiếu sáng chống chói, không gian thoáng đãng. Thích hợp cho tập luyện và thi đấu giao lưu."}
                   </p>
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                      Tiện ích sân
+                    </h3>
 
-                  {/* Bảng giá tự động */}
+                    {activeCourt.amenities &&
+                    activeCourt.amenities.length > 0 ? (
+                      <div className="flex flex-wrap gap-3">
+                        {activeCourt.amenities.map((amenity: any) => (
+                          <div
+                            key={amenity.amenityId}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#F3F0FF] text-[#9156F1] rounded-full border border-[#E9D8FD] text-sm font-medium"
+                          >
+                            <FaCheckCircle size={14} />
+                            <span>{amenity.amenityName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 italic">
+                        Sân này chưa cập nhật tiện ích.
+                      </p>
+                    )}
+                  </div>
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                       <span></span> Bảng giá tham khảo

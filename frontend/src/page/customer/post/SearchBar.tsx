@@ -1,19 +1,35 @@
 import { useState, useEffect } from "react";
 import { Input, Select, Button, ConfigProvider } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
+import DateTimeInline from "./DateTimeInline";
+import type { FilterState } from "./PostPage";
 
 interface SearchBarProps {
   initialTitle?: string;
   onSearch: (values: { title?: string; categoryIds?: number[] }) => void;
+  onTitleChange?: (title: string) => void;
+  filters?: FilterState;
+  onFiltersChange?: (newFilters: Partial<FilterState>) => void;
 }
 
-export default function SearchBar({ initialTitle, onSearch }: SearchBarProps) {
+export default function SearchBar({
+  initialTitle,
+  onSearch,
+  onTitleChange,
+  filters,
+  onFiltersChange,
+}: SearchBarProps) {
   const [title, setTitle] = useState(initialTitle || "");
   const [categoryId, setCategoryId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     setTitle(initialTitle || "");
   }, [initialTitle]);
+
+  useEffect(() => {
+    if (onTitleChange) onTitleChange(title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title]);
 
   const handleSearchClick = () => {
     onSearch({
@@ -74,6 +90,8 @@ export default function SearchBar({ initialTitle, onSearch }: SearchBarProps) {
               { value: 4, label: " Tennis" },
             ]}
           />
+
+        
 
           <Button
             type="primary"

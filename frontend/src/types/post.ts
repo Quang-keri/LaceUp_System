@@ -1,26 +1,8 @@
-export interface PostResponse {
-  postId: string;
-  title: string;
-  description: string;
-  postStatus: string;
-  createdAt: string | null;
+import type { AddressResponse } from "./address";
 
+export interface AvailableCourt {
   courtId: string;
   courtName: string;
-  price: number;
-  courtCoverImageUrl: string;
-
-  rentalAreaId: string;
-  rentalAreaName: string;
-  address: string;
-}
-
-export interface PageResponse<T> {
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
-  totalElements: number;
-  data: T[];
 }
 
 export interface PostResponse {
@@ -32,12 +14,16 @@ export interface PostResponse {
 
   courtId: string;
   courtName: string;
-  price: number;
-  courtCoverImageUrl: string;
+  minPrice?: number;
+  courtCoverImageUrl?: string;
 
   rentalAreaId: string;
   rentalAreaName: string;
-  address: string;
+  address: AddressResponse;
+
+  availableCourtsCount?: number;
+  availableCourts?: AvailableCourt[];
+  availableSlots?: number;
 }
 
 export interface PageResponse<T> {
