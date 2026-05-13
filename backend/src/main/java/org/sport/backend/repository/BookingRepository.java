@@ -52,4 +52,9 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
 
     boolean existsByRenterAndRentalAreaAndBookingStatus(User renter, RentalArea rentalArea, BookingStatus bookingStatus);
         boolean existsByBookerPhoneAndRentalAreaAndBookingStatus(String bookerPhone, RentalArea rentalArea, BookingStatus bookingStatus);
+    List<Booking> findByRentalArea_RentalAreaIdAndCreatedAtBetween(
+            UUID rentalAreaId,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 }

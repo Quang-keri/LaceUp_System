@@ -87,9 +87,20 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
       label: <Link to="/owner/service-items">Hàng hóa & Dịch vụ</Link>,
     },
     {
-      key: "/owner/transactions",
+      key: "submenu-transactions",
       icon: <SwapOutlined />,
-      label: <Link to="/owner/transactions">Giao dịch</Link>,
+      label: "Giao dịch",
+      children: [
+        {
+          key: "/owner/transactions",
+          label: <Link to="/owner/transactions">Giao dịch</Link>,
+        },
+        {
+          ///owner/settlements/:rentalAreaId
+          key: "/owner/users/customers",
+          label: <Link to="/owner/settlements">Lịch sử tiền nhận</Link>,
+        },
+      ],
     },
     {
       key: "submenu-users",

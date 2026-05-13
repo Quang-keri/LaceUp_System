@@ -35,6 +35,7 @@ import UpdateCourtModal from "./UpdateCourtModal";
 import UpdateCourtPriceModal from "../court-price/UpdateCourtPriceModal";
 import CourtCopyModal from "./CourtCopyModal";
 import BookingDetailModal from "./BookingDetailModal";
+import CourtDetailModal from "./CourtDetailModal";
 
 import type {
   CourtResponse,
@@ -60,16 +61,12 @@ export default function CourtManagementPage() {
     initialBranchId || undefined,
   );
   const [courts, setCourts] = useState<CourtResponse[]>([]);
-  const [categories, setCategoriessetCategories] = useState<CategoryResponse[]>(
-    [],
-  );
+  const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Filter States (Sidebar)
   const [searchKeyword, setSearchKeyword] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
 
-  // Modal States - Courts
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCourt, setEditingCourt] = useState<CourtResponse | null>(null);
   const [priceModalOpen, setPriceModalOpen] = useState(false);
@@ -77,7 +74,6 @@ export default function CourtManagementPage() {
     null,
   );
 
-  // Modal States - Sub Courts (Court Copies)
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [editingCopy, setEditingCopy] = useState<CourtCopyResponse | null>(
     null,
@@ -85,12 +81,15 @@ export default function CourtManagementPage() {
   const [selectedParentCourtId, setSelectedParentCourtId] =
     useState<string>("");
 
-  // Booking view for Sub Courts
   const [bookingDetailOpen, setBookingDetailOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SlotResponse | undefined>();
   const [selectedCopy, setSelectedCopy] = useState<
     CourtCopyResponse | undefined
   >();
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedCourtForDetail, setSelectedCourtForDetail] =
+    useState<string>("");
 
   // 1. Tải danh sách chi nhánh khi vào trang
   useEffect(() => {
@@ -102,7 +101,6 @@ export default function CourtManagementPage() {
   useEffect(() => {
     if (selectedBranchId) {
       loadCourts(selectedBranchId);
-      // Update URL để nếu F5 lại trang vẫn giữ nguyên nhánh đang xem
       setSearchParams({ branchId: selectedBranchId });
     } else {
       setCourts([]);
@@ -143,7 +141,7 @@ export default function CourtManagementPage() {
   const loadCategories = async () => {
     try {
       const res = await courtService.getCategories();
-      setCategories(res.result.data);
+      setCategories(res.result);
     } catch {
       // message.error("Không tải được loại sân");
     }
@@ -192,7 +190,6 @@ export default function CourtManagementPage() {
     );
   }, [filteredCourts]);
 
-  // Dropdown nút Thêm Mới
   const menuItems: MenuProps["items"] = [
     {
       key: "create-court",
@@ -204,21 +201,21 @@ export default function CourtManagementPage() {
         setModalOpen(true);
       },
     },
-    {
-      key: "create-sub-court",
-      label: "Tạo sân con",
-      icon: <AppstoreAddOutlined />,
-      disabled: courts.length === 0,
-      onClick: () => {
-        if (courts.length > 0) {
-          setSelectedParentCourtId(courts[0].courtId);
-          setEditingCopy(null);
-          setCopyModalOpen(true);
-        } else {
-          message.warning("Vui lòng tạo Sân trước khi tạo Sân con!");
-        }
-      },
-    },
+    // {
+    //   key: "create-sub-court",
+    //   label: "Tạo sân con",
+    //   icon: <AppstoreAddOutlined />,
+    //   disabled: courts.length === 0,
+    //   onClick: () => {
+    //     if (courts.length > 0) {
+    //       setSelectedParentCourtId(courts[0].courtId);
+    //       setEditingCopy(null);
+    //       setCopyModalOpen(true);
+    //     } else {
+    //       message.warning("Vui lòng tạo Sân trước khi tạo Sân con!");
+    //     }
+    //   },
+    // },
   ];
 
   const courtColumns = [
@@ -280,20 +277,19 @@ export default function CourtManagementPage() {
           >
             Sửa
           </Button>
-          {/* // <Button
-                  onClick={() =>
-                    navigate(`/owner/courts/${court.courtId}/prices`)
-                  }
-                >
-                  Quản lý giá
-                </Button> */}
+          <Button
+            size="small"
+            type="default"
+            onClick={() => {
+              setSelectedCourtForDetail(record.courtId);
+              setDetailModalOpen(true);
+            }}
+          >
+            Chi tiết
+          </Button>
           <Button
             size="small"
             icon={<DollarOutlined />}
-            // onClick={() => {
-            //   setSelectedCourt(record);
-            //   setPriceModalOpen(true);
-            // }}
             onClick={() => navigate(`/owner/courts/${record.courtId}/prices`)}
           >
             Giá sân
@@ -531,7 +527,6 @@ export default function CourtManagementPage() {
         </Content>
       </Layout>
 
-      {/* --- MODALS CHO SÂN --- */}
       {selectedBranchId && (
         <CreateCourtModal
           open={modalOpen && !editingCourt}
@@ -583,6 +578,12 @@ export default function CourtManagementPage() {
         onClose={() => setBookingDetailOpen(false)}
         slot={selectedSlot}
         courtCopy={selectedCopy}
+      />
+
+      <CourtDetailModal
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        courtId={selectedCourtForDetail}
       />
     </div>
   );

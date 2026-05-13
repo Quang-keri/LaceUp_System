@@ -1,5 +1,7 @@
 export type TransactionType = "INCOME" | "EXPENSE";
 
+export type PaymentMethod = "BANK_TRANSFER" | "CASH" | "CARD" | "E_WALLET";
+
 export interface TransactionResponse {
   id: string;
   type: TransactionType;
@@ -7,6 +9,7 @@ export interface TransactionResponse {
   description: string;
   referenceId?: string;
   transactionDate: string;
+  paymentMethod?: PaymentMethod;
 }
 
 export interface TransactionRequest {

@@ -67,6 +67,9 @@ import AboutPage from "../components/Footer/AboutPage.tsx";
 import PoliciesPage from "../components/Footer/PoliciesPage.tsx";
 import TermsPage from "../components/Footer/TermsPage.tsx";
 import AmenityManagement from "../page/admin/amenities/AmenityManagement.tsx";
+import TransactionManager from "../page/owner/transaction/TransactionManager.tsx";
+import OwnerSettlementHistory from "../page/owner/settlement/OwnerSettlementHistory.tsx";
+import OwnerBankAccount from "../page/owner/settlement/OwnerBankAccount.tsx";
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
 
@@ -208,10 +211,19 @@ export const router = createBrowserRouter([
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
       { path: "profile", element: <OwnerProfilePage /> },
+      { path: "transactions", element: <TransactionManager /> },
       {
         path: "notifications",
         element: <NotificationPage />,
         handle: { breadcrumb: "Thông báo mới" },
+      },
+      {
+        path: "/owner/settlements/:rentalAreaId",
+        element: <OwnerSettlementHistory />,
+      },
+      {
+        path: "/owner/bank-account",
+        element: <OwnerBankAccount />,
       },
       { path: "*", element: <NotFound /> },
     ],

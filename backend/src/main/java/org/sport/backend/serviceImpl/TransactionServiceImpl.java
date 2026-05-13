@@ -70,6 +70,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .description(entity.getDescription())
                 .referenceId(entity.getReferenceId())
                 .transactionDate(entity.getTransactionDate())
+                .paymentMethod(entity.getPaymentMethod())
                 .build();
     }
 }

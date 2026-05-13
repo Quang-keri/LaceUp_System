@@ -9,6 +9,7 @@ import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.request.rental.RejectRentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
+import org.sport.backend.dto.response.rental.RentalAreaOptionResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.service.RentalAreaService;
@@ -34,6 +35,17 @@ public class RentalAreaController {
     private  RentalAreaService rentalAreaService;
     @Autowired
     private ServiceItemService serviceItemService;
+
+    @GetMapping("/dropdown/options")
+//    @PreAuthorize("hasAuthority('VIEW_RENTAL_AREA')")
+    public ApiResponse<List<RentalAreaOptionResponse>> getRentalAreaOptions() {
+        return ApiResponse.success(
+                200,
+                "Lấy danh sách khu sân thành công",
+                rentalAreaService.getRentalAreaOptions()
+        );
+    }
+
 
     @GetMapping("/{rentalAreaId}/services")
     public ResponseEntity<ApiResponse<List<ServiceItemResponse>>> getServicesByRentalArea(

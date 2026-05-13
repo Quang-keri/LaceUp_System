@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getTransactions,
   createTransaction,
@@ -11,245 +11,211 @@ import type {
   PageResponse,
 } from "../../../types/transaction";
 
+import TransactionSummaryCards from "./TransactionSummaryCards";
+import TransactionFilters from "./TransactionFilters";
+import TransactionTable from "./TransactionTable";
+import TransactionFormModal from "./TransactionFormModal";
+import TransactionDetailModal from "./TransactionDetailModal";
+
 const TransactionManager: React.FC = () => {
   const [data, setData] = useState<PageResponse<TransactionResponse> | null>(
     null,
   );
   const [page, setPage] = useState(1);
+
   const [filterType, setFilterType] = useState<TransactionType | "">("");
   const [keyword, setKeyword] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<TransactionResponse | null>(null);
+
   const [formData, setFormData] = useState<TransactionRequest>({
     type: "INCOME",
     amount: 0,
     description: "",
   });
 
-  const fetchTransactions = async () => {
+  const totalIncome = useMemo(() => {
+    return (data?.data || []).reduce(
+      (sum, tx) => sum + (tx.type === "INCOME" ? tx.amount : 0),
+      0,
+    );
+  }, [data]);
+
+  const totalExpense = useMemo(() => {
+    return (data?.data || []).reduce(
+      (sum, tx) => sum + (tx.type === "EXPENSE" ? tx.amount : 0),
+      0,
+    );
+  }, [data]);
+
+  const fetchTransactions = useCallback(async () => {
     try {
-      const res = await getTransactions({
+      setLoading(true);
+      setError("");
+
+      const params: Record<string, unknown> = {
         page,
         size: 10,
-        type: filterType || undefined,
-        keyword,
-      });
+      };
+
+      if (filterType) params.type = filterType;
+      if (keyword) params.keyword = keyword;
+      if (startDate) params.startDate = startDate + "T00:00:00";
+      if (endDate) params.endDate = endDate + "T23:59:59";
+
+      const res = await getTransactions(params);
       setData(res);
     } catch (error) {
       console.error("Lỗi tải dữ liệu", error);
+      setError("Không thể tải dữ liệu giao dịch. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [page, filterType, keyword, startDate, endDate]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [page, filterType]);
+  }, [fetchTransactions]);
 
   const handleSearch = () => {
     setPage(1);
     fetchTransactions();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingId) {
-        await updateTransaction(editingId, formData);
-      } else {
-        await createTransaction(formData);
-      }
-      setIsModalOpen(false);
-      fetchTransactions();
-    } catch (error) {
-      console.error("Lỗi lưu giao dịch", error);
-    }
+  const handleResetFilters = () => {
+    setKeyword("");
+    setFilterType("");
+    setStartDate("");
+    setEndDate("");
+    setPage(1);
+  };
+
+  const openCreateModal = () => {
+    setFormData({
+      type: "INCOME",
+      amount: 0,
+      description: "",
+    });
+    setEditingId(null);
+    setIsFormModalOpen(true);
   };
 
   const handleEdit = (tx: TransactionResponse) => {
     setFormData({
       type: tx.type,
       amount: tx.amount,
-      description: tx.description,
+      description: tx.description || "",
     });
     setEditingId(tx.id);
-    setIsModalOpen(true);
+    setIsFormModalOpen(true);
   };
 
-  const openCreateModal = () => {
-    setFormData({ type: "EXPENSE", amount: 0, description: "" });
-    setEditingId(null);
-    setIsModalOpen(true);
+  const handleView = (tx: TransactionResponse) => {
+    setSelectedTransaction(tx);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setIsSubmitting(true);
+
+      if (editingId) {
+        await updateTransaction(editingId, formData);
+      } else {
+        await createTransaction(formData);
+      }
+
+      setIsFormModalOpen(false);
+      setPage(1);
+      await fetchTransactions();
+    } catch (error) {
+      console.error("Lỗi lưu giao dịch", error);
+      setError("Không thể lưu giao dịch. Vui lòng thử lại.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Quản Lý Sổ Quỹ (Thu/Chi)</h1>
-      <div className="flex gap-4 mb-6">
-        <input
-          type="text"
-          placeholder="Tìm theo mô tả..."
-          className="border p-2 rounded"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
-        <select
-          className="border p-2 rounded"
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value as any)}
-        >
-          <option value="">Tất cả</option>
-          <option value="INCOME">Khoản Thu</option>
-          <option value="EXPENSE">Khoản Chi</option>
-        </select>
-        <button
-          onClick={handleSearch}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Tìm kiếm
-        </button>
-        <button
-          onClick={openCreateModal}
-          className="bg-green-500 text-white px-4 py-2 rounded ml-auto"
-        >
-          + Thêm Giao Dịch
-        </button>
-      </div>
-
-      {/* Table */}
-      <table className="min-w-full bg-white border">
-        <thead>
-          <tr className="bg-gray-100 border-b">
-            <th className="p-3 text-left">Ngày</th>
-            <th className="p-3 text-left">Loại</th>
-            <th className="p-3 text-left">Mô tả</th>
-            <th className="p-3 text-right">Số tiền (VNĐ)</th>
-            <th className="p-3 text-center">Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data?.data.map((tx) => (
-            <tr key={tx.id} className="border-b">
-              <td className="p-3">
-                {new Date(tx.transactionDate).toLocaleString("vi-VN")}
-              </td>
-              <td className="p-3">
-                <span
-                  className={`px-2 py-1 rounded text-sm ${
-                    tx.type === "INCOME"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {tx.type === "INCOME" ? "THU" : "CHI"}
-                </span>
-              </td>
-              <td className="p-3">{tx.description}</td>
-              <td className="p-3 text-right font-semibold">
-                {tx.amount.toLocaleString()}
-              </td>
-              <td className="p-3 text-center">
-                <button
-                  onClick={() => handleEdit(tx)}
-                  className="text-blue-500 mr-3"
-                >
-                  Sửa
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="flex justify-between items-center mt-4">
-        <span>Tổng: {data?.totalElements || 0} bản ghi</span>
-        <div className="flex gap-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="border px-3 py-1 disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span>
-            Trang {data?.currentPage} / {data?.totalPages}
-          </span>
-          <button
-            disabled={page === data?.totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="border px-3 py-1 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
-      </div>
-
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h2 className="text-xl font-bold mb-4">
-              {editingId ? "Sửa giao dịch" : "Thêm giao dịch"}
-            </h2>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block mb-1">Loại</label>
-                <select
-                  className="w-full border p-2 rounded"
-                  value={formData.type}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      type: e.target.value as TransactionType,
-                    })
-                  }
-                >
-                  <option value="INCOME">Thu</option>
-                  <option value="EXPENSE">Chi</option>
-                </select>
-              </div>
-              <div className="mb-4">
-                <label className="block mb-1">Số tiền</label>
-                <input
-                  type="number"
-                  required
-                  className="w-full border p-2 rounded"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block mb-1">Mô tả (lý do)</label>
-                <textarea
-                  required
-                  className="w-full border p-2 rounded"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="bg-gray-300 px-4 py-2 rounded"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  Lưu
-                </button>
-              </div>
-            </form>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Quản Lý Giao Dịch
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Xem tất cả giao dịch phát sinh trong hệ thống
+            </p>
           </div>
+
+          <button
+            onClick={openCreateModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition"
+          >
+            + Thêm Giao Dịch
+          </button>
         </div>
-      )}
+
+        <TransactionSummaryCards
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+        />
+
+        <TransactionFilters
+          filterType={filterType}
+          keyword={keyword}
+          startDate={startDate}
+          endDate={endDate}
+          setFilterType={setFilterType}
+          setKeyword={setKeyword}
+          setStartDate={setStartDate}
+          setEndDate={setEndDate}
+          onSearch={handleSearch}
+          onReset={handleResetFilters}
+        />
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        <TransactionTable
+          data={data}
+          loading={loading}
+          page={page}
+          setPage={setPage}
+          onEdit={handleEdit}
+          onView={handleView}
+        />
+
+        <TransactionFormModal
+          open={isFormModalOpen}
+          editingId={editingId}
+          formData={formData}
+          setFormData={setFormData}
+          isSubmitting={isSubmitting}
+          onClose={() => setIsFormModalOpen(false)}
+          onSubmit={handleSubmit}
+        />
+
+        <TransactionDetailModal
+          transaction={selectedTransaction}
+          onClose={() => setSelectedTransaction(null)}
+        />
+      </div>
     </div>
   );
 };

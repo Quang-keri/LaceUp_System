@@ -8,13 +8,6 @@ export enum CourtCopyStatus {
   INACTIVE = "INACTIVE",
 }
 
-export interface CourtCopyResponse {
-  courtCopyId: string;
-  courtCode: string;
-  status: CourtCopyStatus;
-  slots?: SlotResponse[];
-}
-
 export interface BookingShortResponse {
   bookingId: string;
   note?: string;
@@ -36,7 +29,16 @@ export interface SlotResponse {
 export interface CourtImageResponse {
   courtImageId?: string;
   imageUrl: string;
+  isCover?: boolean;
   createdAt?: string;
+}
+
+export interface CourtCopyResponse {
+  courtCopyId: string;
+  courtCode: string;
+  status: CourtCopyStatus;
+  slots?: SlotResponse[];
+  location?: string;
 }
 
 export interface CourtResponse {
@@ -51,6 +53,9 @@ export interface CourtResponse {
   description?: string;
   images?: CourtImageResponse[];
   courtCopies?: CourtCopyResponse[];
+  surfaceType?: string;
+  indoor?: boolean;
+  amenityIds?: number[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -63,6 +68,7 @@ export interface CreateCourtRequest {
   courtCodes: string[];
   surfaceType?: string;
   indoor?: boolean;
+  amenityIds?: number[];
 }
 
 export interface UpdateCourtRequest {
@@ -72,17 +78,20 @@ export interface UpdateCourtRequest {
   courtCodes?: string[];
   surfaceType?: string;
   indoor?: boolean;
+  amenityIds?: number[];
 }
 
 export interface CreateCourtCopyRequest {
   courtId: string;
   courtCode: string;
+  location?: string;
 }
 
 export interface UpdateCourtCopyRequest {
   courtId: string;
   courtCode: string;
   status: CourtCopyStatus;
+  location?: string;
 }
 
 export interface CourtListResponse {

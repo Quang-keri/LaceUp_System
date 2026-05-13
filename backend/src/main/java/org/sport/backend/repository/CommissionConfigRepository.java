@@ -3,9 +3,7 @@ package org.sport.backend.repository;
 import org.sport.backend.entity.CommissionConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,12 +12,21 @@ public interface CommissionConfigRepository extends JpaRepository<CommissionConf
 
     Optional<CommissionConfig> findByIsDefaultTrue();
 
+    Optional<CommissionConfig> findFirstByRentalArea_RentalAreaIdAndIsActiveTrue(UUID rentalAreaId);
 
-    @Query("SELECT c FROM CommissionConfig c " +
-            "WHERE c.rentalArea.rentalAreaId = :rentalAreaId " +
-            "AND c.minBookings <= :bookingCount " +
-            "AND (c.maxBookings >= :bookingCount OR c.maxBookings IS NULL)")
+    @Query("""
+        SELECT c
+        FROM CommissionConfig c
+        WHERE c.rentalArea.rentalAreaId = :rentalAreaId
+        AND c.isActive = true
+        AND (
+            (c.minBookings IS NULL OR c.minBookings <= :bookingCount)
+            AND (c.maxBookings IS NULL OR c.maxBookings >= :bookingCount)
+        )
+        ORDER BY c.minBookings DESC
+    """)
     Optional<CommissionConfig> findApplicableConfigForRentalArea(
-            @Param("rentalAreaId") UUID rentalAreaId,
-            @Param("bookingCount") int bookingCount);
+            UUID rentalAreaId,
+            int bookingCount
+    );
 }

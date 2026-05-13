@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.transaction;
 
 import lombok.Builder;
 import lombok.Data;
+import org.sport.backend.constant.PaymentMethod;
 import org.sport.backend.constant.TransactionType;
 
 import java.math.BigDecimal;
@@ -17,4 +18,5 @@ public class TransactionResponse {
     private String description;
     private UUID referenceId;
     private LocalDateTime transactionDate;
+    private PaymentMethod paymentMethod;
 }

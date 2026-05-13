@@ -27,6 +27,8 @@ import CheckCircleOutlined from "@ant-design/icons/lib/icons/CheckCircleOutlined
 import { useNavigate } from "react-router-dom";
 import serviceItemService from "../../service/serviceItemService";
 import legalProfileService from "../../service/legalProfileService";
+import Step2BankAccount from "./Step2BankAccount";
+import bankAccountService from "../../service/bankAccountService";
 const FormContainer: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshProfile } = useAuth();
@@ -88,6 +90,15 @@ const FormContainer: React.FC = () => {
         );
         setLoading(false);
         return;
+      }
+      if (completeData.bankAccount) {
+        await bankAccountService.createBankAccount({
+          userId: user?.userId || "",
+          bankName: completeData.bankAccount.bankName,
+          accountNumber: completeData.bankAccount.accountNumber,
+          accountHolderName: completeData.bankAccount.accountHolderName,
+          branchName: completeData.bankAccount.branchName || "",
+        });
       }
       for (const courtType of completeData.courts) {
         const courtCopyRequests = (courtType.courtCopies || []).map(
@@ -238,6 +249,10 @@ const FormContainer: React.FC = () => {
   }
   const steps = [
     { title: "Thông tin cơ bản", content: <Step1BasicInfo next={next} /> },
+    {
+      title: "Tài khoản ngân hàng",
+      content: <Step2BankAccount next={next} prev={prev} />,
+    },
     {
       title: "Loại sân & Tiện ích",
       content: <Step2CourtInfo next={next} prev={prev} />,
