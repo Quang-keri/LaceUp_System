@@ -163,62 +163,45 @@ const Sidebar: React.FC<SidebarProps> = ({
       collapsible
       collapsed={collapsed}
       width={260}
-      collapsedWidth={80} // Đảm bảo width khi thu gọn chuẩn là 80px
       theme={isDark ? "dark" : "light"}
       className="shadow-md z-20"
       style={{
-        overflow: "hidden",
-        height: "100vh",
-        position: "fixed", // QUAN TRỌNG NHẤT: Ghim chết Sidebar
-        left: 0,
-        top: 0,
-        bottom: 0,
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
-        background: isDark ? "#001529" : "#ffffff",
       }}
     >
-      <div className="flex flex-col h-full w-full">
-        <Link to="/trang-chu" className="block flex-none">
-          <div
-            className={`h-16 flex items-center justify-center border-b transition-colors ${
-              isDark
-                ? "border-gray-700 bg-[#001529]"
-                : "border-gray-200 bg-white"
-            }`}
-          >
-            <div className="flex items-center gap-2 overflow-hidden px-4">
-              <img
-                rel="icon"
-                src="/logo.png"
-                alt="Logo"
-                className="w-12 h-12"
-              />
-              {!collapsed && (
-                <div
-                  className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
-                    isDark ? "text-white" : "text-gray-800"
-                  }`}
-                >
-                  Lace Up
-                </div>
-              )}
-            </div>
+      <Link to="/home">
+        {" "}
+        <div
+          className={`h-16 flex items-center justify-center border-b transition-colors ${
+            isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"
+          }`}
+        >
+          <div className="flex items-center gap-2 overflow-hidden px-4">
+            <img rel="icon" src="/logo.png" alt="Logo" className="w-12 h-12" />
+            {!collapsed && (
+              <div
+                className={`font-bold text-xl tracking-tight whitespace-nowrap transition-opacity duration-300 ${
+                  isDark ? "text-white" : "text-gray-800"
+                }`}
+              >
+                Lace Up
+              </div>
+            )}
           </div>
-        </Link>
-
-        {/* Nội dung Menu cuộn độc lập bên trong */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
-          <Menu
-            mode="inline"
-            selectedKeys={[activeKey]}
-            openKeys={openKeys}
-            onOpenChange={onOpenChange}
-            items={items}
-            onClick={handleMenuClick}
-            theme={isDark ? "dark" : "light"}
-            style={{ border: "none", background: "transparent" }}
-          />
         </div>
+      </Link>
+
+      <div className="h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar py-2">
+        <Menu
+          mode="inline"
+          selectedKeys={[activeKey]}
+          openKeys={openKeys}
+          onOpenChange={onOpenChange}
+          items={items}
+          onClick={handleMenuClick}
+          theme={isDark ? "dark" : "light"}
+          style={{ border: "none", background: "transparent" }}
+        />
       </div>
     </Sider>
   );

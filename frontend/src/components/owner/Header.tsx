@@ -131,7 +131,7 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
           backgroundColor: isDark ? "#141414" : "#ffffff",
         }}
       >
-        <Link to={"/trang-chu"}>
+        <Link to={"/home"}>
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Logo" className="w-8 h-8" />
             <span
@@ -189,17 +189,16 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
             components: {
               Menu: {
                 darkItemBg: "transparent",
-
                 darkSubMenuItemBg: isDark ? "#1f1f1f" : "#007acc",
 
-                popupBg: isDark ? "#000000" : "#007acc",
+                // Thêm darkPopupBg để đổi màu nền của các menu xổ xuống (Dropdown Submenu)
+                darkPopupBg: isDark ? "#1f1f1f" : "#007acc",
+                popupBg: isDark ? "#1f1f1f" : "#007acc",
 
                 darkItemSelectedBg: isDark ? "#1677ff" : "#005a9e",
-
                 darkItemHoverBg: isDark
                   ? "rgba(255, 255, 255, 0.1)"
                   : "rgba(0, 0, 0, 0.15)",
-
                 horizontalLineHeight: "46px",
               },
             },

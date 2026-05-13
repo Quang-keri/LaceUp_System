@@ -23,21 +23,8 @@ const AdminLayout: React.FC<{}> = () => {
   const handleThemeToggle = () => setIsDark((prev) => !prev);
 
   return (
-    // ĐỔI 1: Thay min-h-screen bằng h-screen và thêm overflow-hidden để chống cuộn toàn trang
-    <Layout className="h-screen overflow-hidden">
-      <Sidebar
-        collapsed={collapsed}
-        toggleCollapsed={() => setCollapsed(!collapsed)}
-        isDark={isDark}
-        adminUser={user}
-        handleLogout={handleLogoutClick}
-      />
-
-      <Layout
-        // ĐỔI 2: Thay min-h-screen bằng h-screen
-        className="transition-all duration-200 flex flex-col h-screen"
-        style={{ marginLeft: collapsed ? 80 : 260 }}
-      >
+    <Layout className="h-screen overflow-hidden flex flex-row">
+      <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
         <AdminHeader
           collapsed={collapsed}
           toggleCollapsed={() => setCollapsed(!collapsed)}
@@ -47,10 +34,10 @@ const AdminLayout: React.FC<{}> = () => {
         />
 
         <Content
-          // ĐỔI 3: Thêm overflow-y-auto để nội dung bên trong Outlet có thể cuộn độc lập
           className={`flex-1 p-3 overflow-y-auto transition-colors duration-200 ${
-            isDark ? "bg-[#141414]" : "bg-[#f0f2f5]"
+            isDark ? "bg-[#141414]" : "bg-[#ffff]"
           }`}
+          style={{ minHeight: 0 }}
         >
           <Outlet context={{ isDark }} />
         </Content>

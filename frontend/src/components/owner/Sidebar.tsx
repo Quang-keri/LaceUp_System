@@ -182,7 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         borderRight: isDark ? "1px solid #303030" : "1px solid #f0f0f0",
       }}
     >
-      <Link to="/trang-chu">
+      <Link to="/home">
         <div
           className={`h-16 flex items-center justify-center border-b transition-colors ${
             isDark ? "border-gray-700 bg-[#001529]" : "border-gray-200 bg-white"

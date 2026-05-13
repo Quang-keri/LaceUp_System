@@ -14,6 +14,8 @@ import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.CourtRepository;
+import org.sport.backend.repository.CourtCopyRepository;
+import org.sport.backend.repository.SlotRepository;
 import org.sport.backend.repository.PostRepository;
 import org.sport.backend.repository.RentalAreaRepository;
 import org.sport.backend.repository.UserRepository;
@@ -28,7 +30,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -38,7 +42,9 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CourtRepository courtRepository;
+        private final CourtCopyRepository courtCopyRepository;
     private final RentalAreaRepository rentalAreaRepository;
+        private final SlotRepository slotRepository;
 
     private final AddressMapper addressMapper;
 
@@ -75,24 +81,38 @@ public class PostServiceImpl implements PostService {
     @Override
     public PageResponse<PostSummaryResponse> getAllPosts(PostFilterRequest filterRequest) {
 
+        boolean sortingByPrice =
+                "price_low".equals(filterRequest.getSortBy()) ||
+                        "price_high".equals(filterRequest.getSortBy());
 
-        Sort sort = Sort.by("createdAt").descending();
+        Pageable pageable;
 
-        if ("price_low".equals(filterRequest.getSortBy())) {
+        if (sortingByPrice) {
+            pageable = PageRequest.of(
+                    filterRequest.getPage() - 1,
+                    filterRequest.getSize()
+            );
+        } else {
 
-            sort = Sort.by("court.courtPrices.pricePerHour").ascending();
-        } else if ("price_high".equals(filterRequest.getSortBy())) {
-            sort = Sort.by("court.courtPrices.pricePerHour").descending();
+            pageable = PageRequest.of(
+                    filterRequest.getPage() - 1,
+                    filterRequest.getSize(),
+                    Sort.by("createdAt").descending()
+            );
         }
 
-        Pageable pageable = PageRequest.of(filterRequest.getPage() - 1, filterRequest.getSize(), sort);
+        Specification<Post> spec =
+                PostSpecification.filterByCriteria(filterRequest);
 
-        Specification<Post> spec = PostSpecification.filterByCriteria(filterRequest);
+        Page<Post> postPage =
+                postRepository.findAll(spec, pageable);
 
-        Page<Post> postPage = postRepository.findAll(spec, pageable);
+//        LocalDateTime requestedStart = filterRequest.getStartDateTime();
+//        LocalDateTime requestedEnd = filterRequest.getEndDateTime();
 
         List<PostSummaryResponse> data = postPage.getContent()
                 .stream()
+//                .map(p -> mapToSummary(p, requestedStart, requestedEnd))
                 .map(this::mapToSummary)
                 .toList();
 
@@ -104,7 +124,6 @@ public class PostServiceImpl implements PostService {
                 .data(data)
                 .build();
     }
-
     @Override
     public PostDetailResponse getPostDetail(UUID postId) {
 
@@ -130,8 +149,7 @@ public class PostServiceImpl implements PostService {
         Court court = post.getCourt();
         RentalArea rentalArea = post.getRentalArea();
 
-        // 1. Tìm giá thấp nhất của sân này để hiển thị lên Card
-        // Thêm check null cho courtPrices đề phòng dữ liệu bị thiếu
+
         BigDecimal minPrice = BigDecimal.ZERO;
         if (court.getCourtPrices() != null && !court.getCourtPrices().isEmpty()) {
             minPrice = court.getCourtPrices().stream()
@@ -140,7 +158,6 @@ public class PostServiceImpl implements PostService {
                     .orElse(BigDecimal.ZERO);
         }
 
-        // 2. Lấy ảnh bìa
         String coverImage = null;
         if (court.getImages() != null && !court.getImages().isEmpty()) {
             coverImage = court.getImages().stream()
@@ -150,19 +167,29 @@ public class PostServiceImpl implements PostService {
                     .orElse(null);
         }
 
-        // 3. Build DTO trả về đầy đủ các trường
+        double avgRating = 0.0;
+        if (rentalArea.getReviews() != null &&
+                !rentalArea.getReviews().isEmpty()) {
+
+            avgRating = rentalArea.getReviews().stream()
+                    .map(Review::getRating)
+                    .filter(Objects::nonNull)
+                    .mapToDouble(Number::doubleValue)
+                    .average()
+                    .orElse(0.0);
+        }
+
         return PostSummaryResponse.builder()
                 .postId(post.getPostId())
                 .title(post.getTitle())
                 .description(post.getDescription())
                 .postStatus(post.getPostStatus())
                 .createdAt(post.getCreatedAt())
-
                 .courtId(court.getCourtId())
                 .courtName(court.getCourtName())
-                .minPrice(minPrice) // Gắn giá trị minPrice đã tìm được
+                .minPrice(minPrice)
+                .avgRating(avgRating != 0.0 ? Math.round(avgRating * 10.0) / 10.0 : null)
                 .courtCoverImageUrl(coverImage)
-
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
                 .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
