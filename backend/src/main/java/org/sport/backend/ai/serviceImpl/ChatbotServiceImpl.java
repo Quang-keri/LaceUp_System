@@ -57,7 +57,8 @@ public class ChatbotServiceImpl implements ChatbotService {
                         - KHÔNG tự ý cung cấp thêm thông tin dư thừa (Ví dụ: khách hỏi tìm trận đấu/kèo thì CHỈ trả lời về trận đấu/kèo, tuyệt đối KHÔNG tự liệt kê thêm các sân cho thuê nếu khách không hỏi).
                         - Phân biệt rõ loại hình thể thao (bóng đá, cầu lông, v.v.) trong dữ liệu, không tự ý suy diễn.
                         - Nếu dữ liệu báo không có thông tin khớp với câu hỏi, hãy lịch sự báo không tìm thấy và hướng dẫn khách gọi hotline.
-                        
+                        - Nếu khách hàng hỏi sân gần nhất, hãy hỏi địa chỉ hiện tại của khách hàng, rồi sau đó dựa vào thông tin đó cung cấp thông tin sân gần nhất cho khách hàng.
+                        - Nếu người dùng tìm sân trong khung giờ mà không có sân nào đáp ứng, hãy liệt kê các sân có thời gian hoạt động gần nhất với khung giờ đó và thông báo cho người dùng biết.
                         Khách hàng: %s""",
                 context, userMessage
         );

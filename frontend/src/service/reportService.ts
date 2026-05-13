@@ -71,21 +71,25 @@ class ReportService {
   }
 
   async getEndOfDayReport(
-    date?: string | null,
-  ): Promise<EndOfDayReportResponse> {
-    const params: any = {};
+    startDate: string,
+    endDate: string,
+    rentalAreaId: string,
+  ) {
+    const response = await api.get("/reports/end-of-day", {
+      params: { startDate, endDate, rentalAreaId },
+    });
+    return response.data;
+  }
 
-    if (date) {
-      params.date = date;
-    }
-
-    const response = await api.get<EndOfDayReportResponse>(
-      "/reports/end-of-day",
-      {
-        params: params,
-      },
-    );
-
+  async exportEndOfDayReport(
+    startDate: string,
+    endDate: string,
+    rentalAreaId: string,
+  ) {
+    const response = await api.get("/reports/end-of-day/export", {
+      params: { startDate, endDate, rentalAreaId },
+      responseType: "blob",
+    });
     return response.data;
   }
 }

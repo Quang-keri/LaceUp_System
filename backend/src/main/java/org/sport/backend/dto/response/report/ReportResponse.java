@@ -13,7 +13,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class EndOfDayReportDTO {
+public class ReportResponse {
     private LocalDate reportDate;
     private BigDecimal totalBookingRevenue;
     private BigDecimal totalServiceRevenue;

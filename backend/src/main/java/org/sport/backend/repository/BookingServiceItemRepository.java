@@ -23,4 +23,6 @@ public interface BookingServiceItemRepository extends JpaRepository<BookingServi
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
+
+    List<BookingServiceItem> findByBooking_BookingIdIn(List<UUID> bookingIds);
 }

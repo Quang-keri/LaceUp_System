@@ -1,6 +1,6 @@
 package org.sport.backend.service;
 
-import org.sport.backend.dto.response.report.EndOfDayReportDTO;
+import org.sport.backend.dto.response.report.ReportResponse;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,5 +17,5 @@ public interface ReportService {
 
     List<Map<String, Object>> getDynamicOverviewChartOwner(int year, Integer month);
 
-    EndOfDayReportDTO getEndOfDayReport(LocalDate reportDate);
+    ReportResponse getEndOfDayReport(LocalDate startDate, LocalDate endDate, UUID rentalAreaId);
 }

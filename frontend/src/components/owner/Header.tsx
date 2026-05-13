@@ -109,17 +109,7 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
     {
       key: "submenu-reports",
       icon: <BarChartOutlined />,
-      label: "Báo cáo",
-      children: [
-        {
-          key: "/owner/invoices",
-          label: <Link to="/owner/invoices">Hóa đơn</Link>,
-        },
-        {
-          key: "/owner/wallet-overview",
-          label: <Link to="/owner/wallet-overview">Tổng quan tài chính</Link>,
-        },
-      ],
+      label: <Link to="/owner/reports">Báo cáo</Link>,
     },
     {
       key: "/owner/settings",

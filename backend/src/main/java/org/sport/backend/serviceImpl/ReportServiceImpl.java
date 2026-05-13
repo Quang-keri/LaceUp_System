@@ -6,7 +6,9 @@ import org.sport.backend.constant.PaymentStatus;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.dto.response.payment.PaymentResponse;
-import org.sport.backend.dto.response.report.EndOfDayReportDTO;
+import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.report.ReportResponse;
+import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.entity.Booking;
 import org.sport.backend.entity.BookingServiceItem;
 import org.sport.backend.entity.Match;
@@ -60,32 +62,89 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public EndOfDayReportDTO getEndOfDayReport(LocalDate reportDate) {
-        // Mặc định lấy ngày hôm nay nếu client không truyền date
-        LocalDate date = (reportDate != null) ? reportDate : LocalDate.now();
-        LocalDateTime startOfDay = date.atStartOfDay();
-        LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
+    public ReportResponse getEndOfDayReport(LocalDate startDate, LocalDate endDate, UUID rentalAreaId) {
 
-        // 1. Fetch Dữ liệu từ DB
-        List<Booking> bookings = bookingRepository.findAllBookingsForReport(startOfDay, endOfDay);
-        List<Match> matches = matchRepository.findAllMatchesForReport(startOfDay, endOfDay);
-        List<Payment> payments = paymentRepository.findAllPaymentsForReport(startOfDay, endOfDay);
-        List<BookingServiceItem> serviceItems = bookingServiceItemRepository.findAllServiceItemsForReport(startOfDay, endOfDay);
+        LocalDate start = (startDate != null) ? startDate : LocalDate.now();
+        LocalDate end = (endDate != null) ? endDate : start;
 
-        // 2. Mapping sang DTO với đầy đủ thuộc tính
-        List<BookingResponse> bookingDTOs = bookings.stream().map(b -> BookingResponse.builder()
-                .bookingId(b.getBookingId())
-                .bookingStatus(b.getBookingStatus())
-                .totalPrice(b.getTotalPrice())
-                .depositAmount(b.getDepositAmount())
-                .remainingAmount(b.getRemainingAmount())
-                .startTime(b.getStartTime())
-                .endTime(b.getEndTime())
-                .build()).collect(Collectors.toList());
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("Ngày bắt đầu không được lớn hơn ngày kết thúc");
+        }
+
+        if (rentalAreaId == null) {
+            throw new IllegalArgumentException("Rental Area ID không được để trống");
+        }
+
+        LocalDateTime startDateTime = start.atStartOfDay();
+        LocalDateTime endDateTime = end.atTime(LocalTime.MAX);
+
+        List<Booking> bookings = bookingRepository.findAllBookingsForReportByArea(startDateTime, endDateTime, rentalAreaId);        List<Match> matches = matchRepository.findAllMatchesForReport(startDateTime, endDateTime);
+        List<Payment> payments = paymentRepository.findAllPaymentsForReport(startDateTime, endDateTime);
+
+        List<UUID> bookingIds = bookings.stream().map(Booking::getBookingId).collect(Collectors.toList());
+
+        final List<BookingServiceItem> serviceItems = bookingIds.isEmpty()
+                ? new ArrayList<>()
+                : bookingServiceItemRepository.findByBooking_BookingIdIn(bookingIds);
+
+        List<BookingResponse> bookingDTOs = bookings.stream().map(b -> {
+
+            List<BookingResponse.BookingServiceResponse> extraServices = serviceItems.stream()
+                    .filter(s -> s.getBooking() != null && s.getBooking().getBookingId().equals(b.getBookingId()))
+                    .map(s -> BookingResponse.BookingServiceResponse.builder()
+                            .serviceId(s.getServiceItem() != null ? s.getServiceItem().getServiceItemId() : null)
+                            .serviceName(s.getServiceItem() != null ? s.getServiceItem().getServiceName() : "N/A")
+                            .quantity(s.getQuantity())
+                            .price(s.getPrice())
+
+                            .build())
+                    .collect(Collectors.toList());
+
+            return BookingResponse.builder()
+                    .bookingId(b.getBookingId())
+                    .bookingStatus(b.getBookingStatus())
+                    .status(b.getBookingStatus())
+                    .totalPrice(b.getTotalPrice())
+                    .depositAmount(b.getDepositAmount())
+                    .remainingAmount(b.getRemainingAmount())
+                    .startTime(b.getStartTime())
+                    .endTime(b.getEndTime())
+                    .createdAt(b.getCreatedAt())
+                    .note(b.getNote())
+                    .invoicePdfUrl(b.getInvoiceUrl())
+                    .phoneNumber(b.getBookerPhone())
+                    .userName(b.getBookerName() != null ? b.getBookerName() :
+                            (b.getRenter() != null ? b.getRenter().getUserName() : "Khách lẻ"))
+
+                    // MAP DỊCH VỤ VÀO TRỰC TIẾP TỪNG BOOKING
+                    .extraServiceResponses(extraServices)
+
+                    .slots(b.getSlots() != null ? b.getSlots().stream().map(slot -> {
+                        String courtName = (slot.getCourtCopy() != null && slot.getCourtCopy().getCourt() != null)
+                                ? slot.getCourtCopy().getCourt().getCourtName() : "N/A";
+                        String courtCode = slot.getCourtCopy() != null
+                                ? slot.getCourtCopy().getCourtCode() : "N/A";
+
+                        return SlotResponse.builder()
+                                .slotId(slot.getSlotId())
+                                .startTime(slot.getStartTime())
+                                .endTime(slot.getEndTime())
+                                .price(slot.getPrice())
+                                .courtName(courtName)
+                                .courtCode(courtCode)
+                                .build();
+                    }).collect(Collectors.toList()) : new ArrayList<>())
+
+                    .rentalArea(b.getRentalArea() != null ? RentalAreaResponse.builder()
+                            .rentalAreaId(b.getRentalArea().getRentalAreaId())
+                            .rentalAreaName(b.getRentalArea().getRentalAreaName())
+                            .build() : null)
+                    .build();
+        }).collect(Collectors.toList());
 
         List<MatchResponse> matchDTOs = matches.stream().map(m -> MatchResponse.builder()
                 .matchId(m.getMatchId())
-                .courtName(m.getCourt().getCourtName())
+                .courtName(m.getCourt() != null ? m.getCourt().getCourtName() : "N/A")
                 .startTime(m.getStartTime())
                 .endTime(m.getEndTime())
                 .status(m.getStatus().toString())
@@ -110,21 +169,12 @@ public class ReportServiceImpl implements ReportService {
                 .payosPaymentLinkId(p.getPayosPaymentLinkId())
                 .build()).collect(Collectors.toList());
 
-        List<BookingResponse.BookingServiceResponse> serviceItemDTOs = serviceItems.stream().map(s ->
-                BookingResponse.BookingServiceResponse.builder()
-                        .serviceId(s.getServiceItem() != null ? s.getServiceItem().getServiceItemId() : null)
-                        .serviceName(s.getServiceItem() != null ? s.getServiceItem().getServiceName() : "N/A")
-                        .quantity(s.getQuantity())
-                        .price(s.getPrice())
-                        .build()
-        ).collect(Collectors.toList());
-
         // 3. Tính toán các con số tổng quan
         BigDecimal totalBookingRevenue = bookings.stream()
                 .map(b -> b.getTotalPrice() != null ? b.getTotalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalServiceRevenue = serviceItemDTOs.stream()
+        BigDecimal totalServiceRevenue = serviceItems.stream()
                 .map(s -> {
                     if (s.getPrice() != null && s.getQuantity() != null) {
                         return s.getPrice().multiply(BigDecimal.valueOf(s.getQuantity()));
@@ -138,15 +188,14 @@ public class ReportServiceImpl implements ReportService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 4. Trả về DTO tổng hợp
-        return EndOfDayReportDTO.builder()
-                .reportDate(date)
+        return ReportResponse.builder()
+                .reportDate(start) // Hoặc có thể truyền trả lại chuỗi khoảng thời gian nếu cần
                 .totalBookingRevenue(totalBookingRevenue)
                 .totalServiceRevenue(totalServiceRevenue)
                 .totalPaid(totalPaid)
                 .bookings(bookingDTOs)
                 .matches(matchDTOs)
                 .payments(paymentDTOs)
-                .serviceItems(serviceItemDTOs)
                 .build();
     }
 

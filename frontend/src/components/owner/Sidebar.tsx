@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ConfigProvider, Layout, Menu, type MenuProps } from "antd";
+import { Layout, Menu, type MenuProps } from "antd";
 import { Link, useLocation } from "react-router-dom";
 import {
   AppstoreOutlined,
