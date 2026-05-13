@@ -37,4 +37,8 @@ public class UserResponse {
     private BigDecimal fakeMoney;
     private List<CategoryRankResponse> categoryRank;
     private Integer teamNumber;
+    private Integer creditScore;
+    private String memberTier;
+    private Integer totalMatches;
+    private BigDecimal totalSpent;
 }

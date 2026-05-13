@@ -536,7 +536,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         List<CourtSummaryResponse> courtResponses = courts.stream().map(court -> {
 
-
             List<AmenityResponse> amenityResponses = court.getAmenities().stream().map(
                     amenity -> AmenityResponse.builder()
                             .amenityId(amenity.getAmenityId())

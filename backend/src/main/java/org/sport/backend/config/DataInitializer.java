@@ -38,7 +38,8 @@ public class DataInitializer implements CommandLineRunner {
     private final UserAchievementRepository userAchievementRepository;
     private final UserCategoryRankRepository userCategoryRankRepository;
     private final PasswordEncoder passwordEncoder;
-    private  final ItemGroupRepository itemGroupRepository;
+    private final ItemGroupRepository itemGroupRepository;
+
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
@@ -72,17 +73,21 @@ public class DataInitializer implements CommandLineRunner {
         if (categoryRepository.count() == 0) seedCategories();
         if (amenityRepository.count() == 0) seedAmenities();
 
-
         // 3. Seed Users, Rank theo môn & Achievements
         if (userRepository.count() == 0) {
             String commonPass = passwordEncoder.encode("123456");
             List<User> users = new ArrayList<>();
             Random random = new Random();
 
-            users.add(User.builder().userName("Admin main").email("admin@gmail.com").passwordHash(commonPass).gender("Male").phone("0901000011").dateOfBirth(LocalDate.of(1990, 5, 15)).provider(AuthProvider.LOCAL).role(adminRole).createdAt(LocalDateTime.now().minusYears(5)).active(true).build());
-            users.add(User.builder().userName("Owner main").email("owner@gmail.com").passwordHash(commonPass).gender("Male").phone("0911000011").dateOfBirth(LocalDate.of(1985, 8, 20)).provider(AuthProvider.LOCAL).role(ownerRole).createdAt(LocalDateTime.now().minusYears(1)).active(true).build());
-            users.add(User.builder().userName("Staff main").email("staff@gmail.com").passwordHash(commonPass).gender("Male").phone("0921000011").dateOfBirth(LocalDate.of(1995, 12, 1)).provider(AuthProvider.LOCAL).role(staffRole).createdAt(LocalDateTime.now().minusYears(1)).active(true).build());
-            users.add(User.builder().userName("Renter main").email("renter@gmail.com").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true).build());
+            // Khởi tạo các tài khoản chính kèm thông tin uy tín mặc định
+            users.add(User.builder().userName("Admin main").email("admin@gmail.com").passwordHash(commonPass).gender("Male").phone("0901000011").dateOfBirth(LocalDate.of(1990, 5, 15)).provider(AuthProvider.LOCAL).role(adminRole).createdAt(LocalDateTime.now().minusYears(5)).active(true)
+                    .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
+            users.add(User.builder().userName("Owner main").email("owner@gmail.com").passwordHash(commonPass).gender("Male").phone("0911000011").dateOfBirth(LocalDate.of(1985, 8, 20)).provider(AuthProvider.LOCAL).role(ownerRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
+                    .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
+            users.add(User.builder().userName("Staff main").email("staff@gmail.com").passwordHash(commonPass).gender("Male").phone("0921000011").dateOfBirth(LocalDate.of(1995, 12, 1)).provider(AuthProvider.LOCAL).role(staffRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
+                    .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
+            users.add(User.builder().userName("Renter main").email("renter@gmail.com").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
+                    .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
 
             for (int i = 1; i <= 2; i++)
                 users.add(createDummyUser("Admin " + i, "admin" + i + "@gmail.com", commonPass, adminRole));
@@ -173,12 +178,13 @@ public class DataInitializer implements CommandLineRunner {
         if (bookingRepository.count() == 0) seedBookingAndPaymentData();
         if (postRepository.count() == 0) seedPostData();
         if (rentalAreaRepository.count() <= 1) seedMultipleRentalAreasAndPosts(courtImagesList.subList(2, 6));
-        if(itemGroupRepository.count() == 0){
+        if (itemGroupRepository.count() == 0) {
             seedItemGroup();
         }
 
     }
-    private void seedItemGroup(){
+
+    private void seedItemGroup() {
         ItemGroup group1 = new ItemGroup();
         group1.setName("Đồ ăn / Thức uống");
 
@@ -192,6 +198,7 @@ public class DataInitializer implements CommandLineRunner {
         itemGroupRepository.save(group2);
         itemGroupRepository.save(group3);
     }
+
     private void seedPermissions() {
         List<Permission> permissions = List.of(
                 Permission.builder().permissionName("VIEW_USERS").description("Xem danh sách người dùng").build(),
@@ -199,31 +206,46 @@ public class DataInitializer implements CommandLineRunner {
                 Permission.builder().permissionName("CREATE_USER").description("Tạo tài khoản người dùng mới").build(),
                 Permission.builder().permissionName("UPDATE_USER").description("Cập nhật thông tin người dùng").build(),
                 Permission.builder().permissionName("UPDATE_USER_STATUS").description("Cập nhật trạng thái người dùng (Khóa/Mở)").build(),
+
+                Permission.builder().permissionName("UPDATE_CUSTOMER_REPUTTION").description("Cộng hoặc trừ điểm uy tín của người dùng").build(),
+                Permission.builder().permissionName("VIEW_CUSTOMER").description("Xem danh sách khách hàng đã từng đặt sân tại cơ sở").build(),
+                Permission.builder().permissionName("VIEW_CUSTOMER_DETAIL").description("Xem chi tiết khách hàng đ0ã từng đặt sân tại cơ sở").build(),
+
                 Permission.builder().permissionName("ASSIGN_ROLE").description("Gán vai trò (Role) cho người dùng").build(),
                 Permission.builder().permissionName("VIEW_USER_AUTHORITIES").description("Xem danh sách quyền của người dùng").build(),
                 Permission.builder().permissionName("VIEW_ROLES").description("Xem danh sách và chi tiết vai trò").build(),
                 Permission.builder().permissionName("CREATE_ROLE").description("Tạo mới vai trò").build(),
                 Permission.builder().permissionName("UPDATE_ROLE").description("Cập nhật thông tin và trạng thái vai trò").build(),
                 Permission.builder().permissionName("MANAGE_ROLE_PERMISSIONS").description("Thêm hoặc xóa quyền của vai trò").build(),
+
                 Permission.builder().permissionName("VIEW_COURTS").description("Xem danh sách sân trong khu vực").build(),
                 Permission.builder().permissionName("EXTEND_SLOT").description("Gia hạn thời gian thuê sân").build(),
                 Permission.builder().permissionName("SWAP_SLOT").description("Đổi sân hoặc đổi giờ thuê").build(),
+
                 Permission.builder().permissionName("VIEW_DASHBOARD_ADMIN").description("Xem bảng admin").build(),
                 Permission.builder().permissionName("VIEW_DASHBOARD_OWNER").description("Xem bảng owner").build(),
+
                 Permission.builder().permissionName("CREATE_RENTAL_AREA").description("Tạo mới khu vực cho thuê (Cơ sở)").build(),
                 Permission.builder().permissionName("UPDATE_RENTAL_AREA").description("Cập nhật thông tin khu vực cho thuê").build(),
                 Permission.builder().permissionName("DELETE_RENTAL_AREA").description("Xóa/Vô hiệu hóa khu vực cho thuê").build(),
+
                 Permission.builder().permissionName("CREATE_POST").description("Tạo bài đăng mới").build(),
                 Permission.builder().permissionName("UPDATE_POST").description("Cập nhật bài đăng của mình").build(),
                 Permission.builder().permissionName("DELETE_POST").description("Xóa bài đăng của mình").build(),
+
                 Permission.builder().permissionName("VIEW_PERMISSIONS").description("Xem danh sách và chi tiết các quyền").build(),
                 Permission.builder().permissionName("CREATE_PERMISSION").description("Tạo quyền hệ thống mới").build(),
                 Permission.builder().permissionName("UPDATE_PERMISSION").description("Cập nhật thông tin quyền hệ thống").build(),
                 Permission.builder().permissionName("DELETE_PERMISSION").description("Xóa quyền khỏi hệ thống").build(),
+                Permission.builder().permissionName("GRANT_EXTRA_PERMISSION").description("Thêm quyền truy cập riêng cho một người dùng").build(),
+                Permission.builder().permissionName("REVOKE_EXTRA_PERMISSION").description("Thu hồi quyền truy cập riêng của một người dùng").build(),
+
                 Permission.builder().permissionName("CREATE_PAYMENT").description("Thực hiện thanh toán").build(),
+
                 Permission.builder().permissionName("CREATE_NEWS").description("Đăng tin tức/thông báo mới").build(),
                 Permission.builder().permissionName("UPDATE_NEWS").description("Cập nhật tin tức").build(),
                 Permission.builder().permissionName("DELETE_NEWS").description("Xóa tin tức").build(),
+
                 Permission.builder().permissionName("SUBMIT_MATCH_RESULT").description("Gửi kết quả trận đấu").build(),
                 Permission.builder().permissionName("RESPOND_MATCH_RESULT").description("Xác nhận hoặc từ chối kết quả trận đấu").build(),
                 Permission.builder().permissionName("CREATE_MATCH").description("Tạo trận đấu (giao lưu/cố định)").build(),
@@ -231,6 +253,7 @@ public class DataInitializer implements CommandLineRunner {
                 Permission.builder().permissionName("CONFIRM_MATCH_DEPOSIT").description("Xác nhận tiền cọc cho trận đấu").build(),
                 Permission.builder().permissionName("VIEW_ALL_MATCHES").description("Xem toàn bộ danh sách trận đấu trên hệ thống").build(),
                 Permission.builder().permissionName("VIEW_OWNER_MATCHES").description("Xem danh sách trận đấu diễn ra tại sân của mình").build(),
+
                 Permission.builder().permissionName("CREATE_COURT_PRICE").description("Tạo cấu hình giá thuê sân").build(),
                 Permission.builder().permissionName("UPDATE_COURT_PRICE").description("Cập nhật giá thuê sân").build(),
                 Permission.builder().permissionName("DELETE_COURT_PRICE").description("Xóa cấu hình giá thuê sân").build(),
@@ -239,19 +262,26 @@ public class DataInitializer implements CommandLineRunner {
                 Permission.builder().permissionName("CREATE_COURT").description("Tạo mới loại sân trong khu vực").build(),
                 Permission.builder().permissionName("UPDATE_COURT").description("Cập nhật thông tin loại sân").build(),
                 Permission.builder().permissionName("DELETE_COURT").description("Xóa loại sân").build(),
+
                 Permission.builder().permissionName("USE_CHAT").description("Sử dụng tính năng nhắn tin nội bộ").build(),
+
                 Permission.builder().permissionName("CREATE_CATEGORY").description("Tạo danh mục môn thể thao mới").build(),
                 Permission.builder().permissionName("UPDATE_CATEGORY").description("Cập nhật danh mục thể thao").build(),
                 Permission.builder().permissionName("DELETE_CATEGORY").description("Xóa danh mục thể thao").build(),
+
                 Permission.builder().permissionName("BOOK_ROOM").description("Thực hiện đặt sân và tạo giao dịch").build(),
                 Permission.builder().permissionName("VIEW_BOOKINGS").description("Xem danh sách chi tiết các đơn đặt sân").build(),
                 Permission.builder().permissionName("MANAGE_BOOKING").description("Cập nhật trạng thái/thông tin đơn đặt sân").build(),
+
                 Permission.builder().permissionName("MANAGE_FINANCE").description("Quản lý tài chính, xác nhận thu tiền khách").build(),
+
                 Permission.builder().permissionName("CREATE_AMENITY").description("Tạo mới tiện ích hệ thống").build(),
                 Permission.builder().permissionName("UPDATE_AMENITY").description("Cập nhật tiện ích hệ thống").build(),
                 Permission.builder().permissionName("DELETE_AMENITY").description("Xóa tiện ích hệ thống").build(),
+
                 Permission.builder().permissionName("MANAGE_PAYOUT").description("Xác nhận chuyển tiền/thanh toán cho chủ sân").build(),
                 Permission.builder().permissionName("VIEW_PAYOUT").description("Xem lịch sử nhận tiền của cơ sở").build(),
+
                 Permission.builder().permissionName("MANAGE_COMMISSION").description("Thiết lập và quản lý cấu hình hoa hồng").build(),
                 Permission.builder().permissionName("VIEW_COMMISSION").description("Xem bảng cấu hình phần trăm hoa hồng").build()
         );
@@ -259,21 +289,53 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedRoles(Map<String, Permission> permMap) {
-        Role adminRole = Role.builder().roleName("ADMIN").description("Quản trị hệ thống").active(true).permissions(new HashSet<>(permMap.values())).build();
+        Role adminRole = Role.builder()
+                .roleName("ADMIN")
+                .description("Quản trị hệ thống")
+                .active(true)
+                .permissions(new HashSet<>(permMap.values()))
+                .build();
 
         Set<Permission> staffPerms = getPermissions(permMap,
                 "VIEW_COURTS", "VIEW_BOOKINGS", "MANAGE_BOOKING",
-                "EXTEND_SLOT", "SWAP_SLOT", "USE_CHAT", "VIEW_OWNER_MATCHES"
+                "EXTEND_SLOT", "SWAP_SLOT", "USE_CHAT", "VIEW_OWNER_MATCHES",
+                "VIEW_CUSTOMER", "VIEW_CUSTOMER_DETAIL"
         );
-        Role staffRole = Role.builder().roleName("STAFF").description("Nhân viên quản lý sân").active(true).permissions(staffPerms).build();
+        Role staffRole = Role.builder()
+                .roleName("STAFF")
+                .description("Nhân viên quản lý sân")
+                .active(true)
+                .permissions(staffPerms)
+                .build();
 
         Set<Permission> ownerPerms = getPermissions(permMap,
-                "VIEW_DASHBOARD_OWNER", "CREATE_RENTAL_AREA", "UPDATE_RENTAL_AREA", "DELETE_RENTAL_AREA", "CREATE_COURT", "UPDATE_COURT", "DELETE_COURT", "CREATE_COURT_COPY", "UPDATE_COURT_COPY", "CREATE_COURT_PRICE", "UPDATE_COURT_PRICE", "DELETE_COURT_PRICE", "VIEW_BOOKINGS", "MANAGE_BOOKING", "MANAGE_FINANCE", "VIEW_PAYOUT", "VIEW_COMMISSION", "USE_CHAT", "CREATE_POST", "UPDATE_POST", "DELETE_POST", "VIEW_OWNER_MATCHES");
-        Role ownerRole = Role.builder().roleName("OWNER").description("Chủ sân").active(true).permissions(ownerPerms).build();
+                "VIEW_DASHBOARD_OWNER", "CREATE_RENTAL_AREA", "UPDATE_RENTAL_AREA",
+                "DELETE_RENTAL_AREA", "CREATE_COURT", "UPDATE_COURT", "DELETE_COURT",
+                "CREATE_COURT_COPY", "UPDATE_COURT_COPY", "CREATE_COURT_PRICE",
+                "UPDATE_COURT_PRICE", "DELETE_COURT_PRICE", "VIEW_BOOKINGS",
+                "MANAGE_BOOKING", "MANAGE_FINANCE", "VIEW_PAYOUT", "VIEW_COMMISSION",
+                "USE_CHAT", "CREATE_POST", "UPDATE_POST", "DELETE_POST", "VIEW_OWNER_MATCHES",
+                "VIEW_CUSTOMER", "UPDATE_CUSTOMER_REPUTTION", "VIEW_CUSTOMER_DETAIL"
+        );
+        Role ownerRole = Role.builder()
+                .roleName("OWNER")
+                .description("Chủ sân")
+                .active(true)
+                .permissions(ownerPerms)
+                .build();
 
         Set<Permission> renterPerms = getPermissions(permMap,
-                "BOOK_ROOM", "CREATE_PAYMENT", "USE_CHAT", "EXTEND_SLOT", "SWAP_SLOT", "CREATE_MATCH", "JOIN_MATCH", "CONFIRM_MATCH_DEPOSIT", "SUBMIT_MATCH_RESULT", "RESPOND_MATCH_RESULT", "CREATE_POST", "UPDATE_POST", "DELETE_POST", "VIEW_COURTS");
-        Role renterRole = Role.builder().roleName("RENTER").description("Người thuê").active(true).permissions(renterPerms).build();
+                "BOOK_ROOM", "CREATE_PAYMENT", "USE_CHAT", "EXTEND_SLOT",
+                "SWAP_SLOT", "CREATE_MATCH", "JOIN_MATCH", "CONFIRM_MATCH_DEPOSIT",
+                "SUBMIT_MATCH_RESULT", "RESPOND_MATCH_RESULT", "CREATE_POST",
+                "UPDATE_POST", "DELETE_POST", "VIEW_COURTS"
+        );
+        Role renterRole = Role.builder()
+                .roleName("RENTER")
+                .description("Người thuê")
+                .active(true)
+                .permissions(renterPerms)
+                .build();
 
         roleRepository.saveAll(List.of(adminRole, staffRole, ownerRole, renterRole));
     }
@@ -282,13 +344,16 @@ public class DataInitializer implements CommandLineRunner {
         return Arrays.stream(names).map(permMap::get).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
+    // Bổ sung mặc định vào hàm tạo Dummy User
     private User createDummyUser(String name, String email, String pass, Role role) {
         Random rand = new Random();
         return User.builder()
                 .userName(name).email(email).passwordHash(pass).gender(rand.nextBoolean() ? "Male" : "Female")
                 .phone("09" + (10000000 + rand.nextInt(90000000)))
                 .dateOfBirth(LocalDate.of(1980 + rand.nextInt(25), 1 + rand.nextInt(12), 1 + rand.nextInt(28)))
-                .provider(AuthProvider.LOCAL).role(role).active(true).createdAt(LocalDateTime.now().minusDays(rand.nextInt(365))).build();
+                .provider(AuthProvider.LOCAL).role(role).active(true).createdAt(LocalDateTime.now().minusDays(rand.nextInt(365)))
+                .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO)
+                .build();
     }
 
     private void seedCourtData(List<String> images) {
@@ -350,27 +415,50 @@ public class DataInitializer implements CommandLineRunner {
         if (courtCopies.isEmpty()) return;
 
         Random random = new Random();
+
+        BookingStatus[] bookingStatuses = BookingStatus.values();
+        PaymentStatus[] paymentStatuses = PaymentStatus.values();
+
         for (int i = 1; i <= 20; i++) {
             LocalDateTime createdAt = LocalDateTime.now().minusDays(random.nextInt(30)).minusHours(i);
             LocalDateTime startTime = createdAt.plusDays(1).withHour(9 + (i % 10)).withMinute(0);
             LocalDateTime endTime = startTime.plusHours(2);
             BigDecimal totalPrice = BigDecimal.valueOf(160000);
 
+            BookingStatus randomBookingStatus = bookingStatuses[random.nextInt(bookingStatuses.length)];
+
             Booking booking = Booking.builder()
-                    .bookingTitle("Booking by Renter " + i).bookingStatus(BookingStatus.COMPLETED).bookingType(BookingType.ONLINE)
-                    .totalPrice(totalPrice).depositAmount(totalPrice.divide(BigDecimal.valueOf(2))).remainingAmount(totalPrice.divide(BigDecimal.valueOf(2)))
-                    .startTime(startTime).endTime(endTime).bookerName(renter.getUserName()).bookerPhone(renter.getPhone())
-                    .rentalArea(area).renter(renter).createdAt(createdAt).build();
+                    .bookingTitle("Booking by Renter " + i)
+                    .bookingStatus(randomBookingStatus)
+                    .bookingType(BookingType.ONLINE)
+                    .totalPrice(totalPrice)
+                    .depositAmount(totalPrice.divide(BigDecimal.valueOf(2)))
+                    .remainingAmount(totalPrice.divide(BigDecimal.valueOf(2)))
+                    .startTime(startTime).endTime(endTime)
+                    .bookerName(renter.getUserName())
+                    .bookerPhone(renter.getPhone())
+                    .rentalArea(area).renter(renter).createdAt(createdAt)
+                    .build();
             booking = bookingRepository.save(booking);
 
             CourtCopy selectedCourt = courtCopies.get(random.nextInt(courtCopies.size()));
 
             slotRepository.save(Slot.builder().booking(booking).courtCopy(selectedCourt).startTime(startTime).endTime(endTime).build());
 
-            paymentRepository.save(Payment.builder()
-                    .booking(booking).user(renter).amount(totalPrice).transactionDate(createdAt.plusMinutes(15))
-                    .paymentMethod(PaymentMethod.VN_PAY).paymentStatus(PaymentStatus.COMPLETED).paymentType(PaymentType.FULL)
-                    .transactionCode("PAY_" + UUID.randomUUID().toString().substring(0, 10).toUpperCase()).build());
+            if (randomBookingStatus == BookingStatus.BOOKED || randomBookingStatus == BookingStatus.COMPLETED) {
+                PaymentStatus randomPaymentStatus = paymentStatuses[random.nextInt(paymentStatuses.length)];
+
+                paymentRepository.save(Payment.builder()
+                        .booking(booking)
+                        .user(renter)
+                        .amount(totalPrice)
+                        .transactionDate(createdAt.plusMinutes(15))
+                        .paymentMethod(PaymentMethod.VN_PAY)
+                        .paymentStatus(randomPaymentStatus)
+                        .paymentType(PaymentType.FULL)
+                        .transactionCode("PAY_" + UUID.randomUUID().toString().substring(0, 10).toUpperCase())
+                        .build());
+            }
         }
     }
 
@@ -487,8 +575,8 @@ public class DataInitializer implements CommandLineRunner {
                     .isActive(true)
                     .status(RentalAreaStatus.ACTIVE)
                     .verificationStatus(VerificationStatus.VERIFIED)
-                    .openTime(LocalTime.of(5,00))
-                    .closeTime(LocalTime.of(23,00))
+                    .openTime(LocalTime.of(5, 00))
+                    .closeTime(LocalTime.of(23, 00))
                     .build();
             rentalAreaRepository.save(area);
 

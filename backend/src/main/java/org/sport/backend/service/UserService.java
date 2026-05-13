@@ -5,6 +5,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
+import org.sport.backend.dto.response.user.ReputationLogResponse;
 import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.User;
@@ -47,9 +48,16 @@ public interface UserService {
 
     User findByEmail(String email);
 
+    @Transactional
+    UserResponse updateReputation(UUID userId, Integer points, String reason);
+
+    PageResponse<UserResponse> getCustomersByOwner(int page, int size, String keyword, String tier, Integer minScore, Integer maxScore);
+
     User getCurrentUserEntity();
 
     UserDashboardResponse getUserDashboard(UUID userId);
 
     void verifyOwnerAccount();
+
+    PageResponse<ReputationLogResponse> getReputationLogs(UUID id, int i, int size);
 }

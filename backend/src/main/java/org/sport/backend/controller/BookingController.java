@@ -18,6 +18,7 @@ import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
 import org.sport.backend.entity.ServiceItem;
 import org.sport.backend.repository.ServiceItemRepository;
 import org.sport.backend.service.BookingService;
+import org.sport.backend.service.ExcelService;
 import org.sport.backend.service.InvoiceService;
 import org.sport.backend.service.ServiceItemService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,9 @@ public class BookingController {
     private BookingService bookingService;
     @Autowired
     private InvoiceService invoiceService;
+    @Autowired
+    private ExcelService excelService;
+
     @PostMapping("/owner")
 //    @PreAuthorize("hasAuthority('MANAGE_BOOKING')") // Đảm bảo chỉ chủ sân/nhân viên mới được gọi
     public ApiResponse<BookingResponse> ownerCreateBooking(
@@ -70,8 +74,6 @@ public class BookingController {
                     ApiResponse.error(400, "Lỗi thêm dịch vụ: " + e.getMessage()));
         }
     }
-
-
 
     @PostMapping("/check-availability")
     public ApiResponse<CheckAvailabilityResponse> checkAvailability(
@@ -308,6 +310,35 @@ public class BookingController {
                     .code(500)
                     .message("Api system have some problems " + e.getMessage())
                     .build();
+        }
+    }
+
+    @GetMapping("/export/excel")
+    @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
+    public ResponseEntity<byte[]> exportToExcel(
+            @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) UUID rentalId
+    ) {
+        try {
+            // Lấy dữ liệu (không phân trang - page=1, size=999999 để lấy hết)
+            List<BookingResponse> bookings;
+            if (rentalId != null) {
+                bookings = bookingService.getBookingsRentalId(rentalId, bookingStatus, keyword, from, to, 1, Integer.MAX_VALUE).getData();
+            } else {
+                bookings = bookingService.getAllBookings(bookingStatus, keyword, from, to, 1, Integer.MAX_VALUE).getData();
+            }
+
+            byte[] excelContent = excelService.exportBookingsToExcel(bookings);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=bookings_report.xlsx")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(excelContent);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 

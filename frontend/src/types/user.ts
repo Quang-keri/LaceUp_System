@@ -19,6 +19,10 @@ export interface UserResponse {
   isDepositConfirmed?: boolean;
   teamNumber?: number | null;
   categoryRanks?: CategoryRankResponse[];
+  creditScore?: number;
+  memberTier?: string;
+  totalMatches?: number;
+  totalSpent?: number;
 }
 
 export interface CreateUserRequest {
@@ -60,4 +64,11 @@ export interface UserDashboardResponse {
   winRate: number;
 
   categoryRanks: CategoryRankResponse[];
+}
+
+export interface ReputationLogResponse {
+  id: number;
+  pointsChanged: number;
+  reason: string;
+  createdAt: string;
 }

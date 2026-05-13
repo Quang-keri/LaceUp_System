@@ -257,19 +257,19 @@ const CreateMatchModal = ({
                     value="1"
                     className="flex-1 text-center rounded-lg! font-bold border-slate-200"
                   >
-                    🏸 Cầu lông
+                    Cầu lông
                   </Radio.Button>
                   <Radio.Button
                     value="2"
                     className="flex-1 text-center rounded-lg! font-bold border-slate-200"
                   >
-                    ⚽ Bóng đá
+                    Bóng đá
                   </Radio.Button>
                   <Radio.Button
                     value="3"
                     className="flex-1 text-center rounded-lg! font-bold border-slate-200"
                   >
-                    🏓 Pickleball
+                    Pickleball
                   </Radio.Button>
                 </Radio.Group>
               </Form.Item>
@@ -384,19 +384,19 @@ const CreateMatchModal = ({
                     value="NORMAL"
                     className="flex-1 text-center rounded-lg! font-bold border-slate-200"
                   >
-                    😊 Giao lưu
+                    Giao lưu
                   </Radio.Button>
                   <Radio.Button
                     value="BET"
                     className="flex-1 text-center rounded-lg! font-bold border-slate-200"
                   >
-                    💰 Chia Kèo
+                    Chia Kèo
                   </Radio.Button>
                   <Radio.Button
                     value="RANKED"
                     className="flex-1 text-center rounded-lg! font-bold border-slate-200"
                   >
-                    🏆 Đánh Rank
+                    Đánh Rank
                   </Radio.Button>
                 </Radio.Group>
               </Form.Item>

@@ -10,9 +10,7 @@ const { Content } = Layout;
 const THEME_KEY = "adminTheme";
 
 export default function OwnerLayout() {
-  // 1. Lấy cả user và logout từ context
   const { user, logout } = useAuth();
-
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -25,7 +23,6 @@ export default function OwnerLayout() {
     document.body.setAttribute("data-theme", themeValue);
   }, [isDark]);
 
-  // 2. Tạo hàm handleLogoutClick giống bên Admin
   const handleLogoutClick = async () => {
     await logout();
   };

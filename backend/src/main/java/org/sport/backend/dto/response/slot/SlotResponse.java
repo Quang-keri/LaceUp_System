@@ -20,6 +20,7 @@ public class SlotResponse {
     private UUID slotId;
     private UUID courtCopyId;
     private String courtCode;
+    private String courtName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BigDecimal price;

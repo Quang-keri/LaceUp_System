@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Card, message, Modal } from "antd";
+import { Card, message, Modal, Button } from "antd";
+import { FileExcelOutlined } from "@ant-design/icons";
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
 
@@ -204,6 +205,42 @@ export default function BookingManagementPage() {
     setViewMode("detail");
   };
 
+  const handleExportExcel = async () => {
+    if (!selectedBuildingId) {
+      message.warning("Vui lòng chọn cơ sở để xuất dữ liệu");
+      return;
+    }
+
+    try {
+      message.loading({ content: "Đang chuẩn bị file...", key: "export" });
+      const response: any = await bookingService.exportBookingsExcel({
+        rentalId: selectedBuildingId,
+        bookingStatus: filterStatus,
+        keyword: keyword,
+      });
+
+      // Xử lý tải file blob
+      const blob = new Blob([response.data || response], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Danh_sach_Booking_${new Date().getTime()}.xlsx`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      message.success({ content: "Xuất file thành công!", key: "export" });
+    } catch (error) {
+      console.error(error);
+      message.error({ content: "Lỗi khi xuất file Excel", key: "export" });
+    }
+  };
+
   return (
     <div style={{ padding: "20px" }}>
       {viewMode === "table" ? (
@@ -223,7 +260,20 @@ export default function BookingManagementPage() {
             }}
           />
 
-          <Card title="Quản lý Booking" style={{ marginTop: "20px" }}>
+          <Card
+            title="Quản lý Booking"
+            style={{ marginTop: "20px" }}
+            extra={
+              <Button
+                type="primary"
+                icon={<FileExcelOutlined />}
+                onClick={handleExportExcel}
+                style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }} // Màu xanh lá đặc trưng của Excel
+              >
+                Xuất Excel
+              </Button>
+            }
+          >
             <BookingTable
               bookings={bookings}
               loading={loading}

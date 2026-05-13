@@ -1,4 +1,4 @@
-import "./App.css";
+// import "./App.css";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./routes/Router";
 import "react-toastify/dist/ReactToastify.css";

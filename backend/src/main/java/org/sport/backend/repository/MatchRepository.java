@@ -43,4 +43,10 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
     boolean existsByCourtAndStartTime(Court court, LocalDateTime localDateTime);
 
     List<Match> findByStatus(MatchStatus status);
+
+    @Query("SELECT m FROM Match m WHERE m.startTime >= :startOfDay AND m.startTime <= :endOfDay")
+    List<Match> findAllMatchesForReport(
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay
+    );
 }

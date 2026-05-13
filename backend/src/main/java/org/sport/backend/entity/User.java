@@ -3,6 +3,7 @@ package org.sport.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.*;
+import org.sport.backend.constant.MemberTier;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.AuthProvider;
 import org.sport.backend.constant.RankHelper;
@@ -84,5 +85,24 @@ public class User extends BaseEntity {
 
 //    @Builder.Default
 //    private BigDecimal fakeMoney = BigDecimal.valueOf(1000000.00);
+
+    @Builder.Default
+    @Column(name = "credit_score")
+    private Integer creditScore = 100;
+
+    @Builder.Default
+    @Column(name = "member_tier", length = 20)
+    private MemberTier memberTier = MemberTier.BRONZE;
+
+    @Builder.Default
+    @Column(name = "total_matches")
+    private Integer totalMatches = 0;
+
+    @Builder.Default
+    @Column(name = "total_spent", precision = 19, scale = 2)
+    private BigDecimal totalSpent = BigDecimal.ZERO;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReputationLog> reputationLogs;
 
 }

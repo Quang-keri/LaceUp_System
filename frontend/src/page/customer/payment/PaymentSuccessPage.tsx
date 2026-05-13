@@ -16,7 +16,7 @@ export default function PaymentSuccessPage() {
             <Button
               type="primary"
               key="booking"
-              onClick={() => navigate("/customer/my-bookings")}
+              onClick={() => navigate("/booking-history")}
             >
               Xem lịch đặt sân
             </Button>,
