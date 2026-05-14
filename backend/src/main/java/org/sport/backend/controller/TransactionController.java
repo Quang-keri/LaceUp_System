@@ -22,15 +22,22 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
-    @GetMapping
-    public ApiResponse<PageResponse<TransactionResponse>> getTransactions(
+    @GetMapping("/admin")
+    public ApiResponse<PageResponse<TransactionResponse>> getAllTransactionsForAdmin(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) TransactionType type,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        return ApiResponse.success(200,"Get all transactions successfully",transactionService.getTransactions(page, size, keyword, type, startDate, endDate));
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+    ) {
+        return ApiResponse.success(
+                200,
+                "Get all system transactions successfully",
+                transactionService.getTransactions(page, size, keyword, type, startDate, endDate)
+        );
     }
 
     @PostMapping
@@ -44,4 +51,35 @@ public class TransactionController {
     }
 
 
+    @GetMapping("/owner/{ownerId}")
+    public ApiResponse<PageResponse<TransactionResponse>> getOwnerTransactions(
+            @PathVariable UUID ownerId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) TransactionType type
+    ) {
+        return ApiResponse.success(
+                200,
+                "Get owner transactions successfully",
+                transactionService.getOwnerTransactions(ownerId, page, size, type)
+        );
+    }
+    @GetMapping("/rental-area/{rentalAreaId}")
+    public ApiResponse<PageResponse<TransactionResponse>> getRentalAreaTransactions(
+            @PathVariable UUID rentalAreaId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) TransactionType type
+    ) {
+        return ApiResponse.success(
+                200,
+                "Get rental area transactions successfully",
+                transactionService.getRentalAreaTransactions(
+                        rentalAreaId,
+                        page,
+                        size,
+                        type
+                )
+        );
+    }
 }

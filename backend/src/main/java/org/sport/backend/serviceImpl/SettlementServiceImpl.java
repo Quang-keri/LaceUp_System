@@ -109,48 +109,78 @@ public class SettlementServiceImpl implements SettlementService {
     public void generateDailySettlements(LocalDate date) {
         List<RentalArea> rentalAreas = rentalAreaRepository.findAll();
 
-        LocalDateTime start = date.atStartOfDay();
-        LocalDateTime end = date.plusDays(1).atStartOfDay();
-
         for (RentalArea rentalArea : rentalAreas) {
             UUID rentalAreaId = rentalArea.getRentalAreaId();
 
-            boolean exists = settlementRepository
-                    .existsByRentalArea_RentalAreaIdAndSettlementDate(rentalAreaId, date);
+            // Tổng tiền sân dùng để tính hoa hồng
+            BigDecimal bookingAmount =
+                    transactionRepository.sumCommissionableBookingIncome(
+                            rentalAreaId,
+                            date
+                    );
 
-            if (exists) {
-                continue;
+            // Tiền admin thực sự đang giữ, ví dụ: VNPay, chuyển khoản
+            BigDecimal adminCollectedAmount =
+                    transactionRepository.sumAdminCollectedBookingIncome(
+                            rentalAreaId,
+                            date
+                    );
+
+            if (bookingAmount == null) {
+                bookingAmount = BigDecimal.ZERO;
             }
 
-            BigDecimal grossAmount = transactionRepository.sumBookingIncomeByRentalArea(
-                    rentalAreaId,
-                    start,
-                    end
-            );
+            if (adminCollectedAmount == null) {
+                adminCollectedAmount = BigDecimal.ZERO;
+            }
 
-            if (grossAmount == null || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            if (adminCollectedAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
 
             BigDecimal commissionRate = commissionService.getApplicableRate(rentalAreaId);
 
-            BigDecimal commissionAmount = grossAmount
+            // Hoa hồng chỉ tính trên tiền sân, không tính tiền nước/dịch vụ
+            BigDecimal commissionAmount = bookingAmount
                     .multiply(commissionRate)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal ownerAmount = grossAmount
+            // Owner chỉ nhận lại phần tiền admin đang giữ sau khi trừ hoa hồng
+            BigDecimal ownerAmount = adminCollectedAmount
                     .subtract(commissionAmount)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            Settlement settlement = Settlement.builder()
-                    .rentalArea(rentalArea)
-                    .settlementDate(date)
-                    .grossAmount(grossAmount)
-                    .commissionRate(commissionRate)
-                    .commissionAmount(commissionAmount)
-                    .ownerAmount(ownerAmount)
-                    .status(SettlementStatus.PENDING)
-                    .build();
+            Optional<Settlement> existingOpt =
+                    settlementRepository.findByRentalArea_RentalAreaIdAndSettlementDate(
+                            rentalAreaId,
+                            date
+                    );
+
+            Settlement settlement;
+
+            if (existingOpt.isPresent()) {
+                settlement = existingOpt.get();
+
+                if (settlement.getStatus() == SettlementStatus.PAID) {
+                    continue;
+                }
+
+                settlement.setGrossAmount(adminCollectedAmount);
+                settlement.setCommissionRate(commissionRate);
+                settlement.setCommissionAmount(commissionAmount);
+                settlement.setOwnerAmount(ownerAmount);
+                settlement.setStatus(SettlementStatus.PENDING);
+            } else {
+                settlement = Settlement.builder()
+                        .rentalArea(rentalArea)
+                        .settlementDate(date)
+                        .grossAmount(adminCollectedAmount)
+                        .commissionRate(commissionRate)
+                        .commissionAmount(commissionAmount)
+                        .ownerAmount(ownerAmount)
+                        .status(SettlementStatus.PENDING)
+                        .build();
+            }
 
             settlementRepository.save(settlement);
         }
@@ -258,4 +288,15 @@ public class SettlementServiceImpl implements SettlementService {
                 .paidAt(settlement.getPaidAt())
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SettlementResponse> getOwnerSettlements(UUID rentalAreaId) {
+        return settlementRepository
+                .findByRentalArea_RentalAreaIdOrderBySettlementDateDesc(rentalAreaId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
 }

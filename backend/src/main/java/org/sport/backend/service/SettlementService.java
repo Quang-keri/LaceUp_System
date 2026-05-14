@@ -22,4 +22,6 @@ public interface SettlementService {
     AdminSettlementSummaryResponse getSummaryByDate(LocalDate date);
 
     SettlementResponse markAsPaid(UUID settlementId, PayoutConfirmRequest request, UUID adminId);
+    List<SettlementResponse> getOwnerSettlements(UUID rentalAreaId);
+
 }

@@ -208,7 +208,6 @@ public class BookingServiceImpl implements BookingService {
 
             transactionRepository.save(transaction);
 
-            transactionRepository.save(transaction);
         }
 
         return mapToBookingResponse(booking);
@@ -251,8 +250,6 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Booking với ID: " + bookingId));
 
-        boolean wasCompleted = booking.getBookingStatus() == BookingStatus.COMPLETED;
-
         BigDecimal totalExtraCost = BigDecimal.ZERO;
 
         for (AddExtraServicesRequest.ServiceItemRequest itemReq : request.getItems()) {
@@ -284,31 +281,28 @@ public class BookingServiceImpl implements BookingService {
             totalExtraCost = totalExtraCost.add(itemTotal);
         }
 
-        BigDecimal currentTotal = booking.getTotalPrice() != null
-                ? booking.getTotalPrice()
-                : BigDecimal.ZERO;
+        if (totalExtraCost.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal currentTotal = booking.getTotalPrice() != null
+                    ? booking.getTotalPrice()
+                    : BigDecimal.ZERO;
 
-        BigDecimal currentRemaining = booking.getRemainingAmount() != null
-                ? booking.getRemainingAmount()
-                : BigDecimal.ZERO;
+            booking.setTotalPrice(currentTotal.add(totalExtraCost));
 
-        booking.setTotalPrice(currentTotal.add(totalExtraCost));
-        booking.setRemainingAmount(currentRemaining.add(totalExtraCost));
-
-        if (wasCompleted && totalExtraCost.compareTo(BigDecimal.ZERO) > 0) {
-
+            // Không cộng vào remainingAmount vì tiền dịch vụ owner thu trực tiếp tại sân
             Transaction transaction = Transaction.builder()
                     .booking(booking)
                     .referenceId(booking.getBookingId())
+                    .rentalArea(booking.getRentalArea())
+                    .owner(booking.getRentalArea().getOwner())
                     .type(TransactionType.INCOME)
                     .amount(totalExtraCost)
                     .paymentMethod(PaymentMethod.CASH)
-                    .description("Phát sinh dịch vụ thêm cho booking " + booking.getBookingId())
+                    .status(TransactionStatus.SUCCESS)
+                    .category(TransactionCategory.EXTRA_SERVICE_PAYMENT)
+                    .description("Owner thu dịch vụ thêm tại sân cho booking " + booking.getBookingId())
                     .build();
 
             transactionRepository.save(transaction);
-
-            booking.setBookingStatus(BookingStatus.BOOKED);
         }
 
         bookingRepository.save(booking);
@@ -1194,7 +1188,7 @@ public class BookingServiceImpl implements BookingService {
                     .amount(remainingAmount)
                     .paymentMethod(payment != null ? payment.getPaymentMethod() : PaymentMethod.CASH)
                     .status(TransactionStatus.SUCCESS)
-                    .category(TransactionCategory.BOOKING_FULL_PAYMENT)
+                    .category(TransactionCategory.BOOKING_REMAINING_PAYMENT)
                     .description("Thu tiền còn lại cho booking " + booking.getBookingId())
                     .build();
 

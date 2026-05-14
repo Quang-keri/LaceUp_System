@@ -21,24 +21,35 @@ export interface RentalAreaOptionResponse {
 }
 
 export const financeService = {
+  // =========================
+  // ADMIN - SETTLEMENT
+  // =========================
+
   generateDailySettlements: async (date: string) => {
-    const res = await api.post(`/admin/settlements/generate`, null, {
-      params: { date },
-    });
+    const res = await api.post(
+      `/settlements/admin/generate`,
+      null,
+      {
+        params: { date },
+      },
+    );
+
     return res.data.result;
   },
 
   getSettlementsByDate: async (date: string) => {
-    const res = await api.get(`/admin/settlements`, {
+    const res = await api.get(`/settlements/admin`, {
       params: { date },
     });
+
     return res.data.result;
   },
 
   getSettlementSummary: async (date: string) => {
-    const res = await api.get(`/admin/settlements/summary`, {
+    const res = await api.get(`/settlements/admin/summary`, {
       params: { date },
     });
+
     return res.data.result;
   },
 
@@ -47,31 +58,80 @@ export const financeService = {
     data: PayoutConfirmRequest,
   ) => {
     const res = await api.patch(
-      `/admin/settlements/${settlementId}/paid`,
+      `/settlements/admin/${settlementId}/paid`,
       data,
     );
+
     return res.data.result;
   },
+
+  // =========================
+  // ADMIN - MONTHLY REPORT
+  // =========================
+
+  getMonthlySettlements: async (
+    month: number,
+    year: number,
+  ) => {
+    const res = await api.get(`/settlements/admin/monthly`, {
+      params: { month, year },
+    });
+
+    return res.data.result;
+  },
+
+  getMonthlySettlementByRentalArea: async (
+    rentalAreaId: string,
+    month: number,
+    year: number,
+  ) => {
+    const res = await api.get(
+      `/settlements/admin/monthly/${rentalAreaId}`,
+      {
+        params: { month, year },
+      },
+    );
+
+    return res.data.result;
+  },
+
+  // =========================
+  // OWNER - SETTLEMENT HISTORY
+  // =========================
+
+  getOwnerSettlements: async (rentalAreaId: string) => {
+    const res = await api.get(
+      `/settlements/owner/rental-areas/${rentalAreaId}`,
+    );
+
+    return res.data.result;
+  },
+
+  // =========================
+  // COMMISSION CONFIG
+  // =========================
 
   getCommissionConfigs: async () => {
     const res = await api.get(`/admin/commission-configs`);
     return res.data.result;
   },
 
-  createCommissionConfig: async (data: CommissionConfigDTO) => {
-    const res = await api.post(`/admin/commission-configs`, data);
+  createCommissionConfig: async (
+    data: CommissionConfigDTO,
+  ) => {
+    const res = await api.post(
+      `/admin/commission-configs`,
+      data,
+    );
+
     return res.data.result;
   },
 
   getRentalAreaOptions: async () => {
-    const res = await api.get(`/rental-areas/dropdown/options`);
-    return res.data.result;
-  },
+    const res = await api.get(
+      `/rental-areas/dropdown/options`,
+    );
 
-  getOwnerSettlements: async (rentalAreaId: string) => {
-    const res = await api.get(`/owner/settlements`, {
-      params: { rentalAreaId },
-    });
     return res.data.result;
   },
 
@@ -81,7 +141,11 @@ export const financeService = {
   },
 
   saveOwnerBankAccount: async (data: any) => {
-    const res = await api.put(`/owner/bank-accounts`, data);
+    const res = await api.put(
+      `/owner/bank-accounts`,
+      data,
+    );
+
     return res.data.result;
   },
 };

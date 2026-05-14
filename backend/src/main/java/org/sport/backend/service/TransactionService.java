@@ -9,8 +9,29 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface TransactionService {
-    PageResponse<TransactionResponse> getTransactions(int page, int size, String keyword, TransactionType type, LocalDateTime startDate, LocalDateTime endDate);
-    TransactionResponse createTransaction(TransactionRequest request);
-    TransactionResponse updateTransaction(UUID id, TransactionRequest request);
+    PageResponse<TransactionResponse> getRentalAreaTransactions(
+            UUID rentalAreaId,
+            int page,
+            int size,
+            TransactionType type
+    );
+    PageResponse<TransactionResponse> getTransactions(
+            int page,
+            int size,
+            String keyword,
+            TransactionType type,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 
+    PageResponse<TransactionResponse> getOwnerTransactions(
+            UUID ownerId,
+            int page,
+            int size,
+            TransactionType type
+    );
+
+    TransactionResponse createTransaction(TransactionRequest request);
+
+    TransactionResponse updateTransaction(UUID id, TransactionRequest request);
 }

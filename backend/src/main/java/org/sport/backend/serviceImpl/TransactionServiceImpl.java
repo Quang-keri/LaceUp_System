@@ -25,6 +25,66 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
 
+
+    @Override
+    public PageResponse<TransactionResponse> getRentalAreaTransactions(
+            UUID rentalAreaId,
+            int page,
+            int size,
+            TransactionType type
+    ) {
+        Page<Transaction> transactionPage;
+
+        if (type != null) {
+            transactionPage =
+                    transactionRepository.findByRentalArea_RentalAreaIdAndType(
+                            rentalAreaId,
+                            type,
+                            PageRequest.of(page - 1, size)
+                    );
+        } else {
+            transactionPage =
+                    transactionRepository.findByRentalArea_RentalAreaId(
+                            rentalAreaId,
+                            PageRequest.of(page - 1, size)
+                    );
+        }
+
+        List<TransactionResponse> responses = transactionPage.getContent()
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.of(transactionPage, responses);
+    }
+    @Override
+    public PageResponse<TransactionResponse> getOwnerTransactions(
+            UUID ownerId,
+            int page,
+            int size,
+            TransactionType type
+    ) {
+        Page<Transaction> transactionPage;
+
+        if (type != null) {
+            transactionPage = transactionRepository.findByOwner_UserIdAndType(
+                    ownerId,
+                    type,
+                    PageRequest.of(page - 1, size)
+            );
+        } else {
+            transactionPage = transactionRepository.findByOwner_UserId(
+                    ownerId,
+                    PageRequest.of(page - 1, size)
+            );
+        }
+
+        List<TransactionResponse> responses = transactionPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.of(transactionPage, responses);
+    }
     @Override
     public PageResponse<TransactionResponse> getTransactions(int page, int size, String keyword, TransactionType type, LocalDateTime startDate, LocalDateTime endDate) {
         Specification<Transaction> spec = TransactionSpecification.filterTransactions(keyword, type, startDate, endDate);
@@ -71,6 +131,29 @@ public class TransactionServiceImpl implements TransactionService {
                 .referenceId(entity.getReferenceId())
                 .transactionDate(entity.getTransactionDate())
                 .paymentMethod(entity.getPaymentMethod())
+                .status(entity.getStatus())
+                .category(entity.getCategory())
+
+                .bookingId(entity.getBooking() != null
+                        ? entity.getBooking().getBookingId()
+                        : null)
+
+                .rentalAreaId(entity.getRentalArea() != null
+                        ? entity.getRentalArea().getRentalAreaId()
+                        : null)
+
+                .rentalAreaName(entity.getRentalArea() != null
+                        ? entity.getRentalArea().getRentalAreaName()
+                        : null)
+
+                .ownerId(entity.getOwner() != null
+                        ? entity.getOwner().getUserId()
+                        : null)
+
+                .ownerName(entity.getOwner() != null
+                        ? entity.getOwner().getUserName()
+                        : null)
+
                 .build();
     }
 }
