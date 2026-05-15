@@ -21,7 +21,7 @@ const PRICE_TYPES = [
   { label: "Sự kiện", value: "EVENT" },
 ];
 
-export default function Step3CourtCopy({ next, prev }: any) {
+export default function Step4CourtCopy({ next, prev }: any) {
   const { formData, updateFormData } = useRentalForm();
   const [form] = Form.useForm();
 

@@ -70,6 +70,7 @@ import AmenityManagement from "../page/admin/amenities/AmenityManagement.tsx";
 import TransactionManager from "../page/owner/transaction/TransactionManager.tsx";
 import OwnerSettlementHistory from "../page/owner/settlement/OwnerSettlementHistory.tsx";
 import OwnerBankAccount from "../page/owner/settlement/OwnerBankAccount.tsx";
+import AdminTransactionManager from "../page/admin/transaction/AdminTransactionManager.tsx";
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
 
@@ -165,6 +166,7 @@ export const router = createBrowserRouter([
       { path: "news", element: <NewsPage /> },
       { path: "reviews", element: <ReviewsManagement /> },
       { path: "amenities", element: <AmenityManagement /> },
+      { path: "transactions", element: <AdminTransactionManager /> },
       {
         path: "settlements",
         element: <SettlementManagement />,
@@ -211,11 +213,22 @@ export const router = createBrowserRouter([
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
       { path: "profile", element: <OwnerProfilePage /> },
-      { path: "transactions", element: <TransactionManager /> },
+      {
+        path: "/owner/transactions",
+        element: <TransactionManager />,
+      },
+      {
+        path: "/owner/transactions/:rentalAreaId",
+        element: <TransactionManager />,
+      },
       {
         path: "notifications",
         element: <NotificationPage />,
         handle: { breadcrumb: "Thông báo mới" },
+      },
+      {
+        path: "/owner/settlements",
+        element: <OwnerSettlementHistory />,
       },
       {
         path: "/owner/settlements/:rentalAreaId",

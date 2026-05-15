@@ -86,7 +86,7 @@ public class MatchServiceImpl implements MatchService {
         City city = cityRepository.getReferenceById(request.getCityId());
         Address address = Address.builder()
                 .ward(request.getWard())
-                .district(request.getDistrict())
+//                .district(request.getDistrict())
                 .street(request.getStreet())
                 .city(city)
                 .build();

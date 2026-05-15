@@ -13,7 +13,10 @@ public interface TransactionService {
             UUID rentalAreaId,
             int page,
             int size,
-            TransactionType type
+            String keyword,
+            TransactionType type,
+            LocalDateTime startDate,
+            LocalDateTime endDate
     );
     PageResponse<TransactionResponse> getTransactions(
             int page,

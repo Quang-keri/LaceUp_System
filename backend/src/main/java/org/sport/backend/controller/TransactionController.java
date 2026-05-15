@@ -69,7 +69,12 @@ public class TransactionController {
             @PathVariable UUID rentalAreaId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) TransactionType type
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) TransactionType type,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
     ) {
         return ApiResponse.success(
                 200,
@@ -78,7 +83,10 @@ public class TransactionController {
                         rentalAreaId,
                         page,
                         size,
-                        type
+                        keyword,
+                        type,
+                        startDate,
+                        endDate
                 )
         );
     }

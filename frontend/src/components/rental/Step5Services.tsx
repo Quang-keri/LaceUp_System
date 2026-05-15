@@ -20,7 +20,7 @@ import {
 import { useRentalForm } from "../../context/RentalFormContext";
 import itemGroupService from "../../service/itemGroupService"; // Import service vừa tạo
 
-export default function Step4Services({
+export default function Step5Services({
   next,
   prev,
 }: {
@@ -34,12 +34,10 @@ export default function Step4Services({
   );
   const [itemGroups, setItemGroups] = useState<any[]>([]);
 
-
   useEffect(() => {
     form.setFieldsValue({ services: formData.extraServices?.services || [] });
   }, [formData.extraServices, form]);
 
-  
   useEffect(() => {
     const fetchItemGroups = async () => {
       try {
@@ -108,7 +106,6 @@ export default function Step4Services({
                       >
                         <Select placeholder="Chọn nhóm">
                           {itemGroups.map((group) => (
-          
                             <Select.Option
                               key={group.itemGroupId}
                               value={group.itemGroupId}

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.UUID;
 @RestController
-@RequestMapping("/owner/bank-accounts")
+@RequestMapping("/bank-accounts")
 @RequiredArgsConstructor
 public class BankAccountController {
 
@@ -36,7 +36,7 @@ public class BankAccountController {
         );
     }
 
-    @PutMapping
+    @PostMapping
     public ResponseEntity<?> createOrUpdateBankAccount(
             Principal principal,
             @RequestBody BankAccountRequest request

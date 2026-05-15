@@ -41,8 +41,11 @@ const TransactionFilters: React.FC<Props> = ({
             }
           >
             <option value="">Tất cả</option>
-            <option value="INCOME">Khoản Thu</option>
-            <option value="EXPENSE">Khoản Chi</option>
+            <option value="INCOME">Khoản thu</option>
+            <option value="EXPENSE">Khoản chi</option>
+            <option value="PAYOUT">Tiền hệ thống chuyển</option>
+            <option value="REFUND">Hoàn tiền</option>
+            {/* <option value="COMMISSION">Hoa hồng</option> */}
           </select>
         </div>
 

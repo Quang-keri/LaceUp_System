@@ -9,7 +9,7 @@ import { useRentalForm } from "../../context/RentalFormContext";
 import amenityService from "../../service/amenityService";
 import categoryService from "../../service/categoryService";
 
-export default function Step2CourtInfo({
+export default function Step3CourtInfo({
   next,
   prev,
 }: {

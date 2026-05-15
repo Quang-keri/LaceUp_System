@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
-import { Form, Input, Button, Card, Row, Col } from "antd";
+import { Form, Input, Button, Card, Row, Col, Select, Avatar } from "antd";
 import { BankOutlined, LeftOutlined } from "@ant-design/icons";
 import { useRentalForm } from "../../context/RentalFormContext";
+import { BANKS, type Bank } from "../../utils/banks";
 
 export default function Step2BankAccount({
   next,
@@ -13,9 +14,34 @@ export default function Step2BankAccount({
   const { formData, updateFormData } = useRentalForm();
   const [form] = Form.useForm();
 
+  const banks = BANKS;
+
   useEffect(() => {
     form.setFieldsValue(formData.bankAccount);
   }, [formData.bankAccount, form]);
+
+  const handleBankChange = (value?: string) => {
+    if (!value) {
+      form.setFieldsValue({
+        bankName: undefined,
+        bankFullName: undefined,
+        bankCode: undefined,
+        bankBin: undefined,
+        bankLogo: undefined,
+      });
+      return;
+    }
+
+    const selectedBank = banks.find((bank) => bank.shortName === value);
+
+    form.setFieldsValue({
+      bankName: selectedBank?.shortName,
+      bankFullName: selectedBank?.name,
+      bankCode: selectedBank?.code,
+      bankBin: selectedBank?.bin,
+      bankLogo: selectedBank?.logo,
+    });
+  };
 
   const onFinish = (values: any) => {
     updateFormData("bankAccount", values);
@@ -41,10 +67,59 @@ export default function Step2BankAccount({
               name="bankName"
               label="Tên ngân hàng"
               rules={[
-                { required: true, message: "Vui lòng nhập tên ngân hàng" },
+                { required: true, message: "Vui lòng chọn tên ngân hàng" },
               ]}
             >
-              <Input size="large" placeholder="VD: Vietcombank, MB Bank..." />
+              <Select
+                showSearch
+                allowClear
+                size="large"
+                placeholder="Chọn ngân hàng"
+                optionFilterProp="label"
+                onChange={handleBankChange}
+                options={banks.map((bank) => ({
+                  label: `${bank.shortName} - ${bank.name}`,
+                  value: bank.shortName,
+                  bank,
+                }))}
+                optionRender={(option) => {
+                  const bank = option.data.bank as Bank;
+
+                  return (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <Avatar src={bank.logo} size={28} />
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{bank.shortName}</div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          {bank.name}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item name="bankFullName" hidden>
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="bankCode" hidden>
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="bankBin" hidden>
+              <Input />
+            </Form.Item>
+
+            <Form.Item name="bankLogo" hidden>
+              <Input />
             </Form.Item>
           </Col>
 

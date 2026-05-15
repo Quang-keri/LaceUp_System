@@ -1,10 +1,14 @@
 package org.sport.backend.serviceImpl;
 
+import org.sport.backend.constant.TransactionStatus;
 import org.sport.backend.constant.TransactionType;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.transaction.TransactionRequest;
 import org.sport.backend.dto.response.transaction.TransactionResponse;
+import org.sport.backend.entity.RentalArea;
 import org.sport.backend.entity.Transaction;
+import org.sport.backend.entity.User;
+import org.sport.backend.repository.RentalAreaRepository;
 import org.sport.backend.repository.TransactionRepository;
 import org.sport.backend.service.TransactionService;
 import org.sport.backend.specification.TransactionSpecification;
@@ -24,31 +28,34 @@ import java.util.stream.Collectors;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
-
+   private final RentalAreaRepository rentalAreaRepository;
 
     @Override
     public PageResponse<TransactionResponse> getRentalAreaTransactions(
             UUID rentalAreaId,
             int page,
             int size,
-            TransactionType type
+            String keyword,
+            TransactionType type,
+            LocalDateTime startDate,
+            LocalDateTime endDate
     ) {
-        Page<Transaction> transactionPage;
+        Specification<Transaction> spec =
+                TransactionSpecification.filterTransactions(
+                        keyword,
+                        type,
+                        startDate,
+                        endDate
+                );
 
-        if (type != null) {
-            transactionPage =
-                    transactionRepository.findByRentalArea_RentalAreaIdAndType(
-                            rentalAreaId,
-                            type,
-                            PageRequest.of(page - 1, size)
-                    );
-        } else {
-            transactionPage =
-                    transactionRepository.findByRentalArea_RentalAreaId(
-                            rentalAreaId,
-                            PageRequest.of(page - 1, size)
-                    );
-        }
+        spec = spec.and((root, query, cb) ->
+                cb.equal(root.get("rentalArea").get("rentalAreaId"), rentalAreaId)
+        );
+
+        Page<Transaction> transactionPage = transactionRepository.findAll(
+                spec,
+                PageRequest.of(page - 1, size)
+        );
 
         List<TransactionResponse> responses = transactionPage.getContent()
                 .stream()
@@ -99,12 +106,33 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionResponse createTransaction(TransactionRequest request) {
+        RentalArea rentalArea = null;
+        User owner = null;
+        if (request.getType() != TransactionType.INCOME
+                && request.getType() != TransactionType.EXPENSE) {
+            throw new RuntimeException("Owner chỉ được tạo giao dịch thu hoặc chi");
+        }
+        if (request.getRentalAreaId() != null) {
+            rentalArea = rentalAreaRepository.findById(request.getRentalAreaId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy khu sân"));
+
+            owner = rentalArea.getOwner();
+        }
+
         Transaction transaction = Transaction.builder()
                 .type(request.getType())
                 .amount(request.getAmount())
                 .description(request.getDescription())
                 .referenceId(request.getReferenceId())
+                .status(request.getStatus() != null
+                        ? request.getStatus()
+                        : TransactionStatus.SUCCESS)
+                .paymentMethod(request.getPaymentMethod())
+                .category(request.getCategory())
+                .rentalArea(rentalArea)
+                .owner(owner)
                 .build();
+
         return mapToResponse(transactionRepository.save(transaction));
     }
 

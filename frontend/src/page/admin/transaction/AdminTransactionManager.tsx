@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Select, Space, message } from "antd";
-import { useNavigate, useParams } from "react-router-dom";
+import { Select, Space, message } from "antd";
 
 import {
+  getTransactions,
   getRentalAreaTransactions,
   createTransaction,
   updateTransaction,
@@ -16,17 +16,14 @@ import type {
   TransactionType,
   PageResponse,
 } from "../../../types/transaction";
+import TransactionSummaryCards from "../../owner/transaction/TransactionSummaryCards";
+import TransactionFilters from "../../owner/transaction/TransactionFilters";
+import TransactionTable from "../../owner/transaction/TransactionTable";
+import TransactionFormModal from "../../owner/transaction/TransactionFormModal";
+import TransactionDetailModal from "../../owner/transaction/TransactionDetailModal";
 
-import TransactionSummaryCards from "./TransactionSummaryCards";
-import TransactionFilters from "./TransactionFilters";
-import TransactionTable from "./TransactionTable";
-import TransactionFormModal from "./TransactionFormModal";
-import TransactionDetailModal from "./TransactionDetailModal";
 
-const TransactionManager: React.FC = () => {
-  const { rentalAreaId } = useParams<{ rentalAreaId?: string }>();
-  const navigate = useNavigate();
-
+const AdminTransactionManager: React.FC = () => {
   const [data, setData] = useState<PageResponse<TransactionResponse> | null>(
     null,
   );
@@ -34,7 +31,10 @@ const TransactionManager: React.FC = () => {
   const [rentalAreas, setRentalAreas] = useState<any[]>([]);
   const [loadingRentals, setLoadingRentals] = useState(false);
 
-  const selectedRentalAreaId = rentalAreaId;
+  // Admin chọn sân
+  const [selectedRentalAreaId, setSelectedRentalAreaId] = useState<
+    string | undefined
+  >(undefined);
 
   const [page, setPage] = useState(1);
 
@@ -57,30 +57,19 @@ const TransactionManager: React.FC = () => {
     type: "INCOME",
     amount: 0,
     description: "",
-    status: "SUCCESS",
-    paymentMethod: "CASH",
-    category: "EXTRA_SERVICE_PAYMENT",
-    rentalAreaId,
   });
 
-  // Load khu sân của owner
-  const fetchMyRentalAreas = async () => {
+  // Load toàn bộ khu sân
+  const fetchRentalAreas = async () => {
     try {
       setLoadingRentals(true);
 
-      const res = await rentalService.getMyRentalAreas(1, 100);
+      const res = await rentalService.getAllRentalAreas?.(1, 100);
 
       const rentals =
-        res.result?.data || res.result?.content || res.result || [];
+        res?.result?.data || res?.result?.content || res?.result || [];
 
       setRentalAreas(rentals);
-
-      // Nếu chưa có rentalAreaId -> chuyển sang sân đầu tiên
-      if (!rentalAreaId && rentals.length > 0) {
-        navigate(`/owner/transactions/${rentals[0].rentalAreaId}`, {
-          replace: true,
-        });
-      }
     } catch (error: any) {
       message.error(
         error.response?.data?.message || "Lỗi tải danh sách khu sân",
@@ -90,31 +79,21 @@ const TransactionManager: React.FC = () => {
     }
   };
 
-  // Tổng thu
   const totalIncome = useMemo(() => {
-    return (data?.data || []).reduce((sum, tx) => {
-      return tx.type === "INCOME" ? sum + tx.amount : sum;
-    }, 0);
+    return (data?.data || []).reduce(
+      (sum, tx) => sum + (tx.type === "INCOME" ? tx.amount : 0),
+      0,
+    );
   }, [data]);
 
-  // Tổng chi
   const totalExpense = useMemo(() => {
-    return (data?.data || []).reduce((sum, tx) => {
-      return tx.type === "EXPENSE" ? sum + tx.amount : sum;
-    }, 0);
+    return (data?.data || []).reduce(
+      (sum, tx) => sum + (tx.type === "EXPENSE" ? tx.amount : 0),
+      0,
+    );
   }, [data]);
 
-  // Tổng tiền admin đã chuyển cho owner
-  const totalPayout = useMemo(() => {
-    return (data?.data || []).reduce((sum, tx) => {
-      return tx.type === "PAYOUT" ? sum + tx.amount : sum;
-    }, 0);
-  }, [data]);
-
-  // Fetch transaction
   const fetchTransactions = useCallback(async () => {
-    if (!rentalAreaId) return;
-
     try {
       setLoading(true);
       setError("");
@@ -126,125 +105,95 @@ const TransactionManager: React.FC = () => {
 
       if (filterType) params.type = filterType;
       if (keyword) params.keyword = keyword;
+      if (startDate) params.startDate = startDate + "T00:00:00";
+      if (endDate) params.endDate = endDate + "T23:59:59";
 
-      if (startDate) {
-        params.startDate = `${startDate}T00:00:00`;
+      let res;
+
+      // Nếu chọn khu sân -> lọc theo sân
+      if (selectedRentalAreaId) {
+        res = await getRentalAreaTransactions(selectedRentalAreaId, params);
+      } else {
+        // Không chọn -> xem toàn hệ thống
+        res = await getTransactions(params);
       }
-
-      if (endDate) {
-        params.endDate = `${endDate}T23:59:59`;
-      }
-
-      const res = await getRentalAreaTransactions(rentalAreaId, params);
 
       setData(res);
     } catch (error) {
       console.error("Lỗi tải dữ liệu", error);
-
       setError("Không thể tải dữ liệu giao dịch. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
-  }, [rentalAreaId, page, filterType, keyword, startDate, endDate]);
+  }, [selectedRentalAreaId, page, filterType, keyword, startDate, endDate]);
 
   useEffect(() => {
-    fetchMyRentalAreas();
+    fetchRentalAreas();
   }, []);
 
   useEffect(() => {
-    if (rentalAreaId) {
-      fetchTransactions();
-    }
-  }, [rentalAreaId, fetchTransactions]);
+    fetchTransactions();
+  }, [fetchTransactions]);
 
-  // Đổi sân
-  const handleChangeRentalArea = (id: string) => {
-    setPage(1);
-    navigate(`/owner/transactions/${id}`);
-  };
-
-  // Search
   const handleSearch = () => {
     setPage(1);
     fetchTransactions();
   };
 
-  // Reset filter
   const handleResetFilters = () => {
     setKeyword("");
     setFilterType("");
     setStartDate("");
     setEndDate("");
+    setSelectedRentalAreaId(undefined);
     setPage(1);
   };
 
-  // Mở modal tạo
   const openCreateModal = () => {
     setFormData({
       type: "INCOME",
       amount: 0,
       description: "",
-      status: "SUCCESS",
-      paymentMethod: "CASH",
-      category: "EXTRA_SERVICE_PAYMENT",
-      rentalAreaId,
     });
 
     setEditingId(null);
     setIsFormModalOpen(true);
   };
 
-  // Edit
   const handleEdit = (tx: TransactionResponse) => {
     setFormData({
       type: tx.type,
       amount: tx.amount,
       description: tx.description || "",
-      referenceId: tx.referenceId,
-      status: tx.status,
-      paymentMethod: tx.paymentMethod,
-      category: tx.category,
-      rentalAreaId: tx.rentalAreaId || rentalAreaId,
     });
 
     setEditingId(tx.id);
     setIsFormModalOpen(true);
   };
 
-  // View detail
   const handleView = (tx: TransactionResponse) => {
     setSelectedTransaction(tx);
   };
 
-  // Submit
-  const handleSubmit = async (values: TransactionRequest) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     try {
       setIsSubmitting(true);
 
       if (editingId) {
-        await updateTransaction(editingId, values);
+        await updateTransaction(editingId, formData);
       } else {
-        await createTransaction(values);
+        await createTransaction(formData);
       }
 
       setIsFormModalOpen(false);
-
       setPage(1);
 
       await fetchTransactions();
-
-      message.success(
-        editingId
-          ? "Cập nhật giao dịch thành công"
-          : "Tạo giao dịch thành công",
-      );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Lỗi lưu giao dịch", error);
-
-      setError(
-        error.response?.data?.message ||
-          "Không thể lưu giao dịch. Vui lòng thử lại.",
-      );
+      setError("Không thể lưu giao dịch. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);
     }
@@ -252,7 +201,7 @@ const TransactionManager: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div>
+      <div className="max-w-7xl mx-auto">
         <Space
           style={{
             width: "100%",
@@ -266,33 +215,39 @@ const TransactionManager: React.FC = () => {
             </h1>
 
             <p className="text-gray-600 mt-1">
-              Xem giao dịch phát sinh theo từng khu sân
+              Xem giao dịch toàn hệ thống hoặc theo từng khu sân
             </p>
           </div>
 
           <Space>
             <Select
+              allowClear
               style={{ width: 320 }}
-              placeholder="Chọn khu sân"
+              placeholder="Tất cả khu sân"
               loading={loadingRentals}
               value={selectedRentalAreaId}
-              onChange={handleChangeRentalArea}
+              onChange={(value) => {
+                setSelectedRentalAreaId(value);
+                setPage(1);
+              }}
               options={rentalAreas.map((item) => ({
                 value: item.rentalAreaId,
                 label: item.rentalAreaName,
               }))}
             />
 
-            <Button type="primary" onClick={openCreateModal}>
+            <button
+              onClick={openCreateModal}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition"
+            >
               + Thêm Giao Dịch
-            </Button>
+            </button>
           </Space>
         </Space>
 
         <TransactionSummaryCards
           totalIncome={totalIncome}
           totalExpense={totalExpense}
-          totalPayout={totalPayout}
         />
 
         <TransactionFilters
@@ -308,7 +263,6 @@ const TransactionManager: React.FC = () => {
           onReset={handleResetFilters}
         />
 
-        
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
             {error}
@@ -328,11 +282,10 @@ const TransactionManager: React.FC = () => {
           open={isFormModalOpen}
           editingId={editingId}
           formData={formData}
+          setFormData={setFormData}
           isSubmitting={isSubmitting}
           onClose={() => setIsFormModalOpen(false)}
           onSubmit={handleSubmit}
-          rentalAreaId={rentalAreaId}
-          role="OWNER"
         />
 
         <TransactionDetailModal
@@ -344,4 +297,4 @@ const TransactionManager: React.FC = () => {
   );
 };
 
-export default TransactionManager;
+export default AdminTransactionManager;

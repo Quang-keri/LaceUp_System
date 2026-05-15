@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Table, Typography, Tag, message } from "antd";
-import { useParams } from "react-router-dom";
+import { Table, Typography, Tag, message, Select, Space } from "antd";
+import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
 import { financeService } from "../../../service/financeService";
+import rentalService from "../../../service/rental/rentalService";
 
 const { Title } = Typography;
 
@@ -10,16 +11,44 @@ const formatMoney = (value?: number) =>
   `${Number(value || 0).toLocaleString("vi-VN")} đ`;
 
 const OwnerSettlementHistory: React.FC = () => {
-  const { rentalAreaId } = useParams<{ rentalAreaId: string }>();
+  const { rentalAreaId } = useParams<{ rentalAreaId?: string }>();
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
+  const [loadingRentals, setLoadingRentals] = useState(false);
   const [data, setData] = useState<any[]>([]);
+  const [rentalAreas, setRentalAreas] = useState<any[]>([]);
 
-  const fetchData = async () => {
-    if (!rentalAreaId) return;
+  const selectedRentalAreaId = rentalAreaId;
 
+  const fetchMyRentalAreas = async () => {
+    try {
+      setLoadingRentals(true);
+
+      const res = await rentalService.getMyRentalAreas(1, 100);
+      const rentals =
+        res.result?.data || res.result?.content || res.result || [];
+
+      setRentalAreas(rentals);
+
+      if (!rentalAreaId && rentals.length > 0) {
+        navigate(`/owner/settlements/${rentals[0].rentalAreaId}`, {
+          replace: true,
+        });
+      }
+    } catch (error: any) {
+      message.error(
+        error.response?.data?.message || "Lỗi tải danh sách khu sân",
+      );
+    } finally {
+      setLoadingRentals(false);
+    }
+  };
+
+  const fetchData = async (id: string) => {
     try {
       setLoading(true);
-      const result = await financeService.getOwnerSettlements(rentalAreaId);
+      const result = await financeService.getOwnerSettlements(id);
       setData(result || []);
     } catch (error: any) {
       message.error(
@@ -31,8 +60,18 @@ const OwnerSettlementHistory: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchMyRentalAreas();
+  }, []);
+
+  useEffect(() => {
+    if (rentalAreaId) {
+      fetchData(rentalAreaId);
+    }
   }, [rentalAreaId]);
+
+  const handleChangeRentalArea = (id: string) => {
+    navigate(`/owner/settlements/${id}`);
+  };
 
   const columns = [
     {
@@ -61,7 +100,7 @@ const OwnerSettlementHistory: React.FC = () => {
       ),
     },
     {
-      title: "Owner thực nhận",
+      title: "Doanh nghiệp nhận",
       dataIndex: "ownerAmount",
       key: "ownerAmount",
       render: (val: number) => (
@@ -95,7 +134,29 @@ const OwnerSettlementHistory: React.FC = () => {
 
   return (
     <div style={{ padding: 24, background: "#fff", borderRadius: 8 }}>
-      <Title level={4}>Lịch sử tiền nhận từ hệ thống</Title>
+      <Space
+        style={{
+          width: "100%",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
+        <Title level={4} style={{ margin: 0 }}>
+          Lịch sử tiền nhận từ hệ thống
+        </Title>
+
+        <Select
+          style={{ width: 320 }}
+          placeholder="Chọn khu sân"
+          loading={loadingRentals}
+          value={selectedRentalAreaId}
+          onChange={handleChangeRentalArea}
+          options={rentalAreas.map((item) => ({
+            value: item.rentalAreaId,
+            label: item.rentalAreaName,
+          }))}
+        />
+      </Space>
 
       <Table
         columns={columns}

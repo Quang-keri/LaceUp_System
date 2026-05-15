@@ -117,7 +117,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         return String.join(", ",
                 address.getStreet(),
                 address.getWard(),
-                address.getDistrict(),
                 cityName
         ).replaceAll("null,?\\s*", "").trim();
     }
@@ -141,7 +140,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         Address address = Address.builder()
                 .ward(request.getWard())
-                .district(request.getDistrict())
+
                 .street(request.getStreet())
                 .cityName(request.getCityName())
 //                .city(city)
@@ -471,9 +470,9 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         if (request.getWard() != null) {
             currentAddress.setWard(request.getWard());
         }
-        if (request.getDistrict() != null) {
-            currentAddress.setDistrict(request.getDistrict());
-        }
+//        if (request.getDistrict() != null) {
+//            currentAddress.setDistrict(request.getDistrict());
+//        }
 
         if (request.getCityId() != null) {
             City newCity = cityRepository.findById(request.getCityId())

@@ -1,118 +1,180 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { Form, Input, InputNumber, Modal, Select } from "antd";
 import type {
   TransactionRequest,
   TransactionType,
+  TransactionCategory,
+  TransactionStatus,
+  PaymentMethod,
 } from "../../../types/transaction";
 
 type Props = {
   open: boolean;
   editingId: string | null;
   formData: TransactionRequest;
-  setFormData: React.Dispatch<React.SetStateAction<TransactionRequest>>;
   isSubmitting: boolean;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (values: TransactionRequest) => void;
+  rentalAreaId?: string;
+  role?: "OWNER" | "ADMIN";
 };
+
+const ownerTypeOptions = [
+  { value: "INCOME", label: "Khoản thu" },
+  { value: "EXPENSE", label: "Khoản chi" },
+];
+
+const adminTypeOptions = [
+  { value: "INCOME", label: "Khoản thu" },
+  { value: "EXPENSE", label: "Khoản chi" },
+  { value: "PAYOUT", label: "Chuyển tiền owner" },
+  { value: "REFUND", label: "Hoàn tiền" },
+  { value: "COMMISSION", label: "Hoa hồng" },
+];
+
+const ownerCategoryOptions = [
+  { value: "EXTRA_SERVICE_PAYMENT", label: "Dịch vụ tại sân" },
+];
+
+const adminCategoryOptions = [
+  { value: "BOOKING_DEPOSIT", label: "Tiền cọc booking" },
+  { value: "BOOKING_FULL_PAYMENT", label: "Thanh toán đủ booking" },
+  { value: "BOOKING_REMAINING_PAYMENT", label: "Tiền còn lại booking" },
+  { value: "EXTRA_SERVICE_PAYMENT", label: "Dịch vụ tại sân" },
+  { value: "OWNER_PAYOUT", label: "Admin chuyển tiền owner" },
+  { value: "REFUND", label: "Hoàn tiền" },
+];
 
 const TransactionFormModal: React.FC<Props> = ({
   open,
   editingId,
   formData,
-  setFormData,
   isSubmitting,
   onClose,
   onSubmit,
+  rentalAreaId,
+  role = "OWNER",
 }) => {
-  if (!open) return null;
+  const [form] = Form.useForm<TransactionRequest>();
+
+  const isOwner = role === "OWNER";
+
+  useEffect(() => {
+    if (open) {
+      form.setFieldsValue({
+        ...formData,
+        rentalAreaId: formData.rentalAreaId || rentalAreaId,
+        type: formData.type || "INCOME",
+        category: formData.category || "EXTRA_SERVICE_PAYMENT",
+        status: formData.status || "SUCCESS",
+        paymentMethod: formData.paymentMethod || "CASH",
+      });
+    }
+  }, [open, formData, rentalAreaId, form]);
+
+  const handleOk = async () => {
+    const values = await form.validateFields();
+
+    onSubmit({
+      ...formData,
+      ...values,
+      rentalAreaId: values.rentalAreaId || rentalAreaId,
+    });
+  };
 
   return (
-    <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <h2 className="text-xl font-bold mb-4">
-          {editingId ? "Cập nhật giao dịch" : "Thêm giao dịch mới"}
-        </h2>
+    <Modal
+      title={editingId ? "Cập nhật giao dịch" : "Thêm giao dịch mới"}
+      open={open}
+      onCancel={onClose}
+      onOk={handleOk}
+      confirmLoading={isSubmitting}
+      okText={editingId ? "Cập nhật" : "Tạo giao dịch"}
+      cancelText="Hủy"
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical">
+        <Form.Item
+          name="type"
+          label="Loại giao dịch"
+          rules={[{ required: true, message: "Vui lòng chọn loại giao dịch" }]}
+        >
+          <Select<TransactionType>
+            options={isOwner ? ownerTypeOptions : adminTypeOptions}
+          />
+        </Form.Item>
 
-        <form onSubmit={onSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Loại giao dịch *
-            </label>
+        <Form.Item
+          name="category"
+          label="Danh mục"
+          rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
+        >
+          <Select<TransactionCategory>
+            options={isOwner ? ownerCategoryOptions : adminCategoryOptions}
+          />
+        </Form.Item>
 
-            <select
-              className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={formData.type}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  type: e.target.value as TransactionType,
-                })
-              }
-            >
-              <option value="INCOME">Khoản Thu</option>
-              <option value="EXPENSE">Khoản Chi</option>
-            </select>
-          </div>
+        <Form.Item
+          name="amount"
+          label="Số tiền"
+          rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
+        >
+          <InputNumber
+            min={0}
+            step={1000}
+            style={{ width: "100%" }}
+            formatter={(value) =>
+              `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+            }
+            parser={(value) => Number(value?.replace(/\$\s?|(,*)/g, "") || 0)}
+            addonAfter="đ"
+          />
+        </Form.Item>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Số tiền *
-            </label>
+        <Form.Item
+          name="paymentMethod"
+          label="Phương thức thanh toán"
+          rules={[
+            { required: true, message: "Vui lòng chọn phương thức thanh toán" },
+          ]}
+        >
+          <Select<PaymentMethod>
+            options={[
+              { value: "CASH", label: "Tiền mặt" },
+              { value: "BANK_TRANSFER", label: "Chuyển khoản" },
+              { value: "VN_PAY", label: "VNPay" },
+                { value: "PAY_OS", label: "PAY_ OS" },
+            ]}
+          />
+        </Form.Item>
 
-            <input
-              type="number"
-              required
-              min="0"
-              step="1000"
-              className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={formData.amount}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  amount: Number(e.target.value),
-                })
-              }
-            />
-          </div>
+        <Form.Item
+          name="status"
+          label="Trạng thái"
+          rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+        >
+          <Select<TransactionStatus>
+            options={[
+              { value: "SUCCESS", label: "Thành công" },
+              { value: "PENDING", label: "Đang xử lý" },
+              { value: "FAILED", label: "Thất bại" },
+            ]}
+          />
+        </Form.Item>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mô tả / Lý do *
-            </label>
+        <Form.Item name="referenceId" label="Mã tham chiếu">
+          <Input placeholder="Booking ID / Settlement ID nếu có" />
+        </Form.Item>
 
-            <textarea
-              required
-              className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  description: e.target.value,
-                })
-              }
-            />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-medium transition"
-            >
-              Hủy
-            </button>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Đang lưu..." : "Lưu"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Form.Item
+          name="description"
+          label="Mô tả / Lý do"
+          rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
+        >
+          <Input.TextArea rows={3} placeholder="Nhập mô tả giao dịch..." />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 

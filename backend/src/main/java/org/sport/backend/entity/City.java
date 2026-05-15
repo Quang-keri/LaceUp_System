@@ -8,12 +8,12 @@ import lombok.experimental.SuperBuilder;
 import java.util.List;
 
 @Entity
+@Table(name = "cities")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @SuperBuilder
-@Table(name = "cities")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class City {
 
@@ -25,7 +25,9 @@ public class City {
     @Column(name = "city_name", nullable = false, unique = true)
     String cityName;
 
-//    @OneToMany(mappedBy = "address.city", fetch = FetchType.LAZY)
-//    List<RentalArea> rentalAreas;
+    @Column(name = "province_code", unique = true)
+    Integer provinceCode;
 
+    @OneToMany(mappedBy = "city", fetch = FetchType.LAZY)
+    List<Ward> wards;
 }

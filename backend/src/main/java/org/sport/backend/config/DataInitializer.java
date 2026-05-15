@@ -1,15 +1,21 @@
 package org.sport.backend.config;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.sport.backend.constant.*;
+import org.sport.backend.dto.request.city.CityRequest;
+import org.sport.backend.dto.request.ward.WardRequest;
 import org.sport.backend.entity.*;
 import org.sport.backend.repository.*;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,6 +45,8 @@ public class DataInitializer implements CommandLineRunner {
     private final UserCategoryRankRepository userCategoryRankRepository;
     private final PasswordEncoder passwordEncoder;
     private  final ItemGroupRepository itemGroupRepository;
+    private final ObjectMapper objectMapper;
+   private  final WardRepository wardRepository;
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
@@ -67,7 +75,7 @@ public class DataInitializer implements CommandLineRunner {
         if (adminRole == null || ownerRole == null || staffRole == null || renterRole == null) return;
 
         if (cityRepository.count() == 0) {
-            cityRepository.saveAll(buildDefaultCities());
+            initAddressData();
         }
         if (categoryRepository.count() == 0) seedCategories();
         if (amenityRepository.count() == 0) seedAmenities();
@@ -293,14 +301,23 @@ public class DataInitializer implements CommandLineRunner {
 
     private void seedCourtData(List<String> images) {
         User owner = userRepository.findByEmail("owner@gmail.com").orElseThrow();
-        City city = cityRepository.findAll().getFirst();
+        List<City> cities = cityRepository.findAll();
+        if (cities.isEmpty()) {
+            initAddressData();
+            cities = cityRepository.findAll();
+        }
+        if (cities.isEmpty()) {
+            throw new IllegalStateException("Cannot seed courts: no cities found after initAddressData()");
+        }
+        City city = cities.get(27);
+
         Category category = categoryRepository.findAll().stream()
                 .filter(c -> c.getCategoryName().equals("Sân cầu lông"))
                 .findFirst().orElseThrow();
 
         RentalArea area = RentalArea.builder()
                 .rentalAreaName("Hệ thống Sân Cầu Lông Pro - Quận 9")
-                .address(Address.builder().street("456 Lê Văn Việt").district("Quận 9").ward("Hiệp Phú").city(city).build())
+                .address(Address.builder().street("456 Lê Văn Việt").ward("Hiệp Phú").city(city).build())
                 .owner(owner)
                 .openTime(LocalTime.of(5, 0))
                 .closeTime(LocalTime.of(22, 0))
@@ -387,73 +404,49 @@ public class DataInitializer implements CommandLineRunner {
                     if (!amenityRepository.existsByAmenityName(a.getAmenityName())) amenityRepository.save(a);
                 });
     }
-    private List<City> buildDefaultCities() {
+    public void initAddressData() {
+        try {
+            System.out.println("START INIT ADDRESS DATA");
 
-        return  List.of(
-                City.builder().cityName("An Giang").build(),
-                City.builder().cityName("Bà Rịa - Vũng Tàu").build(),
-                City.builder().cityName("Bắc Giang").build(),
-                City.builder().cityName("Bắc Kạn").build(),
-                City.builder().cityName("Bạc Liêu").build(),
-                City.builder().cityName("Bắc Ninh").build(),
-                City.builder().cityName("Bến Tre").build(),
-                City.builder().cityName("Bình Định").build(),
-                City.builder().cityName("Bình Dương").build(),
-                City.builder().cityName("Bình Phước").build(),
-                City.builder().cityName("Bình Thuận").build(),
-                City.builder().cityName("Cà Mau").build(),
-                City.builder().cityName("Cần Thơ").build(),
-                City.builder().cityName("Cao Bằng").build(),
-                City.builder().cityName("Đà Nẵng").build(),
-                City.builder().cityName("Đắk Lắk").build(),
-                City.builder().cityName("Đắk Nông").build(),
-                City.builder().cityName("Điện Biên").build(),
-                City.builder().cityName("Đồng Nai").build(),
-                City.builder().cityName("Đồng Tháp").build(),
-                City.builder().cityName("Gia Lai").build(),
-                City.builder().cityName("Hà Giang").build(),
-                City.builder().cityName("Hà Nam").build(),
-                City.builder().cityName("Hà Nội").build(),
-                City.builder().cityName("Hà Tĩnh").build(),
-                City.builder().cityName("Hải Dương").build(),
-                City.builder().cityName("Hải Phòng").build(),
-                City.builder().cityName("Hậu Giang").build(),
-                City.builder().cityName("Hòa Bình").build(),
-                City.builder().cityName("Hưng Yên").build(),
-                City.builder().cityName("Khánh Hòa").build(),
-                City.builder().cityName("Kiên Giang").build(),
-                City.builder().cityName("Kon Tum").build(),
-                City.builder().cityName("Lai Châu").build(),
-                City.builder().cityName("Lâm Đồng").build(),
-                City.builder().cityName("Lạng Sơn").build(),
-                City.builder().cityName("Lào Cai").build(),
-                City.builder().cityName("Long An").build(),
-                City.builder().cityName("Nam Định").build(),
-                City.builder().cityName("Nghệ An").build(),
-                City.builder().cityName("Ninh Bình").build(),
-                City.builder().cityName("Ninh Thuận").build(),
-                City.builder().cityName("Phú Thọ").build(),
-                City.builder().cityName("Phú Yên").build(),
-                City.builder().cityName("Quảng Bình").build(),
-                City.builder().cityName("Quảng Nam").build(),
-                City.builder().cityName("Quảng Ngãi").build(),
-                City.builder().cityName("Quảng Ninh").build(),
-                City.builder().cityName("Quảng Trị").build(),
-                City.builder().cityName("Sóc Trăng").build(),
-                City.builder().cityName("Sơn La").build(),
-                City.builder().cityName("Tây Ninh").build(),
-                City.builder().cityName("Thái Bình").build(),
-                City.builder().cityName("Thái Nguyên").build(),
-                City.builder().cityName("Thanh Hóa").build(),
-                City.builder().cityName("Thừa Thiên Huế").build(),
-                City.builder().cityName("Tiền Giang").build(),
-                City.builder().cityName("Thành Phố Hồ Chí Minh").build(),
-                City.builder().cityName("Trà Vinh").build(),
-                City.builder().cityName("Tuyên Quang").build(),
-                City.builder().cityName("Vĩnh Long").build(),
-                City.builder().cityName("Vĩnh Phúc").build(),
-                City.builder().cityName("Yên Bái").build()
-        );
+            InputStream cityStream = new ClassPathResource("data/cities.json").getInputStream();
+            InputStream wardStream = new ClassPathResource("data/wards.json").getInputStream();
+
+            List<CityRequest> cityDtos = objectMapper.readValue(cityStream, new TypeReference<List<CityRequest>>() {});
+            List<WardRequest> wardDtos = objectMapper.readValue(wardStream, new TypeReference<List<WardRequest>>() {});
+
+            List<City> citiesToSave = cityDtos.stream()
+                    .map(dto -> City.builder()
+                            .cityName(dto.getName())
+                            .provinceCode(dto.getCode())
+                            .build())
+                    .collect(Collectors.toList());
+
+            List<City> savedCities = cityRepository.saveAll(citiesToSave);
+
+            Map<Integer, City> cityMap = savedCities.stream()
+                    .collect(Collectors.toMap(City::getProvinceCode, city -> city));
+
+            List<Ward> wardsToSave = new ArrayList<>();
+            for (WardRequest dto : wardDtos) {
+                City city = cityMap.get(dto.getProvince_code());
+                if (city != null) {
+                    Ward ward = Ward.builder()
+                            .wardName(dto.getName())
+                            .wardCode(dto.getCode())
+                            .city(city)
+                            .build();
+                    wardsToSave.add(ward);
+                }
+            }
+
+            wardRepository.saveAll(wardsToSave);
+
+            System.out.println("Init Address Data Success! Total Wards: " + wardsToSave.size());
+
+        } catch (Exception e) {
+            System.err.println("Init Address Data Failed!");
+            e.printStackTrace();
+        }
     }
 
         private void seedPostData() {
@@ -482,7 +475,7 @@ public class DataInitializer implements CommandLineRunner {
         for (User owner : extraOwners) {
             RentalArea area = RentalArea.builder()
                     .rentalAreaName("Khu sân của " + owner.getUserName())
-                    .address(Address.builder().street("Đường " + index).district("Quận 2").ward("Thạnh Mỹ Lợi").city(city).build())
+                    .address(Address.builder().street("Đường " + index).ward("Thạnh Mỹ Lợi").city(city).build())
                     .owner(owner)
                     .isActive(true)
                     .status(RentalAreaStatus.ACTIVE)
