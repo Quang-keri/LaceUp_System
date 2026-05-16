@@ -23,6 +23,8 @@ public class RentalAreaResponse {
     private UUID rentalAreaId;
     private String rentalAreaName;
     private AddressResponse address;
+    private String gmailLink;
+    private String facebookLink;
     private String contactName;
     private String contactPhone;
     private RentalAreaStatus status;

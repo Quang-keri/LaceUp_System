@@ -19,4 +19,5 @@ public class CourtCopyUpdateRequest {
     private String courtCode;
     @NotNull(message = "trạng thái phòng không bỏ trống ")
     private CourtCopyStatus status;
+    private String location;
 }

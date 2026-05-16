@@ -17,6 +17,7 @@ public class CourtCopyResponse {
     private UUID courtCopyId;
     private String courtCode;
     private CourtCopyStatus status;
+    private String location;
     private List<SlotResponse> slots;
     private List<AmenityResponse> amenities;
 }

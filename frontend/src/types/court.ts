@@ -72,9 +72,12 @@ export interface CreateCourtRequest {
 }
 
 export interface UpdateCourtRequest {
+  courtId?: string;
   courtName?: string;
   categoryId?: string;
-  pricePerHour?: number;
+  rentalAreaId?: string;
+  status?: CourtStatus;
+
   courtCodes?: string[];
   surfaceType?: string;
   indoor?: boolean;

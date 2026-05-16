@@ -4,6 +4,11 @@ const bankAccountService = {
     const res = await api.post("/bank-accounts", data);
     return res.data;
   },
+
+    getMyBankAccount: async () => {
+    const res = await api.get("/bank-accounts");
+    return res.data;
+  },
 };
 
 export default bankAccountService;

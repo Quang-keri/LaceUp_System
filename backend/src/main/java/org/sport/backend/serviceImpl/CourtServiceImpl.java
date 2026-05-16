@@ -147,8 +147,9 @@ public class CourtServiceImpl implements CourtService {
 
     @Override
     public CourtResponse updateCourt(UUID courtId, CourtUpdateRequest request, List<MultipartFile> images) {
+        UUID courtIds = request.getCourtId() != null ? request.getCourtId() : courtId;
 
-        Court court = courtRepository.findById(courtId)
+        Court court = courtRepository.findById(courtIds)
                 .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
 
         Category category = categoryRepository.findById(request.getCategoryId())

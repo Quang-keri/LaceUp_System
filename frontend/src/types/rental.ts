@@ -10,7 +10,7 @@ export enum RentalAreaStatus {
 export interface Address {
   street: string;
   ward: string;
-  district: string;
+  
 }
 
 export interface RentalAreaResponse {

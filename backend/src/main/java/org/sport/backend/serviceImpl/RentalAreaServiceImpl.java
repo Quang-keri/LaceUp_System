@@ -470,12 +470,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         if (request.getWard() != null) {
             currentAddress.setWard(request.getWard());
         }
-//        if (request.getDistrict() != null) {
-//            currentAddress.setDistrict(request.getDistrict());
-//        }
-
         if (request.getCityId() != null) {
-            City newCity = cityRepository.findById(request.getCityId())
+            City newCity = cityRepository.findByProvinceCode(request.getCityId())
                     .orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
             currentAddress.setCity(newCity);
         }
@@ -495,14 +491,12 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 throw new IllegalArgumentException("RentalArea yêu cầu tối đa 5 ảnh");
             }
 
-            // Xóa record ảnh cũ trong DB
+
             rentalAreaImageRepository.deleteAll(currentImages);
 
-            // Upload ảnh mới lên Cloudinary
             String folder = "rentals/" + rentalArea.getRentalAreaId();
             List<CloudinaryUploadResult> uploaded = cloudinaryService.uploadImages(images, folder);
 
-            // Lưu ảnh mới vào DB
             List<RentalAreaImage> newEntities = new ArrayList<>();
             for (int i = 0; i < uploaded.size(); i++) {
                 CloudinaryUploadResult u = uploaded.get(i);
@@ -519,7 +513,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             currentImages = newEntities;
         }
 
-        // Map ảnh ra Response
+
         List<RentalAreaImageResponse> imageResponses = currentImages.stream()
                 .sorted(Comparator.comparing(RentalAreaImage::getSortOrder, Comparator.nullsLast(Integer::compareTo)))
                 .map(img -> RentalAreaImageResponse.builder()
@@ -534,8 +528,17 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
                 .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
+                .city(rentalArea.getAddress() != null
+                        ? CityResponse.builder()
+                        .cityId(rentalArea.getAddress().getCity().getCityId())
+                        .cityName(rentalArea.getAddress().getCity().getCityName())
+                        .build()
+                        : null)
+
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
+                .gmailLink(rentalArea.getGmail())
+                .facebookLink(rentalArea.getFacebookLink())
                 .status(rentalArea.getStatus())
                 .images(imageResponses)
                 .build();

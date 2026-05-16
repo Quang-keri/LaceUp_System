@@ -201,21 +201,6 @@ export default function CourtManagementPage() {
         setModalOpen(true);
       },
     },
-    // {
-    //   key: "create-sub-court",
-    //   label: "Tạo sân con",
-    //   icon: <AppstoreAddOutlined />,
-    //   disabled: courts.length === 0,
-    //   onClick: () => {
-    //     if (courts.length > 0) {
-    //       setSelectedParentCourtId(courts[0].courtId);
-    //       setEditingCopy(null);
-    //       setCopyModalOpen(true);
-    //     } else {
-    //       message.warning("Vui lòng tạo Sân trước khi tạo Sân con!");
-    //     }
-    //   },
-    // },
   ];
 
   const courtColumns = [
@@ -306,12 +291,6 @@ export default function CourtManagementPage() {
           >
             Thêm sân con
           </Button>
-          <Popconfirm
-            title="Xóa sân?"
-            onConfirm={() => handleDeleteCourt(record.courtId)}
-          >
-            <Button danger size="small" icon={<DeleteOutlined />} />
-          </Popconfirm>
         </Space>
       ),
     },
@@ -544,6 +523,7 @@ export default function CourtManagementPage() {
           }}
           categories={categories}
           court={editingCourt}
+          courtId={editingCourt?.courtId}
           onSuccess={() => loadCourts(selectedBranchId)}
         />
       )}
@@ -557,7 +537,6 @@ export default function CourtManagementPage() {
         />
       )}
 
-      {/* --- MODALS CHO SÂN CON --- */}
       {selectedBranchId && (
         <CourtCopyModal
           open={copyModalOpen}
