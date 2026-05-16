@@ -14,6 +14,15 @@ export default function CreateCourtModal({
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
 
+  const categoriesList = Array.isArray(categories)
+    ? categories
+    : 
+    Array.isArray(categories?.result)
+    ? categories.result
+    : Array.isArray(categories?.data)
+    ? categories.data
+    : [];
+
   const handleSubmit = async (values: any) => {
     try {
       if (fileList.length < 2) {
@@ -80,7 +89,7 @@ export default function CreateCourtModal({
         >
           <Select
             placeholder="Chọn loại sân"
-            options={categories.map((c: any) => ({
+            options={categoriesList.map((c: any) => ({
               label: c.categoryName,
               value: c.categoryId,
             }))}
@@ -99,7 +108,6 @@ export default function CreateCourtModal({
           />
         </Form.Item>
 
-        {/* THÊM TRƯỜNG VỊ TRÍ (LOCATION) Ở ĐÂY */}
         <Form.Item
           label="Vị trí / Khu vực"
           name="location"

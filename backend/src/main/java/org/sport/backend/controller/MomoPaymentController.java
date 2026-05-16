@@ -31,16 +31,13 @@ public class MomoPaymentController {
     @PostMapping("/create")
     public ResponseEntity<?> createPayment(@RequestBody Map<String, String> request) {
         try {
-            // Lấy bookingIntentId từ mobile gửi lên
             UUID bookingIntentId = UUID.fromString(request.get("bookingIntentId"));
 
-            // Gọi BookingService để lấy thông tin giá tiền cần thanh toán
             BookingIntentResponse intentResponse = bookingService.getBookingIntentById(bookingIntentId);
             long amount = intentResponse.getPreviewPrice().longValue(); // Lấy tổng tiền
 
             String orderInfo = "Thanh toan dat san LaceUP - ID: " + bookingIntentId.toString();
 
-            // Gọi sang MoMo để lấy payUrl, lúc này orderId của MoMo chính là bookingIntentId của mình
             String payUrl = momoService.createMomoPayment(bookingIntentId.toString(), amount, orderInfo);
 
             return ResponseEntity.ok(Map.of(

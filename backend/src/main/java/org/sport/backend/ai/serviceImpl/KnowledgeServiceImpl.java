@@ -126,7 +126,6 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         String content = String.format(
                 "Tại %s có cơ sở thể thao tên là %s. Địa chỉ: %s, %s, %s. %s %s %s %s " +
                         "Khách hàng có nhu cầu đặt sân vui lòng liên hệ %s.%s",
-                area.getAddress().getDistrict(),
                 area.getRentalAreaName(),
                 area.getAddress().getStreet(),
                 area.getAddress().getWard(),
@@ -201,9 +200,13 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             locationInfo = String.format("đã chốt đá tại sân %s (%s, %s)",
                     area.getRentalAreaName(),
                     area.getAddress().getStreet(),
-                    area.getAddress().getDistrict());
-            districtForMetadata = area.getAddress().getDistrict();
-            cityForMetadata = area.getAddress().getCity() != null ? area.getAddress().getCity().getCityName() : "";
+                    area.getAddress().getWard()
+            );
+
+            cityForMetadata = area.getAddress().getCity() != null
+                    ? area.getAddress().getCity().getCityName()
+                    : "";
+
         } else if (match.getAddress() != null) {
             locationInfo = String.format("đang tìm sân quanh khu vực %s, %s",
                     match.getAddress().getWard() != null ? match.getAddress().getWard() : "",

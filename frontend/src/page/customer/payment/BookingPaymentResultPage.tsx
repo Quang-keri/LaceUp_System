@@ -148,7 +148,7 @@ export default function BookingPaymentResultPage() {
             </Button>
           )}
 
-          <Button size="large" onClick={() => navigate("/")}>
+          <Button size="large" onClick={() => navigate("/home")}>
             Về trang chủ
           </Button>
         </div>

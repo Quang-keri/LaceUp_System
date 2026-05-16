@@ -323,7 +323,6 @@ public class BookingController {
             @RequestParam(required = false) UUID rentalId
     ) {
         try {
-            // Lấy dữ liệu (không phân trang - page=1, size=999999 để lấy hết)
             List<BookingResponse> bookings;
             if (rentalId != null) {
                 bookings = bookingService.getBookingsRentalId(rentalId, bookingStatus, keyword, from, to, 1, Integer.MAX_VALUE).getData();

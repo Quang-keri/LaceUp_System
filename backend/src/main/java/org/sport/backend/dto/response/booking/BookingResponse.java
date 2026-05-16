@@ -35,6 +35,12 @@ public class BookingResponse {
     private String paymentMethod;
     private BigDecimal depositAmount;
     private BigDecimal remainingAmount;
+    private BigDecimal commissionRate;
+    private BigDecimal commissionAmount;
+    private BigDecimal ownerAmount;
+    private BigDecimal platformProfit;
+    private Boolean ownerPaid;
+    private LocalDateTime ownerPaidAt;
     private List<BookingResponse.BookingServiceResponse> extraServiceResponses;
     @Getter
     @Setter

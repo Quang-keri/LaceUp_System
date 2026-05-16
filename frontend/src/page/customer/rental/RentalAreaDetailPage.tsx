@@ -223,7 +223,7 @@ export default function RentalAreaDetailPage() {
                 {data.rentalName}
               </h1>
               <p className="text-gray-500 text-sm line-clamp-1">
-                {`${data.address.street}, ${data.address.ward}, ${data.address.district}, ${data.address.city?.cityName}`}
+                {`${data.address.street}, ${data.address.ward},${data.address.city?.cityName}`}
               </p>
             </div>
 

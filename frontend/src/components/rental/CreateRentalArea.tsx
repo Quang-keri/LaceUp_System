@@ -14,10 +14,7 @@ import {
   useRentalForm,
 } from "../../context/RentalFormContext";
 import Step1BasicInfo from "./Step1BasicInfo";
-import Step2CourtInfo from "./Step2CourtInfo";
-import Step3CourtCopy from "./Step3CourtCopy";
-import Step4Services from "./Step4Services";
-import Step5Legal from "./Step5Legal";
+
 import { useAuth } from "../../context/AuthContext";
 
 import rentalService from "../../service/rental/rentalService";
@@ -27,6 +24,13 @@ import CheckCircleOutlined from "@ant-design/icons/lib/icons/CheckCircleOutlined
 import { useNavigate } from "react-router-dom";
 import serviceItemService from "../../service/serviceItemService";
 import legalProfileService from "../../service/legalProfileService";
+import Step2BankAccount from "./Step2BankAccount";
+import bankAccountService from "../../service/bankAccountService";
+import Step3CourtInfo from "./Step3CourtInfo";
+import Step4CourtCopy from "./Step4CourtCopy";
+import Step5Services from "./Step5Services";
+import Step6Legal from "./Step6Legal";
+
 const FormContainer: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshProfile } = useAuth();
@@ -61,7 +65,6 @@ const FormContainer: React.FC = () => {
         contactPhone: completeData.basicInfo.contactPhone,
         street: completeData.basicInfo.address.street,
         ward: completeData.basicInfo.address.ward,
-        district: completeData.basicInfo.address.district,
         cityName: completeData.basicInfo.address.cityName,
         latitude: completeData.basicInfo.address.latitude,
         longitude: completeData.basicInfo.address.longitude,
@@ -88,6 +91,14 @@ const FormContainer: React.FC = () => {
         );
         setLoading(false);
         return;
+      }
+      if (completeData.bankAccount) {
+        await bankAccountService.createBankAccount({
+          bankName: completeData.bankAccount.bankName,
+          accountNumber: completeData.bankAccount.accountNumber,
+          accountHolderName: completeData.bankAccount.accountHolderName,
+          branchName: completeData.bankAccount.branchName || "",
+        });
       }
       for (const courtType of completeData.courts) {
         const courtCopyRequests = (courtType.courtCopies || []).map(
@@ -239,21 +250,25 @@ const FormContainer: React.FC = () => {
   const steps = [
     { title: "Thông tin cơ bản", content: <Step1BasicInfo next={next} /> },
     {
+      title: "Tài khoản ngân hàng",
+      content: <Step2BankAccount next={next} prev={prev} />,
+    },
+    {
       title: "Loại sân & Tiện ích",
-      content: <Step2CourtInfo next={next} prev={prev} />,
+      content: <Step3CourtInfo next={next} prev={prev} />,
     },
     {
       title: "Thông tin sân",
-      content: <Step3CourtCopy next={next} prev={prev} />,
+      content: <Step4CourtCopy next={next} prev={prev} />,
     },
     {
       title: "Dịch vụ khác",
-      content: <Step4Services next={next} prev={prev} />,
+      content: <Step5Services next={next} prev={prev} />,
     },
     {
       title: "Pháp lý & Hoàn tất",
       content: (
-        <Step5Legal prev={prev} submit={handleSubmit} loading={loading} />
+        <Step6Legal prev={prev} submit={handleSubmit} loading={loading} />
       ),
     },
   ];

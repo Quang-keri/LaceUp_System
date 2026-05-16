@@ -8,6 +8,12 @@ import type {
 import type { ApiResponse } from "../../types/ApiResponse";
 
 class RentalService {
+
+ async getRentalAreaOptions() {
+    const res = await api.get(`/rental-areas/options`);
+    return res.data.result;
+  }
+
   async getRentalAreaById(rentalAreaId: string) {
     const response = await api.get<ApiResponse<RentalAreaResponse>>(
       `/rental-areas/${rentalAreaId}`,

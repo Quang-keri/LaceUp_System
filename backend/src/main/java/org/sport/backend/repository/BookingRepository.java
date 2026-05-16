@@ -49,9 +49,14 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("ownerId") UUID ownerId
     );
 
-    boolean existsByRenterAndRentalAreaAndBookingStatus(User renter, RentalArea rentalArea, BookingStatus bookingStatus);
 
-    boolean existsByBookerPhoneAndRentalAreaAndBookingStatus(String bookerPhone, RentalArea rentalArea, BookingStatus bookingStatus);
+    boolean existsByRenterAndRentalAreaAndBookingStatus(User renter, RentalArea rentalArea, BookingStatus bookingStatus);
+        boolean existsByBookerPhoneAndRentalAreaAndBookingStatus(String bookerPhone, RentalArea rentalArea, BookingStatus bookingStatus);
+    List<Booking> findByRentalArea_RentalAreaIdAndCreatedAtBetween(
+            UUID rentalAreaId,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.createdAt >= :startDate AND b.createdAt <= :endDate AND (:ownerId IS NULL OR b.rentalArea.owner.userId = :ownerId)")
     Long countBookingsInRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, @Param("ownerId") UUID ownerId);

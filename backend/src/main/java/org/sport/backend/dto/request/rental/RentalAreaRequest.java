@@ -20,9 +20,8 @@ public class RentalAreaRequest {
 
     @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
     private String street;
-    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
+    @NotNull(message = "Phường/xã bỏ trống")
     private String ward;
-    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
     private String district;
 
     private Long cityId;

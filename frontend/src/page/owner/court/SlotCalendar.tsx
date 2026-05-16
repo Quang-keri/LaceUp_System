@@ -29,6 +29,7 @@ export default function SlotCalendar({
     totalPrice: 0,
     paidAmount: 0,
     paymentType: "UNPAID",
+    paymentMethod: "BANK_TRANSFER",
   });
 
   const [openModal, setOpenModal] = useState(false);
@@ -95,6 +96,7 @@ export default function SlotCalendar({
         note: formState.note,
         totalPrice: formState.totalPrice,
         paidAmount: formState.paidAmount,
+        paymentMethod: formState.paymentMethod,
         slots: selectedSlots.map((s) => ({
           courtCopyId: s.courtId,
           startTime: dayjs(s.startTime).format("YYYY-MM-DDTHH:mm:ss"),
@@ -103,7 +105,7 @@ export default function SlotCalendar({
       };
 
       const res = await bookingService.createOwnerBooking(payload);
-
+    
       if (res.code !== 200 && res.code !== 201) {
         message.error(res.message || "Có lỗi xảy ra khi tạo lịch đặt.");
         return;
@@ -146,6 +148,7 @@ export default function SlotCalendar({
         totalPrice: 0,
         paidAmount: 0,
         paymentType: "UNPAID",
+        paymentMethod: "BANK_TRANSFER",
       });
     } catch (error: any) {
       const errorMessage =

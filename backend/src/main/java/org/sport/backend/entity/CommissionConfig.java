@@ -41,6 +41,9 @@ public class CommissionConfig extends BaseEntity {
     @Column(name = "is_default")
     private Boolean isDefault;
 
+    @Column(name = "is_active")
+    private Boolean isActive;
+
     @Column(name = "note")
     private String note;
 }

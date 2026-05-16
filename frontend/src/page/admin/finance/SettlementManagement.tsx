@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   DatePicker,
@@ -9,69 +9,87 @@ import {
   message,
   Tag,
   Typography,
+  Card,
+  Row,
+  Col,
+  Statistic,
 } from "antd";
-import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import { financeService } from "../../../service/financeService";
-import { HistoryOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, ReloadOutlined } from "@ant-design/icons";
 
 const { Title } = Typography;
+
+const formatMoney = (value?: number) =>
+  `${Number(value || 0).toLocaleString("vi-VN")} đ`;
 
 const SettlementManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(dayjs());
-
-  // State cho Modal Thanh toán
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [confirmingRecord, setConfirmingRecord] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSettlement, setSelectedSettlement] = useState<any>(null);
   const [form] = Form.useForm();
 
-  const fetchSettlements = async (date: dayjs.Dayjs) => {
+  const dateString = selectedDate.format("YYYY-MM-DD");
+
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const month = date.month() + 1;
-      const year = date.year();
-      const result = await financeService.getMonthlySettlements(month, year);
-      setData(result);
+      const [settlements, summaryData] = await Promise.all([
+        financeService.getSettlementsByDate(dateString),
+        financeService.getSettlementSummary(dateString),
+      ]);
+
+      setData(settlements || []);
+      setSummary(summaryData);
     } catch (error: any) {
-      message.error(
-        error.response?.data?.message || "Lỗi khi tải dữ liệu đối soát",
-      );
+      message.error(error.response?.data?.message || "Lỗi khi tải đối soát");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSettlements(selectedDate);
-  }, [selectedDate]);
+    fetchData();
+  }, [dateString]);
 
-  // Xử lý mở Modal
-  const handleOpenModal = (record: any) => {
-    setConfirmingRecord(record);
-    setIsModalVisible(true);
-  };
-
-  // Xử lý submit Form xác nhận thanh toán
-  const handleConfirmPayout = async (values: any) => {
+  const handleGenerate = async () => {
     try {
       setLoading(true);
-      await financeService.confirmPayout({
-        rentalAreaId: confirmingRecord.rentalAreaId,
-        month: selectedDate.month() + 1,
-        year: selectedDate.year(),
-        transactionReference: values.transactionReference,
-        note: values.note,
-      });
-      message.success("Đã xác nhận thanh toán thành công!");
-      setIsModalVisible(false);
-      form.resetFields();
-      fetchSettlements(selectedDate); // Cập nhật lại bảng
+      await financeService.generateDailySettlements(dateString);
+      message.success("Đã tạo đối soát trong ngày");
+      fetchData();
     } catch (error: any) {
-      message.error(
-        error.response?.data?.message || "Lỗi khi xác nhận thanh toán",
+      message.error(error.response?.data?.message || "Lỗi khi tạo đối soát");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openPaidModal = (record: any) => {
+    setSelectedSettlement(record);
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmPaid = async (values: any) => {
+    try {
+      setLoading(true);
+      await financeService.markSettlementAsPaid(
+        selectedSettlement.settlementId,
+        {
+          transferCode: values.transferCode,
+          note: values.note,
+        },
       );
+
+      message.success("Đã xác nhận chuyển khoản");
+      setIsModalOpen(false);
+      form.resetFields();
+      fetchData();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi khi xác nhận");
     } finally {
       setLoading(false);
     }
@@ -79,58 +97,77 @@ const SettlementManagement: React.FC = () => {
 
   const columns = [
     {
-      title: "Tòa Nhà",
-      dataIndex: "rentalAreaId", // Tạm dùng ID, nếu backend có rentalAreaName thì đổi thành 'rentalAreaName'
-      key: "rentalAreaId",
-      render: (text: string) => <strong>{text}</strong>,
+      title: "Tòa nhà",
+      dataIndex: "rentalAreaName",
+      key: "rentalAreaName",
+      render: (text: string, record: any) => (
+        <div>
+          <strong>{text}</strong>
+          <div style={{ fontSize: 12, color: "#888" }}>
+            {record.rentalAreaId}
+          </div>
+        </div>
+      ),
     },
     {
-      title: "Số Booking",
-      dataIndex: "totalBookingsPaid",
-      key: "totalBookingsPaid",
+      title: "Ngày",
+      dataIndex: "settlementDate",
+      key: "settlementDate",
+      render: (val: string) => dayjs(val).format("DD/MM/YYYY"),
     },
     {
-      title: "Tổng Thu (VND)",
-      dataIndex: "totalRevenue",
-      key: "totalRevenue",
-      render: (val: number) => val?.toLocaleString() + " đ",
+      title: "Tổng thu",
+      dataIndex: "grossAmount",
+      key: "grossAmount",
+      render: formatMoney,
     },
     {
-      title: "Phí Admin",
+      title: "Hoa hồng admin",
       dataIndex: "commissionAmount",
       key: "commissionAmount",
       render: (val: number, record: any) => (
         <span>
-          {val?.toLocaleString()} đ{" "}
-          <Tag color="blue">{(record.commissionRate * 100).toFixed(1)}%</Tag>
+          {formatMoney(val)}{" "}
+          <Tag color="blue">
+            {((record.commissionRate || 0) * 100).toFixed(1)}%
+          </Tag>
         </span>
       ),
     },
     {
-      title: "Thực Trả Chủ Nhà",
-      dataIndex: "payoutToOwner",
-      key: "payoutToOwner",
+      title: "Cần trả owner",
+      dataIndex: "ownerAmount",
+      key: "ownerAmount",
       render: (val: number) => (
-        <strong style={{ color: "green" }}>{val?.toLocaleString()} đ</strong>
+        <strong style={{ color: "green" }}>{formatMoney(val)}</strong>
       ),
     },
     {
-      title: "Hành Động",
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (val: string) => (
+        <Tag color={val === "PAID" ? "success" : "warning"}>{val}</Tag>
+      ),
+    },
+    {
+      title: "Mã giao dịch",
+      dataIndex: "transferCode",
+      key: "transferCode",
+      render: (val: string) => val || "-",
+    },
+    {
+      title: "Hành động",
       key: "action",
       render: (_: any, record: any) => (
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Button
-            type="primary"
-            icon={<CheckCircleOutlined />}
-            onClick={() => handleOpenModal(record)}
-            disabled={record.payoutToOwner <= 0} // Vô hiệu hóa nếu không có tiền cần trả
-          >
-            Thanh Toán
-          </Button>
-          <Link to={`/admin/settlements/${record.rentalAreaId}/history`}>
-            <Button icon={<HistoryOutlined />}>Lịch sử</Button>
-          </Link>
-        </div>
+        <Button
+          type="primary"
+          icon={<CheckCircleOutlined />}
+          disabled={record.status === "PAID"}
+          onClick={() => openPaidModal(record)}
+        >
+          Đã chuyển khoản
+        </Button>
       ),
     },
   ];
@@ -144,52 +181,93 @@ const SettlementManagement: React.FC = () => {
           marginBottom: 16,
         }}
       >
-        <Title level={4}>Đối soát & Thanh toán Chủ nhà</Title>
-        <DatePicker
-          picker="month"
-          value={selectedDate}
-          onChange={(date) => date && setSelectedDate(date)}
-          format="MM/YYYY"
-          allowClear={false}
-        />
+        <Title level={4}>Đối soát & thanh toán owner theo ngày</Title>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          <DatePicker
+            value={selectedDate}
+            onChange={(date) => date && setSelectedDate(date)}
+            format="DD/MM/YYYY"
+            allowClear={false}
+          />
+
+          <Button icon={<ReloadOutlined />} onClick={handleGenerate}>
+            Tạo đối soát
+          </Button>
+        </div>
       </div>
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Tổng doanh thu"
+              value={formatMoney(summary?.totalGrossAmount)}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Hoa hồng admin"
+              value={formatMoney(summary?.totalCommissionAmount)}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Tổng cần trả owner"
+              value={formatMoney(summary?.totalOwnerAmount)}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Còn pending"
+              value={formatMoney(summary?.totalPendingAmount)}
+            />
+          </Card>
+        </Col>
+      </Row>
 
       <Table
         columns={columns}
         dataSource={data}
-        rowKey="rentalAreaId"
+        rowKey="settlementId"
         loading={loading}
         pagination={{ pageSize: 10 }}
       />
 
-      {/* Modal Xác nhận Thanh toán */}
       <Modal
-        title={`Xác nhận thanh toán tháng ${selectedDate.format("MM/YYYY")}`}
-        open={isModalVisible}
+        title="Xác nhận đã chuyển khoản"
+        open={isModalOpen}
         onCancel={() => {
-          setIsModalVisible(false);
+          setIsModalOpen(false);
           form.resetFields();
         }}
         onOk={() => form.submit()}
         confirmLoading={loading}
-        okText="Xác nhận đã chuyển khoản"
+        okText="Xác nhận"
         cancelText="Hủy"
       >
         <p>
-          Bạn đang xác nhận đã chuyển khoản{" "}
-          <strong>{confirmingRecord?.payoutToOwner?.toLocaleString()} đ</strong>{" "}
-          cho chủ tòa nhà.
+          Số tiền cần chuyển:{" "}
+          <strong>{formatMoney(selectedSettlement?.ownerAmount)}</strong>
         </p>
-        <Form form={form} layout="vertical" onFinish={handleConfirmPayout}>
+
+        <Form form={form} layout="vertical" onFinish={handleConfirmPaid}>
           <Form.Item
-            label="Mã giao dịch ngân hàng (Bắt buộc)"
-            name="transactionReference"
-            rules={[{ required: true, message: "Vui lòng nhập mã giao dịch!" }]}
+            label="Mã giao dịch ngân hàng"
+            name="transferCode"
+            rules={[{ required: true, message: "Vui lòng nhập mã giao dịch" }]}
           >
             <Input placeholder="VD: MBBANK-123456789" />
           </Form.Item>
-          <Form.Item label="Ghi chú thêm" name="note">
-            <Input.TextArea rows={3} placeholder="Ghi chú (nếu có)..." />
+
+          <Form.Item label="Ghi chú" name="note">
+            <Input.TextArea rows={3} placeholder="Ghi chú nếu có" />
           </Form.Item>
         </Form>
       </Modal>
