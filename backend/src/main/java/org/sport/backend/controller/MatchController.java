@@ -8,6 +8,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.dto.request.chat.DivideTeamRequest;
+import org.sport.backend.dto.request.match.AutoMatchRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.service.MatchService;
@@ -50,6 +51,28 @@ public class MatchController {
                 200,
                 "Bạn đã tham gia trận đấu thành công!",
                 null));
+    }
+
+    @PostMapping("/join/code")
+    @PreAuthorize("hasAuthority('JOIN_MATCH')")
+    public ResponseEntity<ApiResponse<Void>> joinMatchByCode(
+            @RequestParam String roomCode) {
+        matchService.joinByRoomCode(roomCode);
+        return ResponseEntity.ok(ApiResponse.success(
+                200,
+                "Bạn đã tham gia trận đấu thành công qua mã phòng!",
+                null));
+    }
+
+    @PostMapping("/auto-match")
+    @PreAuthorize("hasAuthority('JOIN_MATCH')")
+    public ResponseEntity<ApiResponse<MatchResponse>> autoMatch(
+            @RequestBody AutoMatchRequest request) {
+        MatchResponse matchedRoom = matchService.autoMatch(request);
+        return ResponseEntity.ok(ApiResponse.success(
+                200,
+                "Ghép trận tự động thành công!",
+                matchedRoom));
     }
 
     @PostMapping("/{matchId}/divide-teams")

@@ -347,19 +347,30 @@ public class UserServiceImpl implements UserService {
     public PageResponse<UserResponse> getCustomersByOwner(int page, int size, String keyword, String tier, Integer minScore, Integer maxScore) {
         User owner = getCurrentUserEntity();
         Pageable pageable = PageRequest.of(page, size);
+        MemberTier tierEnum = parseMemberTier(tier);
 
-        MemberTier tierEnum = null;
-        if (tier != null && !tier.trim().isEmpty()) {
-            try {
-                tierEnum = MemberTier.valueOf(tier.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new RuntimeException("Hạng thành viên không hợp lệ: " + tier);
-            }
-        }
+        Specification<User> spec = UserSpecification.filterCustomers(keyword, tierEnum, minScore, maxScore, owner.getUserId());
 
-        Page<User> users = userRepository.findCustomersByOwnerIdWithFilters(
-                owner.getUserId(), keyword, tierEnum, minScore, maxScore, pageable);
+        Page<User> users = userRepository.findAll(spec, pageable);
+        Page<UserResponse> responsePage = users.map(userMapper::toUserResponse);
 
+        return PageResponse.<UserResponse>builder()
+                .currentPage(page + 1)
+                .totalPages(users.getTotalPages())
+                .pageSize(users.getSize())
+                .totalElements(users.getTotalElements())
+                .data(responsePage.getContent())
+                .build();
+    }
+
+    @Override
+    public PageResponse<UserResponse> getAllCustomers(int page, int size, String keyword, String tier, Integer minScore, Integer maxScore) {
+        Pageable pageable = PageRequest.of(page, size);
+        MemberTier tierEnum = parseMemberTier(tier);
+
+        Specification<User> spec = UserSpecification.filterCustomers(keyword, tierEnum, minScore, maxScore, null);
+
+        Page<User> users = userRepository.findAll(spec, pageable);
         Page<UserResponse> responsePage = users.map(userMapper::toUserResponse);
 
         return PageResponse.<UserResponse>builder()
@@ -463,5 +474,16 @@ public class UserServiceImpl implements UserService {
     private void deleteTokenResetPassword(String token) {
         passwordResetTokenRepository.findByToken(token)
                 .ifPresent(passwordResetTokenRepository::delete);
+    }
+
+    private MemberTier parseMemberTier(String tier) {
+        if (tier == null || tier.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return MemberTier.valueOf(tier.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Hạng thành viên không hợp lệ: " + tier);
+        }
     }
 }

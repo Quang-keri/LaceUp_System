@@ -41,4 +41,7 @@ public class MatchResult extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private ResultStatus status; // PENDING, APPROVED, REJECTED
+
+    @ElementCollection
+    private List<UUID> absentUserIds;
 }

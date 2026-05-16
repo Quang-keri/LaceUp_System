@@ -31,6 +31,7 @@ public class MatchResultServiceImpl implements MatchResultService {
     private final MatchRepository matchRepository;
     private final MatchRegistrationRepository registrationRepository;
     private final UserRepository userRepository;
+    private final ReputationLogRepository reputationLogRepository;
 
     // THÊM: Repository mới để xử lý rank theo từng môn
     private final UserCategoryRankRepository userCategoryRankRepository;
@@ -87,6 +88,7 @@ public class MatchResultServiceImpl implements MatchResultService {
                 .winnerIds(winnerIds)           // Vẫn lưu list ID để tái sử dụng logic tính Rank phía dưới
                 .loserIds(loserIds)             // Vẫn lưu list ID
                 .status(ResultStatus.PENDING)
+                .absentUserIds(request.getAbsentUserIds())
                 .build();
 
         // Cập nhật trạng thái trận đấu
@@ -125,6 +127,7 @@ public class MatchResultServiceImpl implements MatchResultService {
             match.setStatus(MatchStatus.COMPLETED);
 
 //            refundDeposits(match);
+            processCreditScore(result);
 
             // Xử lý cộng điểm hoặc chia tiền
             if (match.getMatchType() == MatchType.RANKED) {
@@ -255,27 +258,39 @@ public class MatchResultServiceImpl implements MatchResultService {
         return isWinner ? gain : loss;
     }
 
-    // --- CÁC HÀM XỬ LÝ TIỀN CƯỢC / HOÀN CỌC GIỮ NGUYÊN ---
+//    // --- CÁC HÀM XỬ LÝ TIỀN CƯỢC / HOÀN CỌC GIỮ NGUYÊN ---
+//    private void processBetMatch(MatchResult result) {
+//        Match match = result.getMatch();
+//        if (match.getCourt() == null || match.getStartTime() == null || match.getEndTime() == null) return;
+//
+//        BigDecimal totalPrice = calculateTotalCourtPrice(match);
+//        double winnerPercentVal = match.getWinnerPercent() != null ? match.getWinnerPercent() : 50.0;
+//        BigDecimal winnerRatio = BigDecimal.valueOf(winnerPercentVal).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+//        BigDecimal loserRatio = BigDecimal.ONE.subtract(winnerRatio);
+//
+//        List<UUID> winners = result.getWinnerIds();
+//        List<UUID> losers = result.getLoserIds();
+//
+//        BigDecimal payPerWinner = calculatePayPerPerson(totalPrice, winnerRatio, winners);
+//        BigDecimal payPerLoser = calculatePayPerPerson(totalPrice, loserRatio, losers);
+//
+
+    /// /        updateUserWallets(winners, payPerWinner, "Trừ tiền sân (Phe Thắng - " + winnerPercentVal + "%)");
+    /// /        updateUserWallets(losers, payPerLoser, "Trừ tiền sân (Phe Thua - " + (100 - winnerPercentVal) + "%)");
+//
+//        log.info("=== ĐÃ TRỪ TIỀN KÈO TRẬN {} ===", match.getMatchId());
+//        log.info("Tổng: {} VNĐ | Thắng trả: {}/ng | Thua trả: {}/ng", totalPrice, payPerWinner, payPerLoser);
+//    }
+
     private void processBetMatch(MatchResult result) {
         Match match = result.getMatch();
-        if (match.getCourt() == null || match.getStartTime() == null || match.getEndTime() == null) return;
 
-        BigDecimal totalPrice = calculateTotalCourtPrice(match);
-        double winnerPercentVal = match.getWinnerPercent() != null ? match.getWinnerPercent() : 50.0;
-        BigDecimal winnerRatio = BigDecimal.valueOf(winnerPercentVal).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
-        BigDecimal loserRatio = BigDecimal.ONE.subtract(winnerRatio);
+        // Vì là kèo hiện vật (nước, bữa ăn) lưu trong trường 'note',
+        // hệ thống không cần tính toán chia tiền sân hay trừ ví người dùng nữa.
+        // Mọi khoản thanh toán tiền sân sẽ quay về mốc chia đều (nếu cọc) hoặc thanh toán trực tiếp cho chủ sân.
 
-        List<UUID> winners = result.getWinnerIds();
-        List<UUID> losers = result.getLoserIds();
-
-        BigDecimal payPerWinner = calculatePayPerPerson(totalPrice, winnerRatio, winners);
-        BigDecimal payPerLoser = calculatePayPerPerson(totalPrice, loserRatio, losers);
-
-//        updateUserWallets(winners, payPerWinner, "Trừ tiền sân (Phe Thắng - " + winnerPercentVal + "%)");
-//        updateUserWallets(losers, payPerLoser, "Trừ tiền sân (Phe Thua - " + (100 - winnerPercentVal) + "%)");
-
-        log.info("=== ĐÃ TRỪ TIỀN KÈO TRẬN {} ===", match.getMatchId());
-        log.info("Tổng: {} VNĐ | Thắng trả: {}/ng | Thua trả: {}/ng", totalPrice, payPerWinner, payPerLoser);
+        log.info("=== ĐÃ CHỐT KẾT QUẢ TRẬN KÈO ===", match.getMatchId());
+        log.info("Phần thưởng kèo: {}", match.getNote() != null ? match.getNote() : "Không ghi rõ");
     }
 
     private BigDecimal calculatePayPerPerson(BigDecimal total, BigDecimal ratio, List<UUID> ids) {
@@ -357,4 +372,43 @@ public class MatchResultServiceImpl implements MatchResultService {
 //            }
 //        }
 //    }
+
+    private void processCreditScore(MatchResult result) {
+        List<MatchRegistration> registrations = registrationRepository.findByMatch(result.getMatch());
+        List<UUID> absents = result.getAbsentUserIds() != null ? result.getAbsentUserIds() : new ArrayList<>();
+
+        for (MatchRegistration reg : registrations) {
+            User user = reg.getUser();
+
+            if (absents.contains(user.getUserId())) {
+                // Bị trừ nặng nếu vắng mặt
+                updateCreditScore(user, -20, "Vắng mặt không báo trước trong trận " + result.getMatch().getCategory().getCategoryName());
+            } else {
+                // Hồi lại 5 điểm nếu tham gia đầy đủ (Áp dụng cho mọi loại trận)
+                updateCreditScore(user, 5, "Hoàn thành trận " + result.getMatch().getCategory().getCategoryName());
+            }
+        }
+    }
+
+    private void updateCreditScore(User user, int pointsChanged, String reason) {
+        int currentScore = user.getCreditScore() != null ? user.getCreditScore() : 100;
+        int newScore = currentScore + pointsChanged;
+
+        // Giới hạn điểm từ 0 đến 100
+        if (newScore > 100) newScore = 100;
+        if (newScore < 0) newScore = 0;
+
+        // Chỉ lưu log và cập nhật nếu điểm có thay đổi (VD: Đang 100 mà cộng 5 thì không cần lưu)
+        if (currentScore != newScore) {
+            user.setCreditScore(newScore);
+            userRepository.save(user);
+
+            ReputationLog log = ReputationLog.builder()
+                    .user(user)
+                    .pointsChanged(newScore - currentScore) // Số điểm thực tế đã cộng/trừ
+                    .reason(reason)
+                    .build();
+            reputationLogRepository.save(log);
+        }
+    }
 }

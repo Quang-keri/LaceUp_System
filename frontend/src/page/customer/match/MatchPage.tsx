@@ -2,17 +2,20 @@ import React, { useEffect, useState } from "react";
 import {
   Calendar,
   Clock,
-  DollarSign,
   MapPin,
   MessageCircle,
   Smile,
   Trophy,
   Users,
+  Zap,
+  Flame,
+  Search,
 } from "lucide-react";
 import matchService from "../../../service/match/matchService.ts";
 import type { MatchResponse } from "../../../types/match.ts";
 import CreateMatchModal from "./CreateMatchModal";
 import JoinMatchModal from "./JoinMatchModal";
+import AutoMatchModal from "./AutoMatchModal";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext.tsx";
 import { message } from "antd";
@@ -26,6 +29,7 @@ const MatchPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [isAutoMatchOpen, setIsAutoMatchOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
     null,
   );
@@ -33,9 +37,10 @@ const MatchPage: React.FC = () => {
   // --- STATE CHO BỘ LỌC TÌM KIẾM ---
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [sortOrder, setSortOrder] = useState("NEWEST");
-  const [selectedLocation, setSelectedLocation] = useState<string>(""); // Lưu Thành phố
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(""); // Lưu Quận/Huyện
-  const [selectedCategory, setSelectedCategory] = useState<string>(""); // Lưu Loại sân
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [roomCodeInput, setRoomCodeInput] = useState("");
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -58,7 +63,6 @@ const MatchPage: React.FC = () => {
     fetchMatches();
   }, []);
 
-  // Reset tất cả bộ lọc
   const resetFilters = () => {
     setSortOrder("NEWEST");
     setSelectedLocation("");
@@ -67,7 +71,6 @@ const MatchPage: React.FC = () => {
     setTypeFilter("ALL");
   };
 
-  // --- CÁC HÀM XỬ LÝ ---
   const handleOpenJoinModal = (match: MatchResponse) => {
     setSelectedMatch(match);
     setIsJoinModalOpen(true);
@@ -79,6 +82,7 @@ const MatchPage: React.FC = () => {
       if (response.code === 200) {
         message.success("Tham gia trận thành công!");
         fetchMatches();
+        navigate("/my-matches");
       }
     } catch (error: any) {
       message.error(error.response?.data?.message || "Lỗi tham gia");
@@ -124,7 +128,7 @@ const MatchPage: React.FC = () => {
             e.stopPropagation();
             handleJoinMatch(match.matchId);
           }}
-          className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all shadow-sm"
+          className="bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all shadow-sm"
         >
           Tham Gia
         </button>
@@ -136,7 +140,7 @@ const MatchPage: React.FC = () => {
           return (
             <button
               disabled
-              className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-semibold text-sm border border-indigo-100"
+              className="bg-purple-50 text-purple-600 px-4 py-2 rounded-xl font-semibold text-sm border border-purple-100"
             >
               Đã Cọc
             </button>
@@ -167,7 +171,7 @@ const MatchPage: React.FC = () => {
         return (
           <button
             disabled
-            className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-sm"
+            className="bg-purple-600 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-sm"
           >
             Sẵn Sàng
           </button>
@@ -230,10 +234,27 @@ const MatchPage: React.FC = () => {
     return "--:--";
   };
 
+  const handleJoinByRoomCode = () => {
+    if (!roomCodeInput.trim()) return;
+
+    matchService
+      .joinMatchByCode(roomCodeInput)
+      .then((res) => {
+        if (res.code === 200) {
+          message.success("Vào phòng thành công!");
+          setRoomCodeInput(""); // Reset ô input sau khi vào thành công
+          fetchMatches();
+          navigate("/my-matches");
+        }
+      })
+      .catch((err) =>
+        message.error(err.response?.data?.message || "Mã không hợp lệ!"),
+      );
+  };
+
   const isValidPrice = (price: any) =>
     price != null && price !== "" && !isNaN(Number(price));
 
-  // --- LOGIC LỌC DỮ LIỆU ĐÃ CẬP NHẬT ---
   const filteredMatches = matches
     .filter((m) =>
       ["OPEN", "CONFIRMED", "WAITING_DEPOSIT", "FULL"].includes(m.status),
@@ -271,7 +292,6 @@ const MatchPage: React.FC = () => {
       return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
     });
 
-  // Lấy danh sách quận/huyện dựa vào Thành phố đang chọn
   const availableDistricts =
     LOCATION_DATA.find((city) => city.name === selectedLocation)?.districts ||
     [];
@@ -289,10 +309,41 @@ const MatchPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {/* --- CỤM NÚT BẤM (MÃ PHÒNG, GHÉP TRẬN, TẠO KÈO) --- */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+          <div className="flex items-center bg-white rounded-xl border border-slate-300 overflow-hidden focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all shadow-sm h-[42px]">
+            <input
+              type="text"
+              placeholder="Nhập mã phòng..."
+              value={roomCodeInput}
+              onChange={(e) => setRoomCodeInput(e.target.value)}
+              className="px-4 py-2 w-36 outline-none text-sm font-semibold uppercase placeholder:normal-case"
+              maxLength={6}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleJoinByRoomCode();
+                }
+              }}
+            />
+            <button
+              onClick={handleJoinByRoomCode}
+              className="pr-3 pl-2 h-full text-slate-400 hover:text-purple-600 transition-colors flex items-center justify-center bg-slate-50 hover:bg-purple-50 border-l border-slate-200"
+              title="Tìm và vào phòng"
+            >
+              <Search size={18} />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsAutoMatchOpen(true)}
+            className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm border-0 h-[42px]"
+          >
+            <Zap size={18} className="fill-white" /> Ghép Trận
+          </button>
+
           <button
             onClick={() => setIsFormOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all active:scale-95 shadow-sm whitespace-nowrap border-0"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all active:scale-95 shadow-sm border-0 h-[42px]"
           >
             <span className="text-xl leading-none">+</span> Tạo Kèo Tìm Bạn
           </button>
@@ -310,6 +361,11 @@ const MatchPage: React.FC = () => {
         onSuccess={fetchMatches}
         match={selectedMatch}
       />
+      <AutoMatchModal
+        isOpen={isAutoMatchOpen}
+        onClose={() => setIsAutoMatchOpen(false)}
+        onSuccess={fetchMatches}
+      />
 
       {/* --- MAIN LAYOUT --- */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -319,7 +375,7 @@ const MatchPage: React.FC = () => {
             <h2 className="text-xl font-extrabold text-slate-800">Bộ lọc</h2>
             <button
               onClick={resetFilters}
-              className="text-sm text-indigo-500 hover:text-indigo-700 font-medium hover:underline"
+              className="text-sm text-purple-500 hover:text-purple-700 font-medium hover:underline"
             >
               Làm mới
             </button>
@@ -345,7 +401,7 @@ const MatchPage: React.FC = () => {
                     name="sort"
                     checked={sortOrder === sort.id}
                     onChange={() => setSortOrder(sort.id)}
-                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
                   />
                   <span className="text-slate-600 group-hover:text-slate-800 font-medium">
                     {sort.label}
@@ -371,7 +427,7 @@ const MatchPage: React.FC = () => {
                     name="categoryCourt"
                     checked={selectedCategory === cat}
                     onChange={() => setSelectedCategory(cat)}
-                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
                   />
                   <span
                     className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
@@ -406,7 +462,7 @@ const MatchPage: React.FC = () => {
                     name="matchType"
                     checked={typeFilter === type.id}
                     onChange={() => setTypeFilter(type.id)}
-                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
                   />
                   <span
                     className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
@@ -419,7 +475,7 @@ const MatchPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Khu vực (Render trực tiếp từ LOCATION_DATA) */}
+          {/* Khu vực */}
           <div className="mb-6">
             <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
               Khu vực
@@ -436,9 +492,9 @@ const MatchPage: React.FC = () => {
                     checked={selectedLocation === city.name}
                     onChange={() => {
                       setSelectedLocation(city.name);
-                      setSelectedDistrict(""); // Reset Quận khi đổi Thành phố
+                      setSelectedDistrict("");
                     }}
-                    className="w-4 h-4 text-indigo-600 bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
                   />
                   <span
                     className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
@@ -453,7 +509,6 @@ const MatchPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Quận / Huyện (Lấy động từ availableDistricts) */}
           <div className="mb-8">
             <h3 className="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">
               Quận / Huyện
@@ -462,14 +517,13 @@ const MatchPage: React.FC = () => {
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
               disabled={!selectedLocation}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm transition-colors hover:border-slate-300"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm transition-colors hover:border-slate-300"
             >
               <option value="">
                 {selectedLocation
                   ? "-- Tất cả Quận/Huyện --"
                   : "-- Chọn Thành phố trước --"}
               </option>
-
               {availableDistricts.map((district) => (
                 <option key={district.name} value={district.name}>
                   {district.name}
@@ -479,11 +533,11 @@ const MatchPage: React.FC = () => {
           </div>
         </div>
 
-        {/* GRID DANH SÁCH (3 CỘT: lg:grid-cols-3) */}
+        {/* GRID DANH SÁCH MATCHES */}
         <div className="flex-1 w-full">
           {loading ? (
             <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-indigo-600 border-t-transparent"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-purple-600 border-t-transparent"></div>
             </div>
           ) : filteredMatches.length === 0 ? (
             <div className="bg-white p-10 rounded-2xl border border-slate-200 text-center text-slate-500 flex flex-col items-center justify-center">
@@ -499,7 +553,7 @@ const MatchPage: React.FC = () => {
               {filteredMatches.map((match) => (
                 <div
                   key={match.matchId}
-                  className="bg-white rounded-2xl border border-slate-200 relative shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                  className="bg-white rounded-2xl border border-slate-200 relative shadow-sm hover:shadow-md hover:border-purple-200 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden"
                 >
                   <div
                     className="p-5 pb-2 cursor-pointer group flex-grow relative"
@@ -509,7 +563,7 @@ const MatchPage: React.FC = () => {
                       <span
                         className={`text-[11px] px-2 py-1 rounded-md font-bold whitespace-nowrap shadow-sm ${
                           match.matchType === "RANKED"
-                            ? "bg-indigo-50 text-indigo-700"
+                            ? "bg-purple-50 text-purple-700"
                             : match.matchType === "BET"
                             ? "bg-orange-50 text-orange-700 border border-orange-100"
                             : "bg-slate-50 text-slate-600"
@@ -525,9 +579,8 @@ const MatchPage: React.FC = () => {
 
                           {match.matchType === "BET" && (
                             <>
-                              <DollarSign size={14} />
-                              Kèo ({match.winnerPercent}/
-                              {100 - (match.winnerPercent || 0)})
+                              <Flame size={14} />
+                              Kèo: {match.note || "Tự thỏa thuận"}
                             </>
                           )}
 
@@ -542,22 +595,30 @@ const MatchPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="flex flex-col items-start mb-4">
-                      <span
-                        className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider inline-block mb-2 ${
-                          match.hasCourt
-                            ? "bg-indigo-50 text-indigo-600"
-                            : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {match.hasCourt ? "Sân cố định" : "Kèo tự do"}
-                      </span>
+                    <div className="flex flex-col items-start mb-4 mt-6">
+                      {/* --- THẺ HIỂN THỊ LOẠI SÂN & ROOM CODE --- */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span
+                          className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider inline-block ${
+                            match.hasCourt
+                              ? "bg-purple-50 text-purple-600"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {match.hasCourt ? "Sân cố định" : "Kèo tự do"}
+                        </span>
 
-                      <h3 className="text-xl font-bold text-slate-800 pr-24 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                        {/* Đã bỏ điều kiện match.roomCode && để luôn hiển thị block này */}
+                        <span className="text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider bg-orange-100 text-orange-700">
+                          Mã: {match.roomCode || "TRỐNG"}
+                        </span>
+                      </div>
+
+                      <h3 className="text-xl font-bold text-slate-800 pr-4 line-clamp-2 group-hover:text-purple-600 transition-colors">
                         {match.title || `Giao lưu ${match.categoryName}`}
                       </h3>
 
-                      <p className="text-indigo-600 text-sm font-semibold mt-1">
+                      <p className="text-purple-600 text-sm font-semibold mt-1">
                         {match.categoryName}
                       </p>
                     </div>
@@ -616,7 +677,7 @@ const MatchPage: React.FC = () => {
                         </div>
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div
-                            className="bg-indigo-500 h-full transition-all duration-700 rounded-full"
+                            className="bg-purple-500 h-full transition-all duration-700 rounded-full"
                             style={{
                               width: `${Math.min(
                                 (match.currentPlayers /
@@ -643,7 +704,7 @@ const MatchPage: React.FC = () => {
                         </p>
                       )}
                       <p
-                        className="text-[12px] text-slate-500 font-medium mt-0.5 cursor-pointer hover:text-indigo-600 hover:underline transition-colors flex items-center gap-1"
+                        className="text-[12px] text-slate-500 font-medium mt-0.5 cursor-pointer hover:text-purple-600 hover:underline transition-colors flex items-center gap-1"
                         title="Xem hồ sơ người tạo"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -660,7 +721,7 @@ const MatchPage: React.FC = () => {
                         }}
                       >
                         Host:{" "}
-                        <span className="text-indigo-600 font-semibold">
+                        <span className="text-purple-600 font-semibold">
                           {match.hostName}
                         </span>
                       </p>
@@ -669,7 +730,7 @@ const MatchPage: React.FC = () => {
                     <div className="flex items-center gap-2.5">
                       <button
                         onClick={(e) => handleChatClick(e, match)}
-                        className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-all shadow-sm"
+                        className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-purple-600 rounded-xl transition-all shadow-sm"
                         title="Chat với chủ phòng"
                       >
                         <MessageCircle size={18} />

@@ -391,6 +391,7 @@ public class DataInitializer implements CommandLineRunner {
                     .imageUrl(images.get(imgIndex++))
                     .publicId("dummy-public-id-" + UUID.randomUUID().toString().substring(0, 8))
                     .court(court)
+                    .isCover(true)
                     .build();
             court.getImages().add(img);
 

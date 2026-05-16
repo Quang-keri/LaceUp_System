@@ -21,6 +21,8 @@ import {
   Users,
   Target,
   Activity,
+  Coffee,
+  Utensils,
 } from "lucide-react";
 
 interface CreateMatchModalProps {
@@ -29,11 +31,10 @@ interface CreateMatchModalProps {
   onSuccess: () => void;
 }
 
-// Cấu hình số người mặc định cho từng môn thể thao
 const SPORT_DEFAULTS: Record<string, { max: number; min: number }> = {
-  "1": { max: 4, min: 2 }, // Cầu lông
-  "2": { max: 10, min: 10 }, // Bóng đá
-  "3": { max: 4, min: 2 }, // Pickleball
+  "1": { max: 4, min: 2 },
+  "2": { max: 10, min: 10 },
+  "3": { max: 4, min: 2 },
 };
 
 const CreateMatchModal = ({
@@ -67,10 +68,9 @@ const CreateMatchModal = ({
         maxPlayers: SPORT_DEFAULTS["1"].max,
         minPlayersToStart: SPORT_DEFAULTS["1"].min,
         matchType: "NORMAL",
-        winnerPercent: 50,
         minRank: Math.max(0, currentRank - 1000),
         maxRank: currentRank + 1000,
-        note: "",
+        note: "", // Reset note
       });
     } else {
       form.resetFields();
@@ -92,7 +92,6 @@ const CreateMatchModal = ({
     form.setFieldsValue({ ward: undefined });
   };
 
-  // Hàm bắt sự kiện khi thay đổi Môn Thể Thao
   const handleCategoryChange = (e: any) => {
     const catId = e.target.value;
     const defaults = SPORT_DEFAULTS[catId];
@@ -150,15 +149,12 @@ const CreateMatchModal = ({
         maxPlayers: Number(values.maxPlayers),
         minPlayersToStart: Number(values.minPlayersToStart),
         isRecurring: false,
-        recurring: false,
         matchType: values.matchType,
-        winnerPercent:
-          values.matchType === "BET" ? Number(values.winnerPercent) : undefined,
         minRank:
           values.matchType === "RANKED" ? Number(values.minRank) : undefined,
         maxRank:
           values.matchType === "RANKED" ? Number(values.maxRank) : undefined,
-        note: values.note || "",
+        note: values.note || "", // Gửi thông tin kèo hoặc ghi chú lên server
         courtId: null,
       };
 
@@ -229,13 +225,6 @@ const CreateMatchModal = ({
           layout="vertical"
           onFinish={handleFinish}
           className="create-match-form"
-          initialValues={{
-            categoryId: "1",
-            maxPlayers: SPORT_DEFAULTS["1"].max,
-            minPlayersToStart: SPORT_DEFAULTS["1"].min,
-            duration: 1,
-            matchType: "NORMAL",
-          }}
         >
           <div className="space-y-4">
             {/* Khối 1: Môn thể thao */}
@@ -404,57 +393,81 @@ const CreateMatchModal = ({
               {/* Box động theo thể thức */}
               <Form.Item
                 noStyle
-                shouldUpdate={(prev, curr) =>
-                  prev.matchType !== curr.matchType ||
-                  prev.winnerPercent !== curr.winnerPercent
-                }
+                shouldUpdate={(prev, curr) => prev.matchType !== curr.matchType}
               >
                 {({ getFieldValue }) => {
                   const type = getFieldValue("matchType");
 
                   if (type === "BET") {
-                    const currentWinnerPercent =
-                      getFieldValue("winnerPercent") || 0;
-                    const loserPercent = 100 - currentWinnerPercent;
-
                     return (
                       <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 mb-4 relative overflow-hidden animate-in slide-in-from-top-2">
                         <Flame className="absolute -right-4 -bottom-4 text-orange-100 w-20 h-20 rotate-12" />
                         <Form.Item
                           label={
                             <span className="text-orange-800 font-bold uppercase tracking-wider text-[10px]">
-                              Cài đặt tỉ lệ bao sân
+                              Phần thưởng Kèo (Phe thua bao)
                             </span>
                           }
+                          name="note" // BINDING VÀO TRƯỜNG NOTE
+                          rules={[
+                            {
+                              required: true,
+                              message:
+                                "Vui lòng chọn hoặc nhập phần thưởng kèo!",
+                            },
+                          ]}
                           className="mb-0 relative z-10"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="bg-white p-1.5 rounded-lg border border-orange-200 shadow-sm flex flex-col items-center justify-center w-24">
-                              <span className="text-[9px] text-orange-500 font-bold uppercase mb-0.5">
-                                Phe Thắng trả
-                              </span>
-                              <Form.Item name="winnerPercent" noStyle>
-                                <InputNumber
-                                  min={0}
-                                  max={50}
-                                  step={10}
-                                  formatter={(value) => `${value}%`}
-                                  parser={(value) =>
-                                    Number(value?.replace("%", "")) as 0 | 50
-                                  }
-                                  className="w-full text-center font-black text-orange-600 text-base custom-input-number border-none shadow-none"
+                          <Select
+                            placeholder="Chọn phần thưởng..."
+                            className="w-full font-bold"
+                            size="large"
+                            dropdownRender={(menu) => (
+                              <>
+                                {menu}
+                                <div className="p-2 border-t border-slate-100">
+                                  <Input
+                                    placeholder="Hoặc tự nhập kèo khác..."
+                                    className="rounded-md"
+                                    onKeyDown={(e) => e.stopPropagation()}
+                                    onChange={(e) =>
+                                      form.setFieldsValue({
+                                        note: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </>
+                            )}
+                          >
+                            <Select.Option value="Chầu nước giải khát">
+                              <div className="flex items-center gap-2">
+                                <Coffee size={16} className="text-amber-600" />
+                                <span>Chầu nước giải khát</span>
+                              </div>
+                            </Select.Option>
+                            <Select.Option value="Tiền sân">
+                              <div className="flex items-center gap-2">
+                                <MapPin
+                                  size={16}
+                                  className="text-emerald-600"
                                 />
-                              </Form.Item>
-                            </div>
-                            <div className="flex-1 bg-gradient-to-r from-orange-500 to-orange-400 py-2.5 px-3 rounded-lg text-white flex items-center justify-between shadow-md">
-                              <span className="font-semibold text-orange-50 uppercase text-[10px]">
-                                Phe Thua Bao
-                              </span>
-                              <span className="font-black text-xl">
-                                {loserPercent}%
-                              </span>
-                            </div>
-                          </div>
+                                <span>Thanh toán tiền sân</span>
+                              </div>
+                            </Select.Option>
+                            <Select.Option value="Bữa ăn sáng/tối">
+                              <div className="flex items-center gap-2">
+                                <Utensils size={16} className="text-rose-600" />
+                                <span>Bữa ăn sáng/tối</span>
+                              </div>
+                            </Select.Option>
+                            <Select.Option value="Cầu/Bóng thi đấu">
+                              <div className="flex items-center gap-2">
+                                <Activity size={16} className="text-blue-600" />
+                                <span>Cầu/Bóng thi đấu</span>
+                              </div>
+                            </Select.Option>
+                          </Select>
                         </Form.Item>
                       </div>
                     );
@@ -518,7 +531,6 @@ const CreateMatchModal = ({
 
             {/* Khối 4: Thời gian & Số lượng */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Cột Thời gian */}
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Clock className="text-purple-600" size={14} />
@@ -561,7 +573,6 @@ const CreateMatchModal = ({
                 </Form.Item>
               </div>
 
-              {/* Cột Nhân sự */}
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Users className="text-orange-500" size={14} />
@@ -570,7 +581,6 @@ const CreateMatchModal = ({
                   </span>
                 </div>
 
-                {/* ĐÃ FIX BINDING CỦA ANT DESIGN: Đưa label ra ngoài Form.Item */}
                 <div className="flex gap-3">
                   <div className="w-1/2">
                     <div className="text-[10px] font-bold text-slate-500 mb-1">
@@ -622,21 +632,33 @@ const CreateMatchModal = ({
               </div>
             </div>
 
-            {/* Ghi chú */}
+            {/* Ghi chú - Chỉ hiện nếu không phải BET */}
             <Form.Item
-              label={
-                <span className="font-bold text-slate-600 uppercase text-[10px] tracking-wider">
-                  Ghi chú thêm (Không bắt buộc)
-                </span>
-              }
-              name="note"
-              className="mb-0"
+              noStyle
+              shouldUpdate={(prev, curr) => prev.matchType !== curr.matchType}
             >
-              <Input.TextArea
-                rows={2}
-                placeholder="Trình độ trung bình khá..."
-                className="rounded-lg border-gray-300 p-2 text-sm"
-              />
+              {({ getFieldValue }) => {
+                if (getFieldValue("matchType") !== "BET") {
+                  return (
+                    <Form.Item
+                      label={
+                        <span className="font-bold text-slate-600 uppercase text-[10px] tracking-wider">
+                          Ghi chú thêm (Không bắt buộc)
+                        </span>
+                      }
+                      name="note"
+                      className="mb-0"
+                    >
+                      <Input.TextArea
+                        rows={2}
+                        placeholder="Trình độ trung bình khá..."
+                        className="rounded-lg border-gray-300 p-2 text-sm"
+                      />
+                    </Form.Item>
+                  );
+                }
+                return null;
+              }}
             </Form.Item>
 
             {/* Nút Submit */}

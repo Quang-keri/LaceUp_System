@@ -64,11 +64,14 @@ public class Match extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private MatchType matchType;
 
-    private Double winnerPercent;
-    private Double betAmount;
+//    private Double winnerPercent;
+//    private Double betAmount;
 
     private Integer minRank;
     private Integer maxRank;
 
     private String note;
+
+    @Column(name = "room_code", unique = true, length = 10)
+    private String roomCode;
 }

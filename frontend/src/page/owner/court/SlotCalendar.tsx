@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -49,6 +49,39 @@ export default function SlotCalendar({
     title: c.courtCode,
   }));
 
+  // --- MAP DỮ LIỆU TỪ API LÊN LỊCH ---
+  useEffect(() => {
+    if (!courtCopies || courtCopies.length === 0) {
+      setEvents([]);
+      return;
+    }
+
+    const existingEvents: any[] = [];
+
+    courtCopies.forEach((court: any) => {
+      if (court.slots && court.slots.length > 0) {
+        court.slots.forEach((slot: any) => {
+          existingEvents.push({
+            id: slot.slotId,
+            resourceId: court.courtCopyId,
+            start: slot.startTime,
+            end: slot.endTime,
+            title: slot.bookingShortResponse?.userName || "Đã đặt",
+            backgroundColor: "#ff4d4f", // 🔴 Đỏ: Lịch đã có người đặt
+            borderColor: "#cf1322",
+            extendedProps: {
+              isBooked: true,
+              phone: slot.bookingShortResponse?.userPhone,
+              note: slot.bookingShortResponse?.note,
+            },
+          });
+        });
+      }
+    });
+
+    setEvents(existingEvents);
+  }, [courtCopies]);
+
   const handleCreateBooking = async () => {
     try {
       if (!formState.customerName || !formState.phone) {
@@ -70,12 +103,13 @@ export default function SlotCalendar({
       };
 
       const res = await bookingService.createOwnerBooking(payload);
-    
+
       if (res.code !== 200 && res.code !== 201) {
         message.error(res.message || "Có lỗi xảy ra khi tạo lịch đặt.");
-        return; // Dừng lại ngay lập tức, không chạy code bên dưới nữa
+        return;
       }
-       message.success("Tạo lịch đặt thành công!");
+
+      message.success("Tạo lịch đặt thành công!");
       const bookingCode =
         res.result?.bookingId?.substring(0, 8).toUpperCase() ||
         "DP" + Math.floor(100000 + Math.random() * 900000);
@@ -94,7 +128,8 @@ export default function SlotCalendar({
         start: s.startTime,
         end: s.endTime,
         title: formState.customerName,
-        backgroundColor: "#10b981",
+        backgroundColor: "#52c41a", // 🟢 Xanh lá: Lịch vừa tạo thành công
+        borderColor: "#389e0d",
         extendedProps: { ...formState, court: s.courtCode, isBooked: true },
       }));
 
@@ -142,14 +177,42 @@ export default function SlotCalendar({
             end: s.endTime,
             resourceId: s.courtId,
             title: "Đang chọn",
-            backgroundColor: "#60a5fa",
+            backgroundColor: "#1677ff", // 🔵 Xanh dương: Khung giờ đang quét chọn
+            borderColor: "#0958d9",
             extendedProps: { isSelecting: true },
           })),
         ]}
         selectable
+        selectAllow={(selectInfo) => {
+          const isOverlap = events.some((event) => {
+            // Kiểm tra trùng sân (nếu ở chế độ Ngày)
+            if (
+              selectInfo.resource &&
+              event.resourceId !== selectInfo.resource.id
+            ) {
+              return false;
+            }
+
+            const eventStart = new Date(event.start).getTime();
+            const eventEnd = new Date(event.end).getTime();
+            const selectStart = selectInfo.start.getTime();
+            const selectEnd = selectInfo.end.getTime();
+
+            return selectStart < eventEnd && selectEnd > eventStart;
+          });
+          return !isOverlap;
+        }}
         select={(info) => {
+          // Ngăn chặn chọn giờ ở chế độ Tháng vì không xác định được Sân cụ thể
+          if (!info.resource) {
+            message.warning(
+              "Vui lòng chuyển sang góc nhìn 'Ngày' để chọn chính xác sân cần đặt!",
+            );
+            return;
+          }
+
           const slot = {
-            id: Math.random().toString(36).substring(2, 9), // Tạo ID random
+            id: Math.random().toString(36).substring(2, 9),
             courtId: info.resource?.id,
             courtCode: info.resource?.title,
             startTime: info.startStr,
@@ -159,7 +222,6 @@ export default function SlotCalendar({
           };
           setSelectedSlots((prev) => [...prev, slot]);
         }}
-        // Sự kiện click thẳng vào event trên lịch để xóa
         eventClick={(info) => {
           if (info.event.extendedProps.isSelecting) {
             Modal.confirm({
@@ -168,6 +230,26 @@ export default function SlotCalendar({
               okText: "Đồng ý",
               cancelText: "Hủy",
               onOk: () => removeSelectedSlot(info.event.id),
+            });
+          } else if (info.event.extendedProps.isBooked) {
+            Modal.info({
+              title: "Thông tin lịch đặt",
+              content: (
+                <div>
+                  <p>
+                    <strong>Khách hàng:</strong> {info.event.title}
+                  </p>
+                  <p>
+                    <strong>Số điện thoại:</strong>{" "}
+                    {info.event.extendedProps.phone || "Không có"}
+                  </p>
+                  <p>
+                    <strong>Giờ:</strong>{" "}
+                    {dayjs(info.event.start).format("HH:mm")} -{" "}
+                    {dayjs(info.event.end).format("HH:mm")}
+                  </p>
+                </div>
+              ),
             });
           }
         }}
@@ -183,10 +265,17 @@ export default function SlotCalendar({
             },
           },
         }}
+        // Việt hóa các nút hiển thị
+        buttonText={{
+          today: "Hôm nay",
+          month: "Tháng",
+          week: "Tuần",
+          day: "Ngày",
+        }}
         headerToolbar={{
           left: "prev,next today createBooking",
           center: "title",
-          right: "resourceTimeGridDay,timeGridWeek",
+          right: "dayGridMonth,timeGridWeek,resourceTimeGridDay", // Thêm dayGridMonth vào thanh công cụ
         }}
       />
 

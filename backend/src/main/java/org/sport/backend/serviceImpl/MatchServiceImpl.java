@@ -1,5 +1,6 @@
 package org.sport.backend.serviceImpl;
 
+import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.constant.RecurringType;
 import org.sport.backend.dto.request.chat.DivideTeamRequest;
+import org.sport.backend.dto.request.match.AutoMatchRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.entity.*;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -62,8 +65,9 @@ public class MatchServiceImpl implements MatchService {
             }
         }
 
-        if (request.getMatchType() == MatchType.BET && request.getWinnerPercent() == null) {
-            throw new RuntimeException("Vui lòng nhập tỉ lệ chia tiền sân cho trận Kèo (VD: 40, 0)");
+        MatchType type = request.getMatchType() != null ? request.getMatchType() : MatchType.NORMAL;
+        if (currentUser.getCreditScore() < 60 && (type == MatchType.RANKED || type == MatchType.BET)) {
+            throw new RuntimeException("Điểm uy tín của bạn (" + currentUser.getCreditScore() + ") dưới 60. Bạn chỉ có thể tạo trận thường (NORMAL)!");
         }
 
         Match.MatchBuilder<?, ?> matchBuilder = Match.builder()
@@ -79,9 +83,10 @@ public class MatchServiceImpl implements MatchService {
                 .dayOfWeek(request.getDayOfWeek())
                 .endDate(request.getEndDate())
                 .matchType(request.getMatchType() != null ? request.getMatchType() : MatchType.NORMAL)
-                .winnerPercent(request.getWinnerPercent())
                 .minRank(request.getMinRank())
-                .maxRank(request.getMaxRank());
+                .maxRank(request.getMaxRank())
+                .roomCode(generateUniqueRoomCode())
+                .note(request.getNote());
 
         City city = cityRepository.getReferenceById(request.getCityId());
         Address address = Address.builder()
@@ -120,6 +125,10 @@ public class MatchServiceImpl implements MatchService {
         User currentUser = userService.getCurrentUserEntity();
         Match match = matchRepository.findByIdWithLock(matchId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
+
+        if (currentUser.getCreditScore() < 60 && (match.getMatchType() == MatchType.RANKED || match.getMatchType() == MatchType.BET)) {
+            throw new RuntimeException("Điểm uy tín của bạn (" + currentUser.getCreditScore() + ") dưới 60. Bạn chỉ có thể tham gia trận thường (NORMAL)!");
+        }
 
         if (match.getStatus() == MatchStatus.WAITING_DEPOSIT ||
                 match.getStatus() == MatchStatus.CONFIRMED ||
@@ -172,6 +181,68 @@ public class MatchServiceImpl implements MatchService {
         }
 
         matchRepository.save(match);
+    }
+
+    @Transactional
+    @Override
+    public void joinByRoomCode(String roomCode) {
+        Match match = matchRepository.findByRoomCode(roomCode.toUpperCase())
+                .orElseThrow(() -> new RuntimeException("Mã phòng không tồn tại hoặc không hợp lệ!"));
+
+        joinMatch(match.getMatchId());
+    }
+
+    @Transactional
+    @Override
+    public MatchResponse autoMatch(AutoMatchRequest request) {
+        User currentUser = userService.getCurrentUserEntity();
+
+        // 1. Nếu là trận Rank, lấy điểm Rank của user để làm điều kiện lọc
+        Integer userRankPoint = null;
+        if (request.getMatchType() == MatchType.RANKED) {
+            userRankPoint = userCategoryRankRepository
+                    .findByUser_UserIdAndCategory_CategoryId(currentUser.getUserId(), request.getCategoryId())
+                    .map(UserCategoryRank::getRankPoint)
+                    .orElse(0);
+        }
+
+        // 2. Xây dựng bộ lọc tìm kiếm trận đấu phù hợp
+        Specification<Match> spec = Specification.where(MatchSpecifications.hasStatus(MatchStatus.OPEN))
+                .and(MatchSpecifications.hasMatchType(request.getMatchType()))
+                .and(MatchSpecifications.hasCity(request.getCity()))
+                .and(MatchSpecifications.hasDistrict(request.getDistrict()))
+                .and(MatchSpecifications.isNotParticipant(currentUser.getUserId())) // Tránh trận đã join
+                .and((root, query, cb) -> cb.equal(root.join("category").get("categoryId"), request.getCategoryId()))
+                .and((root, query, cb) -> cb.lessThan(root.get("currentPlayers"), root.get("maxPlayers"))); // Chưa đầy
+
+        // Áp dụng điều kiện Rank vào query nếu là đấu giải
+        if (userRankPoint != null) {
+            final int rankToCompare = userRankPoint;
+            spec = spec.and((root, query, cb) -> {
+                Predicate minRankNull = cb.isNull(root.get("minRank"));
+                Predicate minRankCheck = cb.lessThanOrEqualTo(root.get("minRank"), rankToCompare);
+
+                Predicate maxRankNull = cb.isNull(root.get("maxRank"));
+                Predicate maxRankCheck = cb.greaterThanOrEqualTo(root.get("maxRank"), rankToCompare);
+
+                return cb.and(cb.or(minRankNull, minRankCheck), cb.or(maxRankNull, maxRankCheck));
+            });
+        }
+
+        // 3. Lấy ra danh sách các trận phù hợp (Lấy trang 1, 1 phần tử đầu tiên ưu tiên tạo sớm nhất)
+        Pageable pageable = PageRequest.of(0, 1, Sort.by("createdAt").ascending());
+        Page<Match> candidateMatches = matchRepository.findAll(spec, pageable);
+
+        if (candidateMatches.isEmpty()) {
+            throw new RuntimeException("Hiện tại chưa tìm thấy trận đấu nào phù hợp với yêu cầu của bạn. Vui lòng thử lại sau hoặc tự tạo phòng!");
+        }
+
+        Match selectedMatch = candidateMatches.getContent().get(0);
+
+        // 4. Gọi lại logic Join match có sẵn để lưu DB
+        joinMatch(selectedMatch.getMatchId());
+
+        return matchMapper.toResponse(selectedMatch);
     }
 
     @Transactional
@@ -392,6 +463,89 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
+    @Scheduled(cron = "0 */5 * * * *")
+    @Transactional
+    public void autoCancelInvalidMatches() {
+        // Lấy thời điểm hiện tại cộng thêm 30 phút (Chốt trước 30 phút)
+        LocalDateTime checkThreshold = LocalDateTime.now().plusMinutes(30);
+
+        List<MatchStatus> pendingStatuses = List.of(MatchStatus.OPEN, MatchStatus.WAITING_DEPOSIT);
+        List<Match> matchesToCheck = matchRepository.findMatchesToAutoCancel(pendingStatuses, checkThreshold);
+
+        if (matchesToCheck.isEmpty()) {
+            return;
+        }
+
+        for (Match match : matchesToCheck) {
+            boolean shouldCancel = false;
+            String cancelReason = "";
+
+            // 1. Trạng thái OPEN: Kiểm tra xem có đủ minPlayersToStart chưa
+            if (match.getStatus() == MatchStatus.OPEN) {
+                int minPlayers = (match.getMinPlayersToStart() != null) ? match.getMinPlayersToStart() : 2;
+                if (match.getCurrentPlayers() < minPlayers) {
+                    shouldCancel = true;
+                    cancelReason = "Không đủ số lượng người chơi tối thiểu (" + match.getCurrentPlayers() + "/" + minPlayers + ") trước giờ thi đấu.";
+                }
+            }
+            // 2. Trạng thái WAITING_DEPOSIT: Đã sát giờ nhưng chưa ai/có người chưa xác nhận cọc
+            else if (match.getStatus() == MatchStatus.WAITING_DEPOSIT) {
+                shouldCancel = true;
+                cancelReason = "Đã sát giờ thi đấu nhưng người chơi chưa hoàn tất xác nhận tiền cọc.";
+            }
+
+            // 3. Quá thời gian bắt đầu (dọn dẹp dữ liệu rác nếu có)
+            if (match.getStartTime().isBefore(LocalDateTime.now())) {
+                shouldCancel = true;
+                cancelReason = "Trận đấu đã quá hạn thời gian bắt đầu nhưng chưa được chốt.";
+            }
+
+            if (shouldCancel) {
+                executeCancelMatch(match, cancelReason);
+            }
+        }
+    }
+
+    private void executeCancelMatch(Match match, String reason) {
+        log.info("Auto-Canceling Match [{}] - Lực lượng: {}/{} - Lý do: {}",
+                match.getMatchId(), match.getCurrentPlayers(), match.getMaxPlayers(), reason);
+
+        match.setStatus(MatchStatus.CANCELLED);
+        // Có thể lưu thêm reason vào DB nếu entity Match của bạn có trường cancelReason
+
+        // Xử lý hoàn tiền cho những người ĐÃ ĐÓNG CỌC (rất quan trọng)
+        if (match.getStatus() == MatchStatus.WAITING_DEPOSIT) {
+            List<MatchRegistration> registrations = registrationRepository.findByMatch(match);
+
+            // Tính số tiền đã cọc (giống logic confirmDeposit của bạn)
+            BigDecimal totalPrice = calculateTotalCourtPrice(match);
+            BigDecimal depositAmount = BigDecimal.ZERO;
+            if (totalPrice.compareTo(BigDecimal.ZERO) > 0 && match.getMaxPlayers() > 0) {
+                depositAmount = totalPrice.divide(BigDecimal.valueOf(match.getMaxPlayers()), 0, RoundingMode.HALF_UP);
+            }
+
+            for (MatchRegistration reg : registrations) {
+                if (reg.getIsDepositConfirmed()) {
+                    User user = reg.getUser();
+
+                    // TODO: Mở comment và gọi logic CỘNG LẠI TIỀN cho user
+                    // BigDecimal currentBalance = user.getFakeMoney() != null ? user.getFakeMoney() : BigDecimal.ZERO;
+                    // user.setFakeMoney(currentBalance.add(depositAmount));
+                    // userRepository.save(user);
+
+                    // log.info("[REFUND] Đã hoàn {} VNĐ cho user {} vì trận đấu bị hủy.", depositAmount, user.getUserName());
+
+                    reg.setIsDepositConfirmed(false); // Reset trạng thái cọc
+                }
+            }
+            registrationRepository.saveAll(registrations);
+        }
+
+        matchRepository.save(match);
+
+        // TODO: Bắn Event hoặc gọi NotificationService để gửi thông báo (FCM) về điện thoại cho những người trong danh sách đăng ký.
+    }
+
     private boolean shouldCreateForDate(Match config, LocalDate date) {
         if (config.getRecurringType() == null) return false;
 
@@ -421,7 +575,6 @@ public class MatchServiceImpl implements MatchService {
                 .maxPlayers(config.getMaxPlayers())
                 .isRecurring(false)
                 .matchType(config.getMatchType())
-                .winnerPercent(config.getWinnerPercent())
                 .minRank(config.getMinRank())
                 .maxRank(config.getMaxRank())
                 .build();
@@ -448,5 +601,20 @@ public class MatchServiceImpl implements MatchService {
         BigDecimal hours = BigDecimal.valueOf(durationMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
         return pricePerHour.multiply(hours);
+    }
+
+    private String generateUniqueRoomCode() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder code = new StringBuilder();
+        java.util.Random rnd = new java.util.Random();
+        String roomCode;
+        do {
+            code.setLength(0); // Reset
+            for (int i = 0; i < 6; i++) {
+                code.append(chars.charAt((int) (rnd.nextFloat() * chars.length())));
+            }
+            roomCode = code.toString();
+        } while (matchRepository.existsByRoomCode(roomCode));
+        return roomCode;
     }
 }

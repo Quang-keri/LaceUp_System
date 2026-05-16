@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import chatBotService from "../../../service/chatBotService";
 import type { ChatbotRequest } from "../../../types/chatBox";
-import { Send, Bot, X, Zap } from "lucide-react";
+import { Send, Bot, X, Zap, ExternalLink, Banknote, MapPin, Star } from "lucide-react";
 
 interface Message {
   id: string;
@@ -72,9 +72,146 @@ const ChatboxBubble: React.FC = () => {
     }
   };
 
+  const renderMessageContent = (msg: Message) => {
+    if (msg.sender === "user") {
+      return (
+        <p className="text-sm font-medium whitespace-pre-wrap leading-relaxed break-words">
+          {msg.text}
+        </p>
+      );
+    }
+
+    const rentalRegex = /\[RENTAL\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]/g;
+    const matches = [...msg.text.matchAll(rentalRegex)];
+
+    if (matches.length > 0) {
+      const cleanText = msg.text.replace(rentalRegex, "").trim();
+
+      return (
+        <div className="flex flex-col gap-3 w-full overflow-hidden">
+          {cleanText && (
+            <p className="text-sm font-medium whitespace-pre-wrap leading-relaxed break-words">
+              {cleanText}
+            </p>
+          )}
+
+          {/* Thay đổi gap-2 thành gap-2.5 để các card có không gian thở */}
+          <div className="flex flex-col gap-2.5 mt-1 w-full">
+            {matches.map((match, idx) => {
+              const [_, name, address, price, rating, url] = match;
+
+              return (
+                <a
+                  key={idx}
+                  href={url.trim()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  // THIẾT KẾ LẠI CARD TẠI ĐÂY
+                  className="flex flex-col p-3.5 bg-white rounded-xl shadow-sm border border-purple-100 hover:border-orange-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group w-full relative overflow-hidden"
+                >
+                  {/* Hiệu ứng nền siêu mờ khi hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-50/0 to-orange-50/0 group-hover:from-orange-50/50 group-hover:to-transparent transition-colors duration-300 pointer-events-none"></div>
+
+                  {/* Header: Tên sân & Nút Link tối giản */}
+                  <div className="flex justify-between items-start gap-3 relative z-10 mb-2">
+                    <span className="font-bold text-purple-900 line-clamp-2 flex-1 leading-snug text-[14px]">
+                      {name.trim()}
+                    </span>
+                    <div className="text-slate-300 group-hover:text-orange-500 transition-colors flex-shrink-0 mt-0.5">
+                      <ExternalLink size={16} strokeWidth={2.5} />
+                    </div>
+                  </div>
+
+                  {/* Body: Thông tin chi tiết */}
+                  <div className="flex flex-col gap-2 text-[12px] font-medium text-slate-500 relative z-10">
+                    
+                    {/* Hàng 1: Địa chỉ */}
+                    <div className="flex items-start gap-2">
+                      <MapPin
+                        size={14}
+                        className="text-purple-400 mt-[2px] flex-shrink-0"
+                      />
+                      <span className="line-clamp-2 leading-tight">{address.trim()}</span>
+                    </div>
+
+                    {/* Hàng 2: Giá và Đánh giá (Có đường kẻ mỏng phân cách ở trên) */}
+                    <div className="flex items-center justify-between gap-2 mt-1 pt-2 border-t border-slate-100">
+                      
+                      {/* Cột Giá */}
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <Banknote
+                          size={14}
+                          className="text-emerald-500 flex-shrink-0"
+                        />
+                        <span className="line-clamp-1 truncate font-semibold text-slate-700">
+                          {price.trim()}
+                        </span>
+                      </div>
+
+                      {/* Cột Đánh Giá: Gọn và hài hòa hơn */}
+                      <div className="flex items-center gap-1 flex-shrink-0 bg-orange-50/80 px-2 py-1 rounded border border-orange-100/50">
+                        <span className="text-orange-600 font-bold leading-none mt-[1px] text-[11px]">
+                          5/5
+                        </span>
+                        <Star
+                          size={12}
+                          className="text-orange-400 fill-orange-400 mb-[1px]"
+                        />
+                      </div>
+
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = msg.text.match(urlRegex);
+
+    if (!urls) {
+      return (
+        <p className="text-sm font-medium whitespace-pre-wrap leading-relaxed break-words">
+          {msg.text}
+        </p>
+      );
+    }
+
+    const textWithoutUrls = msg.text.replace(urlRegex, "").trim();
+    return (
+      <div className="flex flex-col gap-3 w-full overflow-hidden">
+        {textWithoutUrls && (
+          <p className="text-sm font-medium whitespace-pre-wrap leading-relaxed break-words">
+            {textWithoutUrls}
+          </p>
+        )}
+        <div className="flex flex-col gap-2 mt-1 w-full">
+          {urls.map((url, idx) => (
+            <a
+              key={idx}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md group w-full bg-white border border-purple-100 hover:border-orange-400 hover:shadow-md text-purple-800"
+            >
+              <div className="flex flex-col overflow-hidden flex-1 min-w-0">
+                <span className="truncate">👉 Xem chi tiết tại đây</span>
+              </div>
+              <div className="text-slate-300 group-hover:text-orange-500 transition-colors flex-shrink-0">
+                <ExternalLink size={18} strokeWidth={2.5} />
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed bottom-6 left-6 z-50 font-sans">
-      {/* Nút Bubble */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -84,12 +221,9 @@ const ChatboxBubble: React.FC = () => {
         </button>
       )}
 
-      {/* Khung Chat */}
       {isOpen && (
         <div className="w-[340px] sm:w-[380px] h-[550px] max-h-[80vh] bg-slate-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-purple-200 transform transition-all duration-300 origin-bottom-right">
-          {/* Header Thể Thao Tím/Cam */}
           <div className="bg-gradient-to-r from-purple-900 via-purple-800 to-purple-900 p-4 flex justify-between items-center border-b-[4px] border-orange-500 relative overflow-hidden">
-            {/* Hiệu ứng pattern chéo nền cho header */}
             <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ffffff_10px,#ffffff_20px)]"></div>
 
             <div className="flex items-center gap-3 relative z-10">
@@ -114,7 +248,6 @@ const ChatboxBubble: React.FC = () => {
             </button>
           </div>
 
-          {/* Vùng hiển thị tin nhắn */}
           <div className="flex-1 p-4 overflow-y-auto bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50 flex flex-col gap-4 custom-scrollbar">
             {messages.map((msg) => (
               <div
@@ -132,17 +265,11 @@ const ChatboxBubble: React.FC = () => {
                       : "bg-gradient-to-br from-purple-600 to-purple-700 text-white rounded-bl-sm shadow-purple-200/50"
                   }`}
                 >
-                  <p className="text-sm font-medium whitespace-pre-wrap leading-relaxed">
-                    {msg.text}
-                  </p>
+                  {renderMessageContent(msg)}
                 </div>
-                <span className="text-[10px] text-slate-400 font-semibold mt-1 px-1">
-                  {msg.sender === "user" ? "BẠN" : "SPORTBOT"}
-                </span>
               </div>
             ))}
 
-            {/* Hiệu ứng đang gõ */}
             {isLoading && (
               <div className="self-start max-w-[80%] flex flex-col items-start">
                 <div className="bg-gradient-to-br from-purple-600 to-purple-700 text-white p-3.5 rounded-2xl rounded-bl-sm shadow-sm flex gap-1 items-center">
@@ -155,7 +282,6 @@ const ChatboxBubble: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Vùng nhập tin nhắn */}
           <form
             onSubmit={handleSendMessage}
             className="p-3 bg-white border-t border-purple-100 flex gap-2 items-center"
@@ -164,7 +290,7 @@ const ChatboxBubble: React.FC = () => {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Hỏi chiến thuật, kèo đấu..."
+              placeholder="Hỏi chiến thuật, sân bãi..."
               className="flex-1 px-4 py-3 bg-purple-50/50 border border-purple-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all text-sm font-medium text-slate-700 placeholder-slate-400"
               disabled={isLoading}
             />

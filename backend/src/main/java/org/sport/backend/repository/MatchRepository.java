@@ -49,4 +49,13 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
+
+    Optional<Match> findByRoomCode(String roomCode);
+    boolean existsByRoomCode(String roomCode);
+
+    @Query("SELECT m FROM Match m WHERE m.status IN :statuses AND m.startTime <= :thresholdTime")
+    List<Match> findMatchesToAutoCancel(
+            @Param("statuses") List<MatchStatus> statuses,
+            @Param("thresholdTime") LocalDateTime thresholdTime
+    );
 }

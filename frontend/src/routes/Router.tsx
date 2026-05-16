@@ -65,8 +65,9 @@ import AboutPage from "../components/Footer/AboutPage.tsx";
 import PoliciesPage from "../components/Footer/PoliciesPage.tsx";
 import TermsPage from "../components/Footer/TermsPage.tsx";
 import AmenityManagement from "../page/admin/amenities/AmenityManagement.tsx";
-import CustomerManagementPage from "../page/owner/customer-management/CustomerManagementPage.tsx";
+import CustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
 import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
+import AdminCustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -158,7 +159,7 @@ export const router = createBrowserRouter([
       { path: "permissions", element: <PermissionManagement /> },
       { path: "court-types", element: <CategoryManagement /> },
       { path: "bookings/list", element: <BookingManagement /> },
-
+      { path: "customers", element: <AdminCustomerManagementPage /> },
       { path: "news", element: <NewsPage /> },
       { path: "reviews", element: <ReviewsManagement /> },
       { path: "amenities", element: <AmenityManagement /> },

@@ -63,6 +63,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             Authentication authentication = jwtService.getAuthentication(token);
 
+            if (authentication.getPrincipal() instanceof CustomUserDetails userDetails) {
+
+                if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+
+                    SecurityContextHolder.clearContext();
+
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+
+                    response.getWriter().write("""
+                                {
+                                    "code": "ACCOUNT_DEACTIVATED",
+                                    "message": "Account has been deactivated"
+                                }
+                            """);
+
+                    return;
+                }
+            }
+
             if (authentication instanceof UsernamePasswordAuthenticationToken authWithDetails) {
                 authWithDetails.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)

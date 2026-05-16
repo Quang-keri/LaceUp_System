@@ -25,7 +25,7 @@ public class MatchRequest {
     private LocalDate endDate;
 
     private MatchType matchType;
-    private Double winnerPercent;
+//    private Double winnerPercent;
     private Integer minRank;
     private Integer maxRank;
     private String note;
