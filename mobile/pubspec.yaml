@@ -15,6 +15,7 @@ dependencies:
   http: ^1.2.0
   shared_preferences: ^2.2.3  # Thêm thư viện này để lưu token cục bộ
   flutter_dotenv: ^5.1.0
+  dio: ^5.9.2
 
 dev_dependencies:
   flutter_test:

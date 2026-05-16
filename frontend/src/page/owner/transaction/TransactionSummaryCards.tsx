@@ -42,15 +42,15 @@ const TransactionSummaryCards: React.FC<Props> = ({
       <div
         className={`border rounded-lg p-4 ${
           profit >= 0
-            ? "bg-purple-50 border-purple-200"
+            ? "bg-purple-50 border-orange-200"
             : "bg-orange-50 border-orange-200"
         }`}
       >
-        <p className="text-gray-600 text-sm">Lợi nhuận</p>
+        <p className="text-orange-600 text-sm">Lợi nhuận</p>
 
         <p
           className={`text-2xl font-bold ${
-            profit >= 0 ? "text-purple-600" : "text-orange-600"
+            profit >= 0 ? "text-orange-600" : "text-orange-600"
           }`}
         >
           {profit.toLocaleString("vi-VN")} ₫

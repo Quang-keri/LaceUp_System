@@ -33,6 +33,9 @@ const Footer = () => {
               <Link to="/info/terms">Điều khoản dịch vụ</Link>
             </li>
             <li>
+              <Link to="/create-rental-area">Đăng sân của bạn</Link>
+            </li>
+            <li>
               <Link to="/info/about-us">Về chúng tôi</Link>
             </li>
           </ul>

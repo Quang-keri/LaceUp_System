@@ -3,12 +3,17 @@ package org.sport.backend.serviceImpl;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.PaymentStatus;
-import org.sport.backend.constant.SlotStatus;
-import org.sport.backend.entity.User;
-import org.sport.backend.repository.BookingRepository;
-import org.sport.backend.repository.PaymentRepository;
-import org.sport.backend.repository.SlotRepository;
-import org.sport.backend.repository.UserRepository;
+import org.sport.backend.dto.response.booking.BookingResponse;
+import org.sport.backend.dto.response.match.MatchResponse;
+import org.sport.backend.dto.response.payment.PaymentResponse;
+import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.report.ReportResponse;
+import org.sport.backend.dto.response.slot.SlotResponse;
+import org.sport.backend.entity.Booking;
+import org.sport.backend.entity.BookingServiceItem;
+import org.sport.backend.entity.Match;
+import org.sport.backend.entity.Payment;
+import org.sport.backend.repository.*;
 import org.sport.backend.service.ReportService;
 import org.sport.backend.service.UserService;
 import org.springframework.data.domain.PageRequest;
@@ -16,8 +21,10 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,14 +36,14 @@ public class ReportServiceImpl implements ReportService {
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
-    private final SlotRepository slotRepository;
+    private final MatchRepository matchRepository;
+    private final BookingServiceItemRepository bookingServiceItemRepository;
 
     private final UserService userService;
 
     @Override
     public Map<String, Object> getFullDashboardStatsOwner(String range) {
-        User user = userService.getCurrentUserEntity();
-        return generateDashboardStats(range, user.getUserId());
+        return generateDashboardStats(range, userService.getCurrentUserEntity().getUserId());
     }
 
     @Override
@@ -44,186 +51,291 @@ public class ReportServiceImpl implements ReportService {
         return generateDashboardStats(range, null);
     }
 
+    @Override
+    public List<Map<String, Object>> getDynamicOverviewChartAdmin(int year, Integer month) {
+        return buildOverviewChart(year, month, null);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDynamicOverviewChartOwner(int year, Integer month) {
+        return buildOverviewChart(year, month, userService.getCurrentUserEntity().getUserId());
+    }
+
+    @Override
+    public ReportResponse getEndOfDayReport(LocalDate startDate, LocalDate endDate, UUID rentalAreaId) {
+
+        LocalDate start = (startDate != null) ? startDate : LocalDate.now();
+        LocalDate end = (endDate != null) ? endDate : start;
+
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("Ngày bắt đầu không được lớn hơn ngày kết thúc");
+        }
+
+        if (rentalAreaId == null) {
+            throw new IllegalArgumentException("Rental Area ID không được để trống");
+        }
+
+        LocalDateTime startDateTime = start.atStartOfDay();
+        LocalDateTime endDateTime = end.atTime(LocalTime.MAX);
+
+        List<Booking> bookings = bookingRepository.findAllBookingsForReportByArea(startDateTime, endDateTime, rentalAreaId);        List<Match> matches = matchRepository.findAllMatchesForReport(startDateTime, endDateTime);
+        List<Payment> payments = paymentRepository.findAllPaymentsForReport(startDateTime, endDateTime);
+
+        List<UUID> bookingIds = bookings.stream().map(Booking::getBookingId).collect(Collectors.toList());
+
+        final List<BookingServiceItem> serviceItems = bookingIds.isEmpty()
+                ? new ArrayList<>()
+                : bookingServiceItemRepository.findByBooking_BookingIdIn(bookingIds);
+
+        List<BookingResponse> bookingDTOs = bookings.stream().map(b -> {
+
+            List<BookingResponse.BookingServiceResponse> extraServices = serviceItems.stream()
+                    .filter(s -> s.getBooking() != null && s.getBooking().getBookingId().equals(b.getBookingId()))
+                    .map(s -> BookingResponse.BookingServiceResponse.builder()
+                            .serviceId(s.getServiceItem() != null ? s.getServiceItem().getServiceItemId() : null)
+                            .serviceName(s.getServiceItem() != null ? s.getServiceItem().getServiceName() : "N/A")
+                            .quantity(s.getQuantity())
+                            .price(s.getPrice())
+
+                            .build())
+                    .collect(Collectors.toList());
+
+            return BookingResponse.builder()
+                    .bookingId(b.getBookingId())
+                    .bookingStatus(b.getBookingStatus())
+                    .status(b.getBookingStatus())
+                    .totalPrice(b.getTotalPrice())
+                    .depositAmount(b.getDepositAmount())
+                    .remainingAmount(b.getRemainingAmount())
+                    .startTime(b.getStartTime())
+                    .endTime(b.getEndTime())
+                    .createdAt(b.getCreatedAt())
+                    .note(b.getNote())
+                    .invoicePdfUrl(b.getInvoiceUrl())
+                    .phoneNumber(b.getBookerPhone())
+                    .userName(b.getBookerName() != null ? b.getBookerName() :
+                            (b.getRenter() != null ? b.getRenter().getUserName() : "Khách lẻ"))
+
+                    // MAP DỊCH VỤ VÀO TRỰC TIẾP TỪNG BOOKING
+                    .extraServiceResponses(extraServices)
+
+                    .slots(b.getSlots() != null ? b.getSlots().stream().map(slot -> {
+                        String courtName = (slot.getCourtCopy() != null && slot.getCourtCopy().getCourt() != null)
+                                ? slot.getCourtCopy().getCourt().getCourtName() : "N/A";
+                        String courtCode = slot.getCourtCopy() != null
+                                ? slot.getCourtCopy().getCourtCode() : "N/A";
+
+                        return SlotResponse.builder()
+                                .slotId(slot.getSlotId())
+                                .startTime(slot.getStartTime())
+                                .endTime(slot.getEndTime())
+                                .price(slot.getPrice())
+                                .courtName(courtName)
+                                .courtCode(courtCode)
+                                .build();
+                    }).collect(Collectors.toList()) : new ArrayList<>())
+
+                    .rentalArea(b.getRentalArea() != null ? RentalAreaResponse.builder()
+                            .rentalAreaId(b.getRentalArea().getRentalAreaId())
+                            .rentalAreaName(b.getRentalArea().getRentalAreaName())
+                            .build() : null)
+                    .build();
+        }).collect(Collectors.toList());
+
+        List<MatchResponse> matchDTOs = matches.stream().map(m -> MatchResponse.builder()
+                .matchId(m.getMatchId())
+                .courtName(m.getCourt() != null ? m.getCourt().getCourtName() : "N/A")
+                .startTime(m.getStartTime())
+                .endTime(m.getEndTime())
+                .status(m.getStatus().toString())
+                .matchType(m.getMatchType())
+                .currentPlayers(m.getCurrentPlayers())
+                .maxPlayers(m.getMaxPlayers())
+                .winnerPercent(m.getWinnerPercent())
+                .build()).collect(Collectors.toList());
+
+        List<PaymentResponse> paymentDTOs = payments.stream().map(p -> PaymentResponse.builder()
+                .paymentId(p.getPaymentId())
+                .transactionDate(p.getTransactionDate())
+                .amount(p.getAmount())
+                .paymentMethod(p.getPaymentMethod())
+                .paymentStatus(p.getPaymentStatus())
+                .paymentType(p.getPaymentType())
+                .userId(p.getUser() != null ? p.getUser().getUserId() : null)
+                .bookingId(p.getBooking() != null ? p.getBooking().getBookingId() : null)
+                .channel(p.getChannel())
+                .transactionCode(p.getTransactionCode())
+                .orderCode(p.getOrderCode())
+                .payosPaymentLinkId(p.getPayosPaymentLinkId())
+                .build()).collect(Collectors.toList());
+
+        // 3. Tính toán các con số tổng quan
+        BigDecimal totalBookingRevenue = bookings.stream()
+                .map(b -> b.getTotalPrice() != null ? b.getTotalPrice() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalServiceRevenue = serviceItems.stream()
+                .map(s -> {
+                    if (s.getPrice() != null && s.getQuantity() != null) {
+                        return s.getPrice().multiply(BigDecimal.valueOf(s.getQuantity()));
+                    }
+                    return BigDecimal.ZERO;
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalPaid = payments.stream()
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 4. Trả về DTO tổng hợp
+        return ReportResponse.builder()
+                .reportDate(start) // Hoặc có thể truyền trả lại chuỗi khoảng thời gian nếu cần
+                .totalBookingRevenue(totalBookingRevenue)
+                .totalServiceRevenue(totalServiceRevenue)
+                .totalPaid(totalPaid)
+                .bookings(bookingDTOs)
+                .matches(matchDTOs)
+                .payments(paymentDTOs)
+                .build();
+    }
+
+    private List<Map<String, Object>> buildOverviewChart(int year, Integer month, UUID ownerId) {
+        List<Map<String, Object>> chartData = new ArrayList<>();
+
+        if (month == null) {
+            for (int m = 1; m <= 12; m++) {
+                LocalDateTime start = LocalDateTime.of(year, m, 1, 0, 0);
+                LocalDateTime end = start.with(TemporalAdjusters.lastDayOfMonth()).with(LocalTime.MAX);
+                chartData.add(createChartPoint("Tháng " + m, start, end, ownerId));
+            }
+        } else {
+            int days = YearMonth.of(year, month).lengthOfMonth();
+            for (int d = 1; d <= days; d++) {
+                LocalDateTime start = LocalDateTime.of(year, month, d, 0, 0);
+                LocalDateTime end = start.with(LocalTime.MAX);
+                chartData.add(createChartPoint(d + "/" + month, start, end, ownerId));
+            }
+        }
+        return chartData;
+    }
+
+    private Map<String, Object> createChartPoint(String timeLabel, LocalDateTime start, LocalDateTime end, UUID ownerId) {
+        BigDecimal rev = paymentRepository.getTotalRevenue(start, end, ownerId);
+        Long count = bookingRepository.countBookingsInRange(start, end, ownerId);
+        Map<String, Object> point = new HashMap<>();
+        point.put("time", timeLabel);
+        point.put("revenue", rev != null ? rev : BigDecimal.ZERO);
+        point.put("bookingCount", count != null ? count : 0L);
+        return point;
+    }
+
     private Map<String, Object> generateDashboardStats(String range, UUID ownerId) {
         LocalDateTime[] dates = calculateDateRange(range);
-        LocalDateTime startDate = dates[0];
-        LocalDateTime endDate = dates[1];
 
         Map<String, Object> fullDashboard = new HashMap<>();
-        fullDashboard.put("bookingStats", getBookingStats(startDate, endDate, ownerId));
-        fullDashboard.put("paymentStats", getPaymentStats(startDate, endDate, ownerId));
-        fullDashboard.put("totalRevenue", getTotalRevenue(startDate, endDate, ownerId));
-        fullDashboard.put("monthlyRevenue", getMonthlyRevenue(ownerId));
-        fullDashboard.put("topCourts", getTopCourts(startDate, endDate, ownerId));
-        fullDashboard.put("newUsersCount", userRepository.countNewUsers(startDate, endDate));
-        fullDashboard.put("dailyRevenue7d", getDailyRevenueLast7Days(ownerId));
-        fullDashboard.put("peakHour", getPeakBookingHour(startDate, endDate, ownerId));
-        fullDashboard.put("occupancyRate", calculateOccupancyRate(startDate, endDate, ownerId));
-        fullDashboard.put("revenueGrowth", calculateRevenueGrowthPercentage(ownerId));
+        fullDashboard.put("bookingStats", getBookingStats(dates[0], dates[1], ownerId));
+        fullDashboard.put("paymentStats", getPaymentStats(dates[0], dates[1], ownerId));
+        fullDashboard.put("totalRevenue", paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) != null ? paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) : BigDecimal.ZERO);
+        fullDashboard.put("topCourts", getTopCourts(dates[0], dates[1], ownerId));
+        fullDashboard.put("newUsersCount", userRepository.countNewUsers(dates[0], dates[1]));
+        fullDashboard.put("dailyStats7d", getDailyStatsLast7Days(ownerId));
+
+        // Growth Stats
+        LocalDateTime[] gDates = getGrowthDates();
+        fullDashboard.put("revenueGrowth", calculateGrowth(
+                paymentRepository.getTotalRevenue(gDates[0], gDates[1], ownerId),
+                paymentRepository.getTotalRevenue(gDates[2], gDates[3], ownerId)));
+        fullDashboard.put("newUserGrowth", calculateGrowth(
+                BigDecimal.valueOf(userRepository.countNewUsers(gDates[0], gDates[1]) != null ? userRepository.countNewUsers(gDates[0], gDates[1]) : 0),
+                BigDecimal.valueOf(userRepository.countNewUsers(gDates[2], gDates[3]) != null ? userRepository.countNewUsers(gDates[2], gDates[3]) : 0)));
+        fullDashboard.put("cancellationRateGrowth", calculateGrowth(
+                BigDecimal.valueOf(getCancelRate(gDates[0], gDates[1], ownerId)),
+                BigDecimal.valueOf(getCancelRate(gDates[2], gDates[3], ownerId))));
 
         return fullDashboard;
     }
 
-    private List<Map<String, Object>> getMonthlyRevenue(UUID ownerId) {
-        List<Map<String, Object>> monthlyData = new ArrayList<>();
-        int currentYear = LocalDateTime.now().getYear();
+    // RÚT GỌN: Hàm dùng chung để tính thời gian cho Growth
+    private LocalDateTime[] getGrowthDates() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startThis = now.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
+        LocalDateTime startLast = startThis.minusMonths(1);
+        LocalDateTime endLast = startThis.minusSeconds(1);
+        return new LocalDateTime[]{startThis, now, startLast, endLast};
+    }
 
-        for (int month = 1; month <= 12; month++) {
-            LocalDateTime startOfMonth = LocalDateTime.of(currentYear, month, 1, 0, 0);
-            LocalDateTime endOfMonth = startOfMonth.with(TemporalAdjusters.lastDayOfMonth()).withHour(23).withMinute(59);
-
-            BigDecimal revenue = paymentRepository.getTotalRevenue(startOfMonth, endOfMonth, ownerId);
-
-            Map<String, Object> dataPoint = new HashMap<>();
-            dataPoint.put("month", "Tháng " + month);
-            dataPoint.put("revenue", revenue != null ? revenue : BigDecimal.ZERO);
-            monthlyData.add(dataPoint);
+    // RÚT GỌN: Hàm tính phần trăm tăng trưởng chung
+    private Double calculateGrowth(BigDecimal current, BigDecimal previous) {
+        if (current == null) current = BigDecimal.ZERO;
+        if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {
+            return current.compareTo(BigDecimal.ZERO) > 0 ? 100.0 : 0.0;
         }
-        return monthlyData;
+        return current.subtract(previous).divide(previous, 4, RoundingMode.HALF_UP).doubleValue() * 100;
+    }
+
+    private Double getCancelRate(LocalDateTime start, LocalDateTime end, UUID ownerId) {
+        Map<BookingStatus, Long> stats = getBookingStats(start, end, ownerId);
+        long cancelled = stats.getOrDefault(BookingStatus.CANCELLED, 0L);
+        long total = stats.values().stream().mapToLong(Long::longValue).sum();
+        return total == 0 ? 0.0 : (double) cancelled / total * 100.0;
+    }
+
+    private List<Map<String, Object>> getDailyStatsLast7Days(UUID ownerId) {
+        List<Map<String, Object>> last7Days = new ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            LocalDateTime start = LocalDateTime.now().minusDays(i).toLocalDate().atStartOfDay();
+            Map<String, Object> p = createChartPoint(start.getDayOfMonth() + "/" + start.getMonthValue(), start, start.with(LocalTime.MAX), ownerId);
+            p.put("date", p.remove("time")); // Đổi tên key cho khớp UI cũ
+            last7Days.add(p);
+        }
+        return last7Days;
+    }
+
+    private List<Map<String, Object>> getTopCourts(LocalDateTime start, LocalDateTime end, UUID ownerId) {
+        return bookingRepository.findTopCourtsByBookingCount(start, end, ownerId, PageRequest.of(0, 2))
+                .stream().map(res -> Map.of("courtName", res[0], "bookingCount", res[1]))
+                .collect(Collectors.toList());
+    }
+
+    private Map<BookingStatus, Long> getBookingStats(LocalDateTime start, LocalDateTime end, UUID ownerId) {
+        Map<BookingStatus, Long> actual = bookingRepository.countAllByStatus(start, end, ownerId).stream()
+                .collect(Collectors.toMap(res -> (BookingStatus) res[0], res -> (Long) res[1]));
+        return Arrays.stream(BookingStatus.values()).collect(Collectors.toMap(s -> s, s -> actual.getOrDefault(s, 0L)));
+    }
+
+    private Map<PaymentStatus, Long> getPaymentStats(LocalDateTime start, LocalDateTime end, UUID ownerId) {
+        Map<PaymentStatus, Long> actual = paymentRepository.countByPaymentStatus(start, end, ownerId).stream()
+                .collect(Collectors.toMap(res -> (PaymentStatus) res[0], res -> (Long) res[1]));
+        return Arrays.stream(PaymentStatus.values()).collect(Collectors.toMap(s -> s, s -> actual.getOrDefault(s, 0L)));
     }
 
     private LocalDateTime[] calculateDateRange(String range) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startDate;
-        LocalDateTime endDate = now;
-
         LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
-        LocalDateTime endOfToday = now.toLocalDate().atTime(23, 59, 59);
+        LocalDateTime startDate = switch (range) {
+            case "today" -> startOfToday;
+            case "yesterday" -> startOfToday.minusDays(1);
+            case "this_week" -> now.with(java.time.DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
+            case "7d" -> now.minusDays(7);
+            case "this_month" -> now.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
+            case "30d" -> now.minusDays(30);
+            case "last_month" ->
+                    now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
+            case "this_year" -> now.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
+            case "last_year" -> now.minusYears(1).with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
+            case "1y" -> now.minusYears(1);
+            default -> LocalDateTime.of(2020, 1, 1, 0, 0);
+        };
 
-        switch (range) {
-            case "today" -> {
-                startDate = startOfToday;
-                endDate = endOfToday;
-            }
-            case "yesterday" -> {
-                startDate = startOfToday.minusDays(1);
-                endDate = startOfToday.minusSeconds(1);
-            }
-            case "this_week" -> startDate = now.with(java.time.DayOfWeek.MONDAY).toLocalDate().atStartOfDay();
-            case "7d" -> startDate = now.minusDays(7);
-            case "this_month" -> startDate = now.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
-            case "30d" -> startDate = now.minusDays(30);
-            case "last_month" -> {
-                startDate = now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
-                endDate = now.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59);
-            }
-            case "this_year" -> startDate = now.with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
-            case "last_year" -> {
-                startDate = now.minusYears(1).with(TemporalAdjusters.firstDayOfYear()).toLocalDate().atStartOfDay();
-                endDate = now.minusYears(1).with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59);
-            }
-            case "1y" -> startDate = now.minusYears(1);
-            default -> startDate = LocalDateTime.of(2020, 1, 1, 0, 0);
-        }
-
+        LocalDateTime endDate = switch (range) {
+            case "yesterday" -> startOfToday.minusSeconds(1);
+            case "last_month" ->
+                    now.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth()).toLocalDate().atTime(23, 59, 59);
+            case "last_year" ->
+                    now.minusYears(1).with(TemporalAdjusters.lastDayOfYear()).toLocalDate().atTime(23, 59, 59);
+            default -> now;
+        };
         return new LocalDateTime[]{startDate, endDate};
     }
 
-    private Map<BookingStatus, Long> getBookingStats(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
-        List<Object[]> results = bookingRepository.countAllByStatus(startDate, endDate, ownerId);
-
-        Map<BookingStatus, Long> actualCounts = results.stream()
-                .collect(Collectors.toMap(
-                        res -> (BookingStatus) res[0],
-                        res -> (Long) res[1]
-                ));
-
-        Map<BookingStatus, Long> fullStats = new EnumMap<>(BookingStatus.class);
-        for (BookingStatus status : BookingStatus.values()) {
-            fullStats.put(status, actualCounts.getOrDefault(status, 0L));
-        }
-        return fullStats;
-    }
-
-    private Map<PaymentStatus, Long> getPaymentStats(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
-        List<Object[]> results = paymentRepository.countByPaymentStatus(startDate, endDate, ownerId);
-        Map<PaymentStatus, Long> pStats = results.stream()
-                .collect(Collectors.toMap(
-                        res -> (PaymentStatus) res[0],
-                        res -> (Long) res[1]
-                ));
-
-        Map<PaymentStatus, Long> fullPaymentStats = new EnumMap<>(PaymentStatus.class);
-        for (PaymentStatus status : PaymentStatus.values()) {
-            fullPaymentStats.put(status, pStats.getOrDefault(status, 0L));
-        }
-        return fullPaymentStats;
-    }
-
-    private BigDecimal getTotalRevenue(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
-        BigDecimal revenue = paymentRepository.getTotalRevenue(startDate, endDate, ownerId);
-        return revenue != null ? revenue : BigDecimal.ZERO;
-    }
-
-    private List<Map<String, Object>> getTopCourts(LocalDateTime start, LocalDateTime end, UUID ownerId) {
-        List<Object[]> results = bookingRepository.findTopCourtsByBookingCount(start, end, ownerId, PageRequest.of(0, 2));
-
-        return results.stream().map(res -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("courtName", res[0]);
-            map.put("bookingCount", res[1]);
-            return map;
-        }).collect(Collectors.toList());
-    }
-
-    // 1. Tính doanh thu 7 ngày gần nhất
-    private List<Map<String, Object>> getDailyRevenueLast7Days(UUID ownerId) {
-        List<Map<String, Object>> last7DaysRevenue = new ArrayList<>();
-        for (int i = 6; i >= 0; i--) {
-            LocalDateTime d = LocalDateTime.now().minusDays(i);
-            LocalDateTime start = d.toLocalDate().atStartOfDay();
-            LocalDateTime end = d.toLocalDate().atTime(23, 59, 59);
-
-            BigDecimal rev = paymentRepository.getTotalRevenue(start, end, ownerId);
-
-            Map<String, Object> point = new HashMap<>();
-            point.put("date", d.getDayOfMonth() + "/" + d.getMonthValue());
-            point.put("revenue", rev != null ? rev : BigDecimal.ZERO);
-            last7DaysRevenue.add(point);
-        }
-        return last7DaysRevenue;
-    }
-
-    // 2. Lấy khung giờ cao điểm
-    private String getPeakBookingHour(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
-        List<Object[]> peakHoursRaw = bookingRepository.findPeakBookingHours(startDate, endDate, ownerId);
-        if (peakHoursRaw != null && !peakHoursRaw.isEmpty()) {
-            int hour = (int) peakHoursRaw.getFirst()[0];
-            return hour + "h - " + (hour + 1) + "h";
-        }
-        return "N/A";
-    }
-
-    // 3. Tính tỷ lệ lấp đầy sân
-    private Double calculateOccupancyRate(LocalDateTime startDate, LocalDateTime endDate, UUID ownerId) {
-        Long bookedSlots = slotRepository.countByStatusAndDate(SlotStatus.BOOKED, startDate, endDate, ownerId);
-        Long totalSlots = slotRepository.countTotalSlots(startDate, endDate, ownerId);
-
-        if (totalSlots == null || totalSlots == 0) return 0.0;
-
-        double rate = (bookedSlots * 100.0) / totalSlots;
-        return Math.round(rate * 10) / 10.0; // Làm tròn 1 chữ số thập phân
-    }
-
-    // 4. Tính % tăng trưởng so với tháng trước
-    private Double calculateRevenueGrowthPercentage(UUID ownerId) {
-        LocalDateTime now = LocalDateTime.now();
-
-        // Doanh thu tháng này (tính đến hiện tại)
-        LocalDateTime startThisMonth = now.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
-        BigDecimal thisMonthRev = paymentRepository.getTotalRevenue(startThisMonth, now, ownerId);
-        if (thisMonthRev == null) thisMonthRev = BigDecimal.ZERO;
-
-        // Doanh thu tháng trước (cùng kỳ hoặc cả tháng)
-        LocalDateTime startLastMonth = now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay();
-        LocalDateTime endLastMonth = now.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth()).with(LocalTime.MAX);
-        BigDecimal lastMonthRev = paymentRepository.getTotalRevenue(startLastMonth, endLastMonth, ownerId);
-
-        if (lastMonthRev == null || lastMonthRev.compareTo(BigDecimal.ZERO) == 0) {
-            return thisMonthRev.compareTo(BigDecimal.ZERO) > 0 ? 100.0 : 0.0;
-        }
-
-        BigDecimal diff = thisMonthRev.subtract(lastMonthRev);
-        return diff.divide(lastMonthRev, 4, RoundingMode.HALF_UP).doubleValue() * 100;
-    }
 }

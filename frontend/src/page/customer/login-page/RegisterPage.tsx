@@ -1,5 +1,3 @@
-
-// RegisterPage.tsx
 import React, { useState } from "react";
 import { message } from "antd";
 import authService from "../../../service/authService";
@@ -8,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [isAgreed, setIsAgreed] = useState(false);
   const [values, setValues] = useState({
     userName: "",
     email: "",
@@ -27,6 +26,10 @@ const RegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isAgreed) {
+      return message.warning("Vui lòng xác nhận thông tin trước khi đăng ký!");
+    }
 
     if (values.password !== values.confirmPassword) {
       return message.error("Mật khẩu nhập lại không khớp!");
@@ -119,10 +122,30 @@ const RegisterPage: React.FC = () => {
             onChange={handleChange}
           />
 
+          <div className="flex items-center space-x-2 pt-1">
+            <input
+              type="checkbox"
+              id="confirmInfo"
+              checked={isAgreed}
+              onChange={(e) => setIsAgreed(e.target.checked)}
+              className="w-4 h-4 text-[#9156F1] focus:ring-[#9156F1] border-gray-300 rounded cursor-pointer"
+            />
+            <label
+              htmlFor="confirmInfo"
+              className="text-gray-600 cursor-pointer"
+            >
+              Đồng ý với chính xách của chúng tôi.
+            </label>
+          </div>
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-[#9156F1] hover:bg-[#7E46D6] text-white py-2 rounded-lg font-semibold transition"
+            disabled={loading || !isAgreed}
+            className={`w-full py-2 rounded-lg font-semibold transition text-white ${
+              loading || !isAgreed
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#9156F1] hover:bg-[#7E46D6]"
+            }`}
           >
             {loading ? "Đang xử lý..." : "Đăng ký"}
           </button>

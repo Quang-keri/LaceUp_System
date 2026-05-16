@@ -136,7 +136,7 @@ export const financeService = {
   },
 
   getOwnerBankAccount: async () => {
-    const res = await api.get(`/owner/bank-accounts`);
+    const res = await api.get(`/bank-accounts`);
     return res.data.result;
   },
 

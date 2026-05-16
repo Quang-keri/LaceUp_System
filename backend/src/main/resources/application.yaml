@@ -35,7 +35,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
@@ -51,7 +51,7 @@ spring:
         api-key: ${GEMINI_API_KEY}
         chat:
           options:
-            model: gemma-3-27b-it
+            model: gemini-flash-latest
             temperature: 0.7
 
     vectorstore:
@@ -100,3 +100,12 @@ app:
     vector:
       threshold: 0.1
       top-k: 5
+
+momo:
+  partner-code: ${MOMO_PARTNER_CODE}
+  redirect-url: ${MOMO_REDIRECT_URL}
+  endpoint: ${MOMO_ENDPOINT}
+  ipn-url: ${MOMO_IPN_URL}
+  access-key: ${MOMO_ACCESS_KEY}
+  secret-key: ${MOMO_SECRET_KEY}
+  request-type: ${MOMO_REQUEST_TYPE}

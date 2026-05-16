@@ -6,5 +6,6 @@ public enum PaymentMethod {
     WALLET,
     PAY_OS,
     VN_PAY,
+    MOMO,
     PAY_LATER
 }

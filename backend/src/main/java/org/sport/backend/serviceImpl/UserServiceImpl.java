@@ -3,22 +3,22 @@ package org.sport.backend.serviceImpl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sport.backend.constant.MemberTier;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.auth.ResetPasswordRequest;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.response.user.CategoryRankResponse;
+import org.sport.backend.dto.response.user.ReputationLogResponse;
 import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
-import org.sport.backend.entity.Permission;
-import org.sport.backend.entity.Role;
-import org.sport.backend.entity.User;
-import org.sport.backend.entity.UserCategoryRank;
+import org.sport.backend.entity.*;
 import org.sport.backend.entity.mongo.PasswordResetToken;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.UserMapper;
 import org.sport.backend.repository.PermissionRepository;
+import org.sport.backend.repository.ReputationLogRepository;
 import org.sport.backend.repository.RoleRepository;
 import org.sport.backend.repository.UserRepository;
 import org.sport.backend.repository.mongo.PasswordResetTokenRepository;
@@ -40,6 +40,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -50,7 +51,10 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final ReputationLogRepository reputationLogRepository;
+
     private final EmailService emailService;
+
     private final PasswordEncoder passwordEncoder;
 
     private final UserMapper userMapper;
@@ -315,6 +319,85 @@ public class UserServiceImpl implements UserService {
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Transactional
+    @Override
+    public UserResponse updateReputation(UUID userId, Integer points, String reason) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
+
+        // Cập nhật điểm
+        user.setCreditScore(user.getCreditScore() + points);
+        userRepository.save(user);
+
+        // Lưu log
+        ReputationLog log = ReputationLog.builder()
+                .user(user)
+                .pointsChanged(points)
+                .reason(reason)
+                .createdAt(LocalDateTime.now())
+                .build();
+        reputationLogRepository.save(log);
+
+        return userMapper.toUserResponse(user);
+    }
+
+    @Override
+    public PageResponse<UserResponse> getCustomersByOwner(int page, int size, String keyword, String tier, Integer minScore, Integer maxScore) {
+        User owner = getCurrentUserEntity();
+        Pageable pageable = PageRequest.of(page, size);
+
+        MemberTier tierEnum = null;
+        if (tier != null && !tier.trim().isEmpty()) {
+            try {
+                tierEnum = MemberTier.valueOf(tier.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Hạng thành viên không hợp lệ: " + tier);
+            }
+        }
+
+        Page<User> users = userRepository.findCustomersByOwnerIdWithFilters(
+                owner.getUserId(), keyword, tierEnum, minScore, maxScore, pageable);
+
+        Page<UserResponse> responsePage = users.map(userMapper::toUserResponse);
+
+        return PageResponse.<UserResponse>builder()
+                .currentPage(page + 1)
+                .totalPages(users.getTotalPages())
+                .pageSize(users.getSize())
+                .totalElements(users.getTotalElements())
+                .data(responsePage.getContent())
+                .build();
+    }
+
+    @Override
+    public PageResponse<ReputationLogResponse> getReputationLogs(UUID userId, int page, int size) {
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<ReputationLog> logs = reputationLogRepository.findByUser_UserIdOrderByCreatedAtDesc(userId, pageable);
+
+        // Map sang Response DTO
+        List<ReputationLogResponse> logResponses = logs.getContent().stream()
+                .map(log -> ReputationLogResponse.builder()
+                        .id(log.getId())
+                        .pointsChanged(log.getPointsChanged())
+                        .reason(log.getReason())
+                        .createdAt(log.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        return PageResponse.<ReputationLogResponse>builder()
+                .currentPage(page + 1)
+                .pageSize(size)
+                .totalPages(logs.getTotalPages())
+                .totalElements(logs.getTotalElements())
+                .data(logResponses)
+                .build();
     }
 
     @Override

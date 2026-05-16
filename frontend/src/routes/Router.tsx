@@ -71,6 +71,9 @@ import TransactionManager from "../page/owner/transaction/TransactionManager.tsx
 import OwnerSettlementHistory from "../page/owner/settlement/OwnerSettlementHistory.tsx";
 import OwnerBankAccount from "../page/owner/settlement/OwnerBankAccount.tsx";
 import AdminTransactionManager from "../page/admin/transaction/AdminTransactionManager.tsx";
+import CustomerManagementPage from "../page/owner/customer-management/CustomerManagementPage.tsx";
+import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
+
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
 
@@ -176,6 +179,7 @@ export const router = createBrowserRouter([
         element: <PayoutHistory />,
       },
       { path: "commissions", element: <CommissionConfigManagement /> },
+      { path: "*", element: <NotFound /> },
     ],
   },
 
@@ -213,6 +217,8 @@ export const router = createBrowserRouter([
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },
       { path: "profile", element: <OwnerProfilePage /> },
+      { path: "users/customers", element: <CustomerManagementPage /> },
+      { path: "reports", element: <EndOfDayReport /> },
       {
         path: "/owner/transactions",
         element: <TransactionManager />,
@@ -237,7 +243,14 @@ export const router = createBrowserRouter([
       {
         path: "/owner/bank-account",
         element: <OwnerBankAccount />,
+
       },
+      {
+         path: "/owner/buildings",
+        element: <BuildingListPage />,
+      },
+
+
       { path: "*", element: <NotFound /> },
     ],
   },

@@ -10,9 +10,7 @@ const { Content } = Layout;
 const THEME_KEY = "adminTheme";
 
 export default function OwnerLayout() {
-  // 1. Lấy cả user và logout từ context
   const { user, logout } = useAuth();
-
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -25,7 +23,6 @@ export default function OwnerLayout() {
     document.body.setAttribute("data-theme", themeValue);
   }, [isDark]);
 
-  // 2. Tạo hàm handleLogoutClick giống bên Admin
   const handleLogoutClick = async () => {
     await logout();
   };
@@ -42,13 +39,6 @@ export default function OwnerLayout() {
       }}
     >
       <Layout className="h-screen overflow-hidden flex flex-row">
-        {/* <Sidebar
-          collapsed={collapsed}
-          toggleCollapsed={() => setCollapsed(!collapsed)}
-          isDark={isDark}
-          user={user}
-          handleLogout={handleLogoutClick}
-        /> */}
 
         <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
           <OwnerHeader

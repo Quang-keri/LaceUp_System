@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ConfigProvider, Layout, Menu, type MenuProps } from "antd";
+import { Layout, Menu, type MenuProps } from "antd";
 import { Link, useLocation } from "react-router-dom";
 import {
   AppstoreOutlined,
@@ -44,7 +44,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
   isDark,
-  //   adminUser,
   handleLogout,
 }) => {
   const location = useLocation();
@@ -77,7 +76,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     ]),
 
-    //
     getItem("Quản lý Cơ sở", "sub_area", <HomeOutlined />, [
       getItem(
         <Link to="/owner/buildings/list">Chi nhánh</Link>,
@@ -156,6 +154,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/owner/settings",
       ),
     ]),
+
+    getItem(
+      <Link to="/owner/reports">Bao cao</Link>,
+      "/owner/reports",
+      <AppstoreOutlined />,
+    ),
 
     getItem("Đăng xuất", "logout", <LogoutOutlined />),
   ];

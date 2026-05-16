@@ -387,8 +387,6 @@ export default function CourtManagementPage() {
     <div
       style={{
         padding: "20px",
-        backgroundColor: "#f0f2f5",
-        minHeight: "100vh",
       }}
     >
       <div className="flex justify-between items-center mb-4">

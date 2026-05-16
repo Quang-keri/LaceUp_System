@@ -27,6 +27,7 @@ export interface BookingResponse {
   depositAmount?: number;
   remainingAmount?: number;
   isFullyPaid?: boolean;
+  extraServiceResponses?: BookingServiceResponse[];
 }
 
 export interface BookingListResponse {
@@ -52,4 +53,11 @@ export interface CreateBookingRequest {
 export interface UpdateBookingRequest {
   status?: BookingStatus;
   notes?: string;
+}
+
+export interface BookingServiceResponse {
+    serviceId: string;
+    serviceName: string;
+    quantity: number;
+    price: number;
 }

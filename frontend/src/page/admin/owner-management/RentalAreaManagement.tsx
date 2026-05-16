@@ -53,31 +53,31 @@ const RentalAreaManagement: React.FC = () => {
 
       setTotalElements(resultData?.totalElements || 0);
 
-    const mapped = items.map((r: any) => {
-  // Lấy danh sách sân từ courtResponses
-  const rawCourts = r.courtResponses || r.courts || [];
+      const mapped = items.map((r: any) => {
+        // Lấy danh sách sân từ courtResponses
+        const rawCourts = r.courtResponses || r.courts || [];
 
-  return {
-    ...r,
-    id: r.rentalAreaId,
-    name: r.rentalAreaName,
-    ownerName: r.contactName || r.owner?.email || "N/A",
-    ownerPhone: r.contactPhone || r.owner?.phone || "N/A", // Ưu tiên số điện thoại liên hệ trực tiếp
-    addressString: r.address
-      ? `${r.address.street || ""}, ${r.address.ward || ""}, ${
-          r.address.district || ""
-        }${r.address.city ? `, ${r.address.city.cityName}` : ""}`
-      : "Chưa cập nhật",
-    courtCount: rawCourts.length,
-    courts: rawCourts, // QUAN TRỌNG: Gán rawCourts vào đây để Modal đọc được
-    legalInfo: {
-      taxId: r.taxId || "N/A",
-      license: r.license || "N/A",
-      note: r.note || "Không có ghi chú",
-      images: r.images || [],
-    },
-  };
-});
+        return {
+          ...r,
+          id: r.rentalAreaId,
+          name: r.rentalAreaName,
+          ownerName: r.contactName || r.owner?.email || "N/A",
+          ownerPhone: r.contactPhone || r.owner?.phone || "N/A", // Ưu tiên số điện thoại liên hệ trực tiếp
+          addressString: r.address
+            ? `${r.address.street || ""}, ${r.address.ward || ""}, ${
+                r.address.district || ""
+              }${r.address.city ? `, ${r.address.city.cityName}` : ""}`
+            : "Chưa cập nhật",
+          courtCount: rawCourts.length,
+          courts: rawCourts, // QUAN TRỌNG: Gán rawCourts vào đây để Modal đọc được
+          legalInfo: {
+            taxId: r.taxId || "N/A",
+            license: r.license || "N/A",
+            note: r.note || "Không có ghi chú",
+            images: r.images || [],
+          },
+        };
+      });
 
       setData(mapped);
     } catch (err) {
@@ -124,16 +124,12 @@ const RentalAreaManagement: React.FC = () => {
       title: "Tên cơ sở",
       dataIndex: "name",
       key: "name",
-      render: (text: string) => (
-        <Text strong style={{ color: "#9156F1" }}>
-          {text}
-        </Text>
-      ),
+      render: (text: string) => <Text>{text}</Text>,
     },
     { title: "Chủ sở hữu", dataIndex: "ownerName", key: "ownerName" },
     {
       title: "Địa chỉ",
-      dataIndex: "addressString", // Sử dụng addressString đã map
+      dataIndex: "addressString", 
       key: "addressString",
       ellipsis: true,
     },
@@ -143,7 +139,7 @@ const RentalAreaManagement: React.FC = () => {
       key: "courtCount",
       align: "center" as const,
       render: (count: number) => (
-        <Badge count={count} showZero color="#9156F1" />
+        <Badge count={count} showZero color="#007acc" />
       ),
     },
     {
@@ -171,7 +167,7 @@ const RentalAreaManagement: React.FC = () => {
               type="text"
               icon={<EyeOutlined />}
               onClick={() => {
-                setSelectedArea(record); // Lúc này record đã chứa đầy đủ serviceItems, address, owner...
+                setSelectedArea(record); 
                 setIsDetailModalOpen(true);
               }}
             />
@@ -206,7 +202,7 @@ const RentalAreaManagement: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: "24px", background: "#f5f5f5", minHeight: "100vh" }}>
+    <div style={{ padding: "24px" }}>
       <div
         style={{
           marginBottom: 24,

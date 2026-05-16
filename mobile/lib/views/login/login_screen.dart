@@ -1,6 +1,10 @@
+// lib/views/login/login_screen.dart
+
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../../services/user_service.dart';
+import '../../services/auth_service.dart'; // Nơi chứa singleton authService
+import '../../services/user_service.dart'; // Nơi chứa singleton userService
+// Nhớ import model UserResponse của bạn
+// import '../../models/user.dart';
 import '../main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,50 +17,56 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService(); // Khởi tạo Service
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
   Future<void> _handleLogin() async {
+    // Ẩn bàn phím khi bấm đăng nhập
+    FocusScope.of(context).unfocus();
+
     setState(() => _isLoading = true);
 
-    // 1. Gọi API Login
-    final loginResult = await _authService.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    try {
+      // 1. Gọi API Login (Dùng biến authService toàn cục)
+      // Nếu lỗi (sai pass, mất mạng), nó sẽ tự động văng xuống khối catch
+      await authService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
-    if (loginResult['success']) {
-      // 2. Nếu login OK, gọi tiếp API lấy thông tin cá nhân
-      final UserService userService = UserService();
-      final infoResult = await userService.getMyInfo();
+      // 2. Lấy thông tin cá nhân (Dùng biến userService toàn cục)
+      // Hàm này giờ sẽ trả thẳng về model UserResponse (nếu bạn đã áp dụng Model)
+      final userInfo = await userService.getMyInfo();
 
-      setState(() => _isLoading = false);
+      if (!mounted) return;
 
-      if (infoResult['success']) {
-        if (!mounted) return;
-
-        // Lưu thông tin user vào bộ nhớ tạm hoặc Provider/Bloc nếu cần
-        // Ví dụ: chuyển sang MainScreen và truyền dữ liệu user
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MainScreen(userData: infoResult['data']),
-          ),
-        );
-      } else {
-        _showErrorSnackBar(infoResult['message']);
+      // 3. Chuyển sang MainScreen và truyền dữ liệu
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainScreen(userData: userInfo),
+        ),
+      );
+    } catch (e) {
+      // 4. Bắt mọi lỗi từ Service ném ra và hiển thị lên UI
+      // Hàm replaceAll để xóa chữ "Exception: " mặc định của Dart
+      _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      // 5. Khối finally luôn chạy dù thành công hay thất bại để tắt Loading
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
-    } else {
-      setState(() => _isLoading = false);
-      _showErrorSnackBar(loginResult['message']);
     }
   }
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating, // Gợi ý: Dùng floating nhìn hiện đại hơn
+      ),
     );
   }
 
@@ -69,7 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Giữ nguyên phần UI Build cũ của bạn ở đây...
     return Scaffold(
       appBar: AppBar(title: const Text('Đăng nhập'), centerTitle: true),
       body: SafeArea(
@@ -109,7 +118,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
                       : const Text('Đăng nhập'),
                 ),
               ),

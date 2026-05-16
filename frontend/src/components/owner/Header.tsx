@@ -48,9 +48,7 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
   const displayName = adminUser?.userName || "Admin Sân Cầu Lông";
 
   const userMenu: MenuProps["items"] = [
-    { key: "1", label: "Hồ sơ cá nhân" },
-    { key: "2", label: "Cài đặt cơ sở" },
-    { type: "divider" },
+    { key: "/dashboard", label: "Hồ sơ cá nhân" },
     { key: "logout", label: "Đăng xuất", danger: true, onClick: onLogout },
   ];
 
@@ -120,22 +118,19 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
     {
       key: "submenu-reports",
       icon: <BarChartOutlined />,
-      label: "Báo cáo",
-      children: [
-        {
-          key: "/owner/invoices",
-          label: <Link to="/owner/invoices">Hóa đơn</Link>,
-        },
-        {
-          key: "/owner/wallet-overview",
-          label: <Link to="/owner/wallet-overview">Tổng quan tài chính</Link>,
-        },
-      ],
+      label: <Link to="/owner/reports">Báo cáo</Link>,
     },
     {
-      key: "/owner/settings",
+      key: "submenu-settings",
       icon: <SettingOutlined />,
-      label: <Link to="/owner/settings">Thiết lập</Link>,
+      label: "Thiết lập",
+      //BuildingListPage
+      children: [
+        {
+          key: "/owner/buildings",
+          label: <Link to="/owner/buildings">Tòa nhà</Link>,
+        },
+      ],
     },
   ];
 
