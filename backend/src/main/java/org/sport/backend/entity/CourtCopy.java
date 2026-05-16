@@ -23,7 +23,7 @@ public class CourtCopy extends BaseEntity {
     @Column(name = "court_copy_id")
     private UUID courtCopyId;
 
-    @Column(name = "court_code",length = 50,nullable = false,unique = true)
+    @Column(name = "court_code",length = 50,nullable = false)
     private String courtCode;
 
     @Column(name = "location", length = 200)

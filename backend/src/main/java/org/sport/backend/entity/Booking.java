@@ -3,6 +3,7 @@ package org.sport.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.sport.backend.constant.PaymentMethod;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.BookingType;
@@ -84,4 +85,8 @@ public class Booking extends BaseEntity {
 
     @Column(name = "remaining_amount")
     private BigDecimal remainingAmount;
+
+    @OneToMany(mappedBy = "booking")
+    private List<Transaction> transactions;
+
 }

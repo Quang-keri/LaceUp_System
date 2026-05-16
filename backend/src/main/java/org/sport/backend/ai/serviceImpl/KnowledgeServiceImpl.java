@@ -77,7 +77,6 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         double maxPrice = 0;
         boolean hasPrice = false;
 
-        // Logic tính toán giá (giữ nguyên của bạn)
         if (area.getCourts() != null) {
             for (Court court : area.getCourts()) {
                 if (court.getCourtPrices() != null) {
@@ -95,41 +94,22 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
         String priceInfo = hasPrice
                 ? String.format("Giá thuê dao động từ %,.0f VNĐ đến %,.0f VNĐ mỗi giờ.", minPrice, maxPrice)
-                : "Giá thuê: Hiện chưa có thông tin giá cụ thể.";
-
-        // --- PHẦN BỔ SUNG THỜI GIAN ---
-        String timeInfo = (area.getOpenTime() != null && area.getCloseTime() != null)
-                ? String.format("Thời gian hoạt động từ %s đến %s hằng ngày.", area.getOpenTime(), area.getCloseTime())
-                : "Thời gian hoạt động: Vui lòng liên hệ để biết thêm chi tiết.";
-
-        // Cập nhật câu gợi ý về thời gian gần nhất trong nội dung
-        String suggestInfo = "Nếu khung giờ bạn tìm không khớp, hệ thống sẽ ưu tiên gợi ý các sân có giờ mở cửa gần nhất với nhu cầu của bạn.";
+                : "Giá thuê: Hiện chưa có thông tin giá cụ thể, vui lòng liên hệ.";
 
         String content = String.format(
-                "Tại %s có cơ sở thể thao tên là %s. Địa chỉ: %s, %s, %s. %s %s %s " +
-                        "Khách hàng có nhu cầu đặt sân vui lòng liên hệ %s.",
-                area.getAddress().getDistrict(),
+                "Tại %s có cơ sở thể thao tên là %s. Địa chỉ cụ thể nằm ở %s, %s, %s. " +
+                        "%s " +
+                        "Khách hàng có nhu cầu đặt sân tại %s vui lòng liên hệ %s.",
+
                 area.getRentalAreaName(),
                 area.getAddress().getStreet(),
                 area.getAddress().getWard(),
-                area.getAddress().getDistrict(),
-                timeInfo,
                 priceInfo,
-                suggestInfo,
                 area.getContactPhone() != null ? area.getContactPhone() : "Hotline hệ thống"
         );
 
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("type", "RENTAL_AREA");
-        metadata.put("district", area.getAddress().getDistrict() != null ? area.getAddress().getDistrict() : "");
-
-        // Lưu giờ vào metadata (định dạng phút để dễ so sánh logic nếu cần)
-        if (area.getOpenTime() != null) {
-            metadata.put("open_minute", area.getOpenTime().getHour() * 60 + area.getOpenTime().getMinute());
-        }
-        if (area.getCloseTime() != null) {
-            metadata.put("close_minute", area.getCloseTime().getHour() * 60 + area.getCloseTime().getMinute());
-        }
 
         if (hasPrice) {
             metadata.put("min_price", minPrice);
@@ -177,15 +157,29 @@ public class KnowledgeServiceImpl implements KnowledgeService {
             locationInfo = String.format("đã chốt đá tại sân %s (%s, %s)",
                     area.getRentalAreaName(),
                     area.getAddress().getStreet(),
-                    area.getAddress().getDistrict());
-            districtForMetadata = area.getAddress().getDistrict();
-            cityForMetadata = area.getAddress().getCity() != null ? area.getAddress().getCity().getCityName() : "";
+                    area.getAddress().getWard()
+            );
+
+            cityForMetadata = area.getAddress().getCity() != null
+                    ? area.getAddress().getCity().getCityName()
+                    : "";
+
         } else if (match.getAddress() != null) {
-            locationInfo = String.format("đang tìm sân quanh khu vực %s, %s",
-                    match.getAddress().getWard() != null ? match.getAddress().getWard() : "",
-                    match.getAddress().getDistrict() != null ? match.getAddress().getDistrict() : "");
-            districtForMetadata = match.getAddress().getDistrict() != null ? match.getAddress().getDistrict() : "";
-            cityForMetadata = match.getAddress().getCity() != null ? match.getAddress().getCity().getCityName() : "";
+
+            locationInfo = String.format(
+                    "đang tìm sân quanh khu vực %s, %s",
+                    match.getAddress().getWard() != null
+                            ? match.getAddress().getWard()
+                            : "",
+                    match.getAddress().getCity() != null
+                            ? match.getAddress().getCity().getCityName()
+                            : ""
+            );
+
+            cityForMetadata = match.getAddress().getCity() != null
+                    ? match.getAddress().getCity().getCityName()
+                    : "";
+
         } else {
             locationInfo = "chưa chốt địa điểm cụ thể";
         }

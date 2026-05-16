@@ -6,6 +6,7 @@ import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
+import org.sport.backend.dto.response.rental.RentalAreaOptionResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface RentalAreaService {
+    List<RentalAreaOptionResponse> getRentalAreaOptions();
      void approveRentalArea(UUID rentalAreaId);
     void rejectRentalArea(UUID rentalAreaId, String reason);
     RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images);

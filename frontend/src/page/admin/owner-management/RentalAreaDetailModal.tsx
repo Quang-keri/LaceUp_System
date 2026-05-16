@@ -28,7 +28,6 @@ interface Props {
   onApprove: (id: string) => void;
 }
 
-// Hàm format tiền tệ VNĐ
 const formatVND = (price: number) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -52,7 +51,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       width: 100,
       render: (imgs: any[]) => (
         <Image
-          src={imgs?.[0]?.imageUrl} // FIX: Lấy field imageUrl từ object
+          src={imgs?.[0]?.imageUrl} 
           width={80}
           height={60}
           style={{ objectFit: "cover", borderRadius: 4 }}
@@ -70,7 +69,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       title: "Số lượng sân",
       key: "courtCopiesCount",
       align: "center" as const,
-      // FIX: Đếm số lượng object trong mảng courtCopies
       render: (_: any, record: any) => (
         <Tag color="blue">{record.courtCopies?.length || 0} sân</Tag>
       ),
@@ -78,7 +76,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
     {
       title: "Khoảng giá",
       key: "priceRange",
-      // FIX: Lấy minPrice và maxPrice từ JSON
       render: (_: any, record: any) => {
         if (!record.minPrice && !record.maxPrice)
           return <Text type="secondary">Chưa cập nhật</Text>;
@@ -96,7 +93,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       title: "Tiện ích sân",
       dataIndex: "amenities",
       key: "amenities",
-      // FIX: Map amenityName từ object
       render: (amenities: any[]) => (
         <Space wrap size={[0, 4]}>
           {amenities?.map((a) => (
@@ -186,7 +182,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
               {selectedArea.addressString || selectedArea.address}
             </Descriptions.Item>
 
-            {/* HIỂN THỊ DỊCH VỤ TIỆN ÍCH CÓ GIÁ TIỀN & SỐ LƯỢNG */}
             <Descriptions.Item label="Dịch vụ tại cơ sở" span={2}>
               {selectedArea.serviceItems &&
               selectedArea.serviceItems.length > 0 ? (

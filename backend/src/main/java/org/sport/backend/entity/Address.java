@@ -17,8 +17,8 @@ public class Address {
     @Column(name = "ward")
     private String ward;
 
-    @Column(name = "district")
-    private String district;
+//    @Column(name = "district")
+//    private String district;
 
     @Column(name = "city_name")
     private String cityName;

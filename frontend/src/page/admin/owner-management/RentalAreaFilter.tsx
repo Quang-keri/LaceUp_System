@@ -38,7 +38,7 @@ const RentalAreaFilter: React.FC<Props> = ({
       <Button
         type="primary"
         onClick={onSearch}
-        style={{ background: "#9156F1", borderColor: "#9156F1" }}
+        style={{ background: "#007acc", borderColor: "#007acc" }}
       >
         Tìm kiếm
       </Button>

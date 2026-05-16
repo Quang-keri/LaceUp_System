@@ -18,6 +18,7 @@ import org.sport.backend.dto.response.legal.LegalImageResponse;
 import org.sport.backend.dto.response.legal.LegalProfileResponse;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
 import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
+import org.sport.backend.dto.response.rental.RentalAreaOptionResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
@@ -89,7 +90,36 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     private ServiceItemRepository serviceItemRepository;
     @Autowired
     private LegalProfileRepository legalProfileRepository;
+    @Override
+    public List<RentalAreaOptionResponse> getRentalAreaOptions() {
+        return rentalAreaRepository.findAll(
+                        RentalAreaSpecification.isNotDeleted()
+                ).stream()
+                .map(area -> RentalAreaOptionResponse.builder()
+                        .rentalAreaId(area.getRentalAreaId())
+                        .rentalAreaName(area.getRentalAreaName())
+                        .addressText(buildAddressText(area))
+                        .build())
+                .toList();
+    }
 
+    private String buildAddressText(RentalArea area) {
+        if (area.getAddress() == null) {
+            return "";
+        }
+
+        var address = area.getAddress();
+
+        String cityName = address.getCity() != null
+                ? address.getCity().getCityName()
+                : "";
+
+        return String.join(", ",
+                address.getStreet(),
+                address.getWard(),
+                cityName
+        ).replaceAll("null,?\\s*", "").trim();
+    }
     @Override
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
 
@@ -110,7 +140,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         Address address = Address.builder()
                 .ward(request.getWard())
-                .district(request.getDistrict())
+
                 .street(request.getStreet())
                 .cityName(request.getCityName())
 //                .city(city)
@@ -440,9 +470,9 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         if (request.getWard() != null) {
             currentAddress.setWard(request.getWard());
         }
-        if (request.getDistrict() != null) {
-            currentAddress.setDistrict(request.getDistrict());
-        }
+//        if (request.getDistrict() != null) {
+//            currentAddress.setDistrict(request.getDistrict());
+//        }
 
         if (request.getCityId() != null) {
             City newCity = cityRepository.findById(request.getCityId())

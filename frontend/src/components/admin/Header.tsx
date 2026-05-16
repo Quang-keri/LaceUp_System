@@ -137,6 +137,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
           key: "/admin/commissions",
           label: <Link to="/admin/commissions">Cấu hình hoa hồng</Link>,
         },
+        {
+           key: "/admin/transactions",
+          label: <Link to="/admin/transactions">Giao dịch</Link>,
+        }
       ],
     },
     {

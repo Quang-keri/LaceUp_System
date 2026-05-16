@@ -1,75 +1,104 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Table,
   Button,
-  Modal,
   Form,
   Input,
-  message,
+  InputNumber,
+  Modal,
+  Radio,
+  Select,
+  Table,
   Tag,
   Typography,
-  InputNumber,
-  Switch,
-  Space,
+  message,
 } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import {
   financeService,
   type CommissionConfigDTO,
+  type RentalAreaOptionResponse,
 } from "../../../service/financeService";
 
 const { Title } = Typography;
 
 const CommissionConfigManagement: React.FC = () => {
+  const [data, setData] = useState<any[]>([]);
+  const [rentalAreas, setRentalAreas] = useState<RentalAreaOptionResponse[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<CommissionConfigDTO[]>([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [applyType, setApplyType] = useState<"ALL" | "CUSTOM">("ALL");
 
   const [form] = Form.useForm();
 
-  // Load danh sách cấu hình
   const fetchConfigs = async () => {
     try {
       setLoading(true);
       const result = await financeService.getCommissionConfigs();
-      setData(result);
+      setData(result || []);
     } catch (error: any) {
       message.error(
-        error.response?.data?.message || "Lỗi khi tải dữ liệu cấu hình",
+        error.response?.data?.message || "Lỗi tải cấu hình hoa hồng",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
-
-  // Mở modal tạo mới
-  const handleAddNew = () => {
-    form.resetFields();
-    form.setFieldsValue({ isDefault: true, minBookings: 0 }); // Giá trị mặc định
-    setIsModalVisible(true);
+  const fetchRentalAreas = async () => {
+    try {
+      const result = await financeService.getRentalAreaOptions();
+      setRentalAreas(result || []);
+    } catch (error: any) {
+      message.error(
+        error.response?.data?.message || "Lỗi tải danh sách khu sân",
+      );
+    }
   };
 
-  // Submit Form
-  const handleSubmit = async (values: any) => {
+  useEffect(() => {
+    fetchConfigs();
+    fetchRentalAreas();
+  }, []);
+
+  const openCreateModal = () => {
+    setApplyType("ALL");
+    form.setFieldsValue({
+      isDefault: true,
+      rentalAreaId: null,
+      rate: 0.1,
+      minBookings: 0,
+      maxBookings: null,
+      note: "",
+    });
+    setOpen(true);
+  };
+
+  const closeModal = () => {
+    setOpen(false);
+    setApplyType("ALL");
+    form.resetFields();
+  };
+
+  const handleSubmit = async (values: CommissionConfigDTO) => {
     try {
       setLoading(true);
 
-      // Chuyển đổi Rate từ % (UI) sang thập phân (Backend) - VD: 15 -> 0.15
-      const payload: CommissionConfigDTO = {
-        ...values,
-        rate: values.ratePercentage / 100,
-      };
+      await financeService.createCommissionConfig({
+        rentalAreaId: applyType === "ALL" ? null : values.rentalAreaId,
+        minBookings: values.minBookings ?? null,
+        maxBookings: values.maxBookings ?? null,
+        rate: Number(values.rate),
+        isDefault: applyType === "ALL",
+        note: values.note,
+      });
 
-      await financeService.createCommissionConfig(payload);
-      message.success("Đã lưu cấu hình hoa hồng thành công!");
-      setIsModalVisible(false);
-      fetchConfigs(); // Refresh bảng
+      message.success("Tạo cấu hình hoa hồng thành công");
+      closeModal();
+      fetchConfigs();
     } catch (error: any) {
-      message.error(error.response?.data?.message || "Lỗi khi lưu cấu hình");
+      message.error(error.response?.data?.message || "Lỗi tạo cấu hình");
     } finally {
       setLoading(false);
     }
@@ -77,45 +106,57 @@ const CommissionConfigManagement: React.FC = () => {
 
   const columns = [
     {
-      title: "Phạm vi Booking",
-      key: "range",
-      render: (_: any, record: CommissionConfigDTO) => {
-        if (!record.maxBookings) {
-          return `Từ ${record.minBookings} booking trở lên`;
-        }
-        return `Từ ${record.minBookings} đến ${record.maxBookings} booking`;
-      },
+      title: "Loại cấu hình",
+      key: "type",
+      render: (_: any, record: any) =>
+        record.isDefault ? (
+          <Tag color="green">Mặc định toàn hệ thống</Tag>
+        ) : (
+          <Tag color="blue">Riêng khu sân</Tag>
+        ),
     },
     {
-      title: "Tỉ lệ Hoa hồng",
+      title: "Khu sân / tòa nhà",
+      key: "rentalArea",
+      render: (_: any, record: any) =>
+        record.isDefault
+          ? "Tất cả khu sân"
+          : record.rentalArea?.rentalAreaName ||
+            record.rentalAreaName ||
+            record.rentalArea?.rentalAreaId ||
+            record.rentalAreaId ||
+            "-",
+    },
+    {
+      title: "Khoảng booking",
+      key: "bookings",
+      render: (_: any, record: any) =>
+        `${record.minBookings ?? 0} - ${record.maxBookings ?? "∞"}`,
+    },
+    {
+      title: "Tỷ lệ hoa hồng",
       dataIndex: "rate",
       key: "rate",
       render: (val: number) => (
-        <Tag color="magenta" style={{ fontSize: "14px", padding: "4px 8px" }}>
-          {(val * 100).toFixed(1)}%
-        </Tag>
+        <strong>{(Number(val || 0) * 100).toFixed(1)}%</strong>
       ),
     },
     {
-      title: "Phạm vi áp dụng",
-      key: "scope",
-      render: (_: any, record: CommissionConfigDTO) =>
-        record.rentalAreaId ? (
-          <Tag color="blue">Tòa nhà: {record.rentalAreaId}</Tag>
+      title: "Trạng thái",
+      dataIndex: "isActive",
+      key: "isActive",
+      render: (val: boolean) =>
+        val === false ? (
+          <Tag>Tắt</Tag>
         ) : (
-          <Tag color="green">Mặc định toàn hệ thống</Tag>
+          <Tag color="success">Đang áp dụng</Tag>
         ),
     },
     {
       title: "Ghi chú",
       dataIndex: "note",
       key: "note",
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "isDefault",
-      key: "isDefault",
-      render: (val: boolean) => val && <Tag color="volcano">Đang áp dụng</Tag>,
+      render: (val: string) => val || "-",
     },
   ];
 
@@ -128,9 +169,14 @@ const CommissionConfigManagement: React.FC = () => {
           marginBottom: 16,
         }}
       >
-        <Title level={4}>Cấu hình Tỉ lệ Hoa hồng</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew}>
-          Thêm cấu hình mới
+        <Title level={4}>Cấu hình hoa hồng</Title>
+
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={openCreateModal}
+        >
+          Thêm cấu hình
         </Button>
       </div>
 
@@ -139,87 +185,109 @@ const CommissionConfigManagement: React.FC = () => {
         dataSource={data}
         rowKey="commissionConfigId"
         loading={loading}
-        pagination={{ pageSize: 10 }}
       />
 
-      {/* Modal Thêm/Sửa Cấu hình */}
       <Modal
-        title="Thiết lập cấu hình Hoa hồng"
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
+        title="Thêm cấu hình hoa hồng"
+        open={open}
+        onCancel={closeModal}
         onOk={() => form.submit()}
         confirmLoading={loading}
-        okText="Lưu cấu hình"
+        okText="Lưu"
         cancelText="Hủy"
-        width={600}
+        destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Space style={{ display: "flex", marginBottom: 8 }} align="baseline">
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{
+            isDefault: true,
+            rentalAreaId: null,
+            rate: 0.1,
+            minBookings: 0,
+            maxBookings: null,
+          }}
+        >
+          <Form.Item label="Phạm vi áp dụng" required>
+            <Radio.Group
+              value={applyType}
+              onChange={(e) => {
+                const value = e.target.value as "ALL" | "CUSTOM";
+                setApplyType(value);
+
+                if (value === "ALL") {
+                  form.setFieldsValue({
+                    isDefault: true,
+                    rentalAreaId: null,
+                  });
+                } else {
+                  form.setFieldsValue({
+                    isDefault: false,
+                  });
+                }
+              }}
+            >
+              <Radio value="ALL">Áp dụng toàn hệ thống</Radio>
+              <Radio value="CUSTOM">Cấu hình riêng cho khu sân</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item name="isDefault" hidden>
+            <Input />
+          </Form.Item>
+
+          {applyType === "CUSTOM" && (
             <Form.Item
-              label="Số booking tối thiểu"
-              name="minBookings"
+              label="Chọn khu sân / tòa nhà"
+              name="rentalAreaId"
               rules={[
-                { required: true, message: "Vui lòng nhập số tối thiểu!" },
+                {
+                  required: true,
+                  message: "Vui lòng chọn khu sân cần cấu hình riêng",
+                },
               ]}
             >
-              <InputNumber
-                min={0}
-                style={{ width: "100%" }}
-                placeholder="VD: 0"
+              <Select
+                placeholder="Chọn khu sân"
+                showSearch
+                optionFilterProp="label"
+                options={rentalAreas.map((area) => ({
+                  label: `${area.rentalAreaName}${
+                    area.addressText ? ` - ${area.addressText}` : ""
+                  }`,
+                  value: area.rentalAreaId,
+                }))}
               />
             </Form.Item>
+          )}
 
-            <span style={{ padding: "0 8px" }}>đến</span>
+          <Form.Item label="Số booking tối thiểu" name="minBookings">
+            <InputNumber min={0} style={{ width: "100%" }} />
+          </Form.Item>
 
-            <Form.Item
-              label="Số booking tối đa"
-              name="maxBookings"
-              tooltip="Bỏ trống nếu muốn áp dụng cho tất cả booking vượt mức tối thiểu (VD: Từ 50 trở lên)"
-            >
-              <InputNumber
-                min={1}
-                style={{ width: "100%" }}
-                placeholder="Không giới hạn"
-              />
-            </Form.Item>
-          </Space>
+          <Form.Item label="Số booking tối đa" name="maxBookings">
+            <InputNumber min={0} style={{ width: "100%" }} />
+          </Form.Item>
 
           <Form.Item
-            label="Tỉ lệ phần trăm hoa hồng (%)"
-            name="ratePercentage"
-            rules={[{ required: true, message: "Vui lòng nhập tỉ lệ %!" }]}
+            label="Tỷ lệ hoa hồng"
+            name="rate"
+            rules={[
+              { required: true, message: "Vui lòng nhập tỷ lệ hoa hồng" },
+            ]}
+            tooltip="Nhập 0.1 = 10%, 0.15 = 15%"
           >
             <InputNumber
               min={0}
-              max={100}
-              step={0.1}
+              max={1}
+              step={0.01}
               style={{ width: "100%" }}
-              placeholder="VD: Nhập 15 cho 15%"
-              addonAfter="%"
             />
           </Form.Item>
 
-          <Form.Item
-            label="ID Tòa nhà áp dụng riêng (Tùy chọn)"
-            name="rentalAreaId"
-            tooltip="Nếu để trống, cấu hình này sẽ áp dụng mặc định cho toàn bộ hệ thống."
-          >
-            <Input placeholder="Nhập ID tòa nhà nếu muốn tạo chính sách riêng..." />
-          </Form.Item>
-
-          <Form.Item
-            label="Đặt làm cấu hình đang áp dụng"
-            name="isDefault"
-            valuePropName="checked"
-          >
-            <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
-          </Form.Item>
-
-          <Form.Item label="Ghi chú nội bộ" name="note">
-            <Input.TextArea
-              rows={2}
-              placeholder="VD: Khuyến mãi mùa hè cho chủ nhà..."
-            />
+          <Form.Item label="Ghi chú" name="note">
+            <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
       </Modal>

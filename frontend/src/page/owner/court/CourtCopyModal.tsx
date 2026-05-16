@@ -26,6 +26,7 @@ export default function CourtCopyModal({
       form.setFieldsValue({
         courtCode: copy.courtCode,
         status: copy.status,
+        location: copy.location,
       });
     } else if (open) {
       form.resetFields();
@@ -42,6 +43,7 @@ export default function CourtCopyModal({
           courtId,
           courtCode: values.courtCode,
           status: values.status,
+          location: values.location,
         });
         message.success("Cập nhật sân con thành công");
       } else {
@@ -49,6 +51,7 @@ export default function CourtCopyModal({
         await CourtService.createCourtCopy({
           courtId,
           courtCode: values.courtCode,
+          location: values.location,
         });
         message.success("Tạo sân con thành công");
       }
@@ -78,6 +81,14 @@ export default function CourtCopyModal({
           rules={[{ required: true, message: "Mã sân con không bỏ trống" }]}
         >
           <Input placeholder="Ví dụ: A1, A2, ..." disabled={!!copy} />
+        </Form.Item>
+
+        <Form.Item
+          label="Vị trí sân con"
+          name="location"
+          rules={[{ required: true, message: "Vui lòng nhập vị trí sân con" }]}
+        >
+          <Input placeholder="Ví dụ: Trong nhà, Tầng 2, Khu A..." />
         </Form.Item>
 
         {copy && (

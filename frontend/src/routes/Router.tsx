@@ -3,6 +3,7 @@ import DefaultLayout from "../layouts/DefaultLayout/DefaultLayout";
 import LoginPage from "../page/customer/login-page/LoginPage.tsx";
 import PostPage from "../page/customer/post/PostPage.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
+import CustomerNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
 import { ProtectedRouter } from "./ProtectedRouter.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
@@ -60,11 +61,16 @@ import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManag
 import NewsPage from "../page/admin/news/NewsPage.tsx";
 import UserNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import UserNewsDetail from "../page/customer/news/UserNewsDetail.tsx";
+
 import PolicyLayout from "../layouts/PolicyLayout.tsx";
 import AboutPage from "../components/Footer/AboutPage.tsx";
 import PoliciesPage from "../components/Footer/PoliciesPage.tsx";
 import TermsPage from "../components/Footer/TermsPage.tsx";
 import AmenityManagement from "../page/admin/amenities/AmenityManagement.tsx";
+import TransactionManager from "../page/owner/transaction/TransactionManager.tsx";
+import OwnerSettlementHistory from "../page/owner/settlement/OwnerSettlementHistory.tsx";
+import OwnerBankAccount from "../page/owner/settlement/OwnerBankAccount.tsx";
+import AdminTransactionManager from "../page/admin/transaction/AdminTransactionManager.tsx";
 import CustomerManagementPage from "../page/owner/customer-management/CustomerManagementPage.tsx";
 import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 
@@ -92,6 +98,7 @@ export const router = createBrowserRouter([
         path: "/create-rental-area",
         element: <CreateRentalAreaPage />,
       },
+
       { path: "home", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
       { path: "news", element: <UserNewsPage /> },
@@ -162,6 +169,7 @@ export const router = createBrowserRouter([
       { path: "news", element: <NewsPage /> },
       { path: "reviews", element: <ReviewsManagement /> },
       { path: "amenities", element: <AmenityManagement /> },
+      { path: "transactions", element: <AdminTransactionManager /> },
       {
         path: "settlements",
         element: <SettlementManagement />,
@@ -171,6 +179,7 @@ export const router = createBrowserRouter([
         element: <PayoutHistory />,
       },
       { path: "commissions", element: <CommissionConfigManagement /> },
+      { path: "*", element: <NotFound /> },
     ],
   },
 
@@ -211,10 +220,37 @@ export const router = createBrowserRouter([
       { path: "users/customers", element: <CustomerManagementPage /> },
       { path: "reports", element: <EndOfDayReport /> },
       {
+        path: "/owner/transactions",
+        element: <TransactionManager />,
+      },
+      {
+        path: "/owner/transactions/:rentalAreaId",
+        element: <TransactionManager />,
+      },
+      {
         path: "notifications",
         element: <NotificationPage />,
         handle: { breadcrumb: "Thông báo mới" },
       },
+      {
+        path: "/owner/settlements",
+        element: <OwnerSettlementHistory />,
+      },
+      {
+        path: "/owner/settlements/:rentalAreaId",
+        element: <OwnerSettlementHistory />,
+      },
+      {
+        path: "/owner/bank-account",
+        element: <OwnerBankAccount />,
+
+      },
+      {
+         path: "/owner/buildings",
+        element: <BuildingListPage />,
+      },
+
+
       { path: "*", element: <NotFound /> },
     ],
   },

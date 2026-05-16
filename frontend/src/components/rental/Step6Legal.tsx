@@ -13,7 +13,7 @@ interface Step5Props {
   loading?: boolean;
 }
 
-export default function Step5Legal({
+export default function Step6Legal({
   prev,
   submit,
   loading = false,

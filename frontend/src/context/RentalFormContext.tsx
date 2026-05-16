@@ -4,24 +4,27 @@ import React, { createContext, useState, useContext, ReactNode } from 'react';
 // Định nghĩa kiểu dữ liệu tổng quát cho toàn bộ form
 interface FormData {
   basicInfo: any;
+  bankAccount: any;
   courts: any[];
   courtCopies: any[];
   extraServices: any;
   legalInfo: any;
 }
 
-interface RentalFormContextType {
-  formData: FormData;
-  updateFormData: (stepKey: keyof FormData, data: any) => void;
-}
-
 const defaultData: FormData = {
-  basicInfo: { country: 'Vietnam' }, // Mặc định quốc gia
+  basicInfo: { country: "Vietnam" },
+  bankAccount: {},
   courts: [],
   courtCopies: [],
   extraServices: { setupLater: false, services: [] },
   legalInfo: {},
 };
+interface RentalFormContextType {
+  formData: FormData;
+  updateFormData: (stepKey: keyof FormData, data: any) => void;
+}
+
+
 
 const RentalFormContext = createContext<RentalFormContextType | undefined>(undefined);
 

@@ -2,5 +2,8 @@ package org.sport.backend.constant;
 
 public enum TransactionType {
     INCOME,
-    EXPENSE
+    EXPENSE,
+    PAYOUT,
+    REFUND,
+    COMMISSION
 }

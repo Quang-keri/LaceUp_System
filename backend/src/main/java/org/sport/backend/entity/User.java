@@ -83,8 +83,10 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserCategoryRank> categoryRanks;
 
-//    @Builder.Default
-//    private BigDecimal fakeMoney = BigDecimal.valueOf(1000000.00);
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private BankAccount bankAccount;
+
+
 
     @Builder.Default
     @Column(name = "credit_score")

@@ -42,7 +42,6 @@ import java.util.*;
 public class BookingServiceImpl implements BookingService {
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
     private BookingIntentRepository bookingIntentRepository;
     @Autowired
@@ -67,7 +66,8 @@ public class BookingServiceImpl implements BookingService {
     private BookingServiceItemRepository bookingServiceItemRepository;
     @Autowired
     private ServiceItemRepository serviceItemRepository;
-
+    @Autowired
+    private TransactionRepository transactionRepository;
 
 
     @Override
@@ -80,7 +80,6 @@ public class BookingServiceImpl implements BookingService {
                 .bookingStatus(BookingStatus.BOOKED)
                 .build();
 
-        // We'll determine rental area and booking time range from slots
         LocalDateTime earliest = null;
         LocalDateTime latest = null;
 
@@ -88,26 +87,27 @@ public class BookingServiceImpl implements BookingService {
 
         BigDecimal calculatedTotalPrice = BigDecimal.ZERO;
 
-                for (SlotRequest slotReq : request.getSlots()) {
+        for (SlotRequest slotReq : request.getSlots()) {
             CourtCopy courtCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sân với ID: " + slotReq.getCourtCopyId()));
 
-                        // Ensure booking is associated with the rental area and renter (owner) so it appears in rental listings
-                        if (booking.getRentalArea() == null && courtCopy.getCourt() != null && courtCopy.getCourt().getRentalArea() != null) {
-                                booking.setRentalArea(courtCopy.getCourt().getRentalArea());
-                        }
-                        if (booking.getRenter() == null) {
-                                try {
-                                        booking.setRenter(userService.getCurrentUserEntity());
-                                } catch (Exception ignored) {
-                                }
-                        }
+            if (booking.getRentalArea() == null && courtCopy.getCourt() != null && courtCopy.getCourt().getRentalArea() != null) {
+                booking.setRentalArea(courtCopy.getCourt().getRentalArea());
+            }
+
+            if (booking.getRenter() == null) {
+                try {
+                    booking.setRenter(userService.getCurrentUserEntity());
+                } catch (Exception ignored) {
+                }
+            }
 
             List<Slot> conflicts = slotRepository.findConflictSlot(
                     courtCopy.getCourtCopyId(),
                     slotReq.getStartTime(),
                     slotReq.getEndTime()
             );
+
             if (!conflicts.isEmpty()) {
                 throw new RuntimeException("Sân " + courtCopy.getCourtCode() + " đã bị đặt trong khung giờ "
                         + slotReq.getStartTime().toLocalTime() + " - " + slotReq.getEndTime().toLocalTime());
@@ -118,9 +118,10 @@ public class BookingServiceImpl implements BookingService {
                     slotReq.getStartTime(),
                     slotReq.getEndTime()
             );
+
             calculatedTotalPrice = calculatedTotalPrice.add(slotPrice);
 
-                        Slot slot = Slot.builder()
+            Slot slot = Slot.builder()
                     .startTime(slotReq.getStartTime())
                     .endTime(slotReq.getEndTime())
                     .price(slotPrice)
@@ -130,14 +131,28 @@ public class BookingServiceImpl implements BookingService {
                     .build();
 
             slotRepository.save(slot);
-                        if (earliest == null || slotReq.getStartTime().isBefore(earliest)) earliest = slotReq.getStartTime();
-                        if (latest == null || slotReq.getEndTime().isAfter(latest)) latest = slotReq.getEndTime();
+
+            if (earliest == null || slotReq.getStartTime().isBefore(earliest)) {
+                earliest = slotReq.getStartTime();
+            }
+
+            if (latest == null || slotReq.getEndTime().isAfter(latest)) {
+                latest = slotReq.getEndTime();
+            }
         }
 
-                if (earliest != null) booking.setStartTime(earliest);
-                if (latest != null) booking.setEndTime(latest);
+        if (earliest != null) {
+            booking.setStartTime(earliest);
+        }
 
-        BigDecimal deposit = request.getPaidAmount() != null ? request.getPaidAmount() : BigDecimal.ZERO;
+        if (latest != null) {
+            booking.setEndTime(latest);
+        }
+
+        BigDecimal deposit = request.getPaidAmount() != null
+                ? request.getPaidAmount()
+                : BigDecimal.ZERO;
+
         BigDecimal remaining = calculatedTotalPrice.subtract(deposit);
 
         if (remaining.compareTo(BigDecimal.ZERO) < 0) {
@@ -160,18 +175,44 @@ public class BookingServiceImpl implements BookingService {
             Payment payment = Payment.builder()
                     .amount(deposit)
                     .transactionDate(LocalDateTime.now())
-                    .paymentStatus(org.sport.backend.constant.PaymentStatus.SUCCESS)
+                    .paymentStatus(PaymentStatus.SUCCESS)
                     .paymentType(deposit.compareTo(calculatedTotalPrice) >= 0
-                            ? org.sport.backend.constant.PaymentType.FULL
-                            : org.sport.backend.constant.PaymentType.DEPOSIT)
+                            ? PaymentType.FULL
+                            : PaymentType.DEPOSIT)
+                    .paymentMethod(request.getPaymentMethod())
                     .booking(booking)
                     .build();
 
             paymentRepository.save(payment);
+
+            Transaction transaction = Transaction.builder()
+                    .type(TransactionType.INCOME)
+                    .amount(deposit)
+                    .booking(booking)
+                    .referenceId(booking.getBookingId())
+                    .rentalArea(booking.getRentalArea())
+                    .owner(booking.getRentalArea().getOwner())
+                    .paymentMethod(request.getPaymentMethod())
+                    .status(TransactionStatus.SUCCESS)
+                    .category(
+                            remaining.compareTo(BigDecimal.ZERO) == 0
+                                    ? TransactionCategory.BOOKING_FULL_PAYMENT
+                                    : TransactionCategory.BOOKING_DEPOSIT
+                    )
+                    .description(
+                            remaining.compareTo(BigDecimal.ZERO) == 0
+                                    ? "Thu đủ tiền khi tạo booking tại sân"
+                                    : "Thu tiền cọc khi tạo booking tại sân"
+                    )
+                    .build();
+
+            transactionRepository.save(transaction);
+
         }
 
         return mapToBookingResponse(booking);
     }
+
     public BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime) {
         LocalDate bookingDate = startTime.toLocalDate();
         LocalTime start = startTime.toLocalTime();
@@ -183,7 +224,6 @@ public class BookingServiceImpl implements BookingService {
         LocalTime currentTime = start;
 
         while (currentTime.isBefore(end)) {
-            // Tìm khung giá chứa currentTime
             LocalTime finalCurrentTime = currentTime;
             CourtPrice currentPriceBracket = prices.stream()
                     .filter(p -> !finalCurrentTime.isBefore(p.getStartTime()) && finalCurrentTime.isBefore(p.getEndTime()))
@@ -217,10 +257,12 @@ public class BookingServiceImpl implements BookingService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ: " + itemReq.getServiceId()));
 
             if (serviceItem.getQuantity() < itemReq.getQuantity()) {
-                throw new RuntimeException("Số lượng dịch vụ " + serviceItem.getServiceName() + " không đủ để cung cấp. Vui lòng giảm số lượng hoặc chọn dịch vụ khác.");
+                throw new RuntimeException(
+                        "Số lượng dịch vụ " + serviceItem.getServiceName()
+                                + " không đủ để cung cấp. Vui lòng giảm số lượng hoặc chọn dịch vụ khác."
+                );
             }
 
-            //Chỗ này update sau Quang chưa làm hết luồng này
             serviceItem.setQuantity(serviceItem.getQuantity() - itemReq.getQuantity());
             serviceItemRepository.save(serviceItem);
 
@@ -233,22 +275,34 @@ public class BookingServiceImpl implements BookingService {
 
             bookingServiceItemRepository.save(bsi);
 
+            BigDecimal itemTotal = serviceItem.getPriceSell()
+                    .multiply(BigDecimal.valueOf(itemReq.getQuantity()));
 
-            BigDecimal itemTotal = serviceItem.getPriceSell().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalExtraCost = totalExtraCost.add(itemTotal);
         }
 
+        if (totalExtraCost.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal currentTotal = booking.getTotalPrice() != null
+                    ? booking.getTotalPrice()
+                    : BigDecimal.ZERO;
 
-        BigDecimal currentTotal = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
-        booking.setTotalPrice(currentTotal.add(totalExtraCost));
+            booking.setTotalPrice(currentTotal.add(totalExtraCost));
 
+            // Không cộng vào remainingAmount vì tiền dịch vụ owner thu trực tiếp tại sân
+            Transaction transaction = Transaction.builder()
+                    .booking(booking)
+                    .referenceId(booking.getBookingId())
+                    .rentalArea(booking.getRentalArea())
+                    .owner(booking.getRentalArea().getOwner())
+                    .type(TransactionType.INCOME)
+                    .amount(totalExtraCost)
+                    .paymentMethod(PaymentMethod.CASH)
+                    .status(TransactionStatus.SUCCESS)
+                    .category(TransactionCategory.EXTRA_SERVICE_PAYMENT)
+                    .description("Owner thu dịch vụ thêm tại sân cho booking " + booking.getBookingId())
+                    .build();
 
-        BigDecimal currentRemaining = booking.getRemainingAmount() != null ? booking.getRemainingAmount() : BigDecimal.ZERO;
-        booking.setRemainingAmount(currentRemaining.add(totalExtraCost));
-
-
-        if (booking.getRemainingAmount().compareTo(BigDecimal.ZERO) > 0 && booking.getBookingStatus() == BookingStatus.COMPLETED) {
-            booking.setBookingStatus(BookingStatus.BOOKED);
+            transactionRepository.save(transaction);
         }
 
         bookingRepository.save(booking);
@@ -263,7 +317,7 @@ public class BookingServiceImpl implements BookingService {
         System.err.println(court.getCourtId());
         RentalArea rentalArea = court.getRentalArea();
 
-        System.err.println(rentalArea.getIsActive());
+
 
         if (!Boolean.TRUE.equals(rentalArea.getIsActive()) || rentalArea.getStatus() != RentalAreaStatus.ACTIVE) {
             return new CheckAvailabilityResponse(false, "Khu vực sân hiện không hoạt động");
@@ -273,12 +327,8 @@ public class BookingServiceImpl implements BookingService {
         }
         LocalTime reqStartTime = request.getStartTime().toLocalTime();
         LocalTime reqEndTime = request.getEndTime().toLocalTime();
-        LocalTime openTime = rentalArea.getOpenTime();
-        LocalTime closeTime = rentalArea.getCloseTime();
-        System.err.println("Request Start: " + reqStartTime);
-        System.err.println("Request End: " + reqEndTime);
-        System.err.println("Rental Open: " + openTime);
-        System.err.println("Rental Close: " + closeTime);
+
+
         if (reqStartTime.isBefore(rentalArea.getOpenTime()) || reqEndTime.isAfter(rentalArea.getCloseTime())) {
             return new CheckAvailabilityResponse(
                     false,
@@ -332,7 +382,7 @@ public class BookingServiceImpl implements BookingService {
             user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         }
-        System.err.println("User name " + user.getUserName());
+
         BookingIntent intent = BookingIntent.builder()
                 .user(user)
                 .bookerName(request.getUserName())
@@ -496,13 +546,7 @@ public class BookingServiceImpl implements BookingService {
                 total = total.add(price);
             }
 
-            // DEBUG (rất nên giữ)
-            System.out.println(
-                    "[PRICE] " + cursor +
-                            " -> " + stepEnd +
-                            " | " + rule.getPriceType() +
-                            " | " + rule.getPricePerHour()
-            );
+
 
             cursor = stepEnd;
         }
@@ -533,7 +577,7 @@ public class BookingServiceImpl implements BookingService {
 
     private int getPriorityScore(CourtPrice p, boolean isWeekend) {
 
-        // specific date luôn cao nhất
+
         if (p.getSpecificDate() != null) return 1000;
 
         return switch (p.getPriceType()) {
@@ -1044,8 +1088,12 @@ public class BookingServiceImpl implements BookingService {
 
     private void syncSlotStatus(Booking booking, BookingStatus status) {
         SlotStatus slotStatus = null;
-        if (status == BookingStatus.CANCELLED) slotStatus = SlotStatus.CANCELLED;
-        else if (status == BookingStatus.COMPLETED) slotStatus = SlotStatus.COMPLETED;
+        if (status == BookingStatus.CANCELLED){
+            slotStatus = SlotStatus.CANCELLED;
+        }
+        else if (status == BookingStatus.COMPLETED) {
+            slotStatus = SlotStatus.COMPLETED;
+        }
 
         if (slotStatus != null) {
             for (Slot s : booking.getSlots()) s.setSlotStatus(slotStatus);
@@ -1053,16 +1101,53 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void recalculateBookingSummary(Booking booking) {
-        BigDecimal total = booking.getSlots().stream().map(Slot::getPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
-        LocalDateTime minStart = booking.getSlots().stream().map(Slot::getStartTime).min(LocalDateTime::compareTo).orElse(null);
-        LocalDateTime maxEnd = booking.getSlots().stream().map(Slot::getEndTime).max(LocalDateTime::compareTo).orElse(null);
+
+        BigDecimal total = booking.getSlots().stream()
+                .map(Slot::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        LocalDateTime minStart = booking.getSlots().stream()
+                .map(Slot::getStartTime)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+
+        LocalDateTime maxEnd = booking.getSlots().stream()
+                .map(Slot::getEndTime)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
 
         booking.setTotalPrice(total);
         booking.setStartTime(minStart);
         booking.setEndTime(maxEnd);
-        // Recalculate remaining amount based on existing deposit
-        BigDecimal deposit = booking.getDepositAmount() == null ? BigDecimal.ZERO : booking.getDepositAmount();
-        booking.setRemainingAmount(total.subtract(deposit));
+
+        BigDecimal deposit = booking.getDepositAmount() == null
+                ? BigDecimal.ZERO
+                : booking.getDepositAmount();
+
+        BigDecimal remaining = total.subtract(deposit);
+
+        booking.setRemainingAmount(
+                remaining.compareTo(BigDecimal.ZERO) < 0
+                        ? BigDecimal.ZERO
+                        : remaining
+        );
+
+
+        BigDecimal overpaid = deposit.subtract(total);
+
+        if (overpaid.compareTo(BigDecimal.ZERO) > 0) {
+
+            Transaction refundTransaction = Transaction.builder()
+                    .type(TransactionType.EXPENSE)
+                    .amount(overpaid)
+                    .booking(booking)
+                    .referenceId(booking.getBookingId())
+                    .paymentMethod(PaymentMethod.CASH)
+                    .description("Hoàn tiền do cập nhật booking giảm giá")
+                    .build();
+
+            transactionRepository.save(refundTransaction);
+        }
     }
 
     @Override
@@ -1082,17 +1167,38 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Booking với ID: " + bookingId));
 
-        if (booking.getRemainingAmount() != null && booking.getRemainingAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        BigDecimal remainingAmount = booking.getRemainingAmount();
+
+        if (remainingAmount == null || remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Đơn hàng này đã được thanh toán đủ!");
         }
-        booking.setRemainingAmount(BigDecimal.ZERO);
-        booking.setDepositAmount(booking.getTotalPrice());
-        ;
 
         if (booking.getBookingStatus() == BookingStatus.BOOKED) {
+
+            Payment payment = paymentRepository
+                    .findFirstByBookingOrderByTransactionDateDesc(booking)
+                    .orElse(null);
+
+            Transaction transaction = Transaction.builder()
+                    .booking(booking)
+                    .referenceId(booking.getBookingId())
+                    .rentalArea(booking.getRentalArea())
+                    .owner(booking.getRentalArea().getOwner())
+                    .type(TransactionType.INCOME)
+                    .amount(remainingAmount)
+                    .paymentMethod(payment != null ? payment.getPaymentMethod() : PaymentMethod.CASH)
+                    .status(TransactionStatus.SUCCESS)
+                    .category(TransactionCategory.BOOKING_REMAINING_PAYMENT)
+                    .description("Thu tiền còn lại cho booking " + booking.getBookingId())
+                    .build();
+
+            transactionRepository.save(transaction);
+
             booking.setBookingStatus(BookingStatus.COMPLETED);
         }
 
+        booking.setRemainingAmount(BigDecimal.ZERO);
+        booking.setDepositAmount(booking.getTotalPrice());
         bookingRepository.save(booking);
     }
 

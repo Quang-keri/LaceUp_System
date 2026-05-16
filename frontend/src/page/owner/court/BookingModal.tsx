@@ -73,6 +73,21 @@ export const BookingModal = ({
               ]}
             />
           </div>
+          <div className="flex-1">
+            <label className="text-xs text-gray-500">
+              Phương thức thanh toán
+            </label>
+            <Select
+              value={formState.paymentMethod || "BANK_TRANSFER"}
+              onChange={(v) => setFormState({ ...formState, paymentMethod: v })}
+              options={[
+                { label: "Chuyển khoản ngân hàng", value: "BANK_TRANSFER" },
+                { label: "Tiền mặt", value: "CASH" },
+                { label: "Thẻ tín dụng", value: "CARD" },
+                { label: "Ví điện tử", value: "E_WALLET" },
+              ]}
+            />
+          </div>
         </div>
         <div className="flex gap-3">
           <div className="flex-1">
