@@ -33,9 +33,8 @@ public class UserResponse {
     private LocalDateTime updatedAt;
     private boolean active;
     private Integer rankPoint;
-    private boolean isDepositConfirmed;
     private BigDecimal fakeMoney;
-    private List<CategoryRankResponse> categoryRank;
+    private List<CategoryRankResponse> categoryRanks;
     private Integer teamNumber;
     private Integer creditScore;
     private String memberTier;

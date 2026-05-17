@@ -9,7 +9,9 @@ import lombok.experimental.SuperBuilder;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.ResultStatus;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -44,4 +46,10 @@ public class MatchResult extends BaseEntity {
 
     @ElementCollection
     private List<UUID> absentUserIds;
+
+    @ElementCollection
+    @CollectionTable(name = "match_result_rank_changes", joinColumns = @JoinColumn(name = "result_id"))
+    @MapKeyColumn(name = "user_id")
+    @Column(name = "point_change")
+    private Map<UUID, Integer> rankChanges = new HashMap<>();;
 }

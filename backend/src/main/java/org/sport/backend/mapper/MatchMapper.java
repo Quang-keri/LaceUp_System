@@ -50,8 +50,6 @@ public interface MatchMapper {
                                 .map(reg -> {
                                     var userRes = userMapper.toUserResponse(reg.getUser());
 
-                                    userRes.setDepositConfirmed(reg.getIsDepositConfirmed());
-
                                     userRes.setTeamNumber(reg.getTeamNumber());
 
                                     return userRes;

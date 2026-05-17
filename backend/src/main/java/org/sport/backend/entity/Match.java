@@ -64,9 +64,6 @@ public class Match extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private MatchType matchType;
 
-//    private Double winnerPercent;
-//    private Double betAmount;
-
     private Integer minRank;
     private Integer maxRank;
 

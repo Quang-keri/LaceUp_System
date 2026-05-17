@@ -227,7 +227,7 @@
   font-weight: 600;
 }
 
-button[type="submit"] {
+.login-box button[type="submit"] {
   width: 100%;
   padding: 16px;
 
@@ -244,7 +244,7 @@ button[type="submit"] {
   transition: 0.3s;
 }
 
-button[type="submit"]:hover {
+.login-box button[type="submit"]:hover {
   background: #16a34a;
   transform: translateY(-2px);
 }

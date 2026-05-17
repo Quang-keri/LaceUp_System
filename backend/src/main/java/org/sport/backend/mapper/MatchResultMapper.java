@@ -11,6 +11,8 @@ import java.util.List;
 public interface MatchResultMapper {
 
     @Mapping(source = "match.matchId", target = "matchId")
+    @Mapping(source = "winningTeamNumber", target = "winningTeamNumber")
+    @Mapping(source = "absentUserIds", target = "absentUserIds")
     MatchResultResponse toResponse(MatchResult matchResult);
 
     List<MatchResultResponse> toResponseList(List<MatchResult> matchResults);

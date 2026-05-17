@@ -87,17 +87,6 @@ public class MatchController {
                 null));
     }
 
-    @PostMapping("/{matchId}/confirm-deposit")
-    @PreAuthorize("hasAuthority('CONFIRM_MATCH_DEPOSIT')")
-    public ResponseEntity<ApiResponse<Void>> confirmDeposit(
-            @PathVariable UUID matchId) {
-        matchService.confirmDeposit(matchId);
-        return ResponseEntity.ok(ApiResponse.success(
-                200,
-                "Đã xác nhận cọc thành công! Chờ người chơi còn lại xác nhận.",
-                null));
-    }
-
     @GetMapping("/open")
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getOpenMatches(
             @RequestParam(defaultValue = "1") int page,

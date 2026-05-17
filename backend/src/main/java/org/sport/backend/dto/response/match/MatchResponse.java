@@ -29,7 +29,6 @@ public class MatchResponse {
     private boolean isFull;
     private boolean hasCourt;
     private List<UserResponse> participants;
-    private Boolean depositConfirmed;
     private MatchType matchType;
     private String note;
     private Integer minRank;

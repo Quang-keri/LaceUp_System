@@ -15,7 +15,7 @@ import {
 } from "antd";
 import {
   CalendarOutlined,
-  ManOutlined,
+  EnvironmentOutlined,
   TrophyOutlined,
   FireOutlined,
 } from "@ant-design/icons";
@@ -29,14 +29,11 @@ import SubmitResultModal from "./my-match/SubmitResultModal.tsx";
 const { Title, Text } = Typography;
 
 const MyMatchPage: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
   const selectedMenu = "2";
 
   const [matches, setMatches] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
-  const [confirmingDepositId, setConfirmingDepositId] = useState<string | null>(
-    null,
-  );
 
   // States quản lý Modals
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
@@ -72,21 +69,6 @@ const MyMatchPage: React.FC = () => {
     }
   }, [matches]);
 
-  const handleConfirmDeposit = async (matchId: string) => {
-    setConfirmingDepositId(matchId);
-    try {
-      const response = await matchService.confirmDeposit(matchId);
-      if (response.code === 200) {
-        message.success("Đã xác nhận cọc thành công!");
-        fetchMyMatches();
-      }
-    } catch (error: any) {
-      message.error(error.response?.data?.message || "Lỗi xác nhận cọc");
-    } finally {
-      setConfirmingDepositId(null);
-    }
-  };
-
   const openModal = (
     match: any,
     modalType: "DETAIL" | "APPROVE" | "SUBMIT",
@@ -112,31 +94,40 @@ const MyMatchPage: React.FC = () => {
   ) => {
     if (type === "RANKED")
       return (
-        <Tag icon={<TrophyOutlined />} color="purple">
+        <Tag icon={<TrophyOutlined />} color="purple" className="font-semibold">
           Rank ({minRank}-{maxRank})
         </Tag>
       );
     if (type === "BET")
       return (
-        <Tag icon={<FireOutlined />} color="orange">
+        <Tag icon={<FireOutlined />} color="orange" className="font-semibold">
           Kèo: {note || "Tự thỏa thuận"}
         </Tag>
       );
-    return <Tag color="blue">Giao lưu</Tag>;
+    return (
+      <Tag color="blue" className="font-semibold">
+        Giao lưu
+      </Tag>
+    );
   };
 
+  // Cập nhật map trạng thái mới sạch sẽ theo Backend mới
   const renderStatusTag = (status: string) => {
     switch (status) {
       case "OPEN":
-      case "CONFIRMED":
-      case "FULL":
-        return <Tag color="green">Sắp diễn ra</Tag>;
-      case "WAITING_DEPOSIT":
-        return <Tag color="warning">Chờ chốt cọc</Tag>;
+        return <Tag color="blue">Đang chờ người</Tag>;
+      case "READY":
+        return <Tag color="green">Sẵn sàng đá</Tag>;
+      case "PLAYING":
+        return <Tag color="processing">Đang đá</Tag>;
       case "WAITING_RESULT_APPROVAL":
-        return <Tag color="orange">Chờ đối thủ duyệt KQ</Tag>;
+        return <Tag color="warning">Chờ duyệt KQ</Tag>;
+      case "DISPUTED":
+        return <Tag color="error">Tranh chấp</Tag>;
       case "COMPLETED":
         return <Tag color="default">Đã hoàn thành</Tag>;
+      case "CANCELLED":
+        return <Tag color="error">Đã hủy</Tag>;
       default:
         return <Tag>{status}</Tag>;
     }
@@ -152,17 +143,13 @@ const MyMatchPage: React.FC = () => {
           dataSource={matches.filter((m) =>
             [
               "OPEN",
-              "CONFIRMED",
-              "FULL",
-              "WAITING_DEPOSIT",
+              "READY",
+              "PLAYING",
               "WAITING_RESULT_APPROVAL",
+              "DISPUTED",
             ].includes(m.status),
           )}
           renderItem={(match) => {
-            const myParticipantInfo = match.participants?.find(
-              (p: any) => p.userId === user?.userId,
-            );
-
             return (
               <Card
                 size="small"
@@ -173,10 +160,13 @@ const MyMatchPage: React.FC = () => {
                 }}
               >
                 <Row align="middle" justify="space-between">
-                  <Col xs={24} md={18}>
+                  <Col xs={24} md={16}>
                     <Space direction="vertical" size={2}>
-                      <Space>
-                        <Title level={5} style={{ margin: 0 }}>
+                      <Space wrap>
+                        <Title
+                          level={5}
+                          style={{ margin: 0, color: "#1e293b" }}
+                        >
                           {match.title || `Giao lưu ${match.categoryName}`}
                         </Title>
                         {renderStatusTag(match.status)}
@@ -190,20 +180,25 @@ const MyMatchPage: React.FC = () => {
                       <Space
                         style={{
                           color: "#64748b",
-                          fontSize: "14px",
-                          marginTop: 8,
+                          fontSize: "13px",
+                          marginTop: 6,
                         }}
                         wrap
                       >
                         <span>
-                          <CalendarOutlined />{" "}
+                          <CalendarOutlined className="text-orange-500" />{" "}
+                          {new Date(match.startTime).toLocaleTimeString(
+                            "vi-VN",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )}{" "}
                           {new Date(match.startTime).toLocaleDateString(
                             "vi-VN",
                           )}
                         </span>
                         <Divider type="vertical" />
                         <span>
-                          <ManOutlined /> {match.courtName || "Tự thỏa thuận"}
+                          <EnvironmentOutlined className="text-purple-500" />{" "}
+                          {match.courtName || "Tự thỏa thuận"}
                         </span>
                       </Space>
                     </Space>
@@ -211,81 +206,45 @@ const MyMatchPage: React.FC = () => {
 
                   <Col
                     xs={24}
-                    md={6}
-                    style={{ textAlign: "right", marginTop: "10px" }}
+                    md={8}
+                    style={{ textAlign: "right", marginTop: "8px" }}
                   >
-                    {match.status === "WAITING_DEPOSIT" ? (
-                      <Space
-                        wrap
-                        style={{ justifyContent: "flex-end", width: "100%" }}
-                      >
-                        {/* Đưa logic nút Cọc lên trước (nằm bên trái) */}
-                        {myParticipantInfo?.depositConfirmed ? (
-                          <Button
-                            disabled
-                            style={{
-                              borderRadius: "8px",
-                              background: "#f0fdf4",
-                              color: "#16a34a",
-                              borderColor: "#bbf7d0",
-                            }}
-                          >
-                            Đã xác nhận cọc
-                          </Button>
-                        ) : (
-                          <Button
-                            type="primary"
-                            loading={confirmingDepositId === match.matchId}
-                            onClick={() => handleConfirmDeposit(match.matchId)}
-                            style={{
-                              borderRadius: "8px",
-                              background: "#f97316",
-                              borderColor: "#f97316",
-                            }}
-                          >
-                            Xác nhận cọc
-                          </Button>
-                        )}
-
+                    <Space
+                      wrap
+                      style={{ justifyContent: "flex-end", width: "100%" }}
+                    >
+                      {match.status === "WAITING_RESULT_APPROVAL" ? (
+                        <Button
+                          type="primary"
+                          onClick={() => openModal(match, "APPROVE")}
+                          style={{
+                            borderRadius: "8px",
+                            background: "#f59e0b",
+                            borderColor: "#f59e0b",
+                          }}
+                        >
+                          Xử lý kết quả
+                        </Button>
+                      ) : match.status === "READY" ||
+                        match.status === "PLAYING" ||
+                        match.status === "DISPUTED" ? (
+                        <Button
+                          type="primary"
+                          onClick={() => openModal(match, "DETAIL")}
+                          className="bg-gradient-to-r from-orange-500 to-purple-600 border-none hover:opacity-90 font-medium"
+                          style={{ borderRadius: "8px" }}
+                        >
+                          Đội hình / Báo KQ
+                        </Button>
+                      ) : (
                         <Button
                           onClick={() => openModal(match, "DETAIL")}
                           style={{ borderRadius: "8px" }}
                         >
                           Xem chi tiết
                         </Button>
-                      </Space>
-                    ) : match.status === "WAITING_RESULT_APPROVAL" ? (
-                      <Button
-                        type="primary"
-                        onClick={() => openModal(match, "APPROVE")}
-                        style={{
-                          borderRadius: "8px",
-                          background: "#f59e0b",
-                          borderColor: "#f59e0b",
-                        }}
-                      >
-                        Xem trạng thái duyệt
-                      </Button>
-                    ) : (match.matchType === "RANKED" ||
-                        match.matchType === "BET") &&
-                      (match.status === "FULL" ||
-                        match.status === "CONFIRMED") ? (
-                      <Button
-                        type="primary"
-                        onClick={() => openModal(match, "DETAIL")}
-                        className="bg-gradient-to-r from-orange-500 to-purple-600 border-none"
-                        style={{ borderRadius: "8px" }}
-                      >
-                        Chốt kết quả / Chọn đội
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => openModal(match, "DETAIL")}
-                        style={{ borderRadius: "8px" }}
-                      >
-                        Xem chi tiết
-                      </Button>
-                    )}
+                      )}
+                    </Space>
                   </Col>
                 </Row>
               </Card>
@@ -296,11 +255,13 @@ const MyMatchPage: React.FC = () => {
     },
     {
       key: "2",
-      label: "Đã hoàn thành",
+      label: "Đã hoàn thành & Đã hủy",
       children: (
         <List
           loading={loadingData}
-          dataSource={matches.filter((m) => m.status === "COMPLETED")}
+          dataSource={matches.filter((m) =>
+            ["COMPLETED", "CANCELLED"].includes(m.status),
+          )}
           renderItem={(match) => (
             <Card
               size="small"
@@ -314,10 +275,10 @@ const MyMatchPage: React.FC = () => {
               <Row align="middle" justify="space-between">
                 <Col>
                   <Space direction="vertical" size={2}>
-                    <Space>
+                    <Space wrap>
                       <Text
                         strong
-                        style={{ color: "#475569", fontSize: "16px" }}
+                        style={{ color: "#475569", fontSize: "15px" }}
                       >
                         {match.title || `Giao lưu ${match.categoryName}`}
                       </Text>
@@ -331,7 +292,7 @@ const MyMatchPage: React.FC = () => {
                     </Space>
                     <Text type="secondary" style={{ fontSize: "13px" }}>
                       {new Date(match.startTime).toLocaleDateString("vi-VN")} •{" "}
-                      {match.courtName || match.address}
+                      {match.courtName || "Sân tự do"}
                     </Text>
                   </Space>
                 </Col>
@@ -339,6 +300,7 @@ const MyMatchPage: React.FC = () => {
                   <Button
                     onClick={() => openModal(match, "DETAIL")}
                     type="link"
+                    className="text-purple-600 hover:text-purple-700 font-semibold"
                   >
                     Chi tiết
                   </Button>

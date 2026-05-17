@@ -255,7 +255,6 @@ public class DataInitializer implements CommandLineRunner {
                 Permission.builder().permissionName("RESPOND_MATCH_RESULT").description("Xác nhận hoặc từ chối kết quả trận đấu").build(),
                 Permission.builder().permissionName("CREATE_MATCH").description("Tạo trận đấu (giao lưu/cố định)").build(),
                 Permission.builder().permissionName("JOIN_MATCH").description("Tham gia trận đấu đã tạo").build(),
-                Permission.builder().permissionName("CONFIRM_MATCH_DEPOSIT").description("Xác nhận tiền cọc cho trận đấu").build(),
                 Permission.builder().permissionName("VIEW_ALL_MATCHES").description("Xem toàn bộ danh sách trận đấu trên hệ thống").build(),
                 Permission.builder().permissionName("VIEW_OWNER_MATCHES").description("Xem danh sách trận đấu diễn ra tại sân của mình").build(),
 
@@ -331,7 +330,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Set<Permission> renterPerms = getPermissions(permMap,
                 "BOOK_ROOM", "CREATE_PAYMENT", "USE_CHAT", "EXTEND_SLOT",
-                "SWAP_SLOT", "CREATE_MATCH", "JOIN_MATCH", "CONFIRM_MATCH_DEPOSIT",
+                "SWAP_SLOT", "CREATE_MATCH", "JOIN_MATCH",
                 "SUBMIT_MATCH_RESULT", "RESPOND_MATCH_RESULT", "CREATE_POST",
                 "UPDATE_POST", "DELETE_POST", "VIEW_COURTS"
         );

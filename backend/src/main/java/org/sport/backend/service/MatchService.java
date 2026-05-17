@@ -27,9 +27,6 @@ public interface MatchService {
     @Transactional
     void divideTeams(UUID matchId, DivideTeamRequest request);
 
-    @Transactional
-    void confirmDeposit(UUID matchId);
-
     PageResponse<MatchResponse> getOpenMatches(
             int page,
             int size,

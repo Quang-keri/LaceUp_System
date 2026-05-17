@@ -124,12 +124,11 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         String linkInfo = "Link chi tiết: http://localhost:5173/rental-area/" + area.getRentalAreaId();
 
         String content = String.format(
-                "Tại %s có cơ sở thể thao tên là %s. Địa chỉ: %s, %s, %s. %s %s %s %s " +
+                "Tại %s có cơ sở thể thao tên là %s. Địa chỉ: %s, %s, %s. %s %s " +
                         "Khách hàng có nhu cầu đặt sân vui lòng liên hệ %s.%s",
                 area.getRentalAreaName(),
                 area.getAddress().getStreet(),
                 area.getAddress().getWard(),
-                area.getAddress().getDistrict(),
                 timeInfo,
                 priceInfo,
                 ratingInfo,
@@ -140,7 +139,6 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("type", "RENTAL_AREA");
-        metadata.put("district", area.getAddress().getDistrict() != null ? area.getAddress().getDistrict() : "");
 
         if (area.getOpenTime() != null) {
             metadata.put("open_minute", area.getOpenTime().getHour() * 60 + area.getOpenTime().getMinute());
@@ -210,9 +208,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         } else if (match.getAddress() != null) {
             locationInfo = String.format("đang tìm sân quanh khu vực %s, %s",
                     match.getAddress().getWard() != null ? match.getAddress().getWard() : "",
-                    match.getAddress().getDistrict() != null ? match.getAddress().getDistrict() : "");
-            districtForMetadata = match.getAddress().getDistrict() != null ? match.getAddress().getDistrict() : "";
-            cityForMetadata = match.getAddress().getCity() != null ? match.getAddress().getCity().getCityName() : "";
+            cityForMetadata = match.getAddress().getCity() != null ? match.getAddress().getCity().getCityName() : "");
         } else {
             locationInfo = "chưa chốt địa điểm cụ thể";
         }
@@ -241,7 +237,6 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("type", "MATCH"); // Bắt buộc để phân loại
         metadata.put("category", match.getCategory() != null ? match.getCategory().getCategoryName() : "");
-        if (!districtForMetadata.isBlank()) metadata.put("district", districtForMetadata);
         if (!cityForMetadata.isBlank()) metadata.put("city", cityForMetadata);
 
         return new Document(match.getMatchId().toString(), content, metadata);

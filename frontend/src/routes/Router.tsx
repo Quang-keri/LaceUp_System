@@ -71,9 +71,9 @@ import TransactionManager from "../page/owner/transaction/TransactionManager.tsx
 import OwnerSettlementHistory from "../page/owner/settlement/OwnerSettlementHistory.tsx";
 import OwnerBankAccount from "../page/owner/settlement/OwnerBankAccount.tsx";
 import AdminTransactionManager from "../page/admin/transaction/AdminTransactionManager.tsx";
-import CustomerManagementPage from "../page/owner/customer-management/CustomerManagementPage.tsx";
 import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 import AdminCustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
+import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();

@@ -10,11 +10,11 @@ import {
   Button,
   message,
 } from "antd";
-import { PicRightOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import matchService from "../../../service/match/matchService";
 import { useAuth } from "../../../context/AuthContext";
 import type { MatchRequest } from "../../../types/match";
+import { Coffee, MapPin, Utensils, Activity } from "lucide-react";
 
 export default function CreateMatchForm({
   court,
@@ -61,32 +61,26 @@ export default function CreateMatchForm({
 
     form.resetFields();
 
-    // 1. Lấy tên category từ object sân
-    // Lưu ý: Kiểm tra console.log(court) để xem categoryName nằm ở đâu
-    const currentCategoryName =
-      court?.category?.categoryName || court?.categoryName;
+    const currentCategoryId =
+      court?.category?.id || court?.categoryId;
 
-    // 2. Lấy mảng rank từ user
-    // Dùng toán tử || để phòng hờ trường hợp Backend trả về 'categoryRank' thay vì 'categoryRanks'
     const ranks = (user as any)?.categoryRank || user?.categoryRanks || [];
 
-    // 3. Tìm rank tương ứng
     const userRankData = ranks.find(
-      (item: any) => item.categoryName === currentCategoryName,
+      (item: any) => item.categoryId === currentCategoryId,
     );
 
     const currentRank = userRankData ? userRankData.rankPoint : 0;
 
-    // 4. Cập nhật vào form
     form.setFieldsValue({
       maxPlayers: 4,
       minPlayersToStart: 2,
       duration: 1,
       matchType: "NORMAL",
-      winnerPercent: 50,
-      // Set biên độ +- 500
+      // KHÔI PHỤC LOGIC: Tự động tính toán biên độ rank của bản thân từ đầu
       minRank: Math.max(0, currentRank - 500),
       maxRank: currentRank + 500,
+      note: "",
     });
 
     setOpenMatchModal(true);
@@ -114,8 +108,6 @@ export default function CreateMatchForm({
         minPlayersToStart: Number(values.minPlayersToStart),
         isRecurring: false,
         matchType: values.matchType,
-        winnerPercent:
-          values.matchType === "BET" ? Number(values.winnerPercent) : undefined,
         minRank:
           values.matchType === "RANKED" ? Number(values.minRank) : undefined,
         maxRank:
@@ -137,9 +129,7 @@ export default function CreateMatchForm({
 
   return (
     <>
-      {/* THÈ TẠO TRẬN RIÊNG, NẰM DƯỚI CARD BOOKING VÀ CÓ KHOẢNG CÁCH */}
       <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-5 w-full mt-6">
-        {/* mt-6 tạo khoảng cách */}
         <p className="text-sm font-medium text-gray-500 mb-3 text-center">
           Không đủ người chơi? Tìm thêm đồng đội!
         </p>
@@ -155,7 +145,6 @@ export default function CreateMatchForm({
         </Button>
       </div>
 
-      {/* Modal Form Tạo Kèo */}
       <Modal
         title={
           <div className="text-lg font-bold text-gray-800">
@@ -178,7 +167,7 @@ export default function CreateMatchForm({
         </div>
 
         <Form form={form} layout="vertical" onFinish={handleCreateMatch}>
-          {/* Lựa chọn Thể thức */}
+          {/* Thể thức thi đấu */}
           <Form.Item
             label={
               <span className="font-semibold text-gray-700">
@@ -204,60 +193,88 @@ export default function CreateMatchForm({
             </Radio.Group>
           </Form.Item>
 
+          {/* Ô xử lý động theo thể thức thi đấu */}
           <Form.Item
             noStyle
-            shouldUpdate={(prev, curr) =>
-              prev.matchType !== curr.matchType ||
-              prev.winnerPercent !== curr.winnerPercent
-            }
+            shouldUpdate={(prev, curr) => prev.matchType !== curr.matchType}
           >
             {({ getFieldValue }) => {
               const type = getFieldValue("matchType");
 
+              // CHIA KÈO
               if (type === "BET") {
-                const currentWinnerPercent =
-                  getFieldValue("winnerPercent") || 0;
-                const loserPercent = 100 - currentWinnerPercent;
-
                 return (
-                  <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 mb-4">
+                  <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 mb-4 animate-in fade-in duration-200">
                     <Form.Item
                       label={
-                        <span className="text-yellow-700 font-bold">
-                          % Tiền sân phe THẮNG phải trả
+                        <span className="text-orange-800 font-bold uppercase tracking-wider text-[11px]">
+                          Phần thưởng Kèo (Phe thua bao)
                         </span>
                       }
+                      name="note"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng chọn hoặc nhập phần thưởng kèo!",
+                        },
+                      ]}
                       className="mb-0"
                     >
-                      <div className="flex items-center gap-4">
-                        <Form.Item name="winnerPercent" noStyle>
-                          <InputNumber
-                            min={0}
-                            max={50}
-                            step={10}
-                            formatter={(value) => `${value}%`}
-                            parser={(value) => value!.replace("%", "")}
-                            className="w-24 font-bold text-yellow-700 text-lg"
-                          />
-                        </Form.Item>
-                        <div className="flex-1 bg-yellow-100/80 py-1.5 px-3 rounded-lg border border-yellow-300 text-sm text-yellow-800 flex items-center gap-2 shadow-sm">
-                          <PicRightOutlined style={{ fontSize: "16px" }} />
-                          <span>
-                            <strong>Phe THUA</strong> sẽ trả:{" "}
-                            <span className="text-red-500 font-bold text-base">
-                              {loserPercent}%
-                            </span>
-                          </span>
-                        </div>
-                      </div>
+                      <Select
+                        placeholder="Chọn phần thưởng..."
+                        className="w-full font-bold"
+                        dropdownRender={(menu) => (
+                          <>
+                            {menu}
+                            <div className="p-2 border-t border-slate-100">
+                              <Input
+                                placeholder="Hoặc tự nhập kèo khác..."
+                                className="rounded-md"
+                                onKeyDown={(e) => e.stopPropagation()}
+                                onChange={(e) =>
+                                  form.setFieldsValue({
+                                    note: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          </>
+                        )}
+                      >
+                        <Select.Option value="Chầu nước giải khát">
+                          <div className="flex items-center gap-2">
+                            <Coffee size={16} className="text-amber-600" />
+                            <span>Chầu nước giải khát</span>
+                          </div>
+                        </Select.Option>
+                        <Select.Option value="Tiền sân">
+                          <div className="flex items-center gap-2">
+                            <MapPin size={16} className="text-emerald-600" />
+                            <span>Thanh toán tiền sân</span>
+                          </div>
+                        </Select.Option>
+                        <Select.Option value="Bữa ăn sáng/tối">
+                          <div className="flex items-center gap-2">
+                            <Utensils size={16} className="text-rose-600" />
+                            <span>Bữa ăn sáng/tối</span>
+                          </div>
+                        </Select.Option>
+                        <Select.Option value="Cầu/Bóng thi đấu">
+                          <div className="flex items-center gap-2">
+                            <Activity size={16} className="text-blue-600" />
+                            <span>Cầu/Bóng thi đấu</span>
+                          </div>
+                        </Select.Option>
+                      </Select>
                     </Form.Item>
                   </div>
                 );
               }
 
+              // ĐÁNH RANK: ĐÃ KHÔI PHỤC THUỘC TÍNH readOnly (Khóa cứng không cho sửa)
               if (type === "RANKED") {
                 return (
-                  <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 mb-4 grid grid-cols-2 gap-4">
+                  <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 mb-4 grid grid-cols-2 gap-4 animate-in fade-in duration-200">
                     <Form.Item
                       label={
                         <span className="text-purple-700 font-bold">
@@ -270,8 +287,8 @@ export default function CreateMatchForm({
                       <InputNumber
                         min={0}
                         step={100}
-                        className="w-full font-bold text-purple-700 text-lg"
-                        readOnly
+                        readOnly // Khóa không cho nhập tay
+                        className="w-full font-bold text-purple-700 text-lg bg-gray-100/50 cursor-not-allowed"
                       />
                     </Form.Item>
                     <Form.Item
@@ -282,21 +299,11 @@ export default function CreateMatchForm({
                       }
                       name="maxRank"
                       className="mb-0"
-                      rules={[
-                        { required: true, message: "Bắt buộc nhập" },
-                        ({ getFieldValue }) => ({
-                          validator(_, value) {
-                            if (!value || getFieldValue("minRank") <= value)
-                              return Promise.resolve();
-                            return Promise.reject(new Error("Phải ≥ Min!"));
-                          },
-                        }),
-                      ]}
                     >
                       <InputNumber
                         step={100}
-                        className="w-full font-bold text-purple-700 text-lg"
-                        readOnly
+                        readOnly // Khóa không cho nhập tay
+                        className="w-full font-bold text-purple-700 text-lg bg-gray-100/50 cursor-not-allowed"
                       />
                     </Form.Item>
                   </div>
@@ -397,18 +404,32 @@ export default function CreateMatchForm({
             </Form.Item>
           </div>
 
-          {/* Ghi chú */}
+          {/* Ghi chú thêm (Ẩn đi khi chọn thể thức BET) */}
           <Form.Item
-            label={
-              <span className="font-semibold text-gray-700">Ghi chú thêm</span>
-            }
-            name="note"
+            noStyle
+            shouldUpdate={(prev, curr) => prev.matchType !== curr.matchType}
           >
-            <Input.TextArea
-              rows={3}
-              placeholder="Ví dụ: Trình độ trung bình khá, tự mang nước/bóng..."
-              className="rounded-lg border-gray-300"
-            />
+            {({ getFieldValue }) => {
+              if (getFieldValue("matchType") !== "BET") {
+                return (
+                  <Form.Item
+                    label={
+                      <span className="font-semibold text-gray-700">
+                        Ghi chú thêm
+                      </span>
+                    }
+                    name="note"
+                  >
+                    <Input.TextArea
+                      rows={3}
+                      placeholder="Ví dụ: Trình độ trung bình khá, tự mang nước/bóng..."
+                      className="rounded-lg border-gray-300"
+                    />
+                  </Form.Item>
+                );
+              }
+              return null;
+            }}
           </Form.Item>
         </Form>
       </Modal>

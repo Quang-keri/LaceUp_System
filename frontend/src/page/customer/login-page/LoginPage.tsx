@@ -1,10 +1,10 @@
-// LoginPage.tsx
 import React, { useState } from "react";
 import authService from "../../../service/authService";
 import { useNavigate } from "react-router-dom";
 import { message } from "antd";
 import { useAuth } from "../../../context/AuthContext";
 import { GoogleOutlined } from "@ant-design/icons";
+import { useGoogleLogin } from "@react-oauth/google";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -32,6 +32,32 @@ const LoginPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleGoogleLogin = useGoogleLogin({
+    flow: "auth-code",
+    onSuccess: async (codeResponse) => {
+      setLoading(true);
+      try {
+        const response = await authService.loginWithGoogle(codeResponse.code);
+        if (response.code === 200) {
+          message.success("Đăng nhập bằng Google thành công!");
+          await refreshProfile();
+          navigate("/");
+        }
+      } catch (error: any) {
+        message.error(
+          "Đăng nhập Google thất bại: " +
+            (error.response?.data?.message || "Lỗi kết nối"),
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: (errorResponse) => {
+      console.error(errorResponse);
+      message.error("Quá trình xác thực với Google thất bại.");
+    },
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F5F3FF] px-4">
@@ -71,10 +97,11 @@ const LoginPage: React.FC = () => {
         <div className="my-4 text-center text-gray-400">HOẶC</div>
 
         <button
-          onClick={() => message.info("Tính năng đang phát triển")}
-          className="w-full border border-[#9156F1] text-[#9156F1] hover:bg-[#F3ECFF] py-2 rounded-lg transition"
+          onClick={() => handleGoogleLogin()}
+          disabled={loading}
+          className="w-full border border-[#9156F1] text-[#9156F1] flex justify-center items-center gap-2 hover:bg-[#F3ECFF] py-2 rounded-lg transition disabled:opacity-50"
         >
-        <GoogleOutlined />  Tiếp tục với Google
+          <GoogleOutlined /> Tiếp tục với Google
         </button>
 
         <div className="mt-4 text-center text-sm">

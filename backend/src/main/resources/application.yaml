@@ -74,6 +74,12 @@ jwt:
 
 token_reset_password_expire_seconds: 900
 
+google:
+  client:
+    id: ${GOOGLE_ID}
+    secret: ${GOOGLE_SECRET}
+    uri: ${GOOGLE_URI}
+
 payos:
   client-id: ${PAYOS_CLIENT_ID}
   api-key: ${PAYOS_API_KEY}

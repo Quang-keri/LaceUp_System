@@ -25,7 +25,6 @@ public class MatchRequest {
     private LocalDate endDate;
 
     private MatchType matchType;
-//    private Double winnerPercent;
     private Integer minRank;
     private Integer maxRank;
     private String note;
@@ -34,8 +33,6 @@ public class MatchRequest {
     private String street;
     @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
     private String ward;
-    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
-    private String district;
     @NotNull(message = "thành phố không bỏ trống")
     private Long cityId;
 }

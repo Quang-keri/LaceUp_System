@@ -29,13 +29,6 @@ export const matchService = {
     return response.data;
   },
 
-  confirmDeposit: async (matchId: string): Promise<ApiResponse<string>> => {
-    const response = await api.post(
-      `${API_BASE_URL}/${matchId}/confirm-deposit`,
-    );
-    return response.data;
-  },
-
   getOpenMatches: async (params: {
     page?: number;
     size?: number;
