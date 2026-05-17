@@ -6,7 +6,7 @@ import {
   Input,
   Button,
   message,
-} from "antd"; // Thêm message từ antd
+} from "antd";
 import dayjs from "dayjs";
 
 import bookingService from "../../../service/bookingService";
@@ -38,7 +38,6 @@ export default function CourtBookingPanel({
       return;
     }
 
-    // Format dữ liệu gửi xuống Backend
     const formattedDate = date.format("YYYY-MM-DD");
     const startTimeStr = `${formattedDate}T${start.format("HH:mm")}:00`;
     const endTimeStr = `${formattedDate}T${end.format("HH:mm")}:00`;
@@ -49,22 +48,19 @@ export default function CourtBookingPanel({
       message.warning(
         "Không thể đặt sân trong quá khứ. Vui lòng chọn lại giờ bắt đầu!",
       );
-      return; // Dừng luôn, không gọi API check nữa
+      return;
     }
-    // 1. Kiểm tra giờ kết thúc > giờ bắt đầu
     if (startObj.isAfter(endObj) || startObj.isSame(endObj)) {
       message.warning("Giờ kết thúc phải sau giờ bắt đầu");
       return;
     }
 
-    // 2. Kiểm tra các điều kiện thời gian (Tối thiểu 1h, Tối đa 8h, Không quá 14 ngày)
     const durationMinutes = endObj.diff(startObj, "minute");
     if (durationMinutes < 60) {
       message.warning("Thời gian thuê tối thiểu là 1 tiếng");
       return;
     }
     if (durationMinutes > 480) {
-      // 8 tiếng * 60 phút
       message.warning("Chỉ được thuê tối đa 8 tiếng cho một lần đặt");
       return;
     }
@@ -76,7 +72,6 @@ export default function CourtBookingPanel({
     setIsChecking(true);
 
     try {
-      // 3. Gọi API thật check Availability
       const payload = {
         courtId: court.courtId,
         quantity: quantity,
@@ -88,12 +83,9 @@ export default function CourtBookingPanel({
 
       const responseData = res.result || res.data;
 
-      // ĐÃ FIX BUGS: Đổi isAvailable thành available cho khớp với JSON Backend trả về
       if (res.code === 200 && responseData?.available === true) {
-        // Hiện thông báo thành công xanh lá cho xịn
         message.success(responseData?.message || "Sân khả dụng!");
 
-        // Hợp lệ -> Tiếp tục chuyển qua Modal Confirm
         onBook({
           date: formattedDate,
           start: start.format("HH:mm"),
@@ -101,7 +93,6 @@ export default function CourtBookingPanel({
           quantity: quantity,
         });
       } else {
-        // Backend báo lỗi logic (Đóng cửa, Kín sân...)
         message.error(
           responseData?.message ||
             res.message ||
@@ -109,10 +100,9 @@ export default function CourtBookingPanel({
         );
       }
     } catch (error: any) {
-    
       const errMsg =
         error.response?.data?.message ||
-        error.response?.data?.result?.message || 
+        error.response?.data?.result?.message ||
         "Lỗi khi kiểm tra lịch sân. Vui lòng thử lại!";
       message.error(errMsg);
     } finally {
@@ -216,19 +206,21 @@ export default function CourtBookingPanel({
         <Button
           onClick={handleBook}
           loading={isChecking}
-          className={`w-full h-[56px] 
+          className={`w-full h-[80px]
     text-lg font-extrabold tracking-wide
-    rounded-2xl 
-    transition-all duration-300 
-    shadow-lg shadow-[#9156F1]/30 
-    border-none text-white
+    rounded-2xl
+    transition-all duration-300
+    shadow-lg shadow-[#9156F1]/30
+    border-none !text-white
     ${
       isChecking
         ? "!bg-[#d8c3fb] hover:!bg-[#d8c3fb]"
         : "!bg-gradient-to-r from-[#9156F1] to-[#B57BFF] hover:from-[#7e43d9] hover:to-[#a86df5]"
     }`}
         >
-          {isChecking ? "Đang kiểm tra lịch trống..." : "Đặt sân ngay"}
+          <span className="!text-white">
+            {isChecking ? "Đang kiểm tra lịch trống..." : "Đặt sân ngay"}
+          </span>
         </Button>
       </div>
     </div>

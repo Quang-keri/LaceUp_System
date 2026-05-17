@@ -197,11 +197,6 @@ export default function BookingTable({
             onClick: () => onEditSlot(record),
           },
           {
-            key: "addService",
-            label: "Thêm dịch vụ", // NÚT THÊM DỊCH VỤ Ở ĐÂY
-            onClick: () => onAddService(record),
-          },
-          {
             key: "status",
             label: "Cập nhật trạng thái",
             onClick: () => onUpdateStatus(record),

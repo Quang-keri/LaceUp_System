@@ -12,6 +12,7 @@ public class PostFilterRequest {
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
     private List<Long> cityIds;
+    private List<Integer> provinceCodes;
     private List<Long> categoryIds;
     private List<Long> amenityIds;
     private String sortBy;

@@ -14,7 +14,7 @@ export interface FilterState {
   minPrice?: number;
   maxPrice?: number;
   sortBy?: string;
-  cityIds?: number[];
+  provinceCodes?: number[]; 
   categoryIds?: number[];
   amenityIds?: number[];
   date?: string;
@@ -58,12 +58,11 @@ export default function PostPage() {
     fetchPosts(filters);
   }, [filters]);
 
-  // debounce titleDraft -> update URL filter `title`
   useEffect(() => {
     if (debouncedTitle !== (filters.title || "")) {
       setFilters({ title: debouncedTitle });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [debouncedTitle]);
 
   const handleFilterChange = (newFilters: Partial<FilterState>) => {

@@ -539,7 +539,7 @@ public class DataInitializer implements CommandLineRunner {
                 .filter(a -> a.getOwner().equals(owner)).findFirst().orElseThrow();
         Court court = courtRepository.findAllByRentalArea(area).getFirst();
         Post post = Post.builder()
-                .title("Chào mừng đến với " + area.getRentalAreaName()).description("Sân bãi tiêu chuẩn, đầy đủ tiện nghi cho mọi lứa tuổi.")
+                .title(area.getRentalAreaName()).description("Sân bãi tiêu chuẩn, đầy đủ tiện nghi cho mọi lứa tuổi.")
                 .postStatus(PostStatus.PUBLISHED).user(owner).court(court).rentalArea(area).build();
         postRepository.save(post);
     }
@@ -601,8 +601,8 @@ public class DataInitializer implements CommandLineRunner {
             }
 
             Post post = Post.builder()
-                    .title("Ưu đãi đặc biệt từ " + owner.getUserName())
-                    .description("Giảm giá 10% cho khách hàng mới đặt sân lần đầu.")
+                    .title(area.getRentalAreaName())
+                    .description("Nhiều ưu đãi cho khách hàng mới đặt sân lần đầu.")
                     .postStatus(PostStatus.PUBLISHED)
                     .user(owner)
                     .court(firstCourt)

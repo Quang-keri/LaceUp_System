@@ -195,7 +195,7 @@ export const router = createBrowserRouter([
       { index: true, element: <OwnerDashboard /> },
       { path: "dashboard", element: <OwnerDashboard /> },
       { path: "buildings/list", element: <BuildingListPage /> },
-      // { path: "buildings/edit/:buildingId", element: <BuildingEditPage /> },
+     
       {
         path: "buildings/:buildingId/courts",
         element: <CourtManagementPage />,
@@ -204,10 +204,7 @@ export const router = createBrowserRouter([
         path: "courts",
         element: <CourtManagementPage />,
       },
-      // {
-      //   path: "buildings/create",
-      //   element: <BuildingFormPage />,
-      // },
+ 
       { path: "/owner/courts/:courtId/prices", element: <CourtPricePage /> },
       { path: "bookings/management", element: <BookingManagementPage /> },
       { path: "bookings/calendar", element: <ManageSchedulePage /> },

@@ -69,6 +69,55 @@ public class CommissionConfigServiceImpl implements CommissionConfigService {
     }
 
     @Override
+    @Transactional
+    public CommissionConfigResponse updateConfig(UUID configId, CommissionConfigDTO dto) {
+        CommissionConfig config = configRepo.findById(configId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy cấu hình hoa hồng"));
+
+        boolean isDefault = Boolean.TRUE.equals(dto.getIsDefault());
+
+        if (isDefault) {
+            configRepo.findByIsDefaultTrue().ifPresent(oldDefault -> {
+                if (!oldDefault.getCommissionConfigId().equals(configId)) {
+                    oldDefault.setIsDefault(false);
+                    oldDefault.setIsActive(false);
+                    configRepo.save(oldDefault);
+                }
+            });
+
+            config.setRentalArea(null);
+            config.setIsDefault(true);
+        } else {
+            if (dto.getRentalAreaId() == null) {
+                throw new RuntimeException("Vui lòng chọn tòa nhà/khu sân khi cấu hình riêng");
+            }
+
+            configRepo.findFirstByRentalArea_RentalAreaIdAndIsActiveTrue(dto.getRentalAreaId())
+                    .ifPresent(oldConfig -> {
+                        if (!oldConfig.getCommissionConfigId().equals(configId)) {
+                            throw new RuntimeException("Khu sân này đã có cấu hình hoa hồng riêng");
+                        }
+                    });
+
+            RentalArea rentalArea = rentalAreaRepository.findById(dto.getRentalAreaId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy tòa nhà/khu sân"));
+
+            config.setRentalArea(rentalArea);
+            config.setIsDefault(false);
+        }
+
+        config.setMinBookings(dto.getMinBookings());
+        config.setMaxBookings(dto.getMaxBookings());
+        config.setRate(dto.getRate() != null ? dto.getRate() : BigDecimal.ZERO);
+        config.setIsActive(true);
+        config.setNote(dto.getNote());
+
+        CommissionConfig saved = configRepo.save(config);
+
+        return mapToResponse(saved);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<CommissionConfigResponse> getAllConfigs() {
         return configRepo.findAll()

@@ -111,6 +111,10 @@ export const financeService = {
 
     return res.data.result;
   },
+  updateCommissionConfig: async (id: string, data: CommissionConfigDTO) => {
+    const res = await api.put(`/admin/commission-configs/${id}`, data);
+    return res.data.result;
+  },
 
   getRentalAreaOptions: async () => {
     const res = await api.get(`/rental-areas/dropdown/options`);

@@ -21,7 +21,7 @@ const LoginPage: React.FC = () => {
       if (response.code === 200) {
         message.success("Đăng nhập thành công!");
         await refreshProfile();
-        navigate("/");
+        navigate("/home");
       }
     } catch (error: any) {
       message.error(

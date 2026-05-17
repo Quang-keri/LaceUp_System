@@ -100,15 +100,32 @@ public class PostSpecification {
             }
 
 
+            Join<Court, RentalArea> rentalAreaJoin = null;
+
+            if (
+                    (filter.getCityIds() != null && !filter.getCityIds().isEmpty()) ||
+                            (filter.getProvinceCodes() != null && !filter.getProvinceCodes().isEmpty())
+            ) {
+                rentalAreaJoin = courtJoin.join("rentalArea", JoinType.INNER);
+            }
+
             if (filter.getCityIds() != null && !filter.getCityIds().isEmpty()) {
-                Join<Court, RentalArea> rentalAreaJoin = courtJoin.join("rentalArea", JoinType.INNER);
-//
                 predicates.add(
                         rentalAreaJoin
                                 .get("address")
                                 .get("city")
                                 .get("cityId")
                                 .in(filter.getCityIds())
+                );
+            }
+
+            if (filter.getProvinceCodes() != null && !filter.getProvinceCodes().isEmpty()) {
+                predicates.add(
+                        rentalAreaJoin
+                                .get("address")
+                                .get("city")
+                                .get("provinceCode")
+                                .in(filter.getProvinceCodes())
                 );
             }
 

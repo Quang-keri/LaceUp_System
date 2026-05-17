@@ -41,9 +41,8 @@ export default function VnPayReturnPage() {
         return;
       }
 
-    
       try {
-        const queryString = window.location.search; 
+        const queryString = window.location.search;
         const res = await paymentService.handleVnPayReturn(queryString);
 
         if (!mounted) return;
@@ -139,7 +138,7 @@ export default function VnPayReturnPage() {
         <div className="flex justify-center gap-3 mt-4">
           {state.bookingId && state.mode === "BOOKED" && (
             <Button
-              type="primary"
+              style={{ color: "white",background:"#9156F1" }}
               size="large"
               onClick={() => navigate(`/booking/${state.bookingId}`)}
             >

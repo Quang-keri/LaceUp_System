@@ -103,15 +103,11 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
     {
       key: "submenu-users",
       icon: <TeamOutlined />,
-      label: "Đối tác & Nhân viên",
+      label: "Khách hàng",
       children: [
         {
           key: "/owner/users/customers",
           label: <Link to="/owner/users/customers">Khách hàng</Link>,
-        },
-        {
-          key: "/owner/users/staffs",
-          label: <Link to="/owner/users/staffs">Nhân viên</Link>,
         },
       ],
     },
@@ -124,7 +120,6 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
       key: "submenu-settings",
       icon: <SettingOutlined />,
       label: "Thiết lập",
-      //BuildingListPage
       children: [
         {
           key: "/owner/buildings",
@@ -207,7 +202,6 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
                 darkItemBg: "transparent",
                 darkSubMenuItemBg: isDark ? "#1f1f1f" : "#007acc",
 
-                // Thêm darkPopupBg để đổi màu nền của các menu xổ xuống (Dropdown Submenu)
                 darkPopupBg: isDark ? "#1f1f1f" : "#007acc",
                 popupBg: isDark ? "#1f1f1f" : "#007acc",
 

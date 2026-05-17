@@ -2,9 +2,11 @@ import { Slider, Checkbox, Radio, Select, ConfigProvider, Rate } from "antd";
 import type { CheckboxValueType } from "antd/es/checkbox/Group";
 import type { FilterState } from "./PostPage";
 import { useEffect, useState } from "react";
-import cityService from "../../../service/cityService";
+
+import { locationService } from "../../../service/locationService";
 import categoryService from "../../../service/categoryService";
 import amenityService from "../../../service/amenityService";
+
 interface FilterSidebarProps {
   filters: FilterState;
   onChange: (newFilters: Partial<FilterState>) => void;
@@ -14,29 +16,30 @@ export default function FilterSidebar({
   filters,
   onChange,
 }: FilterSidebarProps) {
-  const [cities, setCities] = useState<any[]>([]);
+  const [provinces, setProvinces] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [amenities, setAmenities] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchCities();
+    fetchProvinces();
     fetchCategories();
     fetchAmenities();
   }, []);
 
-  const fetchCities = async () => {
+  const fetchProvinces = async () => {
     try {
-      const res = await cityService.getAll();
-      if (res.result) setCities(res.result);
+      const result = await locationService.getProvinces();
+      setProvinces(result || []);
     } catch (e) {
       console.error(e);
+      setProvinces([]);
     }
   };
 
   const fetchCategories = async () => {
     try {
       const res = await categoryService.getAllCategories(1, 100);
-      if (res.result && res.result.data) setCategories(res.result.data);
+      if (res.result?.data) setCategories(res.result.data);
     } catch (e) {
       console.error(e);
     }
@@ -50,6 +53,7 @@ export default function FilterSidebar({
       console.error(e);
     }
   };
+
   return (
     <ConfigProvider
       theme={{
@@ -67,6 +71,7 @@ export default function FilterSidebar({
 
         <div className="flex flex-col gap-2">
           <h4 className="text-sm font-bold text-gray-700">Khoảng giá / giờ</h4>
+
           <div className="px-2">
             <Slider
               range
@@ -79,15 +84,16 @@ export default function FilterSidebar({
               }}
             />
           </div>
+
           <div className="flex justify-between text-xs font-medium text-gray-500">
             <span>0đ</span>
             <span>500k+</span>
           </div>
         </div>
 
-        {/* SẮP XẾP */}
         <div className="flex flex-col gap-3">
           <h4 className="text-sm font-bold text-gray-700">Sắp xếp</h4>
+
           <Radio.Group
             className="flex flex-col gap-1"
             value={filters.sortBy}
@@ -99,12 +105,14 @@ export default function FilterSidebar({
             >
               Mới nhất
             </Radio>
+
             <Radio
               value="price_low"
               className="m-0 px-2 py-1.5 rounded-lg hover:bg-purple-50 transition-colors"
             >
               Giá thấp → cao
             </Radio>
+
             <Radio
               value="price_high"
               className="m-0 px-2 py-1.5 rounded-lg hover:bg-purple-50 transition-colors"
@@ -113,6 +121,7 @@ export default function FilterSidebar({
             </Radio>
           </Radio.Group>
         </div>
+
         <div className="flex flex-col gap-3">
           <h4 className="text-sm font-bold text-gray-700">Đánh giá</h4>
 
@@ -137,33 +146,37 @@ export default function FilterSidebar({
                 </div>
               </Radio>
             ))}
-            <div>
-              <Radio
-                value={0}
-                className="m-0 px-2 py-1.5 rounded-lg hover:bg-purple-50"
-              >
-                Tất cả
-              </Radio>
-            </div>
+
+            <Radio
+              value={0}
+              className="m-0 px-2 py-1.5 rounded-lg hover:bg-purple-50"
+            >
+              Tất cả
+            </Radio>
           </Radio.Group>
         </div>
+
         <div className="flex flex-col gap-3">
           <h4 className="text-sm font-bold text-gray-700">Khu vực</h4>
+
           <Select
             mode="multiple"
             placeholder="Chọn khu vực"
-            value={filters.cityIds}
-            onChange={(values: number[]) => onChange({ cityIds: values })}
+            value={filters.provinceCodes}
+            onChange={(values: number[]) => onChange({ provinceCodes: values })}
             style={{ width: "100%" }}
-            options={cities.map((c: any) => ({
-              label: c.cityName,
-              value: c.cityId,
+            showSearch
+            optionFilterProp="label"
+            options={provinces.map((p: any) => ({
+              label: p.name,
+              value: p.code,
             }))}
           />
         </div>
 
         <div className="flex flex-col gap-3">
           <h4 className="text-sm font-bold text-gray-700">Loại sân</h4>
+
           <Select
             mode="multiple"
             placeholder="Chọn loại sân"
@@ -179,6 +192,7 @@ export default function FilterSidebar({
 
         <div className="flex flex-col gap-3">
           <h4 className="text-sm font-bold text-gray-700">Tiện nghi</h4>
+
           <Checkbox.Group
             className="grid grid-cols-2 gap-2"
             value={filters.amenityIds}

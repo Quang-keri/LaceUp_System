@@ -18,4 +18,6 @@ public interface CommissionConfigService {
     BigDecimal getApplicableRate(UUID rentalAreaId, int bookingCount);
 
     BigDecimal getApplicableRate(UUID rentalAreaId);
+
+    CommissionConfigResponse updateConfig(UUID configId, CommissionConfigDTO dto);
 }

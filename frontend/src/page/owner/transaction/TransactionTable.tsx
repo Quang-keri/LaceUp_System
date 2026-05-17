@@ -219,9 +219,6 @@ const TransactionTable: React.FC<Props> = ({
         dataSource={data?.data || []}
         loading={loading}
         pagination={false}
-        locale={{
-          emptyText: "Không có giao dịch nào để hiển thị",
-        }}
         size="small"
       />
 
