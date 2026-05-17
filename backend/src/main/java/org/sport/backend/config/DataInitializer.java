@@ -382,6 +382,8 @@ public class DataInitializer implements CommandLineRunner {
                 .owner(owner)
                 .openTime(LocalTime.of(5, 0))
                 .closeTime(LocalTime.of(22, 0))
+                .contactName(owner.getUserName())
+                .contactPhone(owner.getPhone())
                 .isActive(true)
                 .status(RentalAreaStatus.ACTIVE)
                 .createdAt(LocalDateTime.now().minusMonths(2))

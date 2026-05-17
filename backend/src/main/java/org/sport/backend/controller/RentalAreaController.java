@@ -37,7 +37,7 @@ public class RentalAreaController {
     private ServiceItemService serviceItemService;
 
     @GetMapping("/dropdown/options")
-//    @PreAuthorize("hasAuthority('VIEW_RENTAL_AREA')")
+    @PreAuthorize("hasAuthority('VIEW_RENTAL_AREA')")
     public ApiResponse<List<RentalAreaOptionResponse>> getRentalAreaOptions() {
         return ApiResponse.success(
                 200,
@@ -79,7 +79,7 @@ public class RentalAreaController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
+    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
     public ApiResponse<?> createRentalArea(
             @Valid @ModelAttribute RentalAreaRequest request
     ) {
@@ -132,7 +132,7 @@ public class RentalAreaController {
     }
 
     @GetMapping("/my-rentals")
-//    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<?> getMyRentalAreas(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
