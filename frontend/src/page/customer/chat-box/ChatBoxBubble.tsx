@@ -1,7 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import chatBotService from "../../../service/chatBotService";
 import type { ChatbotRequest } from "../../../types/chatBox";
-import { Send, Bot, X, Zap, ExternalLink, Banknote, MapPin, Star } from "lucide-react";
+import {
+  Send,
+  Bot,
+  X,
+  Zap,
+  ExternalLink,
+  Banknote,
+  MapPin,
+  Star,
+} from "lucide-react";
 
 interface Message {
   id: string;
@@ -14,7 +23,7 @@ const ChatboxBubble: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Chào bạn! Tôi là HLV Thể thao AI ⚡\nSẵn sàng lên kèo hay cần tư vấn chiến thuật nào?",
+      text: "Chào bạn! Tôi là HLV Thể thao AI \nSẵn sàng lên kèo hay cần tư vấn chiến thuật nào?",
       sender: "bot",
     },
   ]);
@@ -81,7 +90,8 @@ const ChatboxBubble: React.FC = () => {
       );
     }
 
-    const rentalRegex = /\[RENTAL\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]/g;
+    const rentalRegex =
+      /\[RENTAL\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]/g;
     const matches = [...msg.text.matchAll(rentalRegex)];
 
     if (matches.length > 0) {
@@ -124,19 +134,19 @@ const ChatboxBubble: React.FC = () => {
 
                   {/* Body: Thông tin chi tiết */}
                   <div className="flex flex-col gap-2 text-[12px] font-medium text-slate-500 relative z-10">
-                    
                     {/* Hàng 1: Địa chỉ */}
                     <div className="flex items-start gap-2">
                       <MapPin
                         size={14}
                         className="text-purple-400 mt-[2px] flex-shrink-0"
                       />
-                      <span className="line-clamp-2 leading-tight">{address.trim()}</span>
+                      <span className="line-clamp-2 leading-tight">
+                        {address.trim()}
+                      </span>
                     </div>
 
                     {/* Hàng 2: Giá và Đánh giá (Có đường kẻ mỏng phân cách ở trên) */}
                     <div className="flex items-center justify-between gap-2 mt-1 pt-2 border-t border-slate-100">
-                      
                       {/* Cột Giá */}
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <Banknote
@@ -158,7 +168,6 @@ const ChatboxBubble: React.FC = () => {
                           className="text-orange-400 fill-orange-400 mb-[1px]"
                         />
                       </div>
-
                     </div>
                   </div>
                 </a>
@@ -232,8 +241,7 @@ const ChatboxBubble: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-white font-black tracking-widest uppercase italic text-lg leading-tight flex items-center gap-1">
-                  SPORTBOT{" "}
-                  <Zap size={16} className="text-yellow-400 fill-yellow-400" />
+                  LACE UP BOT{" "}
                 </h3>
                 <p className="text-orange-400 text-[10px] font-bold uppercase tracking-wider">
                   Trợ lý AI 24/7

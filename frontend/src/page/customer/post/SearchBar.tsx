@@ -3,6 +3,7 @@ import { Input, Select, Button, ConfigProvider } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { FilterState } from "./PostPage";
 import { locationService } from "../../../service/locationService";
+import categoryService from "../../../service/categoryService";
 
 interface SearchBarProps {
   initialTitle?: string;
@@ -27,7 +28,9 @@ export default function SearchBar({
   const [provinceCode, setProvinceCode] = useState<number | undefined>(
     undefined,
   );
+
   const [provinces, setProvinces] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
     setTitle(initialTitle || "");
@@ -35,21 +38,42 @@ export default function SearchBar({
 
   useEffect(() => {
     if (onTitleChange) onTitleChange(title);
-  }, [title]);
+  }, [title, onTitleChange]);
 
   useEffect(() => {
-    const loadProvinces = async () => {
-      const result = await locationService.getProvinces();
-      setProvinces(result || []);
-    };
-
-    loadProvinces();
+    fetchProvinces();
+    fetchCategories();
   }, []);
 
   useEffect(() => {
     setCategoryId(filters?.categoryIds?.[0]);
     setProvinceCode(filters?.provinceCodes?.[0]);
   }, [filters?.categoryIds, filters?.provinceCodes]);
+
+  const fetchProvinces = async () => {
+    try {
+      const result = await locationService.getProvinces();
+      setProvinces(result || []);
+    } catch (error) {
+      console.error(error);
+      setProvinces([]);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await categoryService.getAllCategories(1, 100);
+
+      if (res.result?.data) {
+        setCategories(res.result.data);
+      } else {
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error(error);
+      setCategories([]);
+    }
+  };
 
   const handleSearchClick = () => {
     onSearch({
@@ -104,7 +128,7 @@ export default function SearchBar({
             value={provinceCode}
             onChange={(value) => setProvinceCode(value)}
             options={provinces.map((p) => ({
-              value: p.code, 
+              value: p.code,
               label: p.name,
             }))}
           />
@@ -113,14 +137,14 @@ export default function SearchBar({
             placeholder="Môn thể thao"
             className="w-48 shadow-[0_2px_10px_rgb(0,0,0,0.05)] hover:shadow-[0_4px_15px_rgb(0,0,0,0.08)] transition-all"
             allowClear
+            showSearch
+            optionFilterProp="label"
             value={categoryId}
             onChange={(value) => setCategoryId(value)}
-            options={[
-              { value: 1, label: "Cầu lông" },
-              { value: 2, label: "Bóng đá" },
-              { value: 3, label: "Pickleball" },
-              { value: 4, label: "Tennis" },
-            ]}
+            options={categories.map((c) => ({
+              value: c.categoryId,
+              label: c.categoryName,
+            }))}
           />
 
           <Button

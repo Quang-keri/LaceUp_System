@@ -15,7 +15,6 @@ const Footer = () => {
             <div className="space-y-3 text-sm text-gray-300 leading-relaxed">
               <p>Email: werelacezone@gmail.com</p>
               <p>Địa chỉ: Thành phố Hồ Chí Minh</p>
-              <p>Hotline: 0909 999 999</p>
             </div>
           </div>
 

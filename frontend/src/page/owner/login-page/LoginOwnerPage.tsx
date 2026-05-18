@@ -59,7 +59,7 @@ const LoginOwnerPage: React.FC = () => {
             <div className="logo">S</div>
 
             <div>
-              <h3>SPORT BOOKING</h3>
+              <h3>Lace Up</h3>
               <span>QUẢN LÝ SÂN THỂ THAO</span>
             </div>
           </div>

@@ -24,8 +24,8 @@ const { Text, Title } = Typography;
 
 interface Props {
   open: boolean;
-  booking: any; // Booking hiện tại đang được chọn
-  rentalAreaId: string | null; // ID tòa nhà để lấy danh sách dịch vụ
+  booking: any;
+  rentalAreaId: string | null; 
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -46,7 +46,7 @@ export default function AddServiceModal({
   useEffect(() => {
     if (open && rentalAreaId) {
       fetchServices(rentalAreaId);
-      setCart([]); // Reset giỏ hàng khi mở lại
+      setCart([]); 
       setKeyword("");
     }
   }, [open, rentalAreaId]);
@@ -57,7 +57,7 @@ export default function AddServiceModal({
       // const res = await rentalService.getServicesByRentalArea(areaId);
       // setAvailableServices(res.result || []);
 
-      // Data giả lập để test giao diện
+      
       setAvailableServices([
         { id: "s1", name: "Nước suối Aquafina", price: 10000, unit: "Chai" },
         { id: "s2", name: "Thuê vợt cầu lông", price: 50000, unit: "Cái" },

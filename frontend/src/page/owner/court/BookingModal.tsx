@@ -6,7 +6,7 @@ interface BookingModalProps {
   onCancel: () => void;
   onOk: () => void;
   formState: any;
-  setFormState: (state: any) => void;
+  setFormState: React.Dispatch<React.SetStateAction<any>>;
   selectedSlots: any[];
   onRemoveSlot?: (index: number) => void;
 }
@@ -20,6 +20,9 @@ export const BookingModal = ({
   selectedSlots,
   onRemoveSlot,
 }: BookingModalProps) => {
+  const formatMoney = (value?: string | number) =>
+    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
   return (
     <Modal
       title="Tạo lịch đặt"
@@ -30,41 +33,63 @@ export const BookingModal = ({
       cancelText="Hủy"
       width={600}
     >
-      <div className="space-y-3">
-        <Input
-          placeholder="Tên khách hàng"
-          value={formState.customerName}
-          onChange={(e) =>
-            setFormState({ ...formState, customerName: e.target.value })
-          }
-        />
-        <Input
-          placeholder="Số điện thoại"
-          value={formState.phone}
-          onChange={(e) =>
-            setFormState({ ...formState, phone: e.target.value })
-          }
-        />
+      <div className="space-y-3 ">
+        <div>
+          <Input
+            placeholder="Tên khách hàng"
+            value={formState.customerName}
+            onChange={(e) =>
+              setFormState((prev: any) => ({
+                ...prev,
+                customerName: e.target.value,
+              }))
+            }
+          />
+        </div>
+        <div>
+          <Input
+            placeholder="Số điện thoại"
+            value={formState.phone}
+            onChange={(e) =>
+              setFormState((prev: any) => ({
+                ...prev,
+                phone: e.target.value,
+              }))
+            }
+          />
+        </div>
+
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="text-xs text-gray-500">
               Hình thức thanh toán
             </label>
             <Select
+              className="w-full"
               value={formState.paymentType || "UNPAID"}
               onChange={(v) => {
-                // v: 'UNPAID' | 'PARTIAL' | 'FULL'
-                if (v === "FULL") {
-                  setFormState({
-                    ...formState,
+                setFormState((prev: any) => {
+                  if (v === "FULL") {
+                    return {
+                      ...prev,
+                      paymentType: v,
+                      paidAmount: prev.totalPrice || 0,
+                    };
+                  }
+
+                  if (v === "UNPAID") {
+                    return {
+                      ...prev,
+                      paymentType: v,
+                      paidAmount: 0,
+                    };
+                  }
+
+                  return {
+                    ...prev,
                     paymentType: v,
-                    paidAmount: formState.totalPrice || 0,
-                  });
-                } else if (v === "UNPAID") {
-                  setFormState({ ...formState, paymentType: v, paidAmount: 0 });
-                } else {
-                  setFormState({ ...formState, paymentType: v });
-                }
+                  };
+                });
               }}
               options={[
                 { label: "Chưa thanh toán", value: "UNPAID" },
@@ -73,13 +98,21 @@ export const BookingModal = ({
               ]}
             />
           </div>
+
           <div className="flex-1">
             <label className="text-xs text-gray-500">
               Phương thức thanh toán
             </label>
             <Select
+              className="w-full"
               value={formState.paymentMethod || "BANK_TRANSFER"}
-              onChange={(v) => setFormState({ ...formState, paymentMethod: v })}
+              onChange={(v) =>
+                setFormState((prev: any) => ({
+                  ...prev,
+                  paymentMethod: v,
+                }))
+              }
+              disabled={formState.paymentType === "UNPAID"}
               options={[
                 { label: "Chuyển khoản ngân hàng", value: "BANK_TRANSFER" },
                 { label: "Tiền mặt", value: "CASH" },
@@ -89,59 +122,74 @@ export const BookingModal = ({
             />
           </div>
         </div>
+
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="text-xs text-gray-500">Tổng tiền cần trả</label>
             <InputNumber
               className="w-full"
-              formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+              formatter={(v) => formatMoney(v)}
               value={formState.totalPrice}
-              onChange={(v) =>
-                setFormState({ ...formState, totalPrice: v || 0 })
-              }
+              disabled
               addonAfter="VND"
             />
           </div>
+
           <div className="flex-1">
             <label className="text-xs text-gray-500">Khách đã thanh toán</label>
             <InputNumber
               className="w-full"
-              formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+              min={0}
+              max={formState.totalPrice || 0}
+              formatter={(v) => formatMoney(v)}
               value={formState.paidAmount}
+              disabled={formState.paymentType === "UNPAID"}
               onChange={(v) =>
-                setFormState({
-                  ...formState,
-                  paidAmount: v || 0,
-                  paymentType:
-                    (v || 0) === 0
-                      ? "UNPAID"
-                      : v === formState.totalPrice
-                      ? "FULL"
-                      : "PARTIAL",
+                setFormState((prev: any) => {
+                  const paidAmount = Number(v || 0);
+
+                  return {
+                    ...prev,
+                    paidAmount,
+                    paymentType:
+                      paidAmount === 0
+                        ? "UNPAID"
+                        : paidAmount >= Number(prev.totalPrice || 0)
+                        ? "FULL"
+                        : "PARTIAL",
+                  };
                 })
               }
               addonAfter="VND"
             />
           </div>
         </div>
+
         <Input.TextArea
           placeholder="Ghi chú"
           value={formState.note}
-          onChange={(e) => setFormState({ ...formState, note: e.target.value })}
+          onChange={(e) =>
+            setFormState((prev: any) => ({
+              ...prev,
+              note: e.target.value,
+            }))
+          }
         />
       </div>
 
       <h4 className="mt-4 font-semibold">Khung giờ đã chọn:</h4>
+
       <div className="bg-gray-50 p-3 rounded-md mt-2 max-h-40 overflow-y-auto text-sm">
         {selectedSlots.map((s, i) => (
           <div
-            key={i}
+            key={s.id || i}
             className="mb-1 border-b pb-1 last:border-0 flex items-start justify-between"
           >
             <div>
               <b className="text-blue-600">{s.courtCode}</b>: {s.startDisplay} →{" "}
               {s.endDisplay}
             </div>
+
             <div>
               {onRemoveSlot && (
                 <Popconfirm

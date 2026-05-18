@@ -3,14 +3,13 @@ import { Card, Button } from "antd";
 
 export default function CourtCard({ post, onClick }: any) {
   const addressLabel = post?.address
-    ? `${post.address.street}, ${post.address.ward}, ${post.address.district}, ${post.address.city?.cityName}`
+    ? `${post.address.street}, ${post.address.ward}, ${post.address.city?.cityName}`
     : "";
 
   const hasRating = post.avgRating && post.avgRating > 0;
 
   return (
     <div className="relative">
-      {/* Badge rating */}
       {hasRating && (
         <div className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full shadow-md flex items-center gap-1">
           <StarFilled style={{ color: "#facc15" }} />

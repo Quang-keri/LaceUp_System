@@ -29,12 +29,14 @@ const BookingStatusUpdateModal: React.FC<Props> = ({
 
   const statusOptions = [
     { label: "Đã xác nhận", value: BookingStatus.BOOKED },
+        { label: "Đang sử dụng", value: BookingStatus.USING },
     { label: "Hoàn thành", value: BookingStatus.COMPLETED },
     { label: "Hủy", value: BookingStatus.CANCELLED },
   ];
 
   const statusColors: Record<string, string> = {
     [BookingStatus.BOOKED]: "#1890ff",
+     [BookingStatus.USING]: "#09d245",
     [BookingStatus.COMPLETED]: "#52c41a",
     [BookingStatus.CANCELLED]: "#f5222d",
   };
@@ -89,7 +91,7 @@ const BookingStatusUpdateModal: React.FC<Props> = ({
           </div>
         )}
 
-        {/* Status Select */}
+      
         <Form.Item
           label="Trạng thái mới"
           name="bookingStatus"
@@ -103,7 +105,7 @@ const BookingStatusUpdateModal: React.FC<Props> = ({
           />
         </Form.Item>
 
-        {/* Note/Reason */}
+      
         <Form.Item label="Ghi chú (Tùy chọn)" name="note">
           <Input.TextArea
             placeholder="Lý do cập nhật trạng thái (VD: Khách hủy, hoàn thành thành công)"
@@ -111,7 +113,7 @@ const BookingStatusUpdateModal: React.FC<Props> = ({
           />
         </Form.Item>
 
-        {/* Booking Info Summary */}
+    
         {booking && (
           <div
             style={{
@@ -123,7 +125,7 @@ const BookingStatusUpdateModal: React.FC<Props> = ({
             }}
           >
             <div style={{ marginBottom: "8px" }}>
-              <strong>Chi tiết đặt sân:</strong>
+              <strong>Chi tiết đặt sân :</strong>
             </div>
             <div
               style={{

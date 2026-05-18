@@ -233,6 +233,7 @@ public class DataInitializer implements CommandLineRunner {
                 Permission.builder().permissionName("CREATE_RENTAL_AREA").description("Tạo mới khu vực cho thuê (Cơ sở)").build(),
                 Permission.builder().permissionName("UPDATE_RENTAL_AREA").description("Cập nhật thông tin khu vực cho thuê").build(),
                 Permission.builder().permissionName("DELETE_RENTAL_AREA").description("Xóa/Vô hiệu hóa khu vực cho thuê").build(),
+                Permission.builder().permissionName("VIEW_RENTAL_AREA").description("Xem thông tin khu vực cho thuê").build(),
 
                 Permission.builder().permissionName("CREATE_POST").description("Tạo bài đăng mới").build(),
                 Permission.builder().permissionName("UPDATE_POST").description("Cập nhật bài đăng của mình").build(),
@@ -287,7 +288,8 @@ public class DataInitializer implements CommandLineRunner {
                 Permission.builder().permissionName("VIEW_PAYOUT").description("Xem lịch sử nhận tiền của cơ sở").build(),
 
                 Permission.builder().permissionName("MANAGE_COMMISSION").description("Thiết lập và quản lý cấu hình hoa hồng").build(),
-                Permission.builder().permissionName("VIEW_COMMISSION").description("Xem bảng cấu hình phần trăm hoa hồng").build()
+                Permission.builder().permissionName("VIEW_COMMISSION").description("Xem bảng cấu hình phần trăm hoa hồng").build(),
+                Permission.builder().permissionName("VIEW_REPORT").description("Xem bảng báo cáo").build()
         );
         permissionRepository.saveAll(permissions);
     }

@@ -3,8 +3,17 @@ import type { BookingListResponse, BookingResponse } from "../types/booking";
 import type { ApiResponse } from "../types/ApiResponse";
 
 class BookingService {
+  async previewOwnerBookingPrice(payload: {
+    slots: { courtCopyId: string; startTime: string; endTime: string }[];
+  }) {
+    const response = await api.post<ApiResponse<number>>(
+      "/bookings/preview-price",
+      payload,
+    );
+    return response.data;
+  }
 
-async createOwnerBooking(payload: {
+  async createOwnerBooking(payload: {
     customerName: string;
     phone: string;
     note: string;
@@ -13,8 +22,8 @@ async createOwnerBooking(payload: {
     slots: { courtCopyId: string; startTime: string; endTime: string }[];
   }) {
     const response = await api.post<ApiResponse<BookingResponse>>(
-      "/bookings/owner", 
-      payload
+      "/bookings/owner",
+      payload,
     );
     return response.data;
   }
@@ -27,12 +36,13 @@ async createOwnerBooking(payload: {
   }
   async addExtraServices(
     bookingId: string,
-    items: { 
-       serviceId: string;
-       quantity: number }[],
+    items: {
+      serviceId: string;
+      quantity: number;
+    }[],
   ) {
     const response = await api.post(`/bookings/${bookingId}/services`, {
-      items: items, 
+      items: items,
     });
     return response.data;
   }
@@ -115,8 +125,8 @@ async createOwnerBooking(payload: {
     return response.data;
   }
   async cancelBooking(bookingId: string) {
-    const response = await api.delete<ApiResponse<void>>(
-      `/bookings/${bookingId}`,
+    const response = await api.put<ApiResponse<void>>(
+      `/bookings/${bookingId}/cancel`,
     );
     return response.data;
   }
@@ -166,11 +176,10 @@ async createOwnerBooking(payload: {
     // Sử dụng instance 'api' đã import từ config/axios
     const response = await api.get(`/bookings/export/excel`, {
       params,
-      responseType: 'blob', // Bắt buộc để nhận dữ liệu nhị phân từ backend
+      responseType: "blob", // Bắt buộc để nhận dữ liệu nhị phân từ backend
     });
     return response;
   }
-  
 }
 
 export default new BookingService();

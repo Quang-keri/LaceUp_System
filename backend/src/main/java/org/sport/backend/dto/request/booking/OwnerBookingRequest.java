@@ -19,9 +19,9 @@ public class OwnerBookingRequest {
     private String phone;
     private String note;
 
-    @NotNull(message = "Tổng số tiền không được để trống")
-    @DecimalMin(value = "0.0", inclusive = true, message = "Tổng số tiền không được âm")
-    private BigDecimal totalPrice;
+//    @NotNull(message = "Tổng số tiền không được để trống")
+//    @DecimalMin(value = "0.0", inclusive = true, message = "Tổng số tiền không được âm")
+//    private BigDecimal totalPrice;
 
     @DecimalMin(value = "0.0", inclusive = true, message = "Số tiền đã trả không được âm")
     private BigDecimal paidAmount;

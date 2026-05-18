@@ -701,7 +701,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .images(images)
                 .courts(courtResponses)
                 .ownerId(rentalArea.getOwner().getUserId())
-                .gmailLink(rentalArea.getGmail())
+                .gmailLink(rentalArea.getOwner().getEmail())
                 .facebookLink(rentalArea.getFacebookLink())
                 .bankAccount(bankAccountResponse)
                 .build();

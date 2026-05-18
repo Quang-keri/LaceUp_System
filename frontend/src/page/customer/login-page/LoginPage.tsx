@@ -3,10 +3,13 @@ import authService from "../../../service/authService";
 import { useNavigate } from "react-router-dom";
 import { message } from "antd";
 import { useAuth } from "../../../context/AuthContext";
-import { GoogleOutlined } from "@ant-design/icons";
+import {
+  GoogleOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
 import { useGoogleLogin } from "@react-oauth/google";
 
-// 1. Cập nhật thêm các câu lỗi tiếng Anh của Backend vào từ điển
 const BACKEND_ERRORS: Record<string, string> = {
   PASSWORD_TOO_SHORT: "Mật khẩu quá ngắn (cần ít nhất 6-8 ký tự).",
   WRONG_PASSWORD: "Mật khẩu không chính xác.",
@@ -22,8 +25,9 @@ const LoginPage: React.FC = () => {
 
   const [hasEmailError, setHasEmailError] = useState(false);
   const [hasPasswordError, setHasPasswordError] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
 
@@ -54,8 +58,10 @@ const LoginPage: React.FC = () => {
     if (!isValid) return;
 
     setLoading(true);
+
     try {
       const response = await authService.login({ email, password });
+
       if (response.code === 200) {
         message.success("Đăng nhập thành công!");
         await refreshProfile();
@@ -78,13 +84,11 @@ const LoginPage: React.FC = () => {
           message.error(BACKEND_ERRORS[passwordErrCode] || passwordErrCode);
         }
       } else {
-        // 2. Sửa lại chỗ này: Dịch message của backend, nếu không có trong từ điển thì dùng câu tiếng Việt mặc định.
         const backendMessage = errorData?.message;
         const translatedMessage =
           BACKEND_ERRORS[backendMessage] ||
           "Email hoặc mật khẩu không chính xác.";
 
-        // Đổi màu viền cả 2 ô để người dùng biết thông tin bị sai
         setHasEmailError(true);
         setHasPasswordError(true);
 
@@ -99,8 +103,10 @@ const LoginPage: React.FC = () => {
     flow: "auth-code",
     onSuccess: async (codeResponse) => {
       setLoading(true);
+
       try {
         const response = await authService.loginWithGoogle(codeResponse.code);
+
         if (response.code === 200) {
           message.success("Đăng nhập bằng Google thành công!");
           await refreshProfile();
@@ -135,26 +141,37 @@ const LoginPage: React.FC = () => {
             }}
             placeholder="Email"
             className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
-              hasPasswordError
+              hasEmailError
                 ? "border-red-500 focus:ring-red-500"
                 : "focus:ring-[#9156F1] border-gray-300"
             }`}
           />
 
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (hasPasswordError) setHasPasswordError(false);
-            }}
-            placeholder="Mật khẩu"
-            className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
-              hasPasswordError
-                ? "border-red-500 focus:ring-red-500"
-                : "focus:ring-[#9156F1] border-gray-300"
-            }`}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (hasPasswordError) setHasPasswordError(false);
+              }}
+              placeholder="Mật khẩu"
+              className={`w-full px-4 py-2 pr-12 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
+                hasPasswordError
+                  ? "border-red-500 focus:ring-red-500"
+                  : "focus:ring-[#9156F1] border-gray-300"
+              }`}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#9156F1] transition"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            </button>
+          </div>
 
           <button
             type="submit"

@@ -23,6 +23,7 @@ export default function SlotCalendar({
 }) {
   const [events, setEvents] = useState<any[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<any[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const [formState, setFormState] = useState({
     customerName: "",
@@ -75,6 +76,53 @@ export default function SlotCalendar({
     setSelectedSlots((prev) => prev.filter((s) => s.id !== idToRemove));
   };
 
+  const buildSlotPayload = () => {
+    return selectedSlots.map((s) => ({
+      courtCopyId: s.courtId,
+      startTime: dayjs(s.startTime).format("YYYY-MM-DDTHH:mm:ss"),
+      endTime: dayjs(s.endTime).format("YYYY-MM-DDTHH:mm:ss"),
+    }));
+  };
+
+  const fetchPreviewPrice = async () => {
+    try {
+      setPreviewLoading(true);
+
+      const res = await bookingService.previewOwnerBookingPrice({
+        slots: buildSlotPayload(),
+      });
+
+      const totalPrice = Number(res.result || 0);
+
+      setFormState((prev) => ({
+        ...prev,
+        totalPrice,
+        paidAmount: prev.paymentType === "FULL" ? totalPrice : prev.paidAmount,
+      }));
+
+      return true;
+    } catch (error: any) {
+      message.error(
+        error.response?.data?.message || "Không tính được tổng tiền",
+      );
+      return false;
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleOpenBookingModal = async () => {
+    if (selectedSlots.length === 0) {
+      message.warning("Vui lòng quét chọn giờ trên lịch trước!");
+      return;
+    }
+
+    const ok = await fetchPreviewPrice();
+    if (ok) {
+      setOpenModal(true);
+    }
+  };
+
   const handleCreateBooking = async () => {
     try {
       if (!formState.customerName || !formState.phone) {
@@ -82,18 +130,23 @@ export default function SlotCalendar({
         return;
       }
 
+      if (selectedSlots.length === 0) {
+        message.warning("Vui lòng chọn ít nhất một khung giờ!");
+        return;
+      }
+
+      if (formState.paidAmount > formState.totalPrice) {
+        message.warning("Số tiền khách trả không được lớn hơn tổng tiền!");
+        return;
+      }
+
       const payload = {
         customerName: formState.customerName,
         phone: formState.phone,
         note: formState.note,
-        totalPrice: Number(formState.totalPrice || 0),
         paidAmount: Number(formState.paidAmount || 0),
         paymentMethod: formState.paymentMethod,
-        slots: selectedSlots.map((s) => ({
-          courtCopyId: s.courtId,
-          startTime: dayjs(s.startTime).format("YYYY-MM-DDTHH:mm:ss"),
-          endTime: dayjs(s.endTime).format("YYYY-MM-DDTHH:mm:ss"),
-        })),
+        slots: buildSlotPayload(),
       };
 
       const res = await bookingService.createOwnerBooking(payload);
@@ -149,15 +202,15 @@ export default function SlotCalendar({
         paymentMethod: "BANK_TRANSFER",
       });
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || "Có lỗi xảy ra khi tạo lịch đặt.";
-      message.error(errorMessage);
+      message.error(
+        error.response?.data?.message || "Có lỗi xảy ra khi tạo lịch đặt.",
+      );
     }
   };
 
   return (
     <Card bordered={false} className="rounded-2xl shadow-sm">
-      <Spin spinning={loading}>
+      <Spin spinning={loading || previewLoading}>
         <FullCalendar
           plugins={[
             resourceTimeGridPlugin,
@@ -253,14 +306,7 @@ export default function SlotCalendar({
           customButtons={{
             createBooking: {
               text: "Tạo lịch đặt",
-              click: () => {
-                if (selectedSlots.length === 0) {
-                  message.warning("Vui lòng quét chọn giờ trên lịch trước!");
-                  return;
-                }
-
-                setOpenModal(true);
-              },
+              click: handleOpenBookingModal,
             },
           }}
           buttonText={{

@@ -138,11 +138,12 @@ export default function VnPayReturnPage() {
         <div className="flex justify-center gap-3 mt-4">
           {state.bookingId && state.mode === "BOOKED" && (
             <Button
-              style={{ color: "white",background:"#9156F1" }}
+              style={{ color: "white", background: "#9156F1" }}
               size="large"
-              onClick={() => navigate(`/booking/${state.bookingId}`)}
+              // onClick={() => navigate(`/booking-history/${state.bookingId}`)}
+              onClick={() => navigate(`/booking-history`)}
             >
-              Xem chi tiết booking
+              Xem chi tiết lịch
             </Button>
           )}
 
