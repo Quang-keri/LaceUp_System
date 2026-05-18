@@ -132,6 +132,10 @@ export const router = createBrowserRouter([
           { path: "my-matches", element: <MyMatchPage /> },
           { path: "achievements", element: <MyAchievements /> },
           { path: "my-ranks", element: <MyRanks /> },
+          {
+            path: "bank-account",
+            element: <OwnerBankAccount />,
+          },
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {
@@ -195,7 +199,7 @@ export const router = createBrowserRouter([
       { index: true, element: <OwnerDashboard /> },
       { path: "dashboard", element: <OwnerDashboard /> },
       { path: "buildings/list", element: <BuildingListPage /> },
-     
+
       {
         path: "buildings/:buildingId/courts",
         element: <CourtManagementPage />,
@@ -204,7 +208,7 @@ export const router = createBrowserRouter([
         path: "courts",
         element: <CourtManagementPage />,
       },
- 
+
       { path: "/owner/courts/:courtId/prices", element: <CourtPricePage /> },
       { path: "bookings/management", element: <BookingManagementPage /> },
       { path: "bookings/calendar", element: <ManageSchedulePage /> },
@@ -237,10 +241,7 @@ export const router = createBrowserRouter([
         path: "/owner/settlements/:rentalAreaId",
         element: <OwnerSettlementHistory />,
       },
-      {
-        path: "/owner/bank-account",
-        element: <OwnerBankAccount />,
-      },
+
       {
         path: "/owner/buildings",
         element: <BuildingListPage />,

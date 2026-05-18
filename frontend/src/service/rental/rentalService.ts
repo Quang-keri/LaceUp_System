@@ -101,15 +101,14 @@ class RentalService {
     formData.append("rentalAreaName", request.rentalAreaName || "");
     formData.append("street", request.address?.street || "");
     formData.append("ward", request.address?.ward || "");
-    formData.append("district", request.address?.district || "");
     formData.append("contactName", request.contactName || "");
     formData.append("contactPhone", request.contactPhone || "");
     formData.append("cityId", request.cityId ? request.cityId.toString() : "");
+    formData.append("status", request.status);
 
-    // Append ảnh vào request
     if (images && images.length > 0) {
       images.forEach((image) => {
-        formData.append("images", image); // Chữ "images" này phải khớp tên biến private List<MultipartFile> images
+        formData.append("images", image);
       });
     }
 
@@ -133,8 +132,7 @@ class RentalService {
   }
 
   async approveRentalArea(rentalAreaId: string) {
-    // Backend may expose an admin endpoint or a rental-areas/{id}/approve
-    // Adjust the path if your API uses a different route.
+
     const response = await api.put<ApiResponse<void>>(
       `/rental-areas/${rentalAreaId}/approve`,
     );

@@ -40,8 +40,7 @@ export default function BuildingEditModal({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [provinces, setProvinces] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
-
-  // Đảm bảo tải xong dữ liệu tỉnh thành mới gọi API lấy chi tiết tòa nhà
+  const [currentStatus, setCurrentStatus] = useState<string | undefined>();
   useEffect(() => {
     const initData = async () => {
       if (open) {
@@ -96,7 +95,6 @@ export default function BuildingEditModal({
       const apiCityId = data.address?.city?.cityId || data.city?.cityId;
       const apiCityName = data.address?.city?.cityName || data.city?.cityName;
 
-      // Tìm mã code chuẩn (vd: 79) dựa vào tên thành phố thay vì dùng id sai (vd: 28)
       let correctCityCode = apiCityId;
       if (apiCityName && loadedProvinces.length > 0) {
         const matchedProvince = loadedProvinces.find(
@@ -107,17 +105,19 @@ export default function BuildingEditModal({
         }
       }
 
+      setCurrentStatus(data.status);
+
       form.setFieldsValue({
         rentalAreaName: data.rentalAreaName,
         cityId: correctCityCode,
         street: data.address?.street || data.street,
         ward: data.address?.ward || data.ward,
-
         contactName: getOwnerName() || data.contactName,
         contactPhone: getOwnerPhone() || data.contactPhone,
         gmailLink: getOwnerEmail() || data.gmailLink,
-
         facebookLink: data.facebookLink,
+
+        status: data.status === "SUSPENDED" ? undefined : data.status,
       });
 
       if (correctCityCode) {
@@ -167,6 +167,8 @@ export default function BuildingEditModal({
 
         contactName: getOwnerName() || values.contactName,
         contactPhone: getOwnerPhone() || values.contactPhone,
+
+        status: currentStatus === "SUSPENDED" ? undefined : values.status,
       };
 
       await RentalService.updateRentalArea(buildingId, updateData, imageFiles);
@@ -310,7 +312,43 @@ export default function BuildingEditModal({
               </Form.Item>
             </Col>
           </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Trạng thái hoạt động"
+                name="status"
+                rules={[
+                  {
+                    required: currentStatus !== "SUSPENDED",
+                    message: "Vui lòng chọn trạng thái",
+                  },
+                ]}
+              >
+                <Select
+                  placeholder={
+                    currentStatus === "SUSPENDED"
+                      ? "Tòa nhà đang bị admin tạm khóa"
+                      : "Chọn trạng thái"
+                  }
+                  disabled={currentStatus === "SUSPENDED"}
+                >
+                  <Select.Option value="ACTIVE">Đang kinh doanh</Select.Option>
+                  <Select.Option value="INACTIVE">
+                    Tạm ngưng hoạt động
+                  </Select.Option>
+                </Select>
+              </Form.Item>
 
+              {currentStatus === "SUSPENDED" && (
+                <div
+                  style={{ color: "#ff4d4f", marginTop: -12, marginBottom: 16 }}
+                >
+                  Tòa nhà đang bị admin tạm khóa, Vui lòng liên hệ đội ngũ của
+                  chúng tôi hỗ trợ
+                </div>
+              )}
+            </Col>
+          </Row>
           <Form.Item label="Hình ảnh tòa nhà">
             <Upload
               listType="picture-card"

@@ -23,7 +23,11 @@ import {
 } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
-
+const rentalStatusMap: any = {
+  ACTIVE: { color: "green", label: "Đang kinh doanh" },
+  INACTIVE: { color: "orange", label: "Ngừng kinh doanh" },
+  SUSPENDED: { color: "red", label: "Bị khóa" },
+};
 interface Props {
   open: boolean;
   selectedArea: any;
@@ -223,7 +227,13 @@ const RentalAreaDetailModal: React.FC<Props> = ({
                 {selectedArea.ownerPhone || selectedArea.contactPhone || "N/A"}
               </Text>
             </Descriptions.Item>
-
+            <Descriptions.Item label="Trạng thái tòa nhà">
+              <Tag
+                color={rentalStatusMap[selectedArea.status]?.color || "default"}
+              >
+                {rentalStatusMap[selectedArea.status]?.label || "Chưa cập nhật"}
+              </Tag>
+            </Descriptions.Item>
             <Descriptions.Item
               label={
                 <span>

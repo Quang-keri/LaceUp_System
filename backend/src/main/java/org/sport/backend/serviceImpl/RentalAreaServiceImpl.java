@@ -470,7 +470,9 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         if (request.getContactPhone() != null) {
             rentalArea.setContactPhone(request.getContactPhone());
         }
-
+        if (request.getStatus() != null) {
+            rentalArea.setStatus(request.getStatus());
+        }
         Address currentAddress = rentalArea.getAddress();
 
         if (request.getStreet() != null) {
@@ -694,6 +696,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
+                .status(rentalArea.getStatus())
                 .city(cityResponse)
                 .images(images)
                 .courts(courtResponses)

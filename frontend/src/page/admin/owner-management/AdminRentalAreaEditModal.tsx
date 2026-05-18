@@ -125,7 +125,7 @@ export default function AdminRentalAreaEditModal({
         cityId: correctProvinceCode,
         ward: data.address?.ward || data.ward,
         street: data.address?.street || data.street,
-
+        status: data.status,
         contactName: data.contactName,
         contactPhone: data.contactPhone,
         gmailLink: data.gmailLink || data.gmail,
@@ -178,11 +178,14 @@ export default function AdminRentalAreaEditModal({
         {
           rentalAreaName: values.rentalAreaName,
           cityId: values.cityId,
-          ward: values.ward,
-          street: values.street,
+          address: {
+            street: values.street,
+            ward: values.ward,
+          },
           contactName: values.contactName,
           contactPhone: values.contactPhone,
           facebookLink: values.facebookLink,
+          status: values.status,
         },
         newImages,
       );
@@ -326,7 +329,27 @@ export default function AdminRentalAreaEditModal({
               </Form.Item>
             </Col>
           </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Trạng thái tòa nhà"
+                name="status"
+                rules={[
+                  { required: true, message: "Vui lòng chọn trạng thái" },
+                ]}
+              >
+                <Select placeholder="Chọn trạng thái">
+                  <Select.Option value="ACTIVE">Đang hoạt động</Select.Option>
 
+                  <Select.Option value="INACTIVE">Tạm ngưng</Select.Option>
+
+                  <Select.Option value="SUSPENDED">
+                    Bị khóa / Suspended
+                  </Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item label="Hình ảnh tòa nhà">
             <Upload
               listType="picture-card"

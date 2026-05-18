@@ -116,11 +116,10 @@ const MyMatchPage: React.FC = () => {
     }
   };
 
-  // Mở modal chi tiết & Tự động gọi API lấy kết quả nếu trận COMPLETED
   const openResultModal = async (match: any) => {
     setSelectedMatch(match);
     setWinningTeamNumber(null);
-    setMatchResultData(null); // Reset dữ liệu cũ
+    setMatchResultData(null); 
 
     const initial: Record<string, number> = {};
     match.participants?.forEach((p: any) => {
@@ -130,7 +129,6 @@ const MyMatchPage: React.FC = () => {
 
     setIsResultModalOpen(true);
 
-    // GỌI API LẤY KẾT QUẢ CHO TRẬN HOÀN THÀNH
     if (match.status === "COMPLETED") {
       setLoadingResult(true);
       try {
