@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import userService from "../../../service/userService";
+import type { UserResponse } from "../../../types/user";
 
 export default function OwnerProfilePage() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<UserResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,6 +23,10 @@ export default function OwnerProfilePage() {
 
   if (loading) {
     return <div className="p-6">Loading profile...</div>;
+  }
+
+  if (!user) {
+    return <div className="p-6">Không tìm thấy thông tin người dùng.</div>;
   }
 
   return (
@@ -57,8 +62,8 @@ export default function OwnerProfilePage() {
               {user.gender === "MALE"
                 ? "Nam"
                 : user.gender === "FEMALE"
-                  ? "Nữ"
-                  : "Khác"}
+                ? "Nữ"
+                : "Khác"}
             </span>
           </div>
 

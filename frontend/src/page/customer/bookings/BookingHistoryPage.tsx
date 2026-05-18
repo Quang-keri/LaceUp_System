@@ -1,16 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Row,
-  Col,
-  Card,
-  Table,
-  Button,
-  Tag,
-  Space,
-  Empty,
-  message,
-  Spin,
-} from "antd";
+import { Card, Table, Button, Tag, Empty, message, Spin } from "antd";
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -25,22 +14,16 @@ import { useAuth } from "../../../context/AuthContext";
 import "./BookingHistoryPage.css";
 import BookingDetailDrawer from "./BookingDetailDrawer";
 
-import UserSidebar from "../../../components/sidebar/UserSidebar.tsx";
-
 const BookingHistoryPage: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
-  const selectedMenu = "3";
 
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
     null,
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
-
   const [statusFilter, setStatusFilter] = useState<BookingStatus | undefined>();
-
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -52,7 +35,6 @@ const BookingHistoryPage: React.FC = () => {
       message.error("Vui lòng đăng nhập lại");
       return;
     }
-
     setLoading(true);
     try {
       const response = await bookingService.getMyBookings(
@@ -61,7 +43,6 @@ const BookingHistoryPage: React.FC = () => {
         size,
         status,
       );
-
       if (response?.code === 200 && response?.result) {
         setBookings(response.result.data);
         setPagination({
@@ -73,7 +54,6 @@ const BookingHistoryPage: React.FC = () => {
         message.error("Lỗi tải dữ liệu booking");
       }
     } catch (error) {
-      console.error("Fetch bookings error:", error);
       message.error("Không thể tải lịch sử booking");
     } finally {
       setLoading(false);
@@ -136,7 +116,6 @@ const BookingHistoryPage: React.FC = () => {
           <div style={{ fontWeight: 600 }}>
             {record.slots?.[0]?.courtCode || "-"}
           </div>
-
           <div style={{ fontSize: 12, color: "#666" }}>
             <EnvironmentOutlined /> {record.rentalArea?.rentalAreaName || "-"}
           </div>
@@ -156,8 +135,7 @@ const BookingHistoryPage: React.FC = () => {
       key: "time",
       render: (_: unknown, record: BookingResponse) => (
         <div style={{ fontSize: 13 }}>
-          {record.startTime ? dayjs(record.startTime).format("HH:mm") : "--"}
-          {" - "}
+          {record.startTime ? dayjs(record.startTime).format("HH:mm") : "--"} -{" "}
           {record.endTime ? dayjs(record.endTime).format("HH:mm") : "--"}
         </div>
       ),
@@ -192,7 +170,7 @@ const BookingHistoryPage: React.FC = () => {
       render: (_: unknown, record: BookingResponse) => (
         <Button
           size="small"
-          style={{color:"#9156F1" ,border:"1px solid #9156F1"}}
+          style={{ color: "#9156F1", border: "1px solid #9156F1" }}
           ghost
           onClick={() => handleViewDetail(record)}
         >
@@ -212,60 +190,42 @@ const BookingHistoryPage: React.FC = () => {
   }
 
   return (
-    <div
-      className="booking-history-page"
-      style={{
-        padding: "24px",
-        backgroundColor: "#f5f7fa",
-        minHeight: "calc(100vh - 70px)",
-      }}
-    >
-      <Row gutter={[24, 24]} justify="center">
-        <Col xs={24} md={8} lg={6}>
-          <UserSidebar selectedKey={selectedMenu} />
-        </Col>
+    <>
+      <Card
+        title={
+          <span style={{ fontSize: "20px", fontWeight: 600 }}>
+            <CalendarOutlined style={{ marginRight: "8px" }} /> Lịch sử Đặt Sân
+          </span>
+        }
+        bordered={false}
+        style={{ borderRadius: "12px", height: "100%" }}
+      >
+        {bookings.length === 0 && !loading ? (
+          <Empty description="Chưa có booking nào" />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={bookings}
+            loading={loading}
+            rowKey="bookingId"
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              onChange: (page, pageSize) =>
+                fetchBookings(page, pageSize, statusFilter),
+            }}
+            scroll={{ x: "max-content" }}
+          />
+        )}
+      </Card>
 
-  
-        <Col xs={24} md={16} lg={18}>
-          <Card
-            title={
-              <span style={{ fontSize: "20px", fontWeight: 600 }}>
-                <CalendarOutlined style={{ marginRight: "8px" }} />
-                Lịch sử Đặt Sân
-              </span>
-            }
-            bordered={false}
-            style={{ borderRadius: "12px", height: "100%" }}
-          >
-            {bookings.length === 0 && !loading ? (
-              <Empty description="Chưa có booking nào" />
-            ) : (
-              <Table
-                columns={columns}
-                dataSource={bookings}
-                loading={loading}
-                rowKey="bookingId"
-                pagination={{
-                  current: pagination.current,
-                  pageSize: pagination.pageSize,
-                  total: pagination.total,
-                  onChange: (page, pageSize) =>
-                    fetchBookings(page, pageSize, statusFilter),
-                }}
-                scroll={{ x: "max-content" }} // Thêm scroll ngang cho table trên mobile
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      {/* DRAWER CHI TIẾT */}
       <BookingDetailDrawer
         bookingId={selectedBookingId}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
       />
-    </div>
+    </>
   );
 };
 

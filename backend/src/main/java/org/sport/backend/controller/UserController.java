@@ -86,6 +86,22 @@ public class UserController {
         );
     }
 
+    @PutMapping("/my-info")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserResponse>> updateMyProfile(
+            @RequestBody @Valid UpdateUserRequest request) {
+
+        log.info("User đang tự cập nhật thông tin cá nhân");
+
+        return ResponseEntity.ok(
+                ApiResponse.<UserResponse>builder()
+                        .code(200)
+                        .message("Cập nhật thông tin cá nhân thành công")
+                        .result(userService.updateMyProfile(request))
+                        .build()
+        );
+    }
+
     @PutMapping("/{userId}")
     @PreAuthorize("hasAuthority('UPDATE_USER')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(

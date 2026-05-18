@@ -385,7 +385,7 @@
 
                     <Tooltip
                       contentStyle={commonTooltipStyle}
-                      formatter={customTooltipFormatter}
+                      formatter={customTooltipFormatter as any}
                     />
                     <Legend
                       verticalAlign="top"
@@ -573,7 +573,7 @@
 
                     <Tooltip
                       contentStyle={commonTooltipStyle}
-                      formatter={customTooltipFormatter}
+                      formatter={customTooltipFormatter as any}
                     />
                     <Legend
                       verticalAlign="top"

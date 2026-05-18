@@ -28,7 +28,7 @@ export interface MatchResponse {
   title: string;
   description: string;
   courtName: string;
-  courtPrice: string;
+  courtPrice: number;
   address: AddressResponse;
   categoryName: string;
   startTime: string;

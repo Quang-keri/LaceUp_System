@@ -25,6 +25,9 @@ public interface UserService {
     UserResponse getUserById(UUID userId);
 
     @Transactional
+    UserResponse updateMyProfile(UpdateUserRequest request);
+
+    @Transactional
     UserResponse updateUser(UUID userId, UpdateUserRequest request);
 
     void updateStatus(UUID id, Boolean active);

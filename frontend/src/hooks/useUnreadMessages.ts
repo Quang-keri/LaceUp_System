@@ -36,7 +36,7 @@ export const useUnreadMessages = (pollInterval: number = 10000): UseUnreadMessag
 
             try {
                 // TEMPLATE MODE: Calculate unread count from mock data
-                const response = await chatService.getUserConversations(currentUserId);
+                const response = await chatService.getUserConversations();
                 if (response.result) {
                     let count = 0;
                     const unread: any[] = [];

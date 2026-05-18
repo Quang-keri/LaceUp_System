@@ -1,7 +1,6 @@
 import api from "../config/axios";
 import type { ApiResponse } from "../types/ApiResponse";
 import type { DashboardData, PeriodStatsData } from "../types/dashboard";
-import type { EndOfDayReportResponse } from "../types/report";
 
 class ReportService {
   async getDashboardOwner(

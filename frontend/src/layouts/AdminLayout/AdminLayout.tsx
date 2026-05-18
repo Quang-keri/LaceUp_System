@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Layout } from "antd";
 import { useAuth } from "../../context/AuthContext";
-import Sidebar from "../../components/admin/Sidebar.tsx";
 import AdminHeader from "../../components/admin/Header.tsx";
 import { Outlet } from "react-router-dom";
 
@@ -10,15 +9,11 @@ const THEME_KEY = "adminTheme";
 
 const AdminLayout: React.FC<{}> = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [isDark, setIsDark] = useState<boolean>(() => {
     return localStorage.getItem(THEME_KEY) === "dark";
   });
-
-  const handleLogoutClick = async () => {
-    await logout();
-  };
 
   const handleThemeToggle = () => setIsDark((prev) => !prev);
 

@@ -352,10 +352,10 @@ public class BookingServiceImpl implements BookingService {
                 .owner(booking.getRentalArea().getOwner())
                 .type(TransactionType.INCOME)
                 .amount(amountToCollect)
-                .paymentMethod(PaymentMethod.CASH)
+                .paymentMethod(PaymentMethod.BANK_TRANSFER)
                 .status(TransactionStatus.SUCCESS)
                 .category(TransactionCategory.BOOKING_REMAINING_PAYMENT)
-                .description("Thu tiền mặt phần còn thiếu (bao gồm sân và dịch vụ) cho booking " + booking.getBookingId())
+                .description("Thu tiền mặt hoặc chuyển khoản tại sân phần còn thiếu (bao gồm sân và dịch vụ) cho đạt lịch " + booking.getBookingId())
                 .build();
         transactionRepository.save(transaction);
 

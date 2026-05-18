@@ -54,26 +54,30 @@ public class ChatbotServiceImpl implements ChatbotService {
 
         // 3. Generation
         // CẬP NHẬT LẠI PROMPT: Bổ sung luật xử lý câu hỏi về Đánh giá / Rating
+        String SUPPORT_EMAIL = "werelacezone@gmail.com";
         String finalPrompt = String.format(
                 """
-                        Hệ thống: Bạn là trợ lý ảo của LaceUP. Bạn được cung cấp các dữ liệu sau từ hệ thống: [%s].
+                        Hệ thống: Bạn là trợ lý ảo của LaceUP (Nền tảng đặt sân thể thao). Bạn được cung cấp các dữ liệu sau từ hệ thống: [%s].
                         
                         Yêu cầu bắt buộc đối với bạn:
-                        - CHỈ trả lời đúng trọng tâm câu hỏi của khách hàng.
+                        - CHỈ trả lời các vấn đề liên quan đến thể thao, tìm sân, đặt sân và các dịch vụ của LaceUP.
+                        - NẾU KHÁCH HỎI LẠC ĐỀ (ví dụ: mua bán lốp xe, thời tiết, v.v.), BẠN PHẢI TỪ CHỐI LỊCH SỰ và thông báo không thuộc phạm vi hỗ trợ. 
+                        - TUYỆT ĐỐI KHÔNG lấy thông tin liên hệ của các chủ sân trong dữ liệu để cung cấp cho người dùng khi họ hỏi lạc đề hoặc cần hỗ trợ từ hệ thống.
+                        - Nếu cần hướng dẫn khách liên hệ để hỗ trợ thêm về hệ thống LaceUP, hãy yêu cầu khách gửi email về địa chỉ: %s.
+                        
                         - QUAN TRỌNG: Khi gợi ý một sân cụ thể, BẠN BẮT BUỘC PHẢI DÙNG CÚ PHÁP TAG SAU ĐỂ HỆ THỐNG VẼ UI (Viết liền trên 1 dòng):
                                                   [RENTAL|Tên sân|Địa chỉ cụ thể|Giá thuê|Điểm đánh giá|Đường dẫn chi tiết sân]
                         - LƯU Ý VỀ ĐƯỜNG DẪN (URL): Bạn phải kết hợp mã định danh (ID) hoặc đường dẫn tương đối của sân với tên miền Frontend chính thức được cấp ở đây: %s
                                                   (Ví dụ mẫu: [RENTAL|Sân Cầu Lông Pro|456 Lê Văn Việt|80,000 VNĐ/giờ|1 lượt đánh giá 5 sao|%s/rental-area/123])
-                        - TUYỆT ĐỐI KHÔNG tự liệt kê lại Địa chỉ, Giá, Đánh giá, hay Link ra dạng gạch đầu dòng văn bản thường nữa. Chỉ nói 1 câu dẫn dắt ngắn gọn rồi chèn ngay block [RENTAL|...] vào.
+                        - TUYỆT ĐỐI KHÔNG tự liệt kê lại Địa chỉ, Giá, Đánh giá, hay Link ra dạng gạch đầu dòng văn bản thường. Chỉ nói 1 câu dẫn dắt ngắn gọn rồi chèn ngay block [RENTAL|...] vào.
                         - KHÔNG tự ý cung cấp thêm thông tin dư thừa.
                         - Phân biệt rõ loại hình thể thao trong dữ liệu, không tự ý suy diễn.
-                        - Nếu dữ liệu báo không có thông tin khớp với câu hỏi, hãy lịch sự báo không tìm thấy và hướng dẫn khách gọi hotline.
-                        - Nếu khách hàng hỏi sân gần nhất, hãy hỏi địa chỉ hiện tại của khách hàng để tư vấn.
+                        - Nếu khách hàng hỏi sân gần nhất, hãy hỏi địa chỉ hiện tại của khách để tư vấn.
                         - Nếu khách tìm khung giờ không có sẵn, hãy gợi ý sân có thời gian hoạt động gần nhất.
                         - Nếu khách hàng hỏi về sân có đánh giá 5 sao (hoặc sân tốt), hãy dựa vào điểm đánh giá trung bình hoặc số lượt đánh giá 5 sao trong dữ liệu để liệt kê các sân phù hợp nhất. Nếu không có sân nào nhắc đến 5 sao, hãy thông báo rõ ràng.
                         
                         Khách hàng: %s""",
-                context, urlProperties.getFrontend(), urlProperties.getFrontend(), userMessage
+                context, SUPPORT_EMAIL, urlProperties.getFrontend(), urlProperties.getFrontend(), userMessage
         );
         try {
             String aiResponse = chatClient.prompt()

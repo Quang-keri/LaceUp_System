@@ -1,4 +1,23 @@
-export default function NewsTable({ data, onEdit, onDelete }) {
+export interface NewsImage {
+  imageUrl: string;
+  isCover?: boolean;
+}
+
+export interface NewsItem {
+  id: number | string;
+  title: string;
+  visibility?: string;
+  createdAt: string;
+  images?: NewsImage[];
+}
+
+interface NewsTableProps {
+  data: NewsItem[];
+  onEdit: (item: NewsItem) => void;
+  onDelete: (id: number | string) => void;
+}
+
+export default function NewsTable({ data, onEdit, onDelete }: NewsTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full bg-white border">
@@ -14,7 +33,7 @@ export default function NewsTable({ data, onEdit, onDelete }) {
         <tbody>
           {data.length === 0 ? (
             <tr>
-              <td colSpan="4" className="text-center py-4">
+              <td colSpan={5} className="text-center py-4">
                 Không có dữ liệu
               </td>
             </tr>
