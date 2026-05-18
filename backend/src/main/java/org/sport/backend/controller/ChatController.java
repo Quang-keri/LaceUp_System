@@ -29,7 +29,6 @@ public class ChatController {
 
     @MessageMapping("/chat")
     public void processMessage(@Payload MessageRequest messageRequest, Principal principal) {
-        System.out.println("loi o day");
         if (principal == null) {
             throw new RuntimeException("User not authenticated in WebSocket");
         }

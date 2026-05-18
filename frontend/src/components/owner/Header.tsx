@@ -26,6 +26,8 @@ import type { UserResponse } from "../../types/user.ts";
 const { Header } = Layout;
 
 interface AdminHeaderProps {
+  collapsed: boolean;
+  toggleCollapsed: () => void;
   adminUser: UserResponse | null;
   isDark: boolean;
   onThemeToggle: () => void;

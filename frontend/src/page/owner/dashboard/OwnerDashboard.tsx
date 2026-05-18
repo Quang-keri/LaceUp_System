@@ -346,9 +346,9 @@ const OwnerDashboard: React.FC = () => {
                   />
 
                   <Tooltip
-                    contentStyle={commonTooltipStyle}
-                    formatter={customTooltipFormatter}
-                  />
+  contentStyle={commonTooltipStyle}
+  formatter={customTooltipFormatter as any} 
+/>
                   <Legend
                     verticalAlign="top"
                     height={36}
@@ -531,7 +531,7 @@ const OwnerDashboard: React.FC = () => {
 
                   <Tooltip
                     contentStyle={commonTooltipStyle}
-                    formatter={customTooltipFormatter}
+                    formatter={customTooltipFormatter as any}
                   />
                   <Legend
                     verticalAlign="top"

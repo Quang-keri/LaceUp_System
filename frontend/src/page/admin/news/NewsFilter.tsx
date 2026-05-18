@@ -1,6 +1,8 @@
-import React from "react";
+interface NewsFilterProps {
+  onSearch: (value: string) => void;
+}
 
-export default function NewsFilter({ onSearch }) {
+export default function NewsFilter({ onSearch }: NewsFilterProps) {
   return (
     <div className="w-full md:w-1/3">
       <input

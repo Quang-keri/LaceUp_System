@@ -19,7 +19,7 @@ import AutoMatchModal from "./AutoMatchModal";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext.tsx";
 import { message } from "antd";
-import { LOCATION_DATA } from "../../../constants/locationData.ts";
+import { locationService } from "../../../service/locationService.ts";
 
 const MatchPage: React.FC = () => {
   const [matches, setMatches] = useState<MatchResponse[]>([]);
@@ -33,6 +33,10 @@ const MatchPage: React.FC = () => {
   const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
     null,
   );
+
+  // --- STATE CHO DỮ LIỆU ĐỊA LÝ ---
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
 
   // --- STATE CHO BỘ LỌC TÌM KIẾM ---
   const [typeFilter, setTypeFilter] = useState("ALL");
@@ -59,8 +63,12 @@ const MatchPage: React.FC = () => {
     }
   };
 
+  // Gọi Tỉnh/Thành ngay khi component mount
   useEffect(() => {
     fetchMatches();
+    locationService.getProvinces().then((data) => {
+      setProvinces(data || []);
+    });
   }, []);
 
   const resetFilters = () => {
@@ -69,6 +77,7 @@ const MatchPage: React.FC = () => {
     setSelectedDistrict("");
     setSelectedCategory("");
     setTypeFilter("ALL");
+    setDistricts([]); // Clear luôn list Quận/Huyện
   };
 
   const handleOpenJoinModal = (match: MatchResponse) => {
@@ -89,25 +98,10 @@ const MatchPage: React.FC = () => {
     }
   };
 
-  const handleConfirmDeposit = async (matchId: string) => {
-    try {
-      const response = await matchService.confirmDeposit(matchId);
-      if (response.code === 200) {
-        message.success("Đã xác nhận cọc thành công!");
-        fetchMatches();
-      }
-    } catch (error: any) {
-      message.error(error.response?.data?.message || "Lỗi xác nhận cọc");
-    }
-  };
-
   const renderActionButton = (match: MatchResponse) => {
     const isParticipant = match.participants?.some(
       (p: any) => p.userId === user?.userId,
     );
-    const isDepositConfirmed = match.participants?.find(
-      (p: any) => p.userId === user?.userId,
-    )?.isDepositConfirmed;
 
     if (
       match.status === "OPEN" ||
@@ -134,39 +128,12 @@ const MatchPage: React.FC = () => {
         </button>
       );
     }
-    if (match.status === "WAITING_DEPOSIT") {
-      if (isParticipant) {
-        if (isDepositConfirmed)
-          return (
-            <button
-              disabled
-              className="bg-purple-50 text-purple-600 px-4 py-2 rounded-xl font-semibold text-sm border border-purple-100"
-            >
-              Đã Cọc
-            </button>
-          );
-        return (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleConfirmDeposit(match.matchId);
-            }}
-            className="bg-orange-500 text-white hover:bg-orange-600 animate-pulse px-4 py-2 rounded-xl font-semibold text-sm shadow-sm"
-          >
-            Xác Nhận Cọc
-          </button>
-        );
-      }
-      return (
-        <button
-          disabled
-          className="bg-slate-100 text-slate-400 px-4 py-2 rounded-xl font-semibold text-sm"
-        >
-          Chờ Xác Nhận
-        </button>
-      );
-    }
-    if (match.status === "CONFIRMED" || match.status === "FULL") {
+
+    if (
+      match.status === "READY" ||
+      match.status === "CONFIRMED" ||
+      match.status === "FULL"
+    ) {
       if (isParticipant)
         return (
           <button
@@ -185,6 +152,7 @@ const MatchPage: React.FC = () => {
         </button>
       );
     }
+
     return (
       <button
         disabled
@@ -242,7 +210,7 @@ const MatchPage: React.FC = () => {
       .then((res) => {
         if (res.code === 200) {
           message.success("Vào phòng thành công!");
-          setRoomCodeInput(""); // Reset ô input sau khi vào thành công
+          setRoomCodeInput("");
           fetchMatches();
           navigate("/my-matches");
         }
@@ -256,9 +224,7 @@ const MatchPage: React.FC = () => {
     price != null && price !== "" && !isNaN(Number(price));
 
   const filteredMatches = matches
-    .filter((m) =>
-      ["OPEN", "CONFIRMED", "WAITING_DEPOSIT", "FULL"].includes(m.status),
-    )
+    .filter((m) => ["OPEN", "READY", "CONFIRMED", "FULL"].includes(m.status))
     .filter((m) => typeFilter === "ALL" || m.matchType === typeFilter)
     .filter(
       (m) =>
@@ -292,13 +258,8 @@ const MatchPage: React.FC = () => {
       return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
     });
 
-  const availableDistricts =
-    LOCATION_DATA.find((city) => city.name === selectedLocation)?.districts ||
-    [];
-
   return (
     <div className="min-h-screen bg-slate-50 p-6 font-sans">
-      {/* --- TOP BAR --- */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-800">
@@ -309,7 +270,6 @@ const MatchPage: React.FC = () => {
           </p>
         </div>
 
-        {/* --- CỤM NÚT BẤM (MÃ PHÒNG, GHÉP TRẬN, TẠO KÈO) --- */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
           <div className="flex items-center bg-white rounded-xl border border-slate-300 overflow-hidden focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all shadow-sm h-[42px]">
             <input
@@ -320,9 +280,7 @@ const MatchPage: React.FC = () => {
               className="px-4 py-2 w-36 outline-none text-sm font-semibold uppercase placeholder:normal-case"
               maxLength={6}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleJoinByRoomCode();
-                }
+                if (e.key === "Enter") handleJoinByRoomCode();
               }}
             />
             <button
@@ -367,7 +325,6 @@ const MatchPage: React.FC = () => {
         onSuccess={fetchMatches}
       />
 
-      {/* --- MAIN LAYOUT --- */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* SIDEBAR BỘ LỌC TÌM KIẾM */}
         <div className="w-full lg:w-1/4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 shrink-0 sticky top-6">
@@ -475,40 +432,38 @@ const MatchPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Khu vực */}
+          {/* Khu vực Tỉnh/Thành */}
           <div className="mb-6">
             <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
-              Khu vực
+              Tỉnh / Thành phố
             </h3>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-              {LOCATION_DATA.map((city) => (
-                <label
-                  key={city.id}
-                  className="flex items-center gap-2 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="locationCity"
-                    checked={selectedLocation === city.name}
-                    onChange={() => {
-                      setSelectedLocation(city.name);
-                      setSelectedDistrict("");
-                    }}
-                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
-                  />
-                  <span
-                    className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
-                    title={city.name}
-                  >
-                    {city.name === "Thành phố Hồ Chí Minh"
-                      ? "TP.HCM"
-                      : city.name}
-                  </span>
-                </label>
+            <select
+              value={selectedLocation}
+              onChange={(e) => {
+                const name = e.target.value;
+                setSelectedLocation(name);
+                setSelectedDistrict("");
+                setDistricts([]);
+
+                const selectedProv = provinces.find((p) => p.name === name);
+                if (selectedProv) {
+                  locationService
+                    .getWardsByProvince(selectedProv.code)
+                    .then((data) => setDistricts(data || []));
+                }
+              }}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer text-sm transition-colors hover:border-slate-300"
+            >
+              <option value="">-- Tất cả Tỉnh/Thành --</option>
+              {provinces.map((city) => (
+                <option key={city.code} value={city.name}>
+                  {city.name}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
+          {/* Khu vực Quận/Huyện */}
           <div className="mb-8">
             <h3 className="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">
               Quận / Huyện
@@ -516,16 +471,16 @@ const MatchPage: React.FC = () => {
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              disabled={!selectedLocation}
+              disabled={!selectedLocation || districts.length === 0}
               className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm transition-colors hover:border-slate-300"
             >
               <option value="">
                 {selectedLocation
                   ? "-- Tất cả Quận/Huyện --"
-                  : "-- Chọn Thành phố trước --"}
+                  : "-- Chọn Tỉnh/Thành trước --"}
               </option>
-              {availableDistricts.map((district) => (
-                <option key={district.name} value={district.name}>
+              {districts.map((district) => (
+                <option key={district.code} value={district.name}>
                   {district.name}
                 </option>
               ))}
@@ -576,14 +531,12 @@ const MatchPage: React.FC = () => {
                               Rank ({match.minRank}-{match.maxRank})
                             </>
                           )}
-
                           {match.matchType === "BET" && (
                             <>
                               <Flame size={14} />
                               Kèo: {match.note || "Tự thỏa thuận"}
                             </>
                           )}
-
                           {match.matchType !== "RANKED" &&
                             match.matchType !== "BET" && (
                               <>
@@ -596,7 +549,6 @@ const MatchPage: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col items-start mb-4 mt-6">
-                      {/* --- THẺ HIỂN THỊ LOẠI SÂN & ROOM CODE --- */}
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <span
                           className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider inline-block ${
@@ -607,17 +559,13 @@ const MatchPage: React.FC = () => {
                         >
                           {match.hasCourt ? "Sân cố định" : "Kèo tự do"}
                         </span>
-
-                        {/* Đã bỏ điều kiện match.roomCode && để luôn hiển thị block này */}
                         <span className="text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider bg-orange-100 text-orange-700">
                           Mã: {match.roomCode || "TRỐNG"}
                         </span>
                       </div>
-
                       <h3 className="text-xl font-bold text-slate-800 pr-4 line-clamp-2 group-hover:text-purple-600 transition-colors">
                         {match.title || `Giao lưu ${match.categoryName}`}
                       </h3>
-
                       <p className="text-purple-600 text-sm font-semibold mt-1">
                         {match.categoryName}
                       </p>
@@ -650,7 +598,6 @@ const MatchPage: React.FC = () => {
                             {formatDate(match.startTime)}
                           </span>
                         </div>
-
                         <div className="flex items-center gap-2">
                           <Clock
                             size={16}

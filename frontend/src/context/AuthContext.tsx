@@ -24,8 +24,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (user && user.userId) {
       const token = tokenService.getAccessToken();
-      const wsUrl =
-        import.meta.env.VITE_API_URL + "/ws";
+      const wsUrl = import.meta.env.VITE_WS_URL;
+      console.log("Đường dẫn WS thực tế đang gọi là:", wsUrl);
 
       if (!websocketService.isConnected()) {
         websocketService.connect(wsUrl, token);

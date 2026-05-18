@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Card, Menu, Typography, Tag, Divider, message } from "antd";
+import {
+  Card,
+  Menu,
+  Typography,
+  Tag,
+  Divider,
+  message,
+  ConfigProvider,
+} from "antd";
 import {
   UserOutlined,
   HistoryOutlined,
@@ -10,7 +18,7 @@ import {
   DashboardOutlined,
   TrophyOutlined,
   BarChartOutlined,
-  BankOutlined, 
+  BankOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.tsx";
@@ -37,7 +45,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
   const [localDashboardData, setLocalDashboardData] =
     useState<UserDashboardResponse | null>(null);
 
-  
   const isOwner = user?.role === "OWNER";
 
   useEffect(() => {
@@ -80,7 +87,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
       case "3":
         navigate("/booking-history");
         break;
-      case "9": 
+      case "9":
         navigate("/bank-account");
         break;
       case "4":
@@ -231,7 +238,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
           </Text>
           <Text type="secondary" style={{ fontSize: "13px" }}>
             Môn thi đấu tốt nhất:{" "}
-            <span style={{ fontWeight: 600, color: "#1890ff" }}>
+            <span style={{ fontWeight: 600, color: "#9156F1" }}>
               {highestRank.categoryName || "Chưa có"}
             </span>
           </Text>
@@ -252,13 +259,25 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
 
       <Divider style={{ margin: "24px 0 16px 0" }} />
 
-      <Menu
-        mode="inline"
-        selectedKeys={[selectedKey]}
-        items={menuItems}
-        onClick={(e) => handleMenuClick(e.key)}
-        style={{ borderRight: "none", textAlign: "left" }}
-      />
+      <ConfigProvider
+        theme={{
+          components: {
+            Menu: {
+              itemSelectedColor: "#9156F1",
+              itemSelectedBg: "#f3e8ff",
+              itemHoverColor: "#9156F1",
+            },
+          },
+        }}
+      >
+        <Menu
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          items={menuItems}
+          onClick={(e) => handleMenuClick(e.key)}
+          style={{ borderRight: "none", textAlign: "left" }}
+        />
+      </ConfigProvider>
     </Card>
   );
 };

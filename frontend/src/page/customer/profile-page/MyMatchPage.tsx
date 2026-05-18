@@ -21,7 +21,6 @@ import {
 } from "@ant-design/icons";
 import { useAuth } from "../../../context/AuthContext.tsx";
 import matchService from "../../../service/match/matchService.ts";
-import UserSidebar from "../../../components/sidebar/UserSidebar.tsx";
 import ApproveResultModal from "./my-match/ApproveResultModal.tsx";
 import MatchDetailModal from "./my-match/MatchDetailModal.tsx";
 import SubmitResultModal from "./my-match/SubmitResultModal.tsx";
@@ -30,12 +29,8 @@ const { Title, Text } = Typography;
 
 const MyMatchPage: React.FC = () => {
   const { isLoading } = useAuth();
-  const selectedMenu = "2";
-
   const [matches, setMatches] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
-
-  // States quản lý Modals
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -45,9 +40,7 @@ const MyMatchPage: React.FC = () => {
     setLoadingData(true);
     try {
       const response = await matchService.getMyMatches(1, 50);
-      if (response.code === 200) {
-        setMatches(response.result.data || []);
-      }
+      if (response.code === 200) setMatches(response.result.data || []);
     } catch (error) {
       message.error("Không thể tải danh sách trận đấu");
     } finally {
@@ -59,7 +52,6 @@ const MyMatchPage: React.FC = () => {
     fetchMyMatches();
   }, []);
 
-  // Đồng bộ lại Selected Match nếu data list thay đổi
   useEffect(() => {
     if (selectedMatch) {
       const updatedMatch = matches.find(
@@ -111,7 +103,6 @@ const MyMatchPage: React.FC = () => {
     );
   };
 
-  // Cập nhật map trạng thái mới sạch sẽ theo Backend mới
   const renderStatusTag = (status: string) => {
     switch (status) {
       case "OPEN":
@@ -149,107 +140,99 @@ const MyMatchPage: React.FC = () => {
               "DISPUTED",
             ].includes(m.status),
           )}
-          renderItem={(match) => {
-            return (
-              <Card
-                size="small"
-                style={{
-                  marginBottom: 16,
-                  borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <Row align="middle" justify="space-between">
-                  <Col xs={24} md={16}>
-                    <Space direction="vertical" size={2}>
-                      <Space wrap>
-                        <Title
-                          level={5}
-                          style={{ margin: 0, color: "#1e293b" }}
-                        >
-                          {match.title || `Giao lưu ${match.categoryName}`}
-                        </Title>
-                        {renderStatusTag(match.status)}
-                        {renderMatchTypeTag(
-                          match.matchType,
-                          match.minRank,
-                          match.maxRank,
-                          match.note,
-                        )}
-                      </Space>
-                      <Space
-                        style={{
-                          color: "#64748b",
-                          fontSize: "13px",
-                          marginTop: 6,
-                        }}
-                        wrap
-                      >
-                        <span>
-                          <CalendarOutlined className="text-orange-500" />{" "}
-                          {new Date(match.startTime).toLocaleTimeString(
-                            "vi-VN",
-                            { hour: "2-digit", minute: "2-digit" },
-                          )}{" "}
-                          {new Date(match.startTime).toLocaleDateString(
-                            "vi-VN",
-                          )}
-                        </span>
-                        <Divider type="vertical" />
-                        <span>
-                          <EnvironmentOutlined className="text-purple-500" />{" "}
-                          {match.courtName || "Tự thỏa thuận"}
-                        </span>
-                      </Space>
-                    </Space>
-                  </Col>
-
-                  <Col
-                    xs={24}
-                    md={8}
-                    style={{ textAlign: "right", marginTop: "8px" }}
-                  >
-                    <Space
-                      wrap
-                      style={{ justifyContent: "flex-end", width: "100%" }}
-                    >
-                      {match.status === "WAITING_RESULT_APPROVAL" ? (
-                        <Button
-                          type="primary"
-                          onClick={() => openModal(match, "APPROVE")}
-                          style={{
-                            borderRadius: "8px",
-                            background: "#f59e0b",
-                            borderColor: "#f59e0b",
-                          }}
-                        >
-                          Xử lý kết quả
-                        </Button>
-                      ) : match.status === "READY" ||
-                        match.status === "PLAYING" ||
-                        match.status === "DISPUTED" ? (
-                        <Button
-                          type="primary"
-                          onClick={() => openModal(match, "DETAIL")}
-                          className="bg-gradient-to-r from-orange-500 to-purple-600 border-none hover:opacity-90 font-medium"
-                          style={{ borderRadius: "8px" }}
-                        >
-                          Đội hình / Báo KQ
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => openModal(match, "DETAIL")}
-                          style={{ borderRadius: "8px" }}
-                        >
-                          Xem chi tiết
-                        </Button>
+          renderItem={(match) => (
+            <Card
+              size="small"
+              style={{
+                marginBottom: 16,
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <Row align="middle" justify="space-between">
+                <Col xs={24} md={16}>
+                  <Space direction="vertical" size={2}>
+                    <Space wrap>
+                      <Title level={5} style={{ margin: 0, color: "#1e293b" }}>
+                        {match.title || `Giao lưu ${match.categoryName}`}
+                      </Title>
+                      {renderStatusTag(match.status)}
+                      {renderMatchTypeTag(
+                        match.matchType,
+                        match.minRank,
+                        match.maxRank,
+                        match.note,
                       )}
                     </Space>
-                  </Col>
-                </Row>
-              </Card>
-            );
-          }}
+                    <Space
+                      style={{
+                        color: "#64748b",
+                        fontSize: "13px",
+                        marginTop: 6,
+                      }}
+                      wrap
+                    >
+                      <span>
+                        <CalendarOutlined className="text-orange-500" />{" "}
+                        {new Date(match.startTime).toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        {new Date(match.startTime).toLocaleDateString("vi-VN")}
+                      </span>
+                      <Divider type="vertical" />
+                      <span>
+                        <EnvironmentOutlined className="text-purple-500" />{" "}
+                        {match.courtName || "Tự thỏa thuận"}
+                      </span>
+                    </Space>
+                  </Space>
+                </Col>
+                <Col
+                  xs={24}
+                  md={8}
+                  style={{ textAlign: "right", marginTop: "8px" }}
+                >
+                  <Space
+                    wrap
+                    style={{ justifyContent: "flex-end", width: "100%" }}
+                  >
+                    {match.status === "WAITING_RESULT_APPROVAL" ? (
+                      <Button
+                        type="primary"
+                        onClick={() => openModal(match, "APPROVE")}
+                        style={{
+                          borderRadius: "8px",
+                          background: "#f59e0b",
+                          borderColor: "#f59e0b",
+                        }}
+                      >
+                        Xử lý kết quả
+                      </Button>
+                    ) : ["READY", "PLAYING", "DISPUTED"].includes(
+                        match.status,
+                      ) ? (
+                      <Button
+                        type="primary"
+                        onClick={() => openModal(match, "DETAIL")}
+                        className="bg-gradient-to-r from-orange-500 to-purple-600 border-none hover:opacity-90 font-medium"
+                        style={{ borderRadius: "8px" }}
+                      >
+                        Đội hình / Báo KQ
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => openModal(match, "DETAIL")}
+                        style={{ borderRadius: "8px" }}
+                      >
+                        Xem chi tiết
+                      </Button>
+                    )}
+                  </Space>
+                </Col>
+              </Row>
+            </Card>
+          )}
         />
       ),
     },
@@ -314,32 +297,18 @@ const MyMatchPage: React.FC = () => {
   ];
 
   return (
-    <div
-      style={{
-        padding: "24px",
-        backgroundColor: "#f5f7fa",
-        minHeight: "calc(100vh - 70px)",
-      }}
-    >
-      <Row gutter={[24, 24]} justify="center">
-        <Col xs={24} md={8} lg={6}>
-          <UserSidebar selectedKey={selectedMenu} />
-        </Col>
-        <Col xs={24} md={16} lg={18}>
-          <Card
-            title={
-              <span style={{ fontSize: "20px", fontWeight: 600 }}>
-                Trận đấu của tôi
-              </span>
-            }
-            bordered={false}
-            style={{ borderRadius: "12px", height: "100%" }}
-          >
-            <Tabs defaultActiveKey="1" items={tabItems} />
-          </Card>
-        </Col>
-      </Row>
-
+    <>
+      <Card
+        title={
+          <span style={{ fontSize: "20px", fontWeight: 600 }}>
+            Trận đấu của tôi
+          </span>
+        }
+        bordered={false}
+        style={{ borderRadius: "12px", height: "100%" }}
+      >
+        <Tabs defaultActiveKey="1" items={tabItems} />
+      </Card>
       <MatchDetailModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -347,21 +316,19 @@ const MyMatchPage: React.FC = () => {
         onOpenSubmitModal={() => setIsSubmitModalOpen(true)}
         match={selectedMatch}
       />
-
       <ApproveResultModal
         isOpen={isApproveModalOpen}
         onClose={() => setIsApproveModalOpen(false)}
         onSuccess={fetchMyMatches}
         match={selectedMatch}
       />
-
       <SubmitResultModal
         isOpen={isSubmitModalOpen}
         onClose={() => setIsSubmitModalOpen(false)}
         onSuccess={fetchMyMatches}
         match={selectedMatch}
       />
-    </div>
+    </>
   );
 };
 

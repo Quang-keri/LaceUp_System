@@ -14,6 +14,13 @@ class WebSocketService {
   private notificationListeners: ((data: any) => void)[] = [];
 
   connect(url: string, token: string | null = null): void {
+    if (!url) {
+      console.warn(
+        "[WS] Chặn lệnh kết nối vì URL truyền vào bị trống hoặc undefined!",
+      );
+      return;
+    }
+
     if (this.isConnected()) return;
 
     this.socket = new SockJS(url);
@@ -114,8 +121,16 @@ class WebSocketService {
 
   disconnect(): void {
     if (this.stompClient) {
-      this.stompClient.disconnect(() => {});
+      try {
+        this.stompClient.disconnect(() => {});
+      } catch (e) {
+        console.error("Lỗi khi ngắt kết nối STOMP:", e);
+      }
       this.stompClient = null;
+    }
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
     }
   }
 

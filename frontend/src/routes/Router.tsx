@@ -3,7 +3,6 @@ import DefaultLayout from "../layouts/DefaultLayout/DefaultLayout";
 import LoginPage from "../page/customer/login-page/LoginPage.tsx";
 import PostPage from "../page/customer/post/PostPage.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
-import CustomerNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
 import { ProtectedRouter } from "./ProtectedRouter.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
@@ -14,7 +13,6 @@ import PermissionManagement from "../page/admin/permission-management/Permission
 import OwnerLayout from "../layouts/OwnerLayout/OwnerLayout.tsx";
 import ChatHome from "../page/customer/chat/ChatHome.tsx";
 import BuildingListPage from "../page/owner/building/BuildingListPage.tsx";
-import BuildingFormPage from "../page/owner/building/BuildingCreateModal.tsx";
 import CourtManagementPage from "../page/owner/court/CourtManagementPage.tsx";
 import BookingManagementPage from "../page/owner/booking/BookingManagementPage.tsx";
 import CourtDetailPage from "../page/owner/court/CourtDetailPage.tsx";
@@ -53,7 +51,6 @@ import { Spin } from "antd";
 import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
 import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx";
 import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
-import BuildingEditPage from "../page/owner/building/BuildingEditModal.tsx";
 import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
 import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
 import MyRanks from "../page/customer/profile-page/MyRankPage.tsx";
@@ -74,6 +71,7 @@ import AdminTransactionManager from "../page/admin/transaction/AdminTransactionM
 import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 import AdminCustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
 import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
+import UserLayout from "../layouts/UserLayout.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -127,15 +125,22 @@ export const router = createBrowserRouter([
           />
         ),
         children: [
-          { path: "dashboard", element: <MyDashboardWrapper /> },
-          { path: "profile", element: <ProfilePage /> },
-          { path: "my-matches", element: <MyMatchPage /> },
-          { path: "achievements", element: <MyAchievements /> },
-          { path: "my-ranks", element: <MyRanks /> },
           {
-            path: "bank-account",
-            element: <OwnerBankAccount />,
+            element: <UserLayout />,
+            children: [
+              { path: "dashboard", element: <MyDashboardWrapper /> },
+              { path: "profile", element: <ProfilePage /> },
+              { path: "my-matches", element: <MyMatchPage /> },
+              { path: "achievements", element: <MyAchievements /> },
+              { path: "my-ranks", element: <MyRanks /> },
+              { path: "booking-history", element: <BookingHistoryPage /> },
+              {
+                path: "bank-account",
+                element: <OwnerBankAccount />,
+              },
+            ],
           },
+
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {
