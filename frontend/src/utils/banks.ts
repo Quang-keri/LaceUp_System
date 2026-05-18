@@ -8,9 +8,9 @@ export type Bank = {
   transferSupported: number;
   lookupSupported: number;
   short_name: string;
-  support: 3;
+  support: number;
   isTransfer: number;
-  swift_code: string;
+  swift_code: string | null;
 };
 
 export const BANKS: Bank[] = [

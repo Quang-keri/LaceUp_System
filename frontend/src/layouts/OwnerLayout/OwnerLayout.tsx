@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Layout, ConfigProvider, theme as antTheme } from "antd";
 import { Outlet } from "react-router-dom";
-import Sidebar from "../../components/owner/Sidebar";
 import OwnerHeader from "../../components/owner/Header";
 import { useAuth } from "../../context/AuthContext";
 import ChatBubble from "../../page/customer/chat/ChatBubble";
@@ -23,10 +22,6 @@ export default function OwnerLayout() {
     document.body.setAttribute("data-theme", themeValue);
   }, [isDark]);
 
-  const handleLogoutClick = async () => {
-    await logout();
-  };
-
   const handleThemeToggle = () => setIsDark((prev) => !prev);
 
   return (
@@ -47,6 +42,7 @@ export default function OwnerLayout() {
             adminUser={user}
             isDark={isDark}
             onThemeToggle={handleThemeToggle}
+            onLogout={logout}
           />
 
           <Content

@@ -28,6 +28,8 @@ import { useAuth } from "../../context/AuthContext";
 const { Header } = Layout;
 
 interface AdminHeaderProps {
+  collapsed: boolean;
+  toggleCollapsed: () => void;
   adminUser: UserResponse | null;
   isDark: boolean;
   onThemeToggle: () => void;

@@ -1,16 +1,32 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Form, Input, Upload, Modal, Button, message, Select } from "antd";
+import type { UploadFile } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import newsService from "../../../service/newsService";
+
+export interface NewsItem {
+  id: number | string;
+  title: string;
+  content: string;
+  visibility?: string;
+  images?: Array<{ id?: number; imageId?: number; imageUrl: string }>;
+}
+
+interface UpdateNewsModalProps {
+  isOpen: boolean;
+  initialData: NewsItem | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}
 
 export default function UpdateNewsModal({
   isOpen,
   initialData,
   onClose,
   onSuccess,
-}) {
+}: UpdateNewsModalProps) {
   const [form] = Form.useForm();
-  const [fileList, setFileList] = useState([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -21,7 +37,6 @@ export default function UpdateNewsModal({
         visibility: initialData.visibility || "PUBLIC",
       });
 
-      
       if (initialData.images && initialData.images.length > 0) {
         const existingImages = initialData.images.map((img) => {
           // Lấy đúng ID (đề phòng API trả về 'imageId' thay vì 'id')
@@ -30,7 +45,7 @@ export default function UpdateNewsModal({
           return {
             uid: String(imageId), // BẮT BUỘC ép kiểu về String
             name: `image-${imageId}.png`,
-            status: "done", // BẮT BUỘC là 'done' thì AntD mới hiện ảnh
+            status: "done" as const, // BẮT BUỘC là 'done' thì AntD mới hiện ảnh
             url: img.imageUrl,
             thumbUrl: img.imageUrl, // THÊM thumbUrl để hỗ trợ preview cho picture-card
           };
@@ -48,7 +63,12 @@ export default function UpdateNewsModal({
     onClose();
   };
 
-  const handleFinish = async (values) => {
+  const handleFinish = async (values: {
+    title: string;
+    content: string;
+    visibility: string;
+  }) => {
+    if (!initialData) return;
     try {
       setLoading(true);
       const formData = new FormData();

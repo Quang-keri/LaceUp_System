@@ -23,18 +23,18 @@ const PolicyLayout = () => {
 
   return (
     <div>
-       <ScrollToTop />
+      <ScrollToTop />
       <ConfigProvider
         theme={{
-          colorPrimary: "#9156F1",
+          token: {
+            colorPrimary: "#9156F1",
+          },
           components: {
             Menu: {
-              activeBarColor: "#9156F1",
-              activeBarHeight: 3,
+              itemSelectedBg: "transparent",
               itemSelectedColor: "#9156F1",
               itemHoverColor: "#9156F1",
-              horizontalItemSelectedColor: "#9156F1",
-              horizontalItemIndicatorColor: "#9156F1",
+              activeBarHeight: 3,
             },
           },
         }}

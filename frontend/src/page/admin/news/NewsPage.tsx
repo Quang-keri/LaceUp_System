@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import NewsCard from "./NewsCard";
 import NewsFilter from "./NewsFilter";
@@ -8,16 +8,28 @@ import newsService from "../../../service/newsService";
 import CreateNewsModal from "./CreateNewsModal";
 import UpdateNewsModal from "./UpdateNewsModal";
 
+export interface NewsImage {
+  imageUrl: string;
+}
+
+export interface NewsItem {
+  id: number | string;
+  title: string;
+  content: string;
+  createdAt: string;
+  images?: NewsImage[];
+}
+
 export default function NewsPage() {
-  const [news, setNews] = useState([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [keyword, setKeyword] = useState("");
   const [pagination, setPagination] = useState({ page: 0, size: 10, total: 0 });
 
   // Quản lý trạng thái các Modal
-  const [viewingNews, setViewingNews] = useState(null); // Dành cho Xem chi tiết
+  const [viewingNews, setViewingNews] = useState<NewsItem | null>(null); // Dành cho Xem chi tiết
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
-  const [selectedNews, setSelectedNews] = useState(null);
+  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
 
   const fetchNews = async () => {
     try {
@@ -37,7 +49,7 @@ export default function NewsPage() {
     fetchNews();
   }, [pagination.page, keyword]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string | number) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa tin tức này?")) {
       try {
         await newsService.delete(id);

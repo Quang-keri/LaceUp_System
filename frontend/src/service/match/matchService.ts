@@ -60,9 +60,6 @@ export const matchService = {
     size: number,
     status?: string,
     category?: string,
-    keyword?: string,
-    startDate?: string,
-    endDate?: string,
     matchType?: string,
   ): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
     const params: any = { page, size };

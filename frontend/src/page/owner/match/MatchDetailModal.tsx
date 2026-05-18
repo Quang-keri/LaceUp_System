@@ -128,7 +128,7 @@ const MatchDetailModal: React.FC<Props> = ({ visible, onCancel, match }) => {
         </Descriptions.Item>
       </Descriptions>
 
-      <Divider orientation="left">
+      <Divider orientation={"left" as any}>
         <Space>
           <Users size={18} />
           <span>
