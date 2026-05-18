@@ -12,7 +12,7 @@ import java.util.UUID;
 @Table(
         name = "user_category_ranks",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"user_id", "category_id"}) // Đảm bảo 1 user chỉ có 1 rank cho mỗi môn
+                @UniqueConstraint(columnNames = {"user_id", "category_id"})
         }
 )
 @Getter
@@ -39,8 +39,6 @@ public class UserCategoryRank extends BaseEntity {
     @Column(name = "rank_point", nullable = false)
     private Integer rankPoint = 0;
 
-    // Các thông số thống kê CỦA RIÊNG MÔN NÀY (Tùy chọn)
-    // Nếu môn nào cũng tính win/loss riêng thì nên dời từ UserStats sang đây
     @Builder.Default
     private int currentWinStreak = 0;
 

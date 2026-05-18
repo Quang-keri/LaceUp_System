@@ -6,7 +6,6 @@ import lombok.experimental.*;
 import org.sport.backend.constant.MemberTier;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.AuthProvider;
-import org.sport.backend.constant.RankHelper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -85,8 +84,6 @@ public class User extends BaseEntity {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private BankAccount bankAccount;
-
-
 
     @Builder.Default
     @Column(name = "credit_score")

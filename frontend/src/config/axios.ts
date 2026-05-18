@@ -39,9 +39,25 @@ api.interceptors.response.use(
     const url = originalRequest.url || "";
     if (url.startsWith("/auth")) return Promise.reject(error);
 
-    if (error.response?.status !== 401) return Promise.reject(error);
+    if (error.response?.status !== 401) {
+      return Promise.reject(error);
+    }
 
-    if (originalRequest._retry) return Promise.reject(error);
+    const code = error.response?.data?.code;
+
+    if (code === "ACCOUNT_DEACTIVATED") {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+
+      window.dispatchEvent(new CustomEvent(AXIOS_AUTH_ERROR_EVENT));
+
+      return Promise.reject(error);
+    }
+
+    if (originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
     originalRequest._retry = true;
 
     const refreshToken = localStorage.getItem("refreshToken");

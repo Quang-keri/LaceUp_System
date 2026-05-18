@@ -119,17 +119,40 @@ export const userService = {
   },
 
   getOwnerCustomers: async (
-        page: number, size: number, keyword?: string, tier?: string, minScore?: number, maxScore?: number
-    ): Promise<ApiResponse<PageResponse<UserResponse>>> => {
-        const params: any = { page, size };
-        if (keyword) params.keyword = keyword;
-        if (tier) params.tier = tier;
-        if (minScore !== undefined) params.minScore = minScore;
-        if (maxScore !== undefined) params.maxScore = maxScore;
-        
-        const response = await api.get('/users/my-customers', { params });
-        return response.data;
-    },
+    page: number,
+    size: number,
+    keyword?: string,
+    tier?: string,
+    minScore?: number,
+    maxScore?: number,
+  ): Promise<ApiResponse<PageResponse<UserResponse>>> => {
+    const params: any = { page, size };
+    if (keyword) params.keyword = keyword;
+    if (tier) params.tier = tier;
+    if (minScore !== undefined) params.minScore = minScore;
+    if (maxScore !== undefined) params.maxScore = maxScore;
+
+    const response = await api.get("/users/my-customers", { params });
+    return response.data;
+  },
+
+  getAllCustomersForAdmin: async (
+    page: number,
+    size: number,
+    keyword?: string,
+    tier?: string,
+    minScore?: number,
+    maxScore?: number,
+  ): Promise<ApiResponse<PageResponse<UserResponse>>> => {
+    const params: any = { page, size };
+    if (keyword) params.keyword = keyword;
+    if (tier) params.tier = tier;
+    if (minScore !== undefined) params.minScore = minScore;
+    if (maxScore !== undefined) params.maxScore = maxScore;
+
+    const response = await api.get("/users/customers", { params });
+    return response.data;
+  },
 
   getReputationLogs: async (
     userId: string,

@@ -3,6 +3,7 @@ package org.sport.backend.ai.serviceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.ai.service.ChatbotService;
 import org.sport.backend.properties.ChatBoxProperties;
+import org.sport.backend.properties.UrlProperties;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -18,12 +19,16 @@ public class ChatbotServiceImpl implements ChatbotService {
 
     private final ChatClient chatClient;
     private final VectorStore vectorStore;
-    private final ChatBoxProperties chatBoxProperties;
 
-    public ChatbotServiceImpl(ChatClient.Builder builder, VectorStore vectorStore, ChatBoxProperties chatBoxProperties) {
+    private final ChatBoxProperties chatBoxProperties;
+    private final UrlProperties urlProperties;
+
+    public ChatbotServiceImpl(
+            ChatClient.Builder builder, VectorStore vectorStore, ChatBoxProperties chatBoxProperties, UrlProperties urlProperties) {
         this.chatClient = builder.build();
         this.vectorStore = vectorStore;
         this.chatBoxProperties = chatBoxProperties;
+        this.urlProperties = urlProperties;
     }
 
     @Override
@@ -48,21 +53,28 @@ public class ChatbotServiceImpl implements ChatbotService {
         }
 
         // 3. Generation
+        // CẬP NHẬT LẠI PROMPT: Bổ sung luật xử lý câu hỏi về Đánh giá / Rating
         String finalPrompt = String.format(
                 """
                         Hệ thống: Bạn là trợ lý ảo của LaceUP. Bạn được cung cấp các dữ liệu sau từ hệ thống: [%s].
                         
                         Yêu cầu bắt buộc đối với bạn:
                         - CHỈ trả lời đúng trọng tâm câu hỏi của khách hàng.
-                        - KHÔNG tự ý cung cấp thêm thông tin dư thừa (Ví dụ: khách hỏi tìm trận đấu/kèo thì CHỈ trả lời về trận đấu/kèo, tuyệt đối KHÔNG tự liệt kê thêm các sân cho thuê nếu khách không hỏi).
-                        - Phân biệt rõ loại hình thể thao (bóng đá, cầu lông, v.v.) trong dữ liệu, không tự ý suy diễn.
+                        - QUAN TRỌNG: Khi gợi ý một sân cụ thể, BẠN BẮT BUỘC PHẢI DÙNG CÚ PHÁP TAG SAU ĐỂ HỆ THỐNG VẼ UI (Viết liền trên 1 dòng):
+                                                  [RENTAL|Tên sân|Địa chỉ cụ thể|Giá thuê|Điểm đánh giá|Đường dẫn chi tiết sân]
+                        - LƯU Ý VỀ ĐƯỜNG DẪN (URL): Bạn phải kết hợp mã định danh (ID) hoặc đường dẫn tương đối của sân với tên miền Frontend chính thức được cấp ở đây: %s
+                                                  (Ví dụ mẫu: [RENTAL|Sân Cầu Lông Pro|456 Lê Văn Việt|80,000 VNĐ/giờ|1 lượt đánh giá 5 sao|%s/rental-area/123])
+                        - TUYỆT ĐỐI KHÔNG tự liệt kê lại Địa chỉ, Giá, Đánh giá, hay Link ra dạng gạch đầu dòng văn bản thường nữa. Chỉ nói 1 câu dẫn dắt ngắn gọn rồi chèn ngay block [RENTAL|...] vào.
+                        - KHÔNG tự ý cung cấp thêm thông tin dư thừa.
+                        - Phân biệt rõ loại hình thể thao trong dữ liệu, không tự ý suy diễn.
                         - Nếu dữ liệu báo không có thông tin khớp với câu hỏi, hãy lịch sự báo không tìm thấy và hướng dẫn khách gọi hotline.
-                        - Nếu khách hàng hỏi sân gần nhất, hãy hỏi địa chỉ hiện tại của khách hàng, rồi sau đó dựa vào thông tin đó cung cấp thông tin sân gần nhất cho khách hàng.
-                        - Nếu người dùng tìm sân trong khung giờ mà không có sân nào đáp ứng, hãy liệt kê các sân có thời gian hoạt động gần nhất với khung giờ đó và thông báo cho người dùng biết.
+                        - Nếu khách hàng hỏi sân gần nhất, hãy hỏi địa chỉ hiện tại của khách hàng để tư vấn.
+                        - Nếu khách tìm khung giờ không có sẵn, hãy gợi ý sân có thời gian hoạt động gần nhất.
+                        - Nếu khách hàng hỏi về sân có đánh giá 5 sao (hoặc sân tốt), hãy dựa vào điểm đánh giá trung bình hoặc số lượt đánh giá 5 sao trong dữ liệu để liệt kê các sân phù hợp nhất. Nếu không có sân nào nhắc đến 5 sao, hãy thông báo rõ ràng.
+                        
                         Khách hàng: %s""",
-                context, userMessage
+                context, urlProperties.getFrontend(), urlProperties.getFrontend(), userMessage
         );
-
         try {
             String aiResponse = chatClient.prompt()
                     .user(finalPrompt)
@@ -71,16 +83,8 @@ public class ChatbotServiceImpl implements ChatbotService {
 
             // 4. XỬ LÝ CHUỖI TRẢ VỀ TỪ AI Ở ĐÂY
             if (aiResponse != null) {
-                // Biến chuỗi "\n" (nếu AI trả về dạng text thô) thành ký tự xuống dòng thực sự
                 aiResponse = aiResponse.replace("\\n", "\n");
-
-                // XÓA DÒNG NÀY: aiResponse = aiResponse.replace("\n", " ");
-                // -> Không thay ký tự xuống dòng thành khoảng trắng nữa!
-
-                // Xóa định dạng in đậm (Markdown **) để text hiển thị sạch sẽ hơn
                 aiResponse = aiResponse.replace("**", "");
-
-                // (Tùy chọn) Xóa bớt khoảng trắng thừa nhưng vẫn giữ lại \n
                 aiResponse = aiResponse.replaceAll(" +", " ").trim();
             }
 

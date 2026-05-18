@@ -8,6 +8,7 @@ import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.sport.backend.entity.mongo.TemporaryRegistration;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
+import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.UserRepository;
 import org.sport.backend.repository.mongo.TemporaryRegistrationRepository;
 import org.sport.backend.service.EmailService;
@@ -26,9 +27,12 @@ import java.util.Random;
 public class EmailServiceImpl implements EmailService {
 
     private final UserRepository userRepository;
-    private final JavaMailSender javaMailSender;
-    private final MailProperties mailProperties;
     private final TemporaryRegistrationRepository temporaryRegistrationRepository;
+
+    private final JavaMailSender javaMailSender;
+
+    private final MailProperties mailProperties;
+    private final UrlProperties urlProperties;
 
     @Override
     public void sendResetPasswordEmail(String toEmail, String resetUrl) {
@@ -63,7 +67,7 @@ public class EmailServiceImpl implements EmailService {
                 .email(user.getEmail())
                 .userRequest(user)
                 .otp(otp)
-                .createdAt(LocalDateTime.now()) // Dùng cho TTL index tự động xóa
+                .createdAt(LocalDateTime.now())
                 .build();
 
         temporaryRegistrationRepository.save(temp);
@@ -76,9 +80,9 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendEmailVerification(String toEmail, String name, String otp) {
 
-        String confirmUrl = "http://localhost:5173/register/confirm?email=" + toEmail + "&otp=" + otp;
+        String confirmUrl = urlProperties.getFrontend() + "/register/confirm?email=" + toEmail + "&otp=" + otp;
 
-        String subject = "Xác nhận đăng ký tài khoản RentRoom";
+        String subject = "Xác nhận đăng ký tài khoản LaceZone";
 
         String content = """
                  <!DOCTYPE html>

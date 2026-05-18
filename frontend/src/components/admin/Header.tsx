@@ -23,6 +23,7 @@ import {
   ReadOutlined,
 } from "@ant-design/icons";
 import type { UserResponse } from "../../types/user.ts";
+import { useAuth } from "../../context/AuthContext";
 
 const { Header } = Layout;
 
@@ -30,17 +31,16 @@ interface AdminHeaderProps {
   adminUser: UserResponse | null;
   isDark: boolean;
   onThemeToggle: () => void;
-  onLogout: () => void; // Thêm prop này để xử lý đăng xuất giống OwnerHeader
 }
 
 const AdminHeader: React.FC<AdminHeaderProps> = ({
   adminUser,
   isDark,
   onThemeToggle,
-  onLogout,
 }) => {
   const location = useLocation();
   const [activeKey, setActiveKey] = useState<string>(location.pathname);
+  const { logout } = useAuth();
 
   useEffect(() => {
     setActiveKey(location.pathname);
@@ -52,7 +52,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     { key: "1", label: "Hồ sơ cá nhân" },
     { key: "2", label: "Cài đặt" },
     { type: "divider" },
-    { key: "logout", label: "Đăng xuất", danger: true, onClick: onLogout },
+    { key: "logout", label: "Đăng xuất", danger: true, onClick: logout },
   ];
 
   const menuItems: MenuProps["items"] = [

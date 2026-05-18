@@ -1,6 +1,9 @@
 server:
   port: ${SERVER_PORT}
 
+url:
+  backend: ${BACKEND_URL}
+  frontend: ${FRONTEND_URL}
 
 spring:
   application:
@@ -73,6 +76,12 @@ jwt:
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
 
 token_reset_password_expire_seconds: 900
+
+google:
+  client:
+    id: ${GOOGLE_ID}
+    secret: ${GOOGLE_SECRET}
+    uri: ${GOOGLE_URI}
 
 payos:
   client-id: ${PAYOS_CLIENT_ID}

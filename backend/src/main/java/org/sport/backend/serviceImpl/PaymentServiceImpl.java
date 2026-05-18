@@ -21,6 +21,7 @@ import org.sport.backend.entity.User;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.properties.PayOsProperties;
+import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.BookingIntentRepository;
 import org.sport.backend.repository.BookingRepository;
 import org.sport.backend.repository.PaymentRepository;
@@ -69,6 +70,8 @@ public class PaymentServiceImpl implements PaymentService {
     private ObjectProvider<PayOS> payOSProvider;
     @Autowired
     private VnPayConfig vnPayConfig;
+    @Autowired
+    private UrlProperties urlProperties;
 
     @Override
     public CheckoutResponse checkout(CheckoutRequest checkoutRequest) {
@@ -308,6 +311,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
         }
     }
+
     private CheckoutResponse handlePayLaterCheckout(BookingIntent intent, User user, PaymentMethod method, BigDecimal amountToPay, PaymentType paymentType) {
         long orderCode = generateUniqueOrderCode();
 
@@ -548,7 +552,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String buildBookingReturnUrl(long orderCode, String status) {
-        String fallback = "http://localhost:5173/payment/booking-result";
+        String fallback = urlProperties.getFrontend() + "/payment/booking-result";
         String base = payOsProperties.getReturnUrl();
         if ("cancel".equalsIgnoreCase(status)) {
             base = payOsProperties.getCancelUrl();
@@ -566,7 +570,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String buildInvoiceViewUrl(java.util.UUID bookingId) {
-        String fallback = "http://localhost:8080/bookings/" + bookingId + "/invoice/view";
+        String fallback = urlProperties.getBackend() + "/bookings/" + bookingId + "/invoice/view";
         String base = payOsProperties.getReturnUrl();
         if (base == null || base.isBlank()) {
             return fallback;

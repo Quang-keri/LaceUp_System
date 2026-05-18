@@ -34,8 +34,5 @@ public class MatchRegistration extends BaseEntity {
     @Column(name = "team_number")
     private Integer teamNumber;
 
-    @Column(name = "is_deposit_confirmed")
-    private Boolean isDepositConfirmed = false;
-
     private LocalDateTime registeredAt;
 }

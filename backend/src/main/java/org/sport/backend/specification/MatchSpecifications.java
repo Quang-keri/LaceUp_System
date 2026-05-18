@@ -70,6 +70,7 @@ public class MatchSpecifications {
 
     public static Specification<Match> fetchAllDetails() {
         return (root, query, cb) -> {
+            assert query != null;
             if (Long.class != query.getResultType()) {
                 root.fetch("court", JoinType.LEFT).fetch("category", JoinType.LEFT);
                 root.fetch("host", JoinType.LEFT);
@@ -101,6 +102,24 @@ public class MatchSpecifications {
             Predicate isParticipant = cb.equal(registrationsJoin.join("user", JoinType.LEFT).get("userId"), userId);
 
             return cb.or(isHost, isParticipant);
+        };
+    }
+
+    public static Specification<Match> isNotParticipant(UUID userId) {
+        return (root, query, cb) -> {
+            if (userId == null) return null;
+
+            // Subquery kiểm tra user chưa có trong danh sách registrations của match này
+            assert query != null;
+            jakarta.persistence.criteria.Subquery<Long> subquery = query.subquery(Long.class);
+            jakarta.persistence.criteria.Root<MatchRegistration> subRoot = subquery.from(MatchRegistration.class);
+            subquery.select(cb.count(subRoot));
+            subquery.where(
+                    cb.equal(subRoot.get("match"), root),
+                    cb.equal(subRoot.get("user").get("userId"), userId)
+            );
+
+            return cb.equal(subquery, 0L);
         };
     }
 }

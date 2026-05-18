@@ -8,4 +8,5 @@ import java.util.UUID;
 public class MatchResultRequest {
     private UUID matchId;
     private Integer winningTeamNumber;
+    private List<UUID> absentUserIds;
 }

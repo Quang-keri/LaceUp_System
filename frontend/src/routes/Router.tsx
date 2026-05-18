@@ -71,8 +71,9 @@ import TransactionManager from "../page/owner/transaction/TransactionManager.tsx
 import OwnerSettlementHistory from "../page/owner/settlement/OwnerSettlementHistory.tsx";
 import OwnerBankAccount from "../page/owner/settlement/OwnerBankAccount.tsx";
 import AdminTransactionManager from "../page/admin/transaction/AdminTransactionManager.tsx";
-import CustomerManagementPage from "../page/owner/customer-management/CustomerManagementPage.tsx";
 import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
+import AdminCustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
+import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -98,7 +99,6 @@ export const router = createBrowserRouter([
         path: "/create-rental-area",
         element: <CreateRentalAreaPage />,
       },
-
       { path: "home", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
       { path: "news", element: <UserNewsPage /> },
@@ -165,7 +165,7 @@ export const router = createBrowserRouter([
       { path: "permissions", element: <PermissionManagement /> },
       { path: "court-types", element: <CategoryManagement /> },
       { path: "bookings/list", element: <BookingManagement /> },
-
+      { path: "customers", element: <AdminCustomerManagementPage /> },
       { path: "news", element: <NewsPage /> },
       { path: "reviews", element: <ReviewsManagement /> },
       { path: "amenities", element: <AmenityManagement /> },

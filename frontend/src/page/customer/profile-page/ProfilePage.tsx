@@ -185,7 +185,15 @@ const ProfilePage: React.FC = () => {
                         size="large"
                         onClick={() => {
                           setIsEditing(false);
-                          form.resetFields();
+                          if (user) {
+                            form.setFieldsValue({
+                              userName: user.userName,
+                              email: user.email,
+                              phone: user.phone || "",
+                              dob: user.dateOfBirth || "",
+                              gender: user.gender || "",
+                            });
+                          }
                         }}
                       >
                         Hủy

@@ -3,6 +3,8 @@ package org.sport.backend.repository;
 import org.sport.backend.constant.ResultStatus;
 import org.sport.backend.entity.MatchResult;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,4 +19,7 @@ public interface MatchResultRepository extends JpaRepository<MatchResult, UUID> 
     Optional<MatchResult> findByMatch_MatchIdAndStatus(UUID matchId, ResultStatus status);
 
     boolean existsByMatch_MatchIdAndStatus(UUID matchId, ResultStatus status);
+
+    @Query("SELECT COUNT(mr) FROM MatchResult mr JOIN mr.winnerIds w WHERE w = :userId AND mr.status = 'APPROVED'")
+    long countTotalWinsByUserId(@Param("userId") UUID userId);
 }
