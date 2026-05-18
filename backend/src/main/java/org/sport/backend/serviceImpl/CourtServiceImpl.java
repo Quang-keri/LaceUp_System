@@ -413,6 +413,7 @@ public class CourtServiceImpl implements CourtService {
                                     .courtCopyId(copy.getCourtCopyId())
                                     .courtCode(copy.getCourtCode())
                                     .status(copy.getCourtCopyStatus())
+                                    .location(copy.getLocation())
                                     .slots(slotResponses)
                                     .build();
                         }

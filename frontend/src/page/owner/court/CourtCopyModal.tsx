@@ -38,7 +38,6 @@ export default function CourtCopyModal({
       setLoading(true);
 
       if (copy) {
-        // Update
         await CourtService.updateCourtCopy(copy.courtCopyId, {
           courtId,
           courtCode: values.courtCode,

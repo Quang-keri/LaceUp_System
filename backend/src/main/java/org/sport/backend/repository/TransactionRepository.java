@@ -75,4 +75,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     );
 
 
+    @Query("""
+    SELECT COALESCE(SUM(t.amount), 0)
+    FROM Transaction t
+    WHERE t.status = 'SUCCESS'
+      AND t.type = 'INCOME'
+      AND t.transactionDate BETWEEN :startDate AND :endDate
+      AND (
+            :ownerId IS NULL
+            OR t.owner.userId = :ownerId
+      )
+""")
+    BigDecimal getTotalIncomeRevenue(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("ownerId") UUID ownerId
+    );
+
+
 }

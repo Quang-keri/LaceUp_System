@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -46,8 +47,18 @@ public class BookingController {
     @Autowired
     private ExcelService excelService;
 
+    @PostMapping("/preview-price")
+    public ResponseEntity<?> previewOwnerBookingPrice(
+            @RequestBody OwnerBookingRequest request
+    ) {
+        BigDecimal total = bookingService.previewOwnerBookingPrice(request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(200, "Preview price successfully", total)
+        );
+    }
     @PostMapping("/owner")
-//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')") // Đảm bảo chỉ chủ sân/nhân viên mới được gọi
+    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<BookingResponse> ownerCreateBooking(
             @Valid @RequestBody OwnerBookingRequest request
     ) {
@@ -63,6 +74,7 @@ public class BookingController {
     }
 
     @PostMapping("/{bookingId}/services")
+//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ResponseEntity<ApiResponse<Void>> addExtraServicesToBooking(
             @PathVariable UUID bookingId,
             @RequestBody AddExtraServicesRequest request) {
@@ -76,6 +88,7 @@ public class BookingController {
     }
 
     @PostMapping("/check-availability")
+//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<CheckAvailabilityResponse> checkAvailability(
             @RequestBody @Valid SlotRequest request
     ) {
@@ -86,7 +99,7 @@ public class BookingController {
     }
 
     @PostMapping("/intent")
-//    @PreAuthorize("hasAuthority('BOOK_ROOM')")
+//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<BookingIntentResponse> createIntent(
             @Valid @RequestBody BookingRequest request
     ) {
@@ -98,7 +111,6 @@ public class BookingController {
     }
 
     @GetMapping("/intent/{intentId}")
-//    @PreAuthorize("hasAuthority('BOOK_ROOM')")
     public ApiResponse<BookingIntentResponse> getBookingIntentById(
             @PathVariable UUID intentId) {
         return ApiResponse.success(
@@ -138,7 +150,6 @@ public class BookingController {
     public ResponseEntity<String> viewInvoice(@PathVariable UUID bookingId) {
         try {
             var booking = bookingService.getBookingById(bookingId);
-            // Build a minimal HTML invoice for printing
             StringBuilder html = new StringBuilder();
             html.append("<html><head><meta charset=\"utf-8\"><title>Invoice</title>");
             html.append("<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}</style>");
@@ -180,7 +191,7 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}/collect-payment")
-    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
+//    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
     public ResponseEntity<ApiResponse<Void>> collectRemainingPayment(
             @PathVariable UUID bookingId
     ) {
@@ -340,5 +351,25 @@ public class BookingController {
             return ResponseEntity.internalServerError().build();
         }
     }
+    @PutMapping("/{bookingId}/cancel")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<BookingResponse>> cancelBooking(
+            @PathVariable UUID bookingId
+    ) {
+        try {
+            BookingResponse response = bookingService.cancelBookingByUser(bookingId);
 
+            return ResponseEntity.ok(
+                    ApiResponse.success(
+                            200,
+                            "Hủy booking thành công. Tiền cọc sẽ không được hoàn lại.",
+                            response
+                    )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error(400, e.getMessage())
+            );
+        }
+    }
 }

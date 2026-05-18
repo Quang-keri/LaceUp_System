@@ -21,7 +21,7 @@ public class AdminReviewController {
     private final ReviewService adminReviewService;
 
     @GetMapping("/stats")
-//    @PreAuthorize("hasAuthority('VIEW_DASHBOARD_ADMIN')")
+   @PreAuthorize("hasAuthority('VIEW_DASHBOARD_ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStats() {
 
         return ResponseEntity.ok(

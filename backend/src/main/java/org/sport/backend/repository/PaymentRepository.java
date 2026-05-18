@@ -16,10 +16,16 @@ import java.util.UUID;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
-    @Query("SELECT SUM(p.amount) FROM Payment p " +
-            "WHERE p.paymentStatus = 'COMPLETED' " +
-            "AND p.transactionDate BETWEEN :startDate AND :endDate " +
-            "AND (:ownerId IS NULL OR p.user.userId = :ownerId)")
+    @Query("""
+    SELECT COALESCE(SUM(p.amount), 0)
+    FROM Payment p
+    WHERE p.paymentStatus = 'SUCCESS'
+      AND p.transactionDate BETWEEN :startDate AND :endDate
+      AND (
+            :ownerId IS NULL
+            OR p.booking.rentalArea.owner.userId = :ownerId
+      )
+""")
     BigDecimal getTotalRevenue(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
@@ -28,7 +34,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     @Query("SELECT p.paymentStatus, COUNT(p) FROM Payment p " +
             "WHERE p.transactionDate BETWEEN :startDate AND :endDate " +
-            "AND (:ownerId IS NULL OR p.user.userId = :ownerId) " +
+            "AND (:ownerId IS NULL OR p.booking.rentalArea.owner.userId = :ownerId) " +
             "GROUP BY p.paymentStatus")
     List<Object[]> countByPaymentStatus(
             @Param("startDate") LocalDateTime startDate,
@@ -47,7 +53,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
-    // Tính tổng tiền Admin đã thực thu (SUCCESS) của một Tòa nhà trong tháng
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
             "JOIN p.booking b " +
             "WHERE b.rentalArea.rentalAreaId = :rentalAreaId " +
@@ -58,7 +63,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
-    // Đếm số lượng booking đã được thanh toán của một Tòa nhà trong tháng
     @Query("SELECT COUNT(DISTINCT b.bookingId) FROM Payment p " +
             "JOIN p.booking b " +
             "WHERE b.rentalArea.rentalAreaId = :rentalAreaId " +

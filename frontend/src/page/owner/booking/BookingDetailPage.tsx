@@ -25,6 +25,7 @@ import {
   PrinterOutlined,
 } from "@ant-design/icons";
 import bookingService from "../../../service/bookingService";
+
 const { Text, Title } = Typography;
 
 interface Props {
@@ -74,26 +75,35 @@ export default function BookingDetailPage({
   const filteredServices = useMemo(() => {
     if (!keyword) return availableServices;
     return availableServices.filter((s) =>
-      // Đổi s.name thành s.serviceName
       s.serviceName?.toLowerCase().includes(keyword.toLowerCase()),
     );
   }, [keyword, availableServices]);
+
   const handleAddToCart = (service: any) => {
+    const serviceId = service.id;
+
+    if (!serviceId) {
+      message.error("Lỗi dữ liệu: Dịch vụ không có ID!");
+      return;
+    }
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.serviceId === service.id);
+      const existing = prev.find((item) => item.serviceId === serviceId);
+
       if (existing) {
         return prev.map((item) =>
-          item.serviceId === service.id
+          item.serviceId === serviceId
             ? { ...item, quantity: item.quantity + 1 }
             : item,
         );
       }
+
       return [
         ...prev,
         {
-          serviceId: service.id,
-          name: service.serviceName, // Sửa thành serviceName
-          price: service.priceSell, // Sửa thành priceSell
+          serviceId,
+          name: service.serviceName,
+          price: service.priceSell,
           quantity: 1,
         },
       ];
@@ -115,15 +125,19 @@ export default function BookingDetailPage({
 
   const originalTotal = booking?.totalPrice || 0;
   const deposit = booking?.depositAmount || 0;
+  const currentRemaining = booking?.remainingAmount || 0;
+  const savedServices = booking?.extraServiceResponses || [];
+
   const newServicesTotal = cart.reduce(
     (total, item) => total + item.price * item.quantity,
     0,
   );
-  const grandTotal = originalTotal + newServicesTotal;
-  const remainingToPay = grandTotal - deposit;
+
+  const remainingToPay = Math.max(0, currentRemaining + newServicesTotal);
 
   const handleSaveServices = async () => {
     if (cart.length === 0) return;
+
     setLoading(true);
     try {
       const payload = cart.map((item) => ({
@@ -131,21 +145,23 @@ export default function BookingDetailPage({
         quantity: item.quantity,
       }));
 
+      console.log("Payload thêm dịch vụ:", payload);
+
       await bookingService.addExtraServices(bookingId, payload);
 
       message.success("Đã lưu dịch vụ vào đơn!");
       setCart([]);
       fetchBookingDetail();
-    } catch (error) {
-      message.error("Lỗi khi lưu dịch vụ");
+      fetchServices();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi khi lưu dịch vụ");
     } finally {
       setLoading(false);
     }
   };
-
   const handleCollectPayment = () => {
     if (cart.length > 0) {
-      message.warning("Vui lòng ấn 'Lưu dịch vụ' trước khi thanh toán!");
+      message.warning("Vui lòng ấn 'Lưu dịch vụ' trước khi thanh toán nốt!");
       return;
     }
 
@@ -203,7 +219,7 @@ export default function BookingDetailPage({
     }
   };
 
-  if (!booking && !loading) return <div>Đang tải...</div>;
+  if (!booking && !loading) return <div>Đang tải dữ liệu...</div>;
 
   const isFullyPaid = remainingToPay <= 0 && cart.length === 0;
 
@@ -271,22 +287,15 @@ export default function BookingDetailPage({
                         />
                       }
                     >
-                      {/* TÊN */}
                       <div style={{ height: 40, fontWeight: 500 }}>
                         {service.serviceName}
                       </div>
-
-                      {/* NHÓM */}
                       <div style={{ fontSize: 12, color: "#888" }}>
                         {service.itemGroupName}
                       </div>
-
-                      {/* SỐ LƯỢNG */}
                       <div style={{ fontSize: 12 }}>
                         Còn: <b>{service.quantity}</b>
                       </div>
-
-                      {/* GIÁ */}
                       <Text type="danger" strong>
                         {service.priceSell?.toLocaleString("vi-VN") || 0}đ
                       </Text>
@@ -298,7 +307,6 @@ export default function BookingDetailPage({
           </Card>
         </Col>
 
-        {/* CỘT PHẢI: CHI TIẾT ĐƠN VÀ GIỎ HÀNG */}
         <Col span={15} style={{ height: "100%" }}>
           <Card
             bodyStyle={{
@@ -325,7 +333,11 @@ export default function BookingDetailPage({
                 </Descriptions.Item>
               </Descriptions>
             </div>
-
+            <div>
+              <Descriptions.Item label="Note ">
+               Ghi chú <b>{booking?.note}</b>
+              </Descriptions.Item>
+            </div>
             <Table
               size="small"
               pagination={false}
@@ -366,67 +378,120 @@ export default function BookingDetailPage({
                 background: "#fafafa",
               }}
             >
-              {cart.length === 0 ? (
+              {savedServices.length === 0 && cart.length === 0 ? (
                 <div
                   style={{ textAlign: "center", marginTop: 40, color: "#999" }}
                 >
                   Chưa có dịch vụ nào được thêm
                 </div>
               ) : (
-                <List
-                  dataSource={cart}
-                  renderItem={(item, index) => (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        background: "#fff",
-                        padding: "8px 12px",
-                        marginBottom: 8,
-                        borderRadius: 6,
-                        border: "1px solid #e8e8e8",
-                      }}
-                    >
-                      <div style={{ width: 30 }}>
-                        <b>{index + 1}.</b>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <b>{item.name}</b>
-                      </div>
-                      <div style={{ width: 100 }}>
-                        Số lượng:{" "}
-                        <InputNumber
-                          min={1}
-                          value={item.quantity}
-                          onChange={(val) =>
-                            handleUpdateQuantity(item.serviceId, val)
-                          }
-                          size="small"
-                        />
-                      </div>
-                      <div style={{ width: 100, textAlign: "right" }}>
-                        <Text strong type="danger">
-                          {(item.price * item.quantity).toLocaleString("vi-VN")}
-                          đ
-                        </Text>
-                      </div>
-                      <div style={{ width: 40, textAlign: "right" }}>
-                        <Button
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => handleRemoveItem(item.serviceId)}
-                          size="small"
-                        />
-                      </div>
-                    </div>
+                <>
+                  {savedServices.length > 0 && (
+                    <>
+                      <Text strong>Dịch vụ đã lưu</Text>
+                      <List
+                        dataSource={savedServices}
+                        renderItem={(item: any, index) => (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              background: "#fff",
+                              padding: "8px 12px",
+                              marginBottom: 8,
+                              borderRadius: 6,
+                              border: "1px solid #e8e8e8",
+                            }}
+                          >
+                            <div style={{ width: 30 }}>
+                              <b>{index + 1}.</b>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <b>{item.serviceName}</b>
+                            </div>
+                            <div style={{ width: 100 }}>
+                              SL: <b>{item.quantity}</b>
+                            </div>
+                            <div style={{ width: 120, textAlign: "right" }}>
+                              <Text strong type="danger">
+                                {(item.price * item.quantity).toLocaleString(
+                                  "vi-VN",
+                                )}
+                                đ
+                              </Text>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    </>
                   )}
-                />
+
+                  {cart.length > 0 && (
+                    <>
+                      {savedServices.length > 0 && (
+                        <Divider style={{ margin: "12px 0" }} />
+                      )}
+                      <Text strong>Dịch vụ thêm mới (Chưa lưu)</Text>
+                      <List
+                        dataSource={cart}
+                        renderItem={(item, index) => (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              background: "#fff",
+                              padding: "8px 12px",
+                              marginBottom: 8,
+                              borderRadius: 6,
+                              border: "1px solid #e8e8e8",
+                            }}
+                          >
+                            <div style={{ width: 30 }}>
+                              <b>{index + 1}.</b>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <b>{item.name}</b>
+                            </div>
+                            <div style={{ width: 100 }}>
+                              Số lượng:{" "}
+                              <InputNumber
+                                min={1}
+                                value={item.quantity}
+                                onChange={(val) =>
+                                  handleUpdateQuantity(item.serviceId, val)
+                                }
+                                size="small"
+                              />
+                            </div>
+                            <div style={{ width: 100, textAlign: "right" }}>
+                              <Text strong type="danger">
+                                {(item.price * item.quantity).toLocaleString(
+                                  "vi-VN",
+                                )}
+                                đ
+                              </Text>
+                            </div>
+                            <div style={{ width: 40, textAlign: "right" }}>
+                              <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => handleRemoveItem(item.serviceId)}
+                                size="small"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      />
+                    </>
+                  )}
+                </>
               )}
             </div>
 
-            {/* TỔNG KẾT VÀ NÚT THANH TOÁN */}
             <Divider style={{ margin: "16px 0" }} />
+
+            {/* KHU VỰC TỔNG KẾT TIỀN */}
             <div
               style={{
                 background: isFullyPaid ? "#f6ffed" : "#fff2f0",
@@ -437,15 +502,16 @@ export default function BookingDetailPage({
             >
               <Row justify="space-between" style={{ marginBottom: 8 }}>
                 <Col>
-                  <Text>Tiền đơn gốc (Sân + DV cũ):</Text>
+                  <Text>Tiền đơn gốc (Sân + DV đã lưu):</Text>
                 </Col>
                 <Col>
                   <Text strong>{originalTotal.toLocaleString("vi-VN")} đ</Text>
                 </Col>
               </Row>
+
               <Row justify="space-between" style={{ marginBottom: 8 }}>
                 <Col>
-                  <Text>Tiền dịch vụ thêm mới:</Text>
+                  <Text>Tiền dịch vụ đang chọn thêm:</Text>
                 </Col>
                 <Col>
                   <Text strong>
@@ -453,9 +519,10 @@ export default function BookingDetailPage({
                   </Text>
                 </Col>
               </Row>
+
               <Row justify="space-between" style={{ marginBottom: 8 }}>
                 <Col>
-                  <Text>Khách đã cọc/trả:</Text>
+                  <Text>Khách đã cọc/trả trước:</Text>
                 </Col>
                 <Col>
                   <Text strong style={{ color: "#52c41a" }}>
@@ -463,6 +530,7 @@ export default function BookingDetailPage({
                   </Text>
                 </Col>
               </Row>
+
               <Divider style={{ margin: "8px 0" }} />
 
               <Row justify="space-between" align="middle">
@@ -477,13 +545,9 @@ export default function BookingDetailPage({
                     type="danger"
                     style={{ margin: 0, marginBottom: 8 }}
                   >
-                    {remainingToPay > 0
-                      ? remainingToPay.toLocaleString("vi-VN")
-                      : 0}{" "}
-                    đ
+                    {remainingToPay.toLocaleString("vi-VN")} đ
                   </Title>
 
-                  {/* HAI NÚT HÀNH ĐỘNG CHÍNH */}
                   <Space>
                     {cart.length > 0 && (
                       <Button
@@ -502,7 +566,7 @@ export default function BookingDetailPage({
                       size="large"
                       icon={<CreditCardOutlined />}
                       onClick={handleCollectPayment}
-                      disabled={isFullyPaid || cart.length > 0} // Disable nếu đã trả đủ HOẶC có dịch vụ chưa lưu
+                      disabled={isFullyPaid || cart.length > 0}
                       style={{
                         background:
                           isFullyPaid || cart.length > 0

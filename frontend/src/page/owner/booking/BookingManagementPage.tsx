@@ -3,7 +3,7 @@ import { Card, message, Modal, Button } from "antd";
 import { FileExcelOutlined } from "@ant-design/icons";
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
-
+import { ReloadOutlined } from "@ant-design/icons";
 import RentalAreaFilter from "./RentalAreaFilter";
 import BookingTable from "./BookingTable";
 import BookingDetailModal from "./BookingDetailModal";
@@ -23,7 +23,6 @@ export default function BookingManagementPage() {
   const [keyword, setKeyword] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
- 
   const [detailOpen, setDetailOpen] = useState(false);
   const [slotEditOpen, setSlotEditOpen] = useState(false);
   const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
@@ -31,7 +30,6 @@ export default function BookingManagementPage() {
     useState<any>(null);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
 
- 
   const [viewMode, setViewMode] = useState<"table" | "detail">("table");
   const [selectedBookingIdForDetail, setSelectedBookingIdForDetail] = useState<
     string | null
@@ -84,7 +82,16 @@ export default function BookingManagementPage() {
       setLoading(false);
     }
   };
+  const handleRefresh = async () => {
+    await fetchBookings(
+      pagination.current,
+      pagination.pageSize,
+      keyword,
+      filterStatus,
+    );
 
+    message.success("Đã làm mới dữ liệu");
+  };
   useEffect(() => {
     fetchBuildings();
   }, []);
@@ -263,14 +270,27 @@ export default function BookingManagementPage() {
             title="Quản lý Đơn Đặt"
             style={{ marginTop: "20px" }}
             extra={
-              <Button
-                type="primary"
-                icon={<FileExcelOutlined />}
-                onClick={handleExportExcel}
-                style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }} // Màu xanh lá đặc trưng của Excel
-              >
-                Xuất Excel
-              </Button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={handleRefresh}
+                  loading={loading}
+                >
+                  Làm mới
+                </Button>
+
+                <Button
+                  type="primary"
+                  icon={<FileExcelOutlined />}
+                  onClick={handleExportExcel}
+                  style={{
+                    backgroundColor: "#52c41a",
+                    borderColor: "#52c41a",
+                  }}
+                >
+                  Xuất Excel
+                </Button>
+              </div>
             }
           >
             <BookingTable
@@ -280,7 +300,7 @@ export default function BookingManagementPage() {
               onChange={(pageInfo: any) =>
                 fetchBookings(pageInfo.current, pageInfo.pageSize)
               }
-              onViewDetail={handleViewDetail} 
+              onViewDetail={handleViewDetail}
               onEditSlot={handleEditSlot}
               onUpdateStatus={handleUpdateStatus}
               onCollectPayment={handleCollectPayment}
@@ -332,7 +352,7 @@ export default function BookingManagementPage() {
             rentalAreaId={selectedBuildingId}
             onBack={() => {
               setViewMode("table");
-              fetchBookings(); 
+              fetchBookings();
             }}
           />
         )

@@ -9,7 +9,11 @@ import {
   Row,
   Col,
   Card,
+  Button,
+  Modal as AntModal,
+  message,
 } from "antd";
+
 import {
   CalendarOutlined,
   ClockCircleOutlined,
@@ -65,17 +69,53 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
     CANCELLED: <CloseCircleOutlined />,
   };
 
+  const handleCancelBooking = () => {
+    if (!bookingId) return;
+
+    AntModal.confirm({
+      title: "Xác nhận hủy booking?",
+      content: "Nếu hủy booking, bạn sẽ mất tiền cọc và không được hoàn lại.",
+      okText: "Đồng ý hủy",
+      cancelText: "Không",
+      okButtonProps: {
+        danger: true,
+      },
+      async onOk() {
+        try {
+          const res = await bookingService.cancelBooking(bookingId);
+
+          if (res.code === 200) {
+            message.success("Hủy đặt lịch thành công");
+            setBooking(res.result);
+            onClose();
+          }
+        } catch (error: any) {
+          message.error(
+            error.response?.data?.message || "Hủy booking thất bại",
+          );
+        }
+      },
+    });
+  };
+
   return (
     <Modal
       title={
         <Space>
           <CalendarOutlined />
-          <span>Chi tiết đặt sân</span>
+          <span>Chi tiết đặt lịch </span>
         </Space>
       }
       open={open}
       onCancel={onClose}
-      footer={null}
+      footer={
+        booking?.bookingStatus !== "CANCELLED" &&
+        booking?.bookingStatus !== "COMPLETED" ? (
+          <Button danger onClick={handleCancelBooking}>
+            Hủy lịch
+          </Button>
+        ) : null
+      }
       width={700}
     >
       {loading || !booking ? (

@@ -69,7 +69,29 @@ public class BookingServiceImpl implements BookingService {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Override
+    public BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request) {
+        if (request.getSlots() == null || request.getSlots().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
 
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (SlotRequest slotReq : request.getSlots()) {
+            CourtCopy courtCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sân"));
+
+            BigDecimal slotPrice = calculateSlotPrice(
+                    courtCopy.getCourt().getCourtId(),
+                    slotReq.getStartTime(),
+                    slotReq.getEndTime()
+            );
+
+            total = total.add(slotPrice);
+        }
+
+        return total;
+    }
     @Override
     @Transactional
     public BookingResponse createOwnerBooking(OwnerBookingRequest request) {
@@ -91,7 +113,9 @@ public class BookingServiceImpl implements BookingService {
             CourtCopy courtCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sân với ID: " + slotReq.getCourtCopyId()));
 
-            if (booking.getRentalArea() == null && courtCopy.getCourt() != null && courtCopy.getCourt().getRentalArea() != null) {
+            if (booking.getRentalArea() == null
+                    && courtCopy.getCourt() != null
+                    && courtCopy.getCourt().getRentalArea() != null) {
                 booking.setRentalArea(courtCopy.getCourt().getRentalArea());
             }
 
@@ -109,8 +133,13 @@ public class BookingServiceImpl implements BookingService {
             );
 
             if (!conflicts.isEmpty()) {
-                throw new RuntimeException("Sân " + courtCopy.getCourtCode() + " đã bị đặt trong khung giờ "
-                        + slotReq.getStartTime().toLocalTime() + " - " + slotReq.getEndTime().toLocalTime());
+                throw new RuntimeException(
+                        "Sân " + courtCopy.getCourtCode()
+                                + " đã bị đặt trong khung giờ "
+                                + slotReq.getStartTime().toLocalTime()
+                                + " - "
+                                + slotReq.getEndTime().toLocalTime()
+                );
             }
 
             BigDecimal slotPrice = calculateSlotPrice(
@@ -153,11 +182,11 @@ public class BookingServiceImpl implements BookingService {
                 ? request.getPaidAmount()
                 : BigDecimal.ZERO;
 
-        BigDecimal remaining = calculatedTotalPrice.subtract(deposit);
-
-        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
-            remaining = BigDecimal.ZERO;
+        if (deposit.compareTo(calculatedTotalPrice) > 0) {
+            throw new RuntimeException("Số tiền khách trả không được lớn hơn tổng tiền");
         }
+
+        BigDecimal remaining = calculatedTotalPrice.subtract(deposit);
 
         booking.setTotalPrice(calculatedTotalPrice);
         booking.setDepositAmount(deposit);
@@ -176,9 +205,11 @@ public class BookingServiceImpl implements BookingService {
                     .amount(deposit)
                     .transactionDate(LocalDateTime.now())
                     .paymentStatus(PaymentStatus.SUCCESS)
-                    .paymentType(deposit.compareTo(calculatedTotalPrice) >= 0
-                            ? PaymentType.FULL
-                            : PaymentType.DEPOSIT)
+                    .paymentType(
+                            deposit.compareTo(calculatedTotalPrice) >= 0
+                                    ? PaymentType.FULL
+                                    : PaymentType.DEPOSIT
+                    )
                     .paymentMethod(request.getPaymentMethod())
                     .booking(booking)
                     .build();
@@ -207,12 +238,10 @@ public class BookingServiceImpl implements BookingService {
                     .build();
 
             transactionRepository.save(transaction);
-
         }
 
         return mapToBookingResponse(booking);
     }
-
     public BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime) {
         LocalDate bookingDate = startTime.toLocalDate();
         LocalTime start = startTime.toLocalTime();
@@ -250,16 +279,28 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Booking với ID: " + bookingId));
 
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("Vui lòng chọn dịch vụ");
+        }
+
         BigDecimal totalExtraCost = BigDecimal.ZERO;
 
         for (AddExtraServicesRequest.ServiceItemRequest itemReq : request.getItems()) {
+            if (itemReq.getServiceId() == null) {
+                throw new RuntimeException("Thiếu serviceId");
+            }
+
+            if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
+                throw new RuntimeException("Số lượng dịch vụ không hợp lệ");
+            }
+
             ServiceItem serviceItem = serviceItemRepository.findById(itemReq.getServiceId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy dịch vụ: " + itemReq.getServiceId()));
 
             if (serviceItem.getQuantity() < itemReq.getQuantity()) {
                 throw new RuntimeException(
                         "Số lượng dịch vụ " + serviceItem.getServiceName()
-                                + " không đủ để cung cấp. Vui lòng giảm số lượng hoặc chọn dịch vụ khác."
+                                + " không đủ. Hiện còn: " + serviceItem.getQuantity()
                 );
             }
 
@@ -281,33 +322,48 @@ public class BookingServiceImpl implements BookingService {
             totalExtraCost = totalExtraCost.add(itemTotal);
         }
 
-        if (totalExtraCost.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal currentTotal = booking.getTotalPrice() != null
-                    ? booking.getTotalPrice()
-                    : BigDecimal.ZERO;
+        booking.setTotalPrice(
+                Optional.ofNullable(booking.getTotalPrice()).orElse(BigDecimal.ZERO)
+                        .add(totalExtraCost)
+        );
 
-            booking.setTotalPrice(currentTotal.add(totalExtraCost));
-
-            // Không cộng vào remainingAmount vì tiền dịch vụ owner thu trực tiếp tại sân
-            Transaction transaction = Transaction.builder()
-                    .booking(booking)
-                    .referenceId(booking.getBookingId())
-                    .rentalArea(booking.getRentalArea())
-                    .owner(booking.getRentalArea().getOwner())
-                    .type(TransactionType.INCOME)
-                    .amount(totalExtraCost)
-                    .paymentMethod(PaymentMethod.CASH)
-                    .status(TransactionStatus.SUCCESS)
-                    .category(TransactionCategory.EXTRA_SERVICE_PAYMENT)
-                    .description("Owner thu dịch vụ thêm tại sân cho booking " + booking.getBookingId())
-                    .build();
-
-            transactionRepository.save(transaction);
-        }
+        booking.setRemainingAmount(
+                Optional.ofNullable(booking.getRemainingAmount()).orElse(BigDecimal.ZERO)
+                        .add(totalExtraCost)
+        );
 
         bookingRepository.save(booking);
     }
+    @Transactional
+    public void collectRemainingPayment(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy Booking"));
 
+        BigDecimal amountToCollect = booking.getRemainingAmount();
+        if (amountToCollect == null || amountToCollect.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Đơn hàng này không còn nợ");
+        }
+
+
+        Transaction transaction = Transaction.builder()
+                .booking(booking)
+                .referenceId(booking.getBookingId())
+                .rentalArea(booking.getRentalArea())
+                .owner(booking.getRentalArea().getOwner())
+                .type(TransactionType.INCOME)
+                .amount(amountToCollect)
+                .paymentMethod(PaymentMethod.BANK_TRANSFER)
+                .status(TransactionStatus.SUCCESS)
+                .category(TransactionCategory.BOOKING_REMAINING_PAYMENT)
+                .description("Thu tiền mặt hoặc chuyển khoản tại sân phần còn thiếu (bao gồm sân và dịch vụ) cho đạt lịch " + booking.getBookingId())
+                .build();
+        transactionRepository.save(transaction);
+
+        booking.setRemainingAmount(BigDecimal.ZERO);
+        booking.setBookingStatus(BookingStatus.COMPLETED);
+
+        bookingRepository.save(booking);
+    }
     @Override
     @Transactional(readOnly = true)
     public CheckAvailabilityResponse checkAvailability(SlotRequest request) {
@@ -702,6 +758,39 @@ public class BookingServiceImpl implements BookingService {
         }
 
         intent.setStatus(BookingIntentStatus.CONFIRMED);
+
+        payment.setBooking(booking);
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setPaymentStatus(PaymentStatus.SUCCESS);
+        payment.setPaymentType(
+                paidAmount.compareTo(totalPrice) >= 0
+                        ? PaymentType.FULL
+                        : PaymentType.DEPOSIT
+        );
+        paymentRepository.save(payment);
+
+        Transaction transaction = Transaction.builder()
+                .type(TransactionType.INCOME)
+                .amount(paidAmount)
+                .booking(booking)
+                .referenceId(booking.getBookingId())
+                .rentalArea(booking.getRentalArea())
+                .owner(booking.getRentalArea().getOwner())
+                .paymentMethod(payment.getPaymentMethod())
+                .status(TransactionStatus.SUCCESS)
+                .category(
+                        remainingAmount.compareTo(BigDecimal.ZERO) <= 0
+                                ? TransactionCategory.BOOKING_FULL_PAYMENT
+                                : TransactionCategory.BOOKING_DEPOSIT
+                )
+                .description(
+                        remainingAmount.compareTo(BigDecimal.ZERO) <= 0
+                                ? "User thanh toán đủ tiền khi đặt sân"
+                                : "User thanh toán tiền cọc khi đặt sân"
+                )
+                .build();
+
+        transactionRepository.save(transaction);
         bookingIntentRepository.save(intent);
         return BookingResponse.builder()
                 .bookingId(booking.getBookingId())
@@ -1087,16 +1176,31 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void syncSlotStatus(Booking booking, BookingStatus status) {
+
         SlotStatus slotStatus = null;
-        if (status == BookingStatus.CANCELLED){
-            slotStatus = SlotStatus.CANCELLED;
+
+        if (status == BookingStatus.BOOKED) {
+            slotStatus = SlotStatus.BOOKED;
+        }
+        else if (status == BookingStatus.USING) {
+            slotStatus = SlotStatus.BOOKED;
         }
         else if (status == BookingStatus.COMPLETED) {
             slotStatus = SlotStatus.COMPLETED;
         }
+        else if (status == BookingStatus.CANCELLED) {
+            slotStatus = SlotStatus.AVAILABLE;
+        }
 
         if (slotStatus != null) {
-            for (Slot s : booking.getSlots()) s.setSlotStatus(slotStatus);
+            for (Slot s : booking.getSlots()) {
+
+                s.setSlotStatus(slotStatus);
+
+                if (status == BookingStatus.CANCELLED) {
+                    s.setBooking(null);
+                }
+            }
         }
     }
 
@@ -1150,57 +1254,8 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
-    @Override
-    public String generateInvoiceUrl(UUID bookingId, String invoiceViewUrl) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-        booking.setInvoiceUrl(invoiceViewUrl);
-        bookingRepository.save(booking);
-        return invoiceViewUrl;
-    }
 
-    @Override
-    @Transactional
-    public void collectRemainingPayment(UUID bookingId) {
-
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy Booking với ID: " + bookingId));
-
-        BigDecimal remainingAmount = booking.getRemainingAmount();
-
-        if (remainingAmount == null || remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Đơn hàng này đã được thanh toán đủ!");
-        }
-
-        if (booking.getBookingStatus() == BookingStatus.BOOKED) {
-
-            Payment payment = paymentRepository
-                    .findFirstByBookingOrderByTransactionDateDesc(booking)
-                    .orElse(null);
-
-            Transaction transaction = Transaction.builder()
-                    .booking(booking)
-                    .referenceId(booking.getBookingId())
-                    .rentalArea(booking.getRentalArea())
-                    .owner(booking.getRentalArea().getOwner())
-                    .type(TransactionType.INCOME)
-                    .amount(remainingAmount)
-                    .paymentMethod(payment != null ? payment.getPaymentMethod() : PaymentMethod.CASH)
-                    .status(TransactionStatus.SUCCESS)
-                    .category(TransactionCategory.BOOKING_REMAINING_PAYMENT)
-                    .description("Thu tiền còn lại cho booking " + booking.getBookingId())
-                    .build();
-
-            transactionRepository.save(transaction);
-
-            booking.setBookingStatus(BookingStatus.COMPLETED);
-        }
-
-        booking.setRemainingAmount(BigDecimal.ZERO);
-        booking.setDepositAmount(booking.getTotalPrice());
-        bookingRepository.save(booking);
-    }
 
     private BookingResponse mapToBookingResponse(Booking booking) {
         if (booking == null) {
@@ -1243,23 +1298,12 @@ public class BookingServiceImpl implements BookingService {
 
         List<BookingResponse.BookingServiceResponse> extraServiceResponses = new ArrayList<>();
 
-//        if (booking.getBookingServiceItems() != null && !booking.getBookingServiceItems().isEmpty()) {
-//            extraServiceResponses = booking.getBookingServiceItems().stream()
-//                    .map(bsi -> BookingResponse.BookingServiceResponse.builder()
-//                            .serviceId(bsi.getServiceItem().getServiceId())
-//                            .serviceName(bsi.getServiceItem().getServiceName())
-//                            .quantity(bsi.getQuantity())
-//                            .price(bsi.getPrice()) // Đây là giá lúc bán lưu trong BookingServiceItem
-//                            .build())
-//                    .toList();
-//        }
-
 
         return BookingResponse.builder()
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO)
                 .bookingStatus(booking.getBookingStatus())
-                .status(booking.getBookingStatus()) // Bạn đang có 2 field giống nhau trong DTO là bookingStatus và status
+                .status(booking.getBookingStatus())
                 .startTime(bookingStart)
                 .endTime(bookingEnd)
                 .slots(slotResponses)
@@ -1268,10 +1312,53 @@ public class BookingServiceImpl implements BookingService {
                 .userName(booking.getBookerName())
                 .phoneNumber(booking.getBookerPhone())
                 .note(booking.getNote())
-                // .paymentMethod(booking.getPaymentMethod().name()) // Mở comment nếu Entity Booking có lưu PaymentMethod
+                // .paymentMethod(booking.getPaymentMethod().name())
                 .depositAmount(booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO)
                 .remainingAmount(booking.getRemainingAmount() != null ? booking.getRemainingAmount() : BigDecimal.ZERO)
                 .extraServiceResponses(extraServiceResponses)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse cancelBookingByUser(UUID bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy booking"));
+
+        if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+            throw new RuntimeException("Booking này đã được hủy trước đó");
+        }
+
+        if (booking.getBookingStatus() == BookingStatus.COMPLETED) {
+            throw new RuntimeException("Booking đã hoàn thành, không thể hủy");
+        }
+
+        BigDecimal depositAmount = booking.getDepositAmount() != null
+                ? booking.getDepositAmount()
+                : BigDecimal.ZERO;
+
+        booking.setBookingStatus(BookingStatus.CANCELLED);
+        booking.setRemainingAmount(BigDecimal.ZERO);
+
+        String oldNote = booking.getNote();
+        booking.setNote(
+                (oldNote == null || oldNote.isBlank() ? "" : oldNote + "\n")
+                        + "Người dùng đã hủy booking. Tiền cọc không được hoàn lại: "
+                        + depositAmount
+        );
+
+        if (booking.getSlots() != null && !booking.getSlots().isEmpty()) {
+            booking.getSlots().forEach(slot -> {
+                slot.setBooking(null);
+                slot.setSlotStatus(SlotStatus.AVAILABLE);
+            });
+
+            slotRepository.saveAll(booking.getSlots());
+            booking.getSlots().clear();
+        }
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        return mapToResponse(savedBooking);
     }
 }

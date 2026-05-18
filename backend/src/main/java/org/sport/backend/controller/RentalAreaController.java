@@ -37,7 +37,7 @@ public class RentalAreaController {
     private ServiceItemService serviceItemService;
 
     @GetMapping("/dropdown/options")
-    @PreAuthorize("hasAuthority('VIEW_RENTAL_AREA')")
+//    @PreAuthorize("hasAuthority('VIEW_RENTAL_AREA')")
     public ApiResponse<List<RentalAreaOptionResponse>> getRentalAreaOptions() {
         return ApiResponse.success(
                 200,

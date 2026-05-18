@@ -55,7 +55,6 @@ export default function CourtManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialBranchId = searchParams.get("branchId");
 
-
   const [branches, setBranches] = useState<RentalAreaResponse[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(
     initialBranchId || undefined,
@@ -334,14 +333,7 @@ export default function CourtManagementPage() {
           >
             Sửa
           </Button>
-          <Popconfirm
-            title="Xóa sân con?"
-            onConfirm={() => handleDeleteCopy(record.courtCopyId)}
-          >
-            <Button size="small" danger>
-              Xóa
-            </Button>
-          </Popconfirm>
+
           <Button
             size="small"
             type="primary"

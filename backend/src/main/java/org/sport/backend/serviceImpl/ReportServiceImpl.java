@@ -38,7 +38,7 @@ public class ReportServiceImpl implements ReportService {
     private final UserRepository userRepository;
     private final MatchRepository matchRepository;
     private final BookingServiceItemRepository bookingServiceItemRepository;
-
+   private final TransactionRepository transactionRepository;
     private final UserService userService;
 
     @Override
@@ -219,13 +219,20 @@ public class ReportServiceImpl implements ReportService {
         return chartData;
     }
 
-    private Map<String, Object> createChartPoint(String timeLabel, LocalDateTime start, LocalDateTime end, UUID ownerId) {
-        BigDecimal rev = paymentRepository.getTotalRevenue(start, end, ownerId);
+    private Map<String, Object> createChartPoint(
+            String timeLabel,
+            LocalDateTime start,
+            LocalDateTime end,
+            UUID ownerId
+    ) {
+        BigDecimal rev = transactionRepository.getTotalIncomeRevenue(start, end, ownerId);
         Long count = bookingRepository.countBookingsInRange(start, end, ownerId);
+
         Map<String, Object> point = new HashMap<>();
         point.put("time", timeLabel);
         point.put("revenue", rev != null ? rev : BigDecimal.ZERO);
         point.put("bookingCount", count != null ? count : 0L);
+
         return point;
     }
 
@@ -235,16 +242,27 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> fullDashboard = new HashMap<>();
         fullDashboard.put("bookingStats", getBookingStats(dates[0], dates[1], ownerId));
         fullDashboard.put("paymentStats", getPaymentStats(dates[0], dates[1], ownerId));
-        fullDashboard.put("totalRevenue", paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) != null ? paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) : BigDecimal.ZERO);
+//        fullDashboard.put("totalRevenue", paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) != null ? paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) : BigDecimal.ZERO);
+        BigDecimal totalRevenue = transactionRepository.getTotalIncomeRevenue(
+                dates[0],
+                dates[1],
+                ownerId
+        );
+
+        fullDashboard.put(
+                "totalRevenue",
+                totalRevenue != null ? totalRevenue : BigDecimal.ZERO
+        );
         fullDashboard.put("topCourts", getTopCourts(dates[0], dates[1], ownerId));
         fullDashboard.put("newUsersCount", userRepository.countByCreatedAtBetween(dates[0], dates[1]));
         fullDashboard.put("dailyStats7d", getDailyStatsLast7Days(ownerId));
 
-        // Growth Stats
+
         LocalDateTime[] gDates = getGrowthDates();
         fullDashboard.put("revenueGrowth", calculateGrowth(
-                paymentRepository.getTotalRevenue(gDates[0], gDates[1], ownerId),
-                paymentRepository.getTotalRevenue(gDates[2], gDates[3], ownerId)));
+                transactionRepository.getTotalIncomeRevenue(gDates[0], gDates[1], ownerId),
+                transactionRepository.getTotalIncomeRevenue(gDates[2], gDates[3], ownerId)
+        ));
         fullDashboard.put("newUserGrowth", calculateGrowth(
                 BigDecimal.valueOf(userRepository.countByCreatedAtBetween(gDates[0], gDates[1]) != null ? userRepository.countByCreatedAtBetween(gDates[0], gDates[1]) : 0),
                 BigDecimal.valueOf(userRepository.countByCreatedAtBetween(gDates[2], gDates[3]) != null ? userRepository.countByCreatedAtBetween(gDates[2], gDates[3]) : 0)));
@@ -264,7 +282,6 @@ public class ReportServiceImpl implements ReportService {
         return new LocalDateTime[]{startThis, now, startLast, endLast};
     }
 
-    // RÚT GỌN: Hàm tính phần trăm tăng trưởng chung
     private Double calculateGrowth(BigDecimal current, BigDecimal previous) {
         if (current == null) current = BigDecimal.ZERO;
         if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {

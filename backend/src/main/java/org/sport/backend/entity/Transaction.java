@@ -35,7 +35,6 @@ public class Transaction {
     private BigDecimal amount;
 
     private String description;
-    // Lưu Booking ID hoặc Invoice ID nếu là tiền thu từ hóa đơn
     @Column(name = "reference_id")
     private UUID referenceId;
 

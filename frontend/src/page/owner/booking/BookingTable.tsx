@@ -5,17 +5,16 @@ import { Dropdown } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 
-// Đã bổ sung cả BOOKED và CONFIRMED để tránh lỗi miss data từ API
 const statusColorMap: Record<string, string> = {
   BOOKED: "blue",
-  CONFIRMED: "blue",
+  USING: "orange",
   COMPLETED: "green",
   CANCELLED: "red",
 };
 
 const statusLabelMap: Record<string, string> = {
   BOOKED: "Đã xác nhận",
-  CONFIRMED: "Đã xác nhận",
+  USING: "Đang sử dụng",
   COMPLETED: "Hoàn thành",
   CANCELLED: "Hủy",
 };
@@ -202,7 +201,7 @@ export default function BookingTable({
             onClick: () => onUpdateStatus(record),
           },
           {
-            type: "divider", // Đường kẻ ngang phân cách
+            type: "divider", 
           },
           {
             key: "payment",
@@ -231,7 +230,7 @@ export default function BookingTable({
       columns={columns}
       dataSource={bookings}
       loading={loading}
-      rowKey={(record) => record.bookingId || Math.random().toString()} // Fallback rowKey
+      rowKey={(record) => record.bookingId || Math.random().toString()}
       pagination={pagination}
       onChange={onChange}
       size="small"
