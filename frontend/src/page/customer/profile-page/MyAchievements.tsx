@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Card, Spin, Empty, Tooltip, Typography, Row, Col } from "antd";
+import { Card, Spin, Tooltip, Typography, Row, Col } from "antd";
 import {
   FireFilled,
   StarFilled,
   CrownFilled,
   RocketFilled,
-  QuestionOutlined,
+  TrophyFilled,
+  SafetyCertificateFilled,
+  ClockCircleFilled,
+  LikeFilled,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import achievementService from "../../../service/achievementService";
@@ -13,34 +16,71 @@ import UserSidebar from "../../../components/sidebar/UserSidebar";
 
 const { Text } = Typography;
 
+// Cập nhật BADGE_MAP: Bổ sung description và đồng bộ theme Cam - Tím
 const BADGE_MAP: Record<string, any> = {
   FIRST_BLOOD: {
-    name: "Chiến Công Đầu",
+    name: "Đệ Nhất Máu",
+    description: "Thắng trận đầu tiên",
     icon: <StarFilled className="text-3xl" />,
-    color: "text-blue-500",
-    bg: "bg-blue-50 border-blue-200",
-    shadow: "shadow-blue-200",
+    color: "text-orange-500",
+    bg: "bg-orange-50 border-orange-300",
+    shadow: "shadow-orange-200",
   },
   ON_FIRE: {
-    name: "Đang Cháy",
+    name: "Đang Trên Đà",
+    description: "Thắng 5 trận liên tiếp",
     icon: <FireFilled className="text-3xl" />,
-    color: "text-orange-500",
-    bg: "bg-orange-50 border-orange-200",
-    shadow: "shadow-orange-200",
+    color: "text-purple-500",
+    bg: "bg-purple-50 border-purple-300",
+    shadow: "shadow-purple-200",
   },
   UNSTOPPABLE: {
     name: "Không Thể Cản Phá",
+    description: "Thắng 10 trận liên tiếp",
     icon: <RocketFilled className="text-3xl" />,
-    color: "text-red-500",
-    bg: "bg-red-50 border-red-200",
-    shadow: "shadow-red-200",
+    color: "text-orange-600",
+    bg: "bg-orange-100 border-orange-400",
+    shadow: "shadow-orange-300",
   },
   VETERAN: {
     name: "Lão Tướng",
+    description: "Chơi đủ 100 trận",
+    icon: <SafetyCertificateFilled className="text-3xl" />,
+    color: "text-purple-600",
+    bg: "bg-purple-100 border-purple-400",
+    shadow: "shadow-purple-300",
+  },
+  CENTURION: {
+    name: "Kẻ Chinh Phục",
+    description: "Đạt mốc 50 trận thắng",
+    icon: <TrophyFilled className="text-3xl" />,
+    color: "text-orange-500",
+    bg: "bg-orange-50 border-orange-300",
+    shadow: "shadow-orange-200",
+  },
+  LEGEND: {
+    name: "Huyền Thoại",
+    description: "Chơi tổng cộng 500 trận",
     icon: <CrownFilled className="text-3xl" />,
-    color: "text-yellow-500",
-    bg: "bg-yellow-50 border-yellow-300",
-    shadow: "shadow-yellow-300",
+    color: "text-purple-700",
+    bg: "bg-purple-100 border-purple-500",
+    shadow: "shadow-purple-400",
+  },
+  PERFECT_ATTENDANCE: {
+    name: "Đúng Giờ Là Vàng",
+    description: "Hoàn thành 20 trận không đi muộn",
+    icon: <ClockCircleFilled className="text-3xl" />,
+    color: "text-orange-500",
+    bg: "bg-orange-50 border-orange-300",
+    shadow: "shadow-orange-200",
+  },
+  SPORTSMANSHIP: {
+    name: "Tinh Thần Thể Thao",
+    description: "10 trận liên tiếp không bị report",
+    icon: <LikeFilled className="text-3xl" />,
+    color: "text-purple-500",
+    bg: "bg-purple-50 border-purple-300",
+    shadow: "shadow-purple-200",
   },
 };
 
@@ -81,6 +121,9 @@ const MyAchievements: React.FC<UserAchievementsProps> = ({ userId }) => {
     fetchAchievements();
   }, [userId]);
 
+  // Lấy ra toàn bộ keys của BADGE_MAP để render
+  const achievementKeys = Object.keys(BADGE_MAP);
+
   return (
     <div
       style={{
@@ -109,62 +152,76 @@ const MyAchievements: React.FC<UserAchievementsProps> = ({ userId }) => {
           ) : (
             <Card
               title={
-                <span className="text-xl font-bold">🎖️ Tủ Kính Thành Tựu</span>
+                <span className="text-xl font-bold"> Tủ Kính Thành Tựu</span>
               }
               bordered={false}
               style={{ borderRadius: "12px", minHeight: "100%" }}
             >
-              {achievements.length === 0 ? (
-                <Empty description="Bạn chưa đạt được thành tựu nào. Hãy tham gia thi đấu ngay!" />
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 pt-4">
-                  {achievements.map((item: any, index: number) => {
-                    const config = BADGE_MAP[item.achievementCode] || {
-                      name: "Huy hiệu bí ẩn",
-                      icon: <QuestionOutlined className="text-3xl" />,
-                      color: "text-gray-500",
-                      bg: "bg-gray-50 border-gray-200",
-                      shadow: "shadow-gray-200",
-                    };
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 pt-4">
+                {achievementKeys.map((code: string) => {
+                  const config = BADGE_MAP[code];
 
-                    return (
-                      <Tooltip
-                        key={item.id || index}
-                        title={
-                          <div className="text-center">
-                            <p className="font-bold text-base mb-1">
-                              {config.name}
-                            </p>
-                            <p className="text-sm text-gray-200 mb-1">
-                              {item.description}
-                            </p>
-                            <p className="text-xs italic text-gray-400">
-                              Đạt được:{" "}
-                              {dayjs(item.achievedAt).format("DD/MM/YYYY")}
-                            </p>
-                          </div>
-                        }
-                        color="#1f2937"
-                        placement="top"
-                      >
-                        <div className="flex flex-col items-center justify-center cursor-pointer transition-transform hover:scale-110">
-                          <div
-                            className={`w-20 h-20 flex items-center justify-center rounded-full border-2 ${config.bg} ${config.color} shadow-lg ${config.shadow} mb-3`}
-                          >
-                            {config.icon}
-                          </div>
-                          <Text
-                            strong
-                            className="text-gray-700 text-center text-sm"
-                          >
+                  // Kiểm tra xem backend trả về field là achievementCode hay achievementType
+                  const achievedItem = achievements.find(
+                    (a: any) =>
+                      a.achievementCode === code || a.achievementType === code,
+                  );
+                  const isAchieved = !!achievedItem;
+
+                  return (
+                    <Tooltip
+                      key={code}
+                      title={
+                        <div className="text-center">
+                          <p className="font-bold text-base mb-1">
                             {config.name}
-                          </Text>
+                          </p>
+                          <p className="text-sm text-gray-200 mb-1">
+                            {config.description}
+                          </p>
+                          {isAchieved ? (
+                            <p className="text-xs italic text-green-400 mt-2">
+                              Đã mở khóa:{" "}
+                              {dayjs(achievedItem.achievedAt).format(
+                                "DD/MM/YYYY",
+                              )}
+                            </p>
+                          ) : (
+                            <p className="text-xs italic text-gray-400 mt-2">
+                               Chưa mở khóa
+                            </p>
+                          )}
                         </div>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              )}
+                      }
+                      color="#1f2937"
+                      placement="top"
+                    >
+                      {/* Thêm class opacity-40 và grayscale nếu chưa đạt được */}
+                      <div
+                        className={`flex flex-col items-center justify-center cursor-pointer transition-all duration-300 ${
+                          isAchieved
+                            ? "hover:scale-110"
+                            : "opacity-40 grayscale hover:opacity-70"
+                        }`}
+                      >
+                        <div
+                          className={`w-20 h-20 flex items-center justify-center rounded-full border-2 ${config.bg} ${config.color} shadow-lg ${config.shadow} mb-3`}
+                        >
+                          {config.icon}
+                        </div>
+                        <Text
+                          strong
+                          className={`text-center text-sm ${
+                            isAchieved ? "text-gray-700" : "text-gray-400"
+                          }`}
+                        >
+                          {config.name}
+                        </Text>
+                      </div>
+                    </Tooltip>
+                  );
+                })}
+              </div>
             </Card>
           )}
         </Col>

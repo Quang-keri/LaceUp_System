@@ -20,15 +20,11 @@ export const matchService = {
 
   divideTeams: async (
     matchId: string,
-    data: { team1UserIds: string[]; team2UserIds: string[] }
+    data: { team1UserIds: string[]; team2UserIds: string[] },
   ): Promise<ApiResponse<void>> => {
-    const response = await api.post(`${API_BASE_URL}/${matchId}/divide-teams`, data);
-    return response.data;
-  },
-
-  confirmDeposit: async (matchId: string): Promise<ApiResponse<string>> => {
     const response = await api.post(
-      `${API_BASE_URL}/${matchId}/confirm-deposit`,
+      `${API_BASE_URL}/${matchId}/divide-teams`,
+      data,
     );
     return response.data;
   },
@@ -105,6 +101,32 @@ export const matchService = {
     const response = await api.get(`${API_BASE_URL}/user/${userId}/history`, {
       params: { page, size },
     });
+    return response.data;
+  },
+
+  joinMatchByCode: async (roomCode: string): Promise<ApiResponse<void>> => {
+    const response = await api.post(`${API_BASE_URL}/join/code`, null, {
+      params: { roomCode },
+    });
+    return response.data;
+  },
+
+  autoMatch: async (data: {
+    categoryId: number;
+    matchType: string;
+    city?: string;
+    district?: string;
+  }): Promise<ApiResponse<MatchResponse>> => {
+    const response = await api.post(`${API_BASE_URL}/auto-match`, data);
+    return response.data;
+  },
+
+  submitResult: async (data: {
+    matchId: string;
+    winningTeamNumber: number;
+    absentUserIds: string[];
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/match-results/submit`, data);
     return response.data;
   },
 };

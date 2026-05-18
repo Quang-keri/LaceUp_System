@@ -59,5 +59,7 @@ public interface UserService {
 
     void verifyOwnerAccount();
 
+    PageResponse<UserResponse> getAllCustomers(int page, int size, String keyword, String tier, Integer minScore, Integer maxScore);
+
     PageResponse<ReputationLogResponse> getReputationLogs(UUID id, int i, int size);
 }

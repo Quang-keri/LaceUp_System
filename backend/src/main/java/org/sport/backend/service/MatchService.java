@@ -5,6 +5,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.dto.request.chat.DivideTeamRequest;
+import org.sport.backend.dto.request.match.AutoMatchRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
 
@@ -18,10 +19,13 @@ public interface MatchService {
     void joinMatch(UUID matchId);
 
     @Transactional
-    void divideTeams(UUID matchId, DivideTeamRequest request);
+    void joinByRoomCode(String roomCode);
 
     @Transactional
-    void confirmDeposit(UUID matchId);
+    MatchResponse autoMatch(AutoMatchRequest request);
+
+    @Transactional
+    void divideTeams(UUID matchId, DivideTeamRequest request);
 
     PageResponse<MatchResponse> getOpenMatches(
             int page,

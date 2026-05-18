@@ -14,6 +14,7 @@ import java.util.UUID;
 @Builder
 public class MatchResponse {
     private UUID matchId;
+    private String roomCode;
     private String courtName;
     private String courtPrice;
     private AddressResponse address;
@@ -28,9 +29,8 @@ public class MatchResponse {
     private boolean isFull;
     private boolean hasCourt;
     private List<UserResponse> participants;
-    private Boolean depositConfirmed;
     private MatchType matchType;
-    private Double winnerPercent;
+    private String note;
     private Integer minRank;
     private Integer maxRank;
 }

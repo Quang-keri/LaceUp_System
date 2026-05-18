@@ -20,7 +20,7 @@ public interface UserMapper {
     @Mapping(source = "role", target = "role", qualifiedByName = "mapRoleName")
     @Mapping(source = "dateOfBirth", target = "age", qualifiedByName = "calculateAge")
     @Mapping(target = "permissions", expression = "java(mergePermissions(user))")
-    @Mapping(target = "categoryRank", expression = "java(mapAllRanks(user))")
+    @Mapping(target = "categoryRanks", expression = "java(mapAllRanks(user))")
     UserResponse toUserResponse(User user);
 
     default Set<String> mergePermissions(User user) {
@@ -43,10 +43,27 @@ public interface UserMapper {
         }
 
         return user.getCategoryRanks().stream()
-                .map(topRank -> CategoryRankResponse.builder()
-                        .categoryName(topRank.getCategory().getCategoryName())
-                        .rankPoint(topRank.getRankPoint())
-                        .build())
+                .map(topRank -> {
+                    Integer catId = (topRank.getCategory() != null) ? topRank.getCategory().getCategoryId() : null;
+                    String catName = (topRank.getCategory() != null) ? topRank.getCategory().getCategoryName() : null;
+
+                    double calculatedWinRate = 0.0;
+                    if (topRank.getTotalMatches() > 0) {
+                        calculatedWinRate = ((double) topRank.getTotalWins() / topRank.getTotalMatches()) * 100;
+                        calculatedWinRate = Math.round(calculatedWinRate * 100.0) / 100.0;
+                    }
+
+                    return CategoryRankResponse.builder()
+                            .categoryId(catId)
+                            .categoryName(catName)
+                            .rankPoint(topRank.getRankPoint() != null ? topRank.getRankPoint() : 0)
+                            .displayRank(topRank.getDisplayRank())
+                            .totalMatches(topRank.getTotalMatches())
+                            .totalWins(topRank.getTotalWins())
+                            .currentWinStreak(topRank.getCurrentWinStreak())
+                            .winRate(calculatedWinRate)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 

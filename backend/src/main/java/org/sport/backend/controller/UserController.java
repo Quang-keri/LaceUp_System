@@ -217,6 +217,25 @@ public class UserController {
         );
     }
 
+    @GetMapping("/customers")
+    @PreAuthorize("hasAuthority('VIEW_CUSTOMER')")
+    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllCustomersForAdmin(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tier,
+            @RequestParam(required = false) Integer minScore,
+            @RequestParam(required = false) Integer maxScore) {
+
+        return ResponseEntity.ok(
+                ApiResponse.<PageResponse<UserResponse>>builder()
+                        .code(200)
+                        .message("Lấy toàn bộ danh sách khách hàng thành công")
+                        .result(userService.getAllCustomers(page - 1, size, keyword, tier, minScore, maxScore))
+                        .build()
+        );
+    }
+
     @GetMapping("/{id}/reputation-logs")
     @PreAuthorize("hasAuthority('VIEW_CUSTOMER_DETAIL')")
     public ResponseEntity<ApiResponse<PageResponse<ReputationLogResponse>>> getReputationLogs(

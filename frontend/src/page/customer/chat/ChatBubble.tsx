@@ -61,6 +61,14 @@ const ChatBubble = () => {
       );
   }, [chatLogic.conversations, currentUserId, user]);
 
+  useEffect(() => {
+    if (!currentUserId) {
+      setIsOpen(false);
+      setShowChatList(true);
+      setIsMinimized(false);
+    }
+  }, [currentUserId]);
+
   if (window.location.pathname === "/chat") return null;
 
   return (
@@ -69,7 +77,7 @@ const ChatBubble = () => {
         <div className="fixed bottom-6 right-6 z-50">
           <button
             onClick={() => setIsOpen(true)}
-            className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center relative"
+            className="w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center relative"
           >
             <FaCommentDots size={22} />
             {unreadCount > 0 && (
@@ -90,12 +98,12 @@ const ChatBubble = () => {
       : "bottom-10 right-10 w-[320px] h-[480px] max-w-[calc(100vw-40px)] max-h-[calc(100vh-120px)]"
   }`}
         >
-          <div className="px-4 py-3 bg-blue-600 text-white flex justify-between items-center">
+          <div className="px-4 py-3 bg-purple-600 text-white flex justify-between items-center">
             <div className="flex items-center gap-2">
               {!showChatList && (
                 <button
                   onClick={() => setShowChatList(true)}
-                  className="hover:bg-blue-700 p-1 rounded-full transition-colors"
+                  className="hover:bg-purple-700 p-1 rounded-full transition-colors"
                 >
                   <FaArrowLeft size={14} />
                 </button>

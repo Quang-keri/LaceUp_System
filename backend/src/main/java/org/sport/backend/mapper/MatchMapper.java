@@ -25,6 +25,7 @@ public interface MatchMapper {
 
         return MatchResponse.builder()
                 .matchId(match.getMatchId())
+                .roomCode(match.getRoomCode()) // ✅ Ánh xạ mã phòng
                 .courtName(match.getCourt() != null ? match.getCourt().getCourtName() : "Sân tự thỏa thuận")
                 .address(addressMapper.toAddressResponse(match.getAddress()))
                 .categoryName(match.getCategory() != null ? match.getCategory().getCategoryName() : "Chưa xác định")
@@ -40,16 +41,14 @@ public interface MatchMapper {
                 .courtPrice(findCourtPriceForMatch(match))
 
                 .matchType(match.getMatchType())
-                .winnerPercent(match.getWinnerPercent())
                 .minRank(match.getMinRank())
                 .maxRank(match.getMaxRank())
+                .note(match.getNote()) // ✅ Ánh xạ ghi chú (dùng cho kèo đồ ăn/nước)
 
                 .participants(match.getRegistrations() == null ? Collections.emptyList() :
                         match.getRegistrations().stream()
                                 .map(reg -> {
                                     var userRes = userMapper.toUserResponse(reg.getUser());
-
-                                    userRes.setDepositConfirmed(reg.getIsDepositConfirmed());
 
                                     userRes.setTeamNumber(reg.getTeamNumber());
 

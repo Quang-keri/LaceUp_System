@@ -17,7 +17,6 @@ export interface MatchRequest {
   dayOfWeek?: string | null;
   endDate?: string | null;
   matchType: "NORMAL" | "BET" | "RANKED";
-  winnerPercent?: number;
   minRank?: number;
   maxRank?: number;
   note?: string;
@@ -25,6 +24,7 @@ export interface MatchRequest {
 
 export interface MatchResponse {
   matchId: string;
+  roomCode?: string;
   title: string;
   description: string;
   courtName: string;
@@ -48,7 +48,7 @@ export interface MatchResponse {
   dayOfWeek: string;
   endDate: string;
   matchType: "NORMAL" | "BET" | "RANKED";
-  winnerPercent?: number;
+  note?: string;
   minRank?: number;
   maxRank?: number;
   isFull: boolean;

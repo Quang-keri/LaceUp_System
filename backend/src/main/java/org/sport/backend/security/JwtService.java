@@ -26,6 +26,7 @@ public class JwtService {
     JwtEncoder jwtEncoder;
     JwtDecoder jwtDecoder;
     JwtProperties jwtProperties;
+    CustomUserDetailsService userDetailsService;
 
     public String generateAccessToken(UserDetails user) {
         return generateToken(user, jwtProperties.getAccessExpiration(), "access");
@@ -58,23 +59,18 @@ public class JwtService {
     }
 
     public Authentication getAuthentication(String token) {
+
         Jwt jwt = jwtDecoder.decode(token);
 
         String email = jwt.getSubject();
 
-        // 1. Đọc trực tiếp danh sách roles/permissions từ trong Token
-        List<String> roles = jwt.getClaimAsStringList("roles");
+        UserDetails userDetails =
+                userDetailsService.loadUserByUsername(email);
 
-        // 2. Map thành GrantedAuthority cho Spring Security hiểu
-        List<SimpleGrantedAuthority> authorities = roles.stream()
-                .map(SimpleGrantedAuthority::new)
-                .toList();
-
-        // 3. Trả về Authentication không cần hit Database
         return new UsernamePasswordAuthenticationToken(
-                email,
+                userDetails,
                 null,
-                authorities
+                userDetails.getAuthorities()
         );
     }
 

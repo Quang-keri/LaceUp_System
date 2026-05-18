@@ -151,7 +151,7 @@ public class ReportServiceImpl implements ReportService {
                 .matchType(m.getMatchType())
                 .currentPlayers(m.getCurrentPlayers())
                 .maxPlayers(m.getMaxPlayers())
-                .winnerPercent(m.getWinnerPercent())
+//                .winnerPercent(m.getWinnerPercent())
                 .build()).collect(Collectors.toList());
 
         List<PaymentResponse> paymentDTOs = payments.stream().map(p -> PaymentResponse.builder()
@@ -237,7 +237,7 @@ public class ReportServiceImpl implements ReportService {
         fullDashboard.put("paymentStats", getPaymentStats(dates[0], dates[1], ownerId));
         fullDashboard.put("totalRevenue", paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) != null ? paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) : BigDecimal.ZERO);
         fullDashboard.put("topCourts", getTopCourts(dates[0], dates[1], ownerId));
-        fullDashboard.put("newUsersCount", userRepository.countNewUsers(dates[0], dates[1]));
+        fullDashboard.put("newUsersCount", userRepository.countByCreatedAtBetween(dates[0], dates[1]));
         fullDashboard.put("dailyStats7d", getDailyStatsLast7Days(ownerId));
 
         // Growth Stats
@@ -246,8 +246,8 @@ public class ReportServiceImpl implements ReportService {
                 paymentRepository.getTotalRevenue(gDates[0], gDates[1], ownerId),
                 paymentRepository.getTotalRevenue(gDates[2], gDates[3], ownerId)));
         fullDashboard.put("newUserGrowth", calculateGrowth(
-                BigDecimal.valueOf(userRepository.countNewUsers(gDates[0], gDates[1]) != null ? userRepository.countNewUsers(gDates[0], gDates[1]) : 0),
-                BigDecimal.valueOf(userRepository.countNewUsers(gDates[2], gDates[3]) != null ? userRepository.countNewUsers(gDates[2], gDates[3]) : 0)));
+                BigDecimal.valueOf(userRepository.countByCreatedAtBetween(gDates[0], gDates[1]) != null ? userRepository.countByCreatedAtBetween(gDates[0], gDates[1]) : 0),
+                BigDecimal.valueOf(userRepository.countByCreatedAtBetween(gDates[2], gDates[3]) != null ? userRepository.countByCreatedAtBetween(gDates[2], gDates[3]) : 0)));
         fullDashboard.put("cancellationRateGrowth", calculateGrowth(
                 BigDecimal.valueOf(getCancelRate(gDates[0], gDates[1], ownerId)),
                 BigDecimal.valueOf(getCancelRate(gDates[2], gDates[3], ownerId))));
