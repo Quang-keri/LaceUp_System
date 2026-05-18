@@ -16,6 +16,7 @@ import BookingDetailDrawer from "./BookingDetailDrawer";
 
 const BookingHistoryPage: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
+
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
@@ -69,18 +70,25 @@ const BookingHistoryPage: React.FC = () => {
     setDrawerOpen(true);
   };
 
+  const handleStatusFilterChange = (status?: BookingStatus) => {
+    setStatusFilter(status);
+    fetchBookings(1, pagination.pageSize, status);
+  };
+
   const statusColorMap: Record<string, string> = {
     BOOKED: "blue",
     CONFIRMED: "blue",
     COMPLETED: "green",
     CANCELLED: "red",
   };
+
   const statusIconMap: Record<BookingStatus | string, React.ReactNode> = {
     BOOKED: <ClockCircleOutlined />,
     CONFIRMED: <ClockCircleOutlined />,
     COMPLETED: <CheckCircleOutlined />,
     CANCELLED: <CloseCircleOutlined />,
   };
+
   const statusLabelMap: Record<string, string> = {
     BOOKED: "Đã xác nhận",
     CONFIRMED: "Đã xác nhận",
@@ -137,9 +145,9 @@ const BookingHistoryPage: React.FC = () => {
       title: "Giá tiền",
       dataIndex: "totalPrice",
       key: "totalPrice",
-      render: (price: number) => (
-        <span style={{ fontWeight: 600, color: "#1890ff" }}>
-          {price?.toLocaleString("vi-VN")}đ
+      render: (price?: number) => (
+        <span style={{ fontWeight: 600, color: "orange" }}>
+          {(price ?? 0).toLocaleString("vi-VN")}đ
         </span>
       ),
       align: "right" as const,
@@ -162,7 +170,7 @@ const BookingHistoryPage: React.FC = () => {
       render: (_: unknown, record: BookingResponse) => (
         <Button
           size="small"
-          type="primary"
+          style={{ color: "#9156F1", border: "1px solid #9156F1" }}
           ghost
           onClick={() => handleViewDetail(record)}
         >
@@ -173,12 +181,13 @@ const BookingHistoryPage: React.FC = () => {
     },
   ];
 
-  if (authLoading || !user)
+  if (authLoading || !user) {
     return (
       <div style={{ padding: 24, textAlign: "center" }}>
         <Spin size="large" />
       </div>
     );
+  }
 
   return (
     <>
@@ -210,6 +219,7 @@ const BookingHistoryPage: React.FC = () => {
           />
         )}
       </Card>
+
       <BookingDetailDrawer
         bookingId={selectedBookingId}
         open={drawerOpen}

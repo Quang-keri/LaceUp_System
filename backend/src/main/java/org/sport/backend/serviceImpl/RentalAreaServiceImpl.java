@@ -7,6 +7,7 @@ import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.amenity.AmenityResponse;
+import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtImageResponse;
@@ -90,6 +91,10 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     private ServiceItemRepository serviceItemRepository;
     @Autowired
     private LegalProfileRepository legalProfileRepository;
+
+    @Autowired
+    private BankAccountRepository bankAccountRepository;
+
     @Override
     public List<RentalAreaOptionResponse> getRentalAreaOptions() {
         return rentalAreaRepository.findAll(
@@ -120,6 +125,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 cityName
         ).replaceAll("null,?\\s*", "").trim();
     }
+
     @Override
     public RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images) {
 
@@ -374,17 +380,20 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             int page,
             int size,
             String keyword,
-            UUID cityId,
+            Integer provinceCode,
             VerificationStatus verificationStatus,
             LocalDateTime fromDate,
             LocalDateTime toDate
     ) {
-
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by("createdAt").descending()
+        );
 
         Specification<RentalArea> spec = Specification
                 .where(RentalAreaSpecification.isNotDeleted())
-                .and(RentalAreaSpecification.hasCity(cityId))
+                .and(RentalAreaSpecification.hasProvinceCode(provinceCode))
                 .and(RentalAreaSpecification.hasVerificationStatus(verificationStatus))
                 .and(RentalAreaSpecification.hasKeyword(keyword))
                 .and(RentalAreaSpecification.fromDate(fromDate))
@@ -398,7 +407,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .toList();
 
         return PageResponse.<RentalAreaResponse>builder()
-                .currentPage(rentalPage.getNumber())
+                .currentPage(rentalPage.getNumber() + 1)
                 .totalPages(rentalPage.getTotalPages())
                 .pageSize(rentalPage.getSize())
                 .totalElements(rentalPage.getTotalElements())
@@ -461,7 +470,9 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         if (request.getContactPhone() != null) {
             rentalArea.setContactPhone(request.getContactPhone());
         }
-
+        if (request.getStatus() != null) {
+            rentalArea.setStatus(request.getStatus());
+        }
         Address currentAddress = rentalArea.getAddress();
 
         if (request.getStreet() != null) {
@@ -470,12 +481,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         if (request.getWard() != null) {
             currentAddress.setWard(request.getWard());
         }
-//        if (request.getDistrict() != null) {
-//            currentAddress.setDistrict(request.getDistrict());
-//        }
-
         if (request.getCityId() != null) {
-            City newCity = cityRepository.findById(request.getCityId())
+            City newCity = cityRepository.findByProvinceCode(request.getCityId())
                     .orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
             currentAddress.setCity(newCity);
         }
@@ -495,14 +502,12 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 throw new IllegalArgumentException("RentalArea yêu cầu tối đa 5 ảnh");
             }
 
-            // Xóa record ảnh cũ trong DB
+
             rentalAreaImageRepository.deleteAll(currentImages);
 
-            // Upload ảnh mới lên Cloudinary
             String folder = "rentals/" + rentalArea.getRentalAreaId();
             List<CloudinaryUploadResult> uploaded = cloudinaryService.uploadImages(images, folder);
 
-            // Lưu ảnh mới vào DB
             List<RentalAreaImage> newEntities = new ArrayList<>();
             for (int i = 0; i < uploaded.size(); i++) {
                 CloudinaryUploadResult u = uploaded.get(i);
@@ -519,7 +524,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             currentImages = newEntities;
         }
 
-        // Map ảnh ra Response
+
         List<RentalAreaImageResponse> imageResponses = currentImages.stream()
                 .sorted(Comparator.comparing(RentalAreaImage::getSortOrder, Comparator.nullsLast(Integer::compareTo)))
                 .map(img -> RentalAreaImageResponse.builder()
@@ -534,8 +539,17 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
                 .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
+                .city(rentalArea.getAddress() != null
+                        ? CityResponse.builder()
+                        .cityId(rentalArea.getAddress().getCity().getCityId())
+                        .cityName(rentalArea.getAddress().getCity().getCityName())
+                        .build()
+                        : null)
+
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
+                .gmailLink(rentalArea.getGmail())
+                .facebookLink(rentalArea.getFacebookLink())
                 .status(rentalArea.getStatus())
                 .images(imageResponses)
                 .build();
@@ -576,13 +590,26 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             int totalCopies = courtCopyRepository
                     .countByCourt(court);
 
-            String cover = courtImageRepository
+            List<CourtImageResponse> courtImages = courtImageRepository
                     .findByCourt(court)
                     .stream()
+                    .sorted(Comparator.comparing(
+                            CourtImage::getSortOrder,
+                            Comparator.nullsLast(Integer::compareTo)
+                    ))
+                    .map(img -> CourtImageResponse.builder()
+                            .courtImageId(img.getCourtImageId())
+                            .imageUrl(img.getImageUrl())
+                            .isCover(img.getIsCover())
+                            .sortOrder(img.getSortOrder())
+                            .build())
+                    .toList();
+
+            String cover = courtImages.stream()
                     .filter(img -> Boolean.TRUE.equals(img.getIsCover()))
                     .findFirst()
-                    .map(CourtImage::getImageUrl)
-                    .orElse(null);
+                    .map(CourtImageResponse::getImageUrl)
+                    .orElse(courtImages.isEmpty() ? null : courtImages.get(0).getImageUrl());
 
             List<CourtCopyResponse> copies = courtCopyRepository
                     .findByCourt(court)
@@ -626,6 +653,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                     .categoryId(court.getCategory().getCategoryId())
                     .categoryName(court.getCategory().getCategoryName())
                     .coverImage(cover)
+                    .images(courtImages)
                     .courtCopies(copies)
                     .amenities(amenityResponses)
                     .build();
@@ -646,18 +674,36 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         }
 
 
+        BankAccount bankAccount = bankAccountRepository
+                .findByUser_UserId(rentalArea.getOwner().getUserId())
+                .orElse(null);
+
+        BankAccountResponse bankAccountResponse = null;
+
+        if (bankAccount != null) {
+            bankAccountResponse = BankAccountResponse.builder()
+                    .bankAccountId(bankAccount.getBankAccountId())
+                    .accountNumber(bankAccount.getAccountNumber())
+                    .bankName(bankAccount.getBankName())
+                    .accountHolderName(bankAccount.getAccountHolderName())
+                    .branchName(bankAccount.getBranchName())
+                    .isVerified(bankAccount.getIsVerified())
+                    .build();
+        }
         return RentalAreaDetailResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
                 .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
+                .status(rentalArea.getStatus())
                 .city(cityResponse)
                 .images(images)
                 .courts(courtResponses)
                 .ownerId(rentalArea.getOwner().getUserId())
                 .gmailLink(rentalArea.getGmail())
                 .facebookLink(rentalArea.getFacebookLink())
+                .bankAccount(bankAccountResponse)
                 .build();
     }
 
@@ -692,7 +738,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         rentalArea.setVerificationStatus(VerificationStatus.VERIFIED);
         rentalAreaRepository.save(rentalArea);
 
-        // Gợi ý: Tại đây bạn có thể gửi Email thông báo cho chủ sân là đã được duyệt,phát triển sau
     }
 
     @Override

@@ -53,9 +53,9 @@ public class InvoiceServiceImpl implements InvoiceService {
 
             document.add(new Paragraph("HỆ THỐNG QUẢN LÝ LACE UP")
                     .setFont(boldFont).setFontSize(16).setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            document.add(new Paragraph("Địa chỉ: "+booking.getRentalArea().getAddress().getStreet() + ", " + booking.getRentalArea().getAddress().getWard() + ", " + booking.getRentalArea().getAddress().getDistrict() + ", " + booking.getRentalArea().getCity())
+            document.add(new Paragraph("Địa chỉ: "+booking.getRentalArea().getAddress().getStreet() + ", " + booking.getRentalArea().getAddress().getWard() +", " + booking.getRentalArea().getAddress().getCity().getCityName())
                     .setFont(font).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
-            document.add(new Paragraph("Điện thoại: "+booking.getRentalArea().getOwner().getPhone())
+            document.add(new Paragraph("Điện thoại: "+booking.getRentalArea().getContactPhone())
                     .setFont(font).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setMarginBottom(15));
 
 
@@ -138,7 +138,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
             Table summaryTable = new Table(UnitValue.createPercentArray(new float[]{5, 5})).useAllAvailableWidth();
 
-            Cell emptyCell = new Cell().setBorder(noBorder); // Ô trống bên trái
+            Cell emptyCell = new Cell().setBorder(noBorder);
 
             Table mathTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth();
 

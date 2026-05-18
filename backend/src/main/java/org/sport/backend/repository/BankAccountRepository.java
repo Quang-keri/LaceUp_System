@@ -12,9 +12,4 @@ public interface BankAccountRepository extends JpaRepository<BankAccount, UUID> 
 
     Optional<BankAccount> findByUser_UserId(UUID userId);
 
-    Optional<BankAccount> findByAccountNumber(String accountNumber);
-
-    boolean existsByUser_UserId(UUID userId);
-
-    boolean existsByAccountNumber(String accountNumber);
 }

@@ -23,8 +23,8 @@ public interface RentalAreaService {
             int page,
             int size,
             String keyword,
-            UUID cityId,
-            VerificationStatus status,
+            Integer provinceCode,
+            VerificationStatus verificationStatus,
             LocalDateTime fromDate,
             LocalDateTime toDate
     );

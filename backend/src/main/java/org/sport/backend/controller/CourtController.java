@@ -27,7 +27,7 @@ public class CourtController {
     private final CourtService courtService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PreAuthorize("hasAuthority('CREATE_COURT')")
+    @PreAuthorize("hasAuthority('CREATE_COURT')")
     public ApiResponse<CourtResponse> createCourt(
             @Valid @ModelAttribute CourtRequest request
     ) {
@@ -145,13 +145,14 @@ public class CourtController {
     @PreAuthorize("hasAuthority('UPDATE_COURT')")
     public ApiResponse<CourtResponse> updateCourt(
             @PathVariable UUID courtId,
-            @Valid @ModelAttribute("data") CourtUpdateRequest request,
-            @RequestParam(value = "images") MultipartFile[] images
+            @Valid @ModelAttribute CourtUpdateRequest request,
+            @RequestParam(value = "images", required = false) MultipartFile[] images
     ) {
+        request.setCourtId(courtId);
         return ApiResponse.success(
                 200,
                 "Update court successfully",
-                courtService.updateCourt(courtId, request, List.of(images))
+                courtService.updateCourt(courtId, request, images == null ? List.of() : List.of(images))
         );
     }
 

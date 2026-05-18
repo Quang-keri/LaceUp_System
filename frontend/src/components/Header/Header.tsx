@@ -49,7 +49,6 @@ const AppHeader = () => {
     { key: "/courts", label: "Sân" },
     { key: "/comunity", label: "Cộng đồng" },
     { key: "/news", label: "Tin tức" },
-   
   ];
 
   const userMenuItems = isLoggedIn
@@ -75,14 +74,15 @@ const AppHeader = () => {
                 icon: <SettingOutlined />,
                 onClick: () => navigate("/owner"),
               },
+              {
+                key: "/owner/bank-account",
+                label: "Tài khoản của tôi",
+                icon: <WalletOutlined />,
+                onClick: () => navigate("/owner/bank-account"),
+              },
             ]
           : []),
-        {
-          key: "/wallet",
-          label: "Ví của tôi",
-          icon: <WalletOutlined />,
-          onClick: () => navigate("/wallet"),
-        },
+
         { type: "divider" as const },
         {
           key: "logout",

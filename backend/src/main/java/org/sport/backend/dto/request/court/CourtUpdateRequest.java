@@ -17,18 +17,20 @@ import java.util.UUID;
 @Builder
 public class CourtUpdateRequest {
 
+    private UUID courtId;
+
     @NotNull(message = "tên sân không bỏ trống")
     private String courtName;
-    @NotNull(message = "mã phòng không bỏ trống")
-    @Size(min = 1, message = "phải có ít nhất 1 mã phòng")
+//    @NotNull(message = "mã phòng không bỏ trống")
+//    @Size(min = 1, message = "phải có ít nhất 1 mã sân")
     private List<String> courtCodes;
     @NotNull(message = "loại sân không bỏ trống")
     private Integer categoryId;
-    @NotNull(message = "giá sân không bỏ trống")
-    private BigDecimal pricePerHour;
-    @NotNull(message = "mã nhà không bỏ trống")
+//    @NotNull(message = "giá sân không bỏ trống")
+//    private BigDecimal pricePerHour;
+//    @NotNull(message = "mã nhà không bỏ trống")
     private UUID rentalAreaId;
-    @NotNull(message = "trạng thái không bỏ trống")
+//    @NotNull(message = "trạng thái không bỏ trống")
     private CourtStatus status;
     private Set<Long> amenityIds;
 

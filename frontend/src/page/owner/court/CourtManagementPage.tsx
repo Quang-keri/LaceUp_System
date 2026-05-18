@@ -55,7 +55,7 @@ export default function CourtManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialBranchId = searchParams.get("branchId");
 
-  // Data States
+
   const [branches, setBranches] = useState<RentalAreaResponse[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(
     initialBranchId || undefined,
@@ -91,13 +91,11 @@ export default function CourtManagementPage() {
   const [selectedCourtForDetail, setSelectedCourtForDetail] =
     useState<string>("");
 
-  // 1. Tải danh sách chi nhánh khi vào trang
   useEffect(() => {
     loadBranches();
     loadCategories();
   }, []);
 
-  // 2. Tải danh sách sân MỖI KHI đổi chi nhánh
   useEffect(() => {
     if (selectedBranchId) {
       loadCourts(selectedBranchId);
@@ -109,12 +107,10 @@ export default function CourtManagementPage() {
 
   const loadBranches = async () => {
     try {
-      // Giả sử gọi page 1, size 100 để lấy hết chi nhánh làm dropdown
-      const res = await rentalService.getMyRentalAreas(1, 100);
+      const res = await rentalService.getMyRentalAreas(1, 20);
       const data = res.result?.data || [];
       setBranches(data);
 
-      // Nếu không có initialBranchId từ URL, tự động chọn chi nhánh đầu tiên
       if (data.length > 0 && !initialBranchId) {
         setSelectedBranchId(data[0].rentalAreaId);
       }
@@ -201,21 +197,6 @@ export default function CourtManagementPage() {
         setModalOpen(true);
       },
     },
-    // {
-    //   key: "create-sub-court",
-    //   label: "Tạo sân con",
-    //   icon: <AppstoreAddOutlined />,
-    //   disabled: courts.length === 0,
-    //   onClick: () => {
-    //     if (courts.length > 0) {
-    //       setSelectedParentCourtId(courts[0].courtId);
-    //       setEditingCopy(null);
-    //       setCopyModalOpen(true);
-    //     } else {
-    //       message.warning("Vui lòng tạo Sân trước khi tạo Sân con!");
-    //     }
-    //   },
-    // },
   ];
 
   const courtColumns = [
@@ -306,12 +287,6 @@ export default function CourtManagementPage() {
           >
             Thêm sân con
           </Button>
-          <Popconfirm
-            title="Xóa sân?"
-            onConfirm={() => handleDeleteCourt(record.courtId)}
-          >
-            <Button danger size="small" icon={<DeleteOutlined />} />
-          </Popconfirm>
         </Space>
       ),
     },
@@ -544,6 +519,7 @@ export default function CourtManagementPage() {
           }}
           categories={categories}
           court={editingCourt}
+          courtId={editingCourt?.courtId}
           onSuccess={() => loadCourts(selectedBranchId)}
         />
       )}
@@ -557,7 +533,6 @@ export default function CourtManagementPage() {
         />
       )}
 
-      {/* --- MODALS CHO SÂN CON --- */}
       {selectedBranchId && (
         <CourtCopyModal
           open={copyModalOpen}

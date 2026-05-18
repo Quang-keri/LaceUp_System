@@ -50,7 +50,6 @@ export default function SlotEditorModal({
   };
 
   const slots = booking?.slots || [];
-  // Lấy rentalAreaId từ booking để truyền xuống form swap
   const rentalAreaId = booking?.rentalArea?.rentalAreaId;
 
   return (
@@ -422,7 +421,7 @@ function SlotEditForm({ slot, rentalAreaId, onSuccess }: any) {
         </>
       )}
 
-      {/* SWAP UI */}
+     
       {mode === "swap" && (
         <>
           <Space direction="vertical" style={{ width: "100%" }}>
@@ -430,9 +429,9 @@ function SlotEditForm({ slot, rentalAreaId, onSuccess }: any) {
               placeholder="Chọn sân muốn đổi sang (Có thể chọn lại sân cũ nếu chỉ đổi giờ)"
               style={{ width: "100%" }}
               onChange={setTargetCourt}
-              options={courtOptions} // Dữ liệu đã fetch từ API
-              loading={loadingCourts} // Hiển thị loading spinner lúc đang lấy API
-              showSearch // Cho phép gõ để tìm kiếm sân nhanh hơn
+              options={courtOptions} 
+              loading={loadingCourts} 
+              showSearch 
               optionFilterProp="label"
             />
             <DatePicker.RangePicker

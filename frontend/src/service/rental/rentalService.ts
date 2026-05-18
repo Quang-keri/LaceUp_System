@@ -8,8 +8,7 @@ import type {
 import type { ApiResponse } from "../../types/ApiResponse";
 
 class RentalService {
-
- async getRentalAreaOptions() {
+  async getRentalAreaOptions() {
     const res = await api.get(`/rental-areas/options`);
     return res.data.result;
   }
@@ -40,26 +39,24 @@ class RentalService {
   }
 
   async getAllRentalAreas(
-    page: number = 1,
-    size: number = 10,
+    page = 1,
+    size = 10,
     keyword?: string,
-    cityId?: number,
+    provinceCode?: number,
     verificationStatus?: string,
   ) {
-    const params = new URLSearchParams();
-    params.append("page", page.toString());
-    params.append("size", size.toString());
-    if (keyword) params.append("keyword", keyword);
-    if (cityId) params.append("cityId", cityId.toString());
-    if (verificationStatus)
-      params.append("verificationStatus", verificationStatus);
+    const res = await api.get("/rental-areas", {
+      params: {
+        page,
+        size,
+        keyword: keyword || undefined,
+        provinceCode,
+        verificationStatus,
+      },
+    });
 
-    const response = await api.get<ApiResponse<RentalAreaListResponse>>(
-      `/rental-areas?${params.toString()}`,
-    );
-    return response.data;
+    return res.data;
   }
-
   async createRentalArea(values: any) {
     const formData = new FormData();
 
@@ -104,15 +101,14 @@ class RentalService {
     formData.append("rentalAreaName", request.rentalAreaName || "");
     formData.append("street", request.address?.street || "");
     formData.append("ward", request.address?.ward || "");
-    formData.append("district", request.address?.district || "");
     formData.append("contactName", request.contactName || "");
     formData.append("contactPhone", request.contactPhone || "");
     formData.append("cityId", request.cityId ? request.cityId.toString() : "");
+    formData.append("status", request.status);
 
-    // Append ảnh vào request
     if (images && images.length > 0) {
       images.forEach((image) => {
-        formData.append("images", image); // Chữ "images" này phải khớp tên biến private List<MultipartFile> images
+        formData.append("images", image);
       });
     }
 
@@ -136,8 +132,7 @@ class RentalService {
   }
 
   async approveRentalArea(rentalAreaId: string) {
-    // Backend may expose an admin endpoint or a rental-areas/{id}/approve
-    // Adjust the path if your API uses a different route.
+
     const response = await api.put<ApiResponse<void>>(
       `/rental-areas/${rentalAreaId}/approve`,
     );

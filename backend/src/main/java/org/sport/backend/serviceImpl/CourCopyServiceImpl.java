@@ -146,6 +146,7 @@ public class CourCopyServiceImpl implements CourtCopyService {
 
         courtCopy.setCourtCode(request.getCourtCode());
         courtCopy.setCourtCopyStatus(request.getStatus());
+        courtCopy.setLocation(request.getLocation());
 
         courtCopyRepository.save(courtCopy);
 
@@ -171,6 +172,7 @@ public class CourCopyServiceImpl implements CourtCopyService {
                 .courtCopyId(courtCopy.getCourtCopyId())
                 .courtCode(courtCopy.getCourtCode())
                 .status(courtCopy.getCourtCopyStatus())
+                .location(courtCopy.getLocation())
                 .slots(slots)
                 .build();
     }

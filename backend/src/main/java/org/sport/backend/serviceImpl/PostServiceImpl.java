@@ -107,8 +107,6 @@ public class PostServiceImpl implements PostService {
         Page<Post> postPage =
                 postRepository.findAll(spec, pageable);
 
-//        LocalDateTime requestedStart = filterRequest.getStartDateTime();
-//        LocalDateTime requestedEnd = filterRequest.getEndDateTime();
 
         List<PostSummaryResponse> data = postPage.getContent()
                 .stream()

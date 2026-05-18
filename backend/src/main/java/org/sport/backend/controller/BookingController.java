@@ -180,7 +180,7 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}/collect-payment")
-//    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
+    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
     public ResponseEntity<ApiResponse<Void>> collectRemainingPayment(
             @PathVariable UUID bookingId
     ) {

@@ -102,29 +102,24 @@ class CourtService {
     images: File[] = [],
   ) {
     const formData = new FormData();
+    if (request.courtId) formData.append("courtId", request.courtId);
     if (request.courtName) formData.append("courtName", request.courtName);
     if (request.categoryId) formData.append("categoryId", request.categoryId);
-    if (request.pricePerHour !== undefined)
-      formData.append("pricePerHour", String(request.pricePerHour));
-    if (request.surfaceType)
-      formData.append("surfaceType", request.surfaceType);
-    if (request.indoor !== undefined)
-      formData.append("indoor", String(request.indoor));
+    if (request.rentalAreaId)
+      formData.append("rentalAreaId", String(request.rentalAreaId));
+    if (request.status) formData.append("status", request.status);
 
     if (request.amenityIds && Array.isArray(request.amenityIds)) {
       request.amenityIds.forEach((id: number) => {
         formData.append("amenityIds", String(id));
       });
     }
-
-    // Append court codes if provided
     if (request.courtCodes && request.courtCodes.length > 0) {
       request.courtCodes.forEach((code, index) => {
         formData.append(`courtCodes[${index}]`, code);
       });
     }
 
-    // Append images if provided
     images.forEach((image) => {
       formData.append("images", image);
     });
@@ -153,7 +148,6 @@ class CourtService {
     return response.data;
   }
 
-  // Court Copy APIs
   async createCourtCopy(request: CreateCourtCopyRequest) {
     const response = await api.post<ApiResponse<CourtCopyResponse>>(
       "/court_copies",

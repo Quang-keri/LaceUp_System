@@ -14,10 +14,10 @@ const OwnerBankAccount: React.FC = () => {
       const result = await financeService.getOwnerBankAccount();
 
       if (result) {
-        form.setFieldsValue(result);
+        form.setFieldsValue(result?.result || result);
       }
     } catch {
-      // owner chưa có bank account thì bỏ qua
+      // Owner chưa có bank account thì bỏ qua
     } finally {
       setLoading(false);
     }
@@ -31,7 +31,7 @@ const OwnerBankAccount: React.FC = () => {
     try {
       setLoading(true);
       await financeService.saveOwnerBankAccount(values);
-      message.success("Đã lưu tài khoản ngân hàng");
+      message.success("Đã lưu thông tin tài khoản ngân hàng");
     } catch (error: any) {
       message.error(
         error.response?.data?.message || "Lỗi lưu tài khoản ngân hàng",
@@ -42,16 +42,35 @@ const OwnerBankAccount: React.FC = () => {
   };
 
   return (
-    <Card style={{ maxWidth: 700 }}>
-      <Title level={4}>Tài khoản ngân hàng nhận tiền</Title>
+    <Card
+      style={{
+        borderRadius: "12px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        height: "100%",
+      }}
+      bordered={false}
+    >
+      <Title level={4} style={{ marginBottom: "24px", color: "#1e293b" }}>
+        Tài khoản ngân hàng nhận tiền
+      </Title>
 
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+      <Form
+        form={form}
+        layout="horizontal"
+        onFinish={handleSubmit}
+        labelCol={{ span: 7 }}
+        wrapperCol={{ span: 17 }}
+        labelAlign="left"
+      >
         <Form.Item
           label="Tên ngân hàng"
           name="bankName"
           rules={[{ required: true, message: "Vui lòng nhập tên ngân hàng" }]}
         >
-          <Input placeholder="VD: MB Bank, Vietcombank..." />
+          <Input
+            placeholder="VD: MB Bank, Vietcombank, Techcombank..."
+            size="large"
+          />
         </Form.Item>
 
         <Form.Item
@@ -59,26 +78,52 @@ const OwnerBankAccount: React.FC = () => {
           name="accountNumber"
           rules={[{ required: true, message: "Vui lòng nhập số tài khoản" }]}
         >
-          <Input placeholder="Nhập số tài khoản" />
+          <Input placeholder="Nhập số tài khoản" size="large" />
         </Form.Item>
 
         <Form.Item
           label="Tên chủ tài khoản"
           name="accountHolderName"
           rules={[
-            { required: true, message: "Vui lòng nhập tên chủ tài khoản" },
+            {
+              required: true,
+              message: "Vui lòng nhập tên chủ tài khoản",
+            },
           ]}
         >
-          <Input placeholder="VD: NGUYEN VAN A" />
+          <Input
+            placeholder="VD: NGUYEN VAN A"
+            size="large"
+            style={{ textTransform: "uppercase" }}
+          />
         </Form.Item>
 
         <Form.Item label="Chi nhánh" name="branchName">
-          <Input placeholder="Có thể bỏ trống" />
+          <Input
+            placeholder="Tên chi nhánh ngân hàng (Có thể bỏ trống)"
+            size="large"
+          />
         </Form.Item>
 
-        <Button type="primary" htmlType="submit" loading={loading}>
-          Lưu tài khoản
-        </Button>
+        <Form.Item
+          wrapperCol={{ offset: 7, span: 17 }}
+          style={{ width: "100px", marginTop: "32px", marginBottom: 0 }}
+        >
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            size="large"
+            style={{
+              background: "#9156F1",
+              borderRadius: "6px",
+              minWidth: "150px",
+              border: "none",
+            }}
+          >
+            Lưu tài khoản
+          </Button>
+        </Form.Item>
       </Form>
     </Card>
   );

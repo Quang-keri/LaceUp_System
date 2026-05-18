@@ -5,10 +5,13 @@ type RawParams = Record<string, string | null>;
 
 function parseArrayParam(value?: string | null) {
   if (!value) return undefined;
-  return value
+
+  const arr = value
     .split(",")
     .map((v) => Number(v))
     .filter((n) => !Number.isNaN(n));
+
+  return arr.length > 0 ? arr : undefined;
 }
 
 export interface FilterState {
@@ -16,7 +19,9 @@ export interface FilterState {
   minPrice?: number;
   maxPrice?: number;
   sortBy?: string;
-  cityIds?: number[];
+
+  provinceCodes?: number[];
+
   categoryIds?: number[];
   amenityIds?: number[];
   date?: string;
@@ -46,7 +51,8 @@ export default function useUrlFilters(defaults: Partial<FilterState> = {}) {
 
       sortBy: p.sortBy || undefined,
 
-      cityIds: parseArrayParam(p.cityIds),
+      provinceCodes: parseArrayParam(p.provinceCodes),
+
       categoryIds: parseArrayParam(p.categoryIds),
       amenityIds: parseArrayParam(p.amenityIds),
 
@@ -59,12 +65,16 @@ export default function useUrlFilters(defaults: Partial<FilterState> = {}) {
     const next = new URLSearchParams(searchParams.toString());
 
     Object.entries(patch).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === "") {
+      if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
         next.delete(key);
         return;
       }
 
-      // Arrays -> comma separated
       if (Array.isArray(value)) {
         next.set(key, value.join(","));
         return;
@@ -73,8 +83,7 @@ export default function useUrlFilters(defaults: Partial<FilterState> = {}) {
       next.set(key, String(value));
     });
 
-    // If user updates a filter other than `page`, reset page to 1 when not explicitly provided
-    if (patch.page === undefined && !(patch as any).page) {
+    if (patch.page === undefined) {
       next.set("page", "1");
     }
 

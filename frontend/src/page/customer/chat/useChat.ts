@@ -91,16 +91,8 @@ export const useChat = (
       currentConversationIdRef.current = null;
       setPage(0);
       setHasMore(true);
-
-      if (websocketService.disconnect) {
-        websocketService.disconnect();
-      }
       return;
     }
-    if (websocketService.connect && !websocketService.isConnected()) {
-      websocketService.connect();
-    }
-
     loadConversations();
 
     const unsubscribeNewMsg = websocketService.onNewMessage((data: any) => {

@@ -15,29 +15,30 @@ import java.time.LocalDateTime;
 
 
 public class RentalAreaSpecification {
-    public static Specification<RentalArea> hasVerificationStatus(VerificationStatus verificationStatus) {
-        return (root, query, criteriaBuilder) -> {
-            if (verificationStatus == null) {
-                return null;
-            }
-            return criteriaBuilder.equal(root.get("verificationStatus"), verificationStatus);
-        };
-    }
+
     public static Specification<RentalArea> isNotDeleted() {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }
 
-    public static Specification<RentalArea> hasCity(UUID cityId) {
+    public static Specification<RentalArea> hasVerificationStatus(
+            VerificationStatus verificationStatus
+    ) {
         return (root, query, cb) -> {
-            if (cityId == null) return null;
-            return cb.equal(root.get("city").get("cityId"), cityId);
+            if (verificationStatus == null) return null;
+            return cb.equal(root.get("verificationStatus"), verificationStatus);
         };
     }
 
-    public static Specification<RentalArea> hasStatus(RentalAreaStatus status) {
+    public static Specification<RentalArea> hasProvinceCode(Integer provinceCode) {
         return (root, query, cb) -> {
-            if (status == null) return null;
-            return cb.equal(root.get("status"), status);
+            if (provinceCode == null) return null;
+
+            return cb.equal(
+                    root.get("address")
+                            .get("city")
+                            .get("provinceCode"),
+                    provinceCode
+            );
         };
     }
 
@@ -45,12 +46,38 @@ public class RentalAreaSpecification {
         return (root, query, cb) -> {
             if (keyword == null || keyword.isBlank()) return null;
 
-            String like = "%" + keyword.toLowerCase() + "%";
+            String like = "%" + keyword.trim().toLowerCase() + "%";
 
             return cb.or(
                     cb.like(cb.lower(root.get("rentalAreaName")), like),
-                    cb.like(cb.lower(root.get("address")), like)
+
+                    cb.like(
+                            cb.lower(root.get("address").get("street")),
+                            like
+                    ),
+
+                    cb.like(
+                            cb.lower(root.get("address").get("ward")),
+                            like
+                    ),
+
+                    cb.like(
+                            cb.lower(root.get("address").get("cityName")),
+                            like
+                    ),
+
+                    cb.like(
+                            cb.lower(root.get("address").get("city").get("cityName")),
+                            like
+                    )
             );
+        };
+    }
+
+    public static Specification<RentalArea> hasStatus(RentalAreaStatus status) {
+        return (root, query, cb) -> {
+            if (status == null) return null;
+            return cb.equal(root.get("status"), status);
         };
     }
 

@@ -66,8 +66,8 @@ public class CourtServiceImpl implements CourtService {
         int count = images == null ? 0 :
                 (int) images.stream().filter(f -> f != null && !f.isEmpty()).count();
 
-        if (count < 1 || count > 5) {
-            throw new IllegalArgumentException("Court yêu cầu 1 tới 5 ảnh");
+        if (count < 1 || count > 3) {
+            throw new IllegalArgumentException("Court yêu cầu 1 tới 3 ảnh");
         }
 
         RentalArea rentalArea = rentalAreaRepository
@@ -146,9 +146,17 @@ public class CourtServiceImpl implements CourtService {
     }
 
     @Override
-    public CourtResponse updateCourt(UUID courtId, CourtUpdateRequest request, List<MultipartFile> images) {
+    @Transactional
+    public CourtResponse updateCourt(
+            UUID courtId,
+            CourtUpdateRequest request,
+            List<MultipartFile> images
+    ) {
+        UUID courtIds = request.getCourtId() != null
+                ? request.getCourtId()
+                : courtId;
 
-        Court court = courtRepository.findById(courtId)
+        Court court = courtRepository.findById(courtIds)
                 .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
 
         Category category = categoryRepository.findById(request.getCategoryId())
@@ -157,48 +165,52 @@ public class CourtServiceImpl implements CourtService {
         RentalArea rentalArea = rentalAreaRepository.findById(request.getRentalAreaId())
                 .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
 
-
         Set<Amenity> amenities = new HashSet<>();
 
         if (request.getAmenityIds() != null && !request.getAmenityIds().isEmpty()) {
-            List<Amenity> found = amenityRepository.findAllById(request.getAmenityIds());
+            List<Amenity> foundAmenities =
+                    amenityRepository.findAllById(request.getAmenityIds());
 
-            if (found.size() != request.getAmenityIds().size()) {
-                throw new IllegalArgumentException("Some amenities not found");
+            if (foundAmenities.size() != request.getAmenityIds().size()) {
+                throw new IllegalArgumentException("Không tìm thấy tiện ích");
             }
 
-            amenities.addAll(found);
+            amenities.addAll(foundAmenities);
         }
 
         court.setAmenities(amenities);
 
+        if (request.getCourtName() != null && !request.getCourtName().isBlank()) {
+            court.setCourtName(request.getCourtName().trim());
+        }
 
-        court.setCourtName(request.getCourtName().trim());
         court.setCategory(category);
         court.setRentalArea(rentalArea);
-        court.setCourtStatus(request.getStatus());
+
+        if (request.getStatus() != null) {
+            court.setCourtStatus(request.getStatus());
+        }
 
         courtRepository.save(court);
 
-
         List<CourtCopy> existingCopies = courtCopyRepository.findByCourt(court);
 
-        List<String> requestCodes = request.getCourtCodes();
-
+        List<String> requestCodes = request.getCourtCodes() != null
+                ? request.getCourtCodes()
+                : new ArrayList<>();
 
         List<String> existingCodes = existingCopies
                 .stream()
                 .map(CourtCopy::getCourtCode)
                 .toList();
 
-
         for (String code : requestCodes) {
+            if (code == null || code.isBlank()) continue;
 
             if (!existingCodes.contains(code)) {
-
                 CourtCopy newCopy = CourtCopy.builder()
                         .court(court)
-                        .courtCode(code)
+                        .courtCode(code.trim())
                         .courtCopyStatus(CourtCopyStatus.ACTIVE)
                         .build();
 
@@ -207,61 +219,62 @@ public class CourtServiceImpl implements CourtService {
         }
 
         for (CourtCopy copy : existingCopies) {
-
             if (!requestCodes.contains(copy.getCourtCode())) {
-
                 courtCopyRepository.delete(copy);
             }
         }
 
-
         if (images != null && !images.isEmpty()) {
+            List<MultipartFile> validImages = images.stream()
+                    .filter(file -> file != null && !file.isEmpty())
+                    .toList();
 
-            int count = (int) images.stream()
-                    .filter(f -> f != null && !f.isEmpty())
-                    .count();
+            if (!validImages.isEmpty()) {
+                List<CourtImage> oldImages = courtImageRepository.findByCourt(court);
 
-            if (count < 1 || count > 5) {
-                throw new IllegalArgumentException("Court yêu cầu 1 tới 5 ảnh");
+                int totalAfterUpdate = oldImages.size() + validImages.size();
+
+                if (totalAfterUpdate > 3) {
+                    throw new IllegalArgumentException("Sân yêu cầu tối đa 3 ảnh");
+                }
+
+                String folder = "courts/" + court.getCourtId();
+
+                List<CloudinaryUploadResult> uploaded =
+                        cloudinaryService.uploadImages(validImages, folder);
+
+                int startSortOrder = oldImages.stream()
+                        .map(CourtImage::getSortOrder)
+                        .filter(Objects::nonNull)
+                        .max(Integer::compareTo)
+                        .orElse(-1) + 1;
+
+                boolean hasCover = oldImages.stream()
+                        .anyMatch(img -> Boolean.TRUE.equals(img.getIsCover()));
+
+                List<CourtImage> newImages = new ArrayList<>();
+
+                for (int i = 0; i < uploaded.size(); i++) {
+                    CloudinaryUploadResult upload = uploaded.get(i);
+
+                    CourtImage img = CourtImage.builder()
+                            .court(court)
+                            .imageUrl(upload.getUrl())
+                            .publicId(upload.getPublicId())
+                            .isCover(!hasCover && i == 0)
+                            .sortOrder(startSortOrder + i)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+
+                    newImages.add(img);
+                }
+
+                courtImageRepository.saveAll(newImages);
             }
-
-            List<CourtImage> oldImages = courtImageRepository.findByCourt(court);
-
-            for (CourtImage img : oldImages) {
-                cloudinaryService.deleteByPublicId(img.getPublicId());
-            }
-
-            courtImageRepository.deleteAll(oldImages);
-
-            String folder = "courts/" + court.getCourtId();
-
-            List<CloudinaryUploadResult> uploaded =
-                    cloudinaryService.uploadImages(images, folder);
-
-            List<CourtImage> newImages = new ArrayList<>();
-
-            for (int i = 0; i < uploaded.size(); i++) {
-
-                CloudinaryUploadResult u = uploaded.get(i);
-
-                CourtImage img = CourtImage.builder()
-                        .court(court)
-                        .imageUrl(u.getUrl())
-                        .publicId(u.getPublicId())
-                        .isCover(i == 0)
-                        .sortOrder(i)
-                        .createdAt(LocalDateTime.now())
-                        .build();
-
-                newImages.add(img);
-            }
-
-            courtImageRepository.saveAll(newImages);
         }
 
         return mapToResponse(court);
     }
-
     @Override
     public PageResponse<CourtResponse> getAllCourts(
             int page,

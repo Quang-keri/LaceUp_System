@@ -3,7 +3,6 @@ import DefaultLayout from "../layouts/DefaultLayout/DefaultLayout";
 import LoginPage from "../page/customer/login-page/LoginPage.tsx";
 import PostPage from "../page/customer/post/PostPage.tsx";
 import LandingPage from "../page/customer/landing-page/LandingPage.tsx";
-import CustomerNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import LoginAdminPage from "../page/admin/login-page/LoginAdminPage.tsx";
 import { ProtectedRouter } from "./ProtectedRouter.tsx";
 import AdminDashboard from "../page/admin/dashboard/AdminDashboard.tsx";
@@ -14,7 +13,6 @@ import PermissionManagement from "../page/admin/permission-management/Permission
 import OwnerLayout from "../layouts/OwnerLayout/OwnerLayout.tsx";
 import ChatHome from "../page/customer/chat/ChatHome.tsx";
 import BuildingListPage from "../page/owner/building/BuildingListPage.tsx";
-import BuildingFormPage from "../page/owner/building/BuildingFormPage.tsx";
 import CourtManagementPage from "../page/owner/court/CourtManagementPage.tsx";
 import BookingManagementPage from "../page/owner/booking/BookingManagementPage.tsx";
 import CourtDetailPage from "../page/owner/court/CourtDetailPage.tsx";
@@ -53,7 +51,6 @@ import { Spin } from "antd";
 import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
 import PlayerPublicPage from "../page/customer/profile-page/PlayerPublicPage.tsx";
 import SportsBookingLanding from "../page/customer/landing-page/SportsBookingLanding.tsx";
-import BuildingEditPage from "../page/owner/building/BuildingEditPage.tsx";
 import CreateRentalAreaPage from "../components/rental/CreateRentalArea.tsx";
 import VnPayReturnPage from "../page/customer/payment/VnPayReturnPage.tsx";
 import MyRanks from "../page/customer/profile-page/MyRankPage.tsx";
@@ -137,14 +134,20 @@ export const router = createBrowserRouter([
               { path: "achievements", element: <MyAchievements /> },
               { path: "my-ranks", element: <MyRanks /> },
               { path: "booking-history", element: <BookingHistoryPage /> },
+              {
+                path: "bank-account",
+                element: <OwnerBankAccount />,
+              },
             ],
           },
+
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {
             path: "payment-success/:bookingId",
             element: <PaymentSuccessPage />,
           },
+          { path: "booking-history", element: <BookingHistoryPage /> },
           {
             path: "notifications",
             element: <NotificationPage />,
@@ -201,7 +204,7 @@ export const router = createBrowserRouter([
       { index: true, element: <OwnerDashboard /> },
       { path: "dashboard", element: <OwnerDashboard /> },
       { path: "buildings/list", element: <BuildingListPage /> },
-      { path: "buildings/edit/:buildingId", element: <BuildingEditPage /> },
+
       {
         path: "buildings/:buildingId/courts",
         element: <CourtManagementPage />,
@@ -210,10 +213,7 @@ export const router = createBrowserRouter([
         path: "courts",
         element: <CourtManagementPage />,
       },
-      {
-        path: "buildings/create",
-        element: <BuildingFormPage />,
-      },
+
       { path: "/owner/courts/:courtId/prices", element: <CourtPricePage /> },
       { path: "bookings/management", element: <BookingManagementPage /> },
       { path: "bookings/calendar", element: <ManageSchedulePage /> },
@@ -246,16 +246,11 @@ export const router = createBrowserRouter([
         path: "/owner/settlements/:rentalAreaId",
         element: <OwnerSettlementHistory />,
       },
-      {
-        path: "/owner/bank-account",
-        element: <OwnerBankAccount />,
 
-      },
       {
-         path: "/owner/buildings",
+        path: "/owner/buildings",
         element: <BuildingListPage />,
       },
-
 
       { path: "*", element: <NotFound /> },
     ],

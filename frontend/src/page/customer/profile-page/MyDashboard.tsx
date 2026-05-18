@@ -19,6 +19,10 @@ import {
   CrownFilled,
   RocketFilled,
   QuestionOutlined,
+  LikeFilled,
+  ClockCircleFilled,
+  TrophyFilled,
+  SafetyCertificateFilled,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import userService from "../../../service/userService";
@@ -29,32 +33,60 @@ const { Text } = Typography;
 
 const BADGE_MAP: Record<string, any> = {
   FIRST_BLOOD: {
-    name: "Chiến Công Đầu",
+    name: "Đệ Nhất Máu",
     icon: <StarFilled className="text-3xl" />,
-    color: "text-blue-500",
-    bg: "bg-blue-50 border-blue-200",
-    shadow: "shadow-blue-200",
+    color: "text-orange-500",
+    bg: "bg-orange-50 border-orange-300",
+    shadow: "shadow-orange-200",
   },
   ON_FIRE: {
-    name: "Đang Cháy",
+    name: "Đang Trên Đà",
     icon: <FireFilled className="text-3xl" />,
-    color: "text-orange-500",
-    bg: "bg-orange-50 border-orange-200",
-    shadow: "shadow-orange-200",
+    color: "text-purple-500",
+    bg: "bg-purple-50 border-purple-300",
+    shadow: "shadow-purple-200",
   },
   UNSTOPPABLE: {
     name: "Không Thể Cản Phá",
     icon: <RocketFilled className="text-3xl" />,
-    color: "text-red-500",
-    bg: "bg-red-50 border-red-200",
-    shadow: "shadow-red-200",
+    color: "text-orange-600",
+    bg: "bg-orange-100 border-orange-400",
+    shadow: "shadow-orange-300",
   },
   VETERAN: {
     name: "Lão Tướng",
+    icon: <SafetyCertificateFilled className="text-3xl" />,
+    color: "text-purple-600",
+    bg: "bg-purple-100 border-purple-400",
+    shadow: "shadow-purple-300",
+  },
+  CENTURION: {
+    name: "Kẻ Chinh Phục",
+    icon: <TrophyFilled className="text-3xl" />,
+    color: "text-orange-500",
+    bg: "bg-orange-50 border-orange-300",
+    shadow: "shadow-orange-200",
+  },
+  LEGEND: {
+    name: "Huyền Thoại",
     icon: <CrownFilled className="text-3xl" />,
-    color: "text-yellow-500",
-    bg: "bg-yellow-50 border-yellow-300",
-    shadow: "shadow-yellow-300",
+    color: "text-purple-700",
+    bg: "bg-purple-100 border-purple-500",
+    shadow: "shadow-purple-400",
+  },
+  PERFECT_ATTENDANCE: {
+    name: "Đúng Giờ Là Vàng",
+    icon: <ClockCircleFilled className="text-3xl" />,
+    color: "text-orange-500",
+    bg: "bg-orange-50 border-orange-300",
+    shadow: "shadow-orange-200",
+  },
+  SPORTSMANSHIP: {
+    name: "Tinh Thần Thể Thao",
+    icon: <LikeFilled className="text-3xl" />,
+    color: "text-purple-500",
+    bg: "bg-purple-50 border-purple-300",
+    shadow: "shadow-purple-200",
   },
 };
 

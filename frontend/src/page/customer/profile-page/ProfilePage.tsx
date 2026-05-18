@@ -41,6 +41,7 @@ const ProfilePage: React.FC = () => {
 
   const handleSave = async (values: any) => {
     if (!user?.userId) return;
+
     setLoadingSave(true);
     try {
       await userService.updateUser(user.userId, {
@@ -49,6 +50,7 @@ const ProfilePage: React.FC = () => {
         dateOfBirth: values.dob,
         gender: values.gender,
       });
+
       message.success("Cập nhật thông tin thành công!");
       await refreshProfile();
       setIsEditing(false);
@@ -90,7 +92,14 @@ const ProfilePage: React.FC = () => {
           }
           extra={
             !isEditing && (
-              <Button type="primary" onClick={() => setIsEditing(true)}>
+              <Button
+                style={{
+                  background: "#9156F1",
+                  color: "white",
+                  border: "none",
+                }}
+                onClick={() => setIsEditing(true)}
+              >
                 Chỉnh sửa hồ sơ
               </Button>
             )
@@ -129,7 +138,7 @@ const ProfilePage: React.FC = () => {
               <Input
                 size="large"
                 value={
-                  user?.age && user.age > 0
+                  user?.age !== undefined && user.age > 0
                     ? `${user.age} tuổi`
                     : "Chưa cập nhật"
                 }
@@ -171,7 +180,7 @@ const ProfilePage: React.FC = () => {
         </Card>
       </Col>
 
-      {/* KHỐI PHẢI CỦA NỘI DUNG CHÍNH (Thống kê) */}
+      {/* KHỐI PHẢI CỦA NỘI DUNG CHÍNH (Thống kê & Hoạt động) */}
       <Col xs={24} lg={8}>
         <Card
           title="Các môn đang chơi"
