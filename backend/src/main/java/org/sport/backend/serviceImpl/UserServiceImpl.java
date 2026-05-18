@@ -130,15 +130,25 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
+    public UserResponse updateMyProfile(UpdateUserRequest request) {
+        User user = getCurrentUserEntity();
+        updateUserMethod(request, user);
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    @Override
     public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
         User user = getUserEntity(userId);
+        updateUserMethod(request, user);
+        return userMapper.toUserResponse(userRepository.save(user));
+    }
 
+    private void updateUserMethod(UpdateUserRequest request, User user) {
         if (request.getUserName() != null) user.setUserName(request.getUserName());
         if (request.getPhone() != null) user.setPhone(request.getPhone());
         if (request.getGender() != null) user.setGender(request.getGender());
         if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
-
-        return userMapper.toUserResponse(userRepository.save(user));
     }
 
     @Override

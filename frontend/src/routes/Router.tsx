@@ -74,6 +74,7 @@ import AdminTransactionManager from "../page/admin/transaction/AdminTransactionM
 import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 import AdminCustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
 import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
+import UserLayout from "../layouts/UserLayout.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -127,18 +128,23 @@ export const router = createBrowserRouter([
           />
         ),
         children: [
-          { path: "dashboard", element: <MyDashboardWrapper /> },
-          { path: "profile", element: <ProfilePage /> },
-          { path: "my-matches", element: <MyMatchPage /> },
-          { path: "achievements", element: <MyAchievements /> },
-          { path: "my-ranks", element: <MyRanks /> },
+          {
+            element: <UserLayout />,
+            children: [
+              { path: "dashboard", element: <MyDashboardWrapper /> },
+              { path: "profile", element: <ProfilePage /> },
+              { path: "my-matches", element: <MyMatchPage /> },
+              { path: "achievements", element: <MyAchievements /> },
+              { path: "my-ranks", element: <MyRanks /> },
+              { path: "booking-history", element: <BookingHistoryPage /> },
+            ],
+          },
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
           {
             path: "payment-success/:bookingId",
             element: <PaymentSuccessPage />,
           },
-          { path: "booking-history", element: <BookingHistoryPage /> },
           {
             path: "notifications",
             element: <NotificationPage />,

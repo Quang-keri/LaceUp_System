@@ -204,7 +204,7 @@ const AppHeader = () => {
           >
             {isLoggedIn ? (
               <>
-                <Badge count={2} size="small" offset={[-2, 2]}>
+                <Badge size="small" offset={[-2, 2]}>
                   <div
                     style={iconButtonStyle}
                     onClick={() => navigate("/chat")}
@@ -215,7 +215,7 @@ const AppHeader = () => {
                   </div>
                 </Badge>
 
-                <Badge count={4} size="small" offset={[-2, 2]}>
+                <Badge size="small" offset={[-2, 2]}>
                   <div
                     style={iconButtonStyle}
                     onClick={() => navigate("/notifications")}

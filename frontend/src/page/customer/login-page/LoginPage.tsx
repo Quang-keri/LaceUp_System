@@ -6,7 +6,6 @@ import { useAuth } from "../../../context/AuthContext";
 import { GoogleOutlined } from "@ant-design/icons";
 import { useGoogleLogin } from "@react-oauth/google";
 
-// 1. Cập nhật thêm các câu lỗi tiếng Anh của Backend vào từ điển
 const BACKEND_ERRORS: Record<string, string> = {
   PASSWORD_TOO_SHORT: "Mật khẩu quá ngắn (cần ít nhất 6-8 ký tự).",
   WRONG_PASSWORD: "Mật khẩu không chính xác.",
@@ -134,7 +133,7 @@ const LoginPage: React.FC = () => {
               if (hasEmailError) setHasEmailError(false);
             }}
             placeholder="Email"
-            className={`w-full px-4 py-2 border rounded-lg outline-none transition focus:ring-2 ${
+            className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
               hasEmailError
                 ? "border-red-500 focus:ring-red-500"
                 : "focus:ring-[#9156F1] border-gray-300"
@@ -149,7 +148,7 @@ const LoginPage: React.FC = () => {
               if (hasPasswordError) setHasPasswordError(false);
             }}
             placeholder="Mật khẩu"
-            className={`w-full px-4 py-2 border rounded-lg outline-none transition focus:ring-2 ${
+            className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
               hasPasswordError
                 ? "border-red-500 focus:ring-red-500"
                 : "focus:ring-[#9156F1] border-gray-300"

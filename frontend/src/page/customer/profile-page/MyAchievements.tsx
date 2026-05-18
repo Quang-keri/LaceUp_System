@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Card, Spin, Tooltip, Typography, Row, Col } from "antd";
+import { Card, Spin, Tooltip, Typography } from "antd";
 import {
   FireFilled,
   StarFilled,
@@ -12,11 +12,9 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import achievementService from "../../../service/achievementService";
-import UserSidebar from "../../../components/sidebar/UserSidebar";
 
 const { Text } = Typography;
 
-// Cập nhật BADGE_MAP: Bổ sung description và đồng bộ theme Cam - Tím
 const BADGE_MAP: Record<string, any> = {
   FIRST_BLOOD: {
     name: "Đệ Nhất Máu",
@@ -96,20 +94,14 @@ const MyAchievements: React.FC<UserAchievementsProps> = ({ userId }) => {
     const fetchAchievements = async () => {
       setLoading(true);
       try {
-        let res;
-        if (userId) {
-          res = await achievementService.getUserAchievements(userId);
-        } else {
-          res = await achievementService.getMyAchievements();
-        }
-
-        let safeArray: any[] = [];
-        if (Array.isArray(res)) {
-          safeArray = res;
-        } else if (res && Array.isArray(res.result)) {
-          safeArray = res.result;
-        }
-
+        let res = userId
+          ? await achievementService.getUserAchievements(userId)
+          : await achievementService.getMyAchievements();
+        let safeArray = Array.isArray(res)
+          ? res
+          : res && Array.isArray(res.result)
+          ? res.result
+          : [];
         setAchievements(safeArray);
       } catch (error) {
         console.error("Lỗi lấy thành tựu: ", error);
@@ -117,116 +109,88 @@ const MyAchievements: React.FC<UserAchievementsProps> = ({ userId }) => {
         setLoading(false);
       }
     };
-
     fetchAchievements();
   }, [userId]);
 
-  // Lấy ra toàn bộ keys của BADGE_MAP để render
   const achievementKeys = Object.keys(BADGE_MAP);
 
+  if (loading)
+    return (
+      <Card
+        style={{ borderRadius: "12px", minHeight: "300px" }}
+        bordered={false}
+      >
+        <div className="flex justify-center items-center py-20">
+          <Spin size="large" />
+        </div>
+      </Card>
+    );
+
   return (
-    <div
-      style={{
-        padding: "24px",
-        backgroundColor: "#f5f7fa",
-        minHeight: "calc(100vh - 70px)",
-      }}
+    <Card
+      title={<span className="text-xl font-bold">Tủ Kính Thành Tựu</span>}
+      bordered={false}
+      style={{ borderRadius: "12px", minHeight: "100%" }}
     >
-      <Row gutter={[24, 24]} justify="center">
-        {/* CỘT TRÁI: HIỂN THỊ SIDEBAR */}
-        <Col xs={24} md={8} lg={6}>
-          <UserSidebar selectedKey="7" />
-        </Col>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 pt-4">
+        {achievementKeys.map((code: string) => {
+          const config = BADGE_MAP[code];
+          const achievedItem = achievements.find(
+            (a: any) =>
+              a.achievementCode === code || a.achievementType === code,
+          );
+          const isAchieved = !!achievedItem;
 
-        {/* CỘT PHẢI: HIỂN THỊ TỦ KÍNH THÀNH TỰU */}
-        <Col xs={24} md={16} lg={18}>
-          {loading ? (
-            <Card
-              style={{ borderRadius: "12px", minHeight: "300px" }}
-              bordered={false}
-            >
-              <div className="flex justify-center items-center py-20">
-                <Spin size="large" />
-              </div>
-            </Card>
-          ) : (
-            <Card
+          return (
+            <Tooltip
+              key={code}
+              color="#1f2937"
+              placement="top"
               title={
-                <span className="text-xl font-bold"> Tủ Kính Thành Tựu</span>
+                <div className="text-center">
+                  <p className="font-bold text-base mb-1">{config.name}</p>
+                  <p className="text-sm text-gray-200 mb-1">
+                    {config.description}
+                  </p>
+                  {isAchieved ? (
+                    <p className="text-xs italic text-green-400 mt-2">
+                      Đã mở khóa:{" "}
+                      {dayjs(achievedItem.achievedAt).format("DD/MM/YYYY")}
+                    </p>
+                  ) : (
+                    <p className="text-xs italic text-gray-400 mt-2">
+                      Chưa mở khóa
+                    </p>
+                  )}
+                </div>
               }
-              bordered={false}
-              style={{ borderRadius: "12px", minHeight: "100%" }}
             >
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 pt-4">
-                {achievementKeys.map((code: string) => {
-                  const config = BADGE_MAP[code];
-
-                  // Kiểm tra xem backend trả về field là achievementCode hay achievementType
-                  const achievedItem = achievements.find(
-                    (a: any) =>
-                      a.achievementCode === code || a.achievementType === code,
-                  );
-                  const isAchieved = !!achievedItem;
-
-                  return (
-                    <Tooltip
-                      key={code}
-                      title={
-                        <div className="text-center">
-                          <p className="font-bold text-base mb-1">
-                            {config.name}
-                          </p>
-                          <p className="text-sm text-gray-200 mb-1">
-                            {config.description}
-                          </p>
-                          {isAchieved ? (
-                            <p className="text-xs italic text-green-400 mt-2">
-                              Đã mở khóa:{" "}
-                              {dayjs(achievedItem.achievedAt).format(
-                                "DD/MM/YYYY",
-                              )}
-                            </p>
-                          ) : (
-                            <p className="text-xs italic text-gray-400 mt-2">
-                               Chưa mở khóa
-                            </p>
-                          )}
-                        </div>
-                      }
-                      color="#1f2937"
-                      placement="top"
-                    >
-                      {/* Thêm class opacity-40 và grayscale nếu chưa đạt được */}
-                      <div
-                        className={`flex flex-col items-center justify-center cursor-pointer transition-all duration-300 ${
-                          isAchieved
-                            ? "hover:scale-110"
-                            : "opacity-40 grayscale hover:opacity-70"
-                        }`}
-                      >
-                        <div
-                          className={`w-20 h-20 flex items-center justify-center rounded-full border-2 ${config.bg} ${config.color} shadow-lg ${config.shadow} mb-3`}
-                        >
-                          {config.icon}
-                        </div>
-                        <Text
-                          strong
-                          className={`text-center text-sm ${
-                            isAchieved ? "text-gray-700" : "text-gray-400"
-                          }`}
-                        >
-                          {config.name}
-                        </Text>
-                      </div>
-                    </Tooltip>
-                  );
-                })}
+              <div
+                className={`flex flex-col items-center justify-center cursor-pointer transition-all duration-300 ${
+                  isAchieved
+                    ? "hover:scale-110"
+                    : "opacity-40 grayscale hover:opacity-70"
+                }`}
+              >
+                <div
+                  className={`w-20 h-20 flex items-center justify-center rounded-full border-2 ${config.bg} ${config.color} shadow-lg ${config.shadow} mb-3`}
+                >
+                  {config.icon}
+                </div>
+                <Text
+                  strong
+                  className={`text-center text-sm ${
+                    isAchieved ? "text-gray-700" : "text-gray-400"
+                  }`}
+                >
+                  {config.name}
+                </Text>
               </div>
-            </Card>
-          )}
-        </Col>
-      </Row>
-    </div>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </Card>
   );
 };
 
