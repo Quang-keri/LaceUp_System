@@ -127,7 +127,8 @@ const OwnerDashboard: React.FC = () => {
   if (!stats) return <div>Không có dữ liệu hiển thị.</div>;
 
   const STATUS_COLORS: Record<string, string> = {
-    BOOKED: "#1890ff",
+    BOOKED: "#18cdff",
+    USING :"blue",
     COMPLETED: "#722ed1",
     CANCELLED: "#fa8c16",
     PENDING: "#fadb14",
@@ -139,6 +140,7 @@ const OwnerDashboard: React.FC = () => {
     const map: Record<string, string> = {
       BOOKED: "Đã đặt",
       COMPLETED: "Hoàn thành",
+      USING:"Đang dùng",
       CANCELLED: "Đã hủy",
       PENDING: "Đang chờ",
       SUCCESS: "Thành công",
@@ -465,7 +467,7 @@ const OwnerDashboard: React.FC = () => {
             bordered={false}
             extra={
               <Space>
-                {/* Chọn Tháng */}
+                
                 <Select
                   value={overviewMonth}
                   style={{ width: 120 }}
@@ -566,72 +568,7 @@ const OwnerDashboard: React.FC = () => {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} align="stretch">
-        <Col xs={24} lg={16}>
-          <Card
-            style={{ height: "100%" }}
-            title={
-              <Space>
-                <Clock size={18} color="#1890ff" />
-                <span>Lượt đặt mới nhất</span>
-              </Space>
-            }
-            bordered={false}
-          >
-            <Table
-              columns={tableColumns}
-              dataSource={recentBookingsMock}
-              pagination={false}
-              size="middle"
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} lg={8}>
-          <Card
-            style={{ height: "100%" }}
-            title={
-              <Space>
-                <Trophy size={18} color="#fa8c16" />
-                <span>Top Sân hoạt động</span>
-              </Space>
-            }
-            bordered={false}
-          >
-            <List
-              itemLayout="horizontal"
-              dataSource={stats.topCourts}
-              renderItem={(item, index) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar
-                        style={{
-                          backgroundColor:
-                            index === 0
-                              ? "#f5222d"
-                              : index === 1
-                              ? "#fa8c16"
-                              : index === 2
-                              ? "#fadb14"
-                              : isDark
-                              ? "#434343"
-                              : "#d9d9d9",
-                          color: index < 3 ? "#fff" : isDark ? "#fff" : "#000",
-                        }}
-                      >
-                        {index + 1}
-                      </Avatar>
-                    }
-                    title={<Text strong>{item.courtName}</Text>}
-                    description={`${item.bookingCount} lượt đặt`}
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
+   
     </div>
   );
 };

@@ -92,7 +92,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (checkoutRequest.getPaymentMethod() == PaymentMethod.CASH) {
             payment.setPaymentStatus(PaymentStatus.BOOKED);
         } else {
-            payment.setPaymentStatus(PaymentStatus.COMPLETED);
+            payment.setPaymentStatus(PaymentStatus.SUCCESS);
         }
 
         paymentRepository.save(payment);
