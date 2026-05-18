@@ -100,12 +100,11 @@ public class RentalAreaController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) UUID cityId,
+            @RequestParam(required = false) Integer provinceCode,
             @RequestParam(required = false) VerificationStatus verificationStatus,
             @RequestParam(required = false) LocalDateTime fromDate,
             @RequestParam(required = false) LocalDateTime toDate
     ) {
-
         return ApiResponse.success(
                 200,
                 "Get all rental areas successfully",
@@ -113,7 +112,7 @@ public class RentalAreaController {
                         page,
                         size,
                         keyword,
-                        cityId,
+                        provinceCode,
                         verificationStatus,
                         fromDate,
                         toDate

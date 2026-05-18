@@ -5,6 +5,7 @@ import lombok.Getter;
 import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.response.address.AddressResponse;
+import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.legal.LegalProfileResponse;
@@ -40,4 +41,5 @@ public class RentalAreaResponse {
     private List<CourtResponse> courtResponses;
     private  List<ServiceItemResponse> serviceItems;
     private LegalProfileResponse legalProfileResponse;
+
 }

@@ -85,6 +85,10 @@ export default function UpdateCourtModal({
         throw new Error("courtId is required to update court");
       }
 
+      const newImages = fileList
+        .filter((f) => f.originFileObj)
+        .map((f) => f.originFileObj as File);
+
       await CourtService.updateCourt(
         idToUpdate,
         {
@@ -99,7 +103,7 @@ export default function UpdateCourtModal({
           indoor: values.indoor === "true",
           amenityIds: values.amenityIds || [],
         },
-        fileList.map((f) => f.originFileObj || f),
+        newImages,
       );
 
       message.success("Cập nhật sân thành công");

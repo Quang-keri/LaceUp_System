@@ -29,5 +29,6 @@ public class CourtSummaryResponse {
     private BigDecimal maxPrice;
     private List<CourtPriceResponse> priceRules;
     private List<AmenityResponse> amenities;
+    private List<CourtImageResponse> images;
 }
 

@@ -384,8 +384,10 @@ public class DataInitializer implements CommandLineRunner {
                 .closeTime(LocalTime.of(22, 0))
                 .contactName(owner.getUserName())
                 .contactPhone(owner.getPhone())
+                .gmail(owner.getEmail())
                 .isActive(true)
                 .status(RentalAreaStatus.ACTIVE)
+                .verificationStatus(VerificationStatus.VERIFIED)
                 .createdAt(LocalDateTime.now().minusMonths(2))
                 .build();
         rentalAreaRepository.save(area);
@@ -563,11 +565,15 @@ public class DataInitializer implements CommandLineRunner {
                     .rentalAreaName("Khu sân của " + owner.getUserName())
                     .address(Address.builder().street("Đường " + index).ward("Thạnh Mỹ Lợi").city(city).build())
                     .owner(owner)
+                    .contactName(owner.getUserName())
+                    .contactPhone(owner.getPhone())
+                    .gmail(owner.getEmail())
                     .isActive(true)
                     .status(RentalAreaStatus.ACTIVE)
                     .verificationStatus(VerificationStatus.VERIFIED)
                     .openTime(LocalTime.of(5, 00))
                     .closeTime(LocalTime.of(23, 00))
+                    .createdAt(LocalDateTime.now())
                     .build();
             rentalAreaRepository.save(area);
 
