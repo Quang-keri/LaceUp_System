@@ -134,11 +134,6 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
                   {booking.phoneNumber}
                 </Space>
               </Descriptions.Item>
-
-              {/* // ko hiển thị ghi chú nữa vì để cho owner xử lý thêm  */}
-              {/* <Descriptions.Item label="Ghi chú" span={2}>
-                {booking.note || "-"}
-              </Descriptions.Item> */}
             </Descriptions>
           </Card>
 
@@ -148,7 +143,7 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
               <Col span={8}>
                 <div style={{ color: "#888" }}>Tổng tiền</div>
                 <div style={{ fontWeight: 600, fontSize: 16 }}>
-                  {booking.totalPrice?.toLocaleString("vi-VN")}đ
+                  {(booking.totalPrice ?? 0).toLocaleString("vi-VN")}đ
                 </div>
               </Col>
 
@@ -200,7 +195,7 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
                 </div>
 
                 <div style={{ fontWeight: 500 }}>
-                  {s.price.toLocaleString("vi-VN")}đ
+                  {(s.price ?? 0).toLocaleString("vi-VN")}đ
                 </div>
               </div>
             ))}

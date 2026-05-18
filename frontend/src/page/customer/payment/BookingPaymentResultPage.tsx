@@ -76,7 +76,6 @@ export default function BookingPaymentResultPage() {
     };
   }, [orderCode, status]);
 
- 
   const getResultProps = () => {
     switch (state.mode) {
       case "BOOKED":
@@ -134,7 +133,7 @@ export default function BookingPaymentResultPage() {
         <div className="flex justify-center gap-3 mt-4">
           {state.bookingId && state.mode === "BOOKED" && (
             <Button
-              type="primary"
+              style={{ color: "#9156F1" }}
               size="large"
               onClick={() => navigate(`/booking/${state.bookingId}`)}
             >

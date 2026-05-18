@@ -145,7 +145,7 @@ export default function AboutPage() {
             {[
               ["Tỷ lệ lấp sân", "> 70%"],
               ["Tỷ lệ hủy", "< 5%"],
-              ["Rating", "> 4.5 ⭐"],
+              ["Tỷ lệ đánh giá", "> 4.5 "],
               ["Tốc độ phản hồi", "< 10 phút"],
             ].map(([name, value]) => (
               <tr key={name}>

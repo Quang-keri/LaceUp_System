@@ -10,6 +10,7 @@ import {
   Button,
   Empty,
   Space,
+  message,
 } from "antd";
 import {
   HomeOutlined,
@@ -17,10 +18,16 @@ import {
   FileProtectOutlined,
   EnvironmentOutlined,
   PhoneOutlined,
+  BankOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
-
+const rentalStatusMap: any = {
+  ACTIVE: { color: "green", label: "Đang kinh doanh" },
+  INACTIVE: { color: "orange", label: "Ngừng kinh doanh" },
+  SUSPENDED: { color: "red", label: "Bị khóa" },
+};
 interface Props {
   open: boolean;
   selectedArea: any;
@@ -43,21 +50,63 @@ const RentalAreaDetailModal: React.FC<Props> = ({
 }) => {
   if (!selectedArea) return null;
 
+  const bankAccount =
+    selectedArea.bankAccount ||
+    selectedArea.bankAccountResponse ||
+    selectedArea.owner?.bankAccount ||
+    selectedArea.owner?.bankAccountResponse;
+
+  const copyText = async (text?: string) => {
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success("Đã copy số tài khoản");
+    } catch {
+      message.error("Không thể copy");
+    }
+  };
+
   const courtColumns = [
     {
       title: "Hình ảnh",
-      dataIndex: "images",
       key: "images",
-      width: 100,
-      render: (imgs: any[]) => (
-        <Image
-          src={imgs?.[0]?.imageUrl} 
-          width={80}
-          height={60}
-          style={{ objectFit: "cover", borderRadius: 4 }}
-          fallback="https://via.placeholder.com/80x60?text=No+Img"
-        />
-      ),
+      width: 220,
+      render: (_: any, record: any) => {
+        const courtImages =
+          record.images?.length > 0
+            ? record.images
+            : record.coverImage
+            ? [{ imageUrl: record.coverImage }]
+            : [];
+
+        const visibleImages = courtImages.slice(0, 3);
+
+        if (visibleImages.length === 0) {
+          return <Text type="secondary">Chưa có ảnh</Text>;
+        }
+
+        return (
+          <Image.PreviewGroup>
+            <Space size={6}>
+              {visibleImages.map((img: any, index: number) => (
+                <Image
+                  key={img.courtImageId || img.imageUrl || index}
+                  src={img.imageUrl}
+                  width={60}
+                  height={50}
+                  style={{
+                    objectFit: "cover",
+                    borderRadius: 6,
+                    border: "1px solid #f0f0f0",
+                  }}
+                  fallback="https://via.placeholder.com/60x50?text=No+Img"
+                />
+              ))}
+            </Space>
+          </Image.PreviewGroup>
+        );
+      },
     },
     {
       title: "Tên loại sân",
@@ -77,11 +126,14 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       title: "Khoảng giá",
       key: "priceRange",
       render: (_: any, record: any) => {
-        if (!record.minPrice && !record.maxPrice)
+        if (!record.minPrice && !record.maxPrice) {
           return <Text type="secondary">Chưa cập nhật</Text>;
+        }
+
         if (record.minPrice === record.maxPrice) {
           return <Text type="danger">{formatVND(record.minPrice)}</Text>;
         }
+
         return (
           <Text type="danger">
             {formatVND(record.minPrice)} - {formatVND(record.maxPrice)}
@@ -100,6 +152,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
               {a.amenityName}
             </Tag>
           ))}
+
           {(!amenities || amenities.length === 0) && (
             <Text type="secondary" style={{ fontSize: 12 }}>
               Không có
@@ -119,7 +172,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       }
       open={open}
       onCancel={onCancel}
-      width={1000}
+      width={1050}
       centered
       footer={[
         <Button key="close" onClick={onCancel}>
@@ -138,7 +191,6 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       ]}
     >
       <Tabs defaultActiveKey="1">
-        {/* TAB 1: THÔNG TIN CHUNG */}
         <Tabs.TabPane
           tab={
             <span>
@@ -150,9 +202,10 @@ const RentalAreaDetailModal: React.FC<Props> = ({
           <Descriptions bordered column={2} size="small">
             <Descriptions.Item label="Tên cơ sở" span={2}>
               <Text strong style={{ fontSize: 16 }}>
-                {selectedArea.name}
+                {selectedArea.name || selectedArea.rentalAreaName}
               </Text>
             </Descriptions.Item>
+
             <Descriptions.Item
               label={
                 <span>
@@ -160,8 +213,9 @@ const RentalAreaDetailModal: React.FC<Props> = ({
                 </span>
               }
             >
-              {selectedArea.ownerName}
+              {selectedArea.ownerName || selectedArea.contactName || "N/A"}
             </Descriptions.Item>
+
             <Descriptions.Item
               label={
                 <span>
@@ -169,7 +223,16 @@ const RentalAreaDetailModal: React.FC<Props> = ({
                 </span>
               }
             >
-              <Text strong>{selectedArea.ownerPhone}</Text>
+              <Text strong>
+                {selectedArea.ownerPhone || selectedArea.contactPhone || "N/A"}
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái tòa nhà">
+              <Tag
+                color={rentalStatusMap[selectedArea.status]?.color || "default"}
+              >
+                {rentalStatusMap[selectedArea.status]?.label || "Chưa cập nhật"}
+              </Tag>
             </Descriptions.Item>
             <Descriptions.Item
               label={
@@ -179,16 +242,15 @@ const RentalAreaDetailModal: React.FC<Props> = ({
               }
               span={2}
             >
-              {selectedArea.addressString || selectedArea.address}
+              {selectedArea.addressString || "Chưa cập nhật"}
             </Descriptions.Item>
 
             <Descriptions.Item label="Dịch vụ tại cơ sở" span={2}>
-              {selectedArea.serviceItems &&
-              selectedArea.serviceItems.length > 0 ? (
+              {selectedArea.serviceItems?.length > 0 ? (
                 <Space wrap size={[0, 8]}>
                   {selectedArea.serviceItems.map((service: any) => (
                     <Tag
-                      key={service.id}
+                      key={service.id || service.serviceItemId}
                       color="purple"
                       style={{ padding: "4px 8px", fontSize: 13 }}
                     >
@@ -211,11 +273,12 @@ const RentalAreaDetailModal: React.FC<Props> = ({
 
           <div style={{ marginTop: 24 }}>
             <Title level={5}>Hình ảnh không gian</Title>
+
             {selectedArea.images?.length > 0 ? (
               <Image.PreviewGroup>
                 <Space wrap size={[12, 12]}>
                   {selectedArea.images.map((img: any, index: number) => {
-                    const maxVisible = 4; // Số lượng ảnh tối đa hiển thị trên Modal
+                    const maxVisible = 4;
                     const isHidden = index >= maxVisible;
                     const isLastVisible = index === maxVisible - 1;
                     const remainingCount =
@@ -223,7 +286,7 @@ const RentalAreaDetailModal: React.FC<Props> = ({
 
                     return (
                       <div
-                        key={index}
+                        key={img.rentalAreaImageId || index}
                         style={{
                           display: isHidden ? "none" : "block",
                           position: "relative",
@@ -288,9 +351,9 @@ const RentalAreaDetailModal: React.FC<Props> = ({
           key="2"
         >
           <Table
-            dataSource={selectedArea.courts}
+            dataSource={selectedArea.courts || []}
             columns={courtColumns}
-            rowKey="courtId"
+            rowKey={(record: any) => record.courtId || record.id}
             pagination={false}
             bordered
             size="middle"
@@ -308,20 +371,28 @@ const RentalAreaDetailModal: React.FC<Props> = ({
         >
           <Descriptions bordered column={1} size="small">
             <Descriptions.Item label="Mã số thuế">
-              {selectedArea.legalProfileResponse?.taxId}
+              {selectedArea.legalProfileResponse?.taxId || "Chưa cập nhật"}
             </Descriptions.Item>
+
             <Descriptions.Item label="Giấy phép KD">
-              {selectedArea.legalProfileResponse?.businessLicenseNumber}
+              {selectedArea.legalProfileResponse?.businessLicenseNumber ||
+                "Chưa cập nhật"}
             </Descriptions.Item>
+
             <Descriptions.Item label="Tên doanh nghiệp">
-              {selectedArea.legalProfileResponse?.companyName}
+              {selectedArea.legalProfileResponse?.companyName ||
+                "Chưa cập nhật"}
             </Descriptions.Item>
+
             <Descriptions.Item label="Người đại diện pháp lý">
-              {selectedArea.legalProfileResponse?.responsiblePersonName}
+              {selectedArea.legalProfileResponse?.responsiblePersonName ||
+                "Chưa cập nhật"}
             </Descriptions.Item>
+
             <Descriptions.Item label="Địa chỉ kinh doanh">
-              {selectedArea.legalProfileResponse?.address}
+              {selectedArea.legalProfileResponse?.address || "Chưa cập nhật"}
             </Descriptions.Item>
+
             <Descriptions.Item label="Ghi chú">
               {selectedArea.legalProfileResponse?.legalNote || "Không có"}
             </Descriptions.Item>
@@ -329,13 +400,14 @@ const RentalAreaDetailModal: React.FC<Props> = ({
 
           <div style={{ marginTop: 20 }}>
             <Text strong>Ảnh chụp chứng từ/Giấy phép:</Text>
+
             <div style={{ marginTop: 12 }}>
               {selectedArea.legalProfileResponse?.images?.length > 0 ? (
                 <Image.PreviewGroup>
                   {selectedArea.legalProfileResponse.images.map(
                     (img: any, i: number) => (
                       <Image
-                        key={i}
+                        key={img.imageUrl || i}
                         src={img.imageUrl}
                         width={200}
                         style={{ marginRight: 10, borderRadius: 4 }}
@@ -349,6 +421,64 @@ const RentalAreaDetailModal: React.FC<Props> = ({
               )}
             </div>
           </div>
+        </Tabs.TabPane>
+
+        <Tabs.TabPane
+          tab={
+            <span>
+              <BankOutlined /> Tài khoản ngân hàng
+            </span>
+          }
+          key="4"
+        >
+          {bankAccount ? (
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Ngân hàng">
+                <Text strong>{bankAccount.bankName || "Chưa cập nhật"}</Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Số tài khoản">
+                <Space>
+                  <Text strong copyable>
+                    {bankAccount.accountNumber || "Chưa cập nhật"}
+                  </Text>
+
+                  {bankAccount.accountNumber && (
+                    <Button
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={() => copyText(bankAccount.accountNumber)}
+                    >
+                      Copy
+                    </Button>
+                  )}
+                </Space>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Chủ tài khoản">
+                <Text strong>
+                  {bankAccount.accountHolderName || "Chưa cập nhật"}
+                </Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Chi nhánh">
+                {bankAccount.branchName || "Không có"}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Trạng thái xác minh">
+                {bankAccount.isVerified ? (
+                  <Tag color="green">Đã xác minh</Tag>
+                ) : (
+                  <Tag color="orange">Chưa xác minh</Tag>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+          ) : (
+            <Empty
+              description="Owner chưa cập nhật tài khoản ngân hàng"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          )}
         </Tabs.TabPane>
       </Tabs>
     </Modal>

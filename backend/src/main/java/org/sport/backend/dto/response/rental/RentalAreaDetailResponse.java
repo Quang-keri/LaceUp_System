@@ -1,7 +1,9 @@
 package org.sport.backend.dto.response.rental;
 
 import lombok.*;
+import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.response.address.AddressResponse;
+import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 
@@ -27,8 +29,9 @@ public class RentalAreaDetailResponse {
     private String district;
     private String gmailLink;
     private String facebookLink;
+    private BankAccountResponse bankAccount;
     private List<RentalAreaImageResponse> images;
-
+     private RentalAreaStatus status;
     private List<CourtSummaryResponse> courts;
 
 }

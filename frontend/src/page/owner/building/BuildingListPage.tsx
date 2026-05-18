@@ -6,19 +6,16 @@ import {
   Input,
   Select,
   message,
-  Popconfirm,
   Tag,
   Card,
   Skeleton,
   Layout,
   Radio,
   Dropdown,
-  Typography,
 } from "antd";
 import type { MenuProps } from "antd";
 import {
   EditOutlined,
-  DeleteOutlined,
   PlusOutlined,
   SearchOutlined,
   DownOutlined,
@@ -31,9 +28,9 @@ import type {
   RentalAreaResponse,
   RentalAreaStatus,
 } from "../../../types/rental";
+import BuildingEditModal from "./BuildingEditModal";
 
 const { Sider, Content } = Layout;
-const { Text } = Typography;
 
 const statusColorMap: Record<string, string> = {
   ACTIVE: "green",
@@ -52,6 +49,10 @@ export default function BuildingListPage() {
 
   const [buildings, setBuildings] = useState<RentalAreaResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingBuildingId, setEditingBuildingId] = useState<string | null>(
+    null,
+  );
 
   const [pagination, setPagination] = useState({
     current: 1,
@@ -98,16 +99,25 @@ export default function BuildingListPage() {
     return buildings.filter((building) => {
       const keyword = searchKeyword.toLowerCase();
 
+      const addressText = [
+        building.address?.street,
+        building.address?.ward,
+        building.address?.city?.cityName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       const matchSearch =
         building.rentalAreaName?.toLowerCase().includes(keyword) ||
-        building.address?.toLowerCase().includes(keyword) ||
+        addressText.includes(keyword) ||
         building.contactName?.toLowerCase().includes(keyword) ||
         building.contactPhone?.toLowerCase().includes(keyword);
 
       const matchStatus =
         filterStatus === "ALL" ? true : building.status === filterStatus;
 
-      return matchSearch && matchStatus;
+      return matchSearch;
     });
   }, [buildings, searchKeyword, filterStatus]);
 
@@ -115,23 +125,12 @@ export default function BuildingListPage() {
     fetchBuildings(1, pagination.pageSize);
   };
 
-  const handleDeleteBuilding = async (buildingId: string) => {
-    try {
-      await RentalService.deleteRentalArea(buildingId);
-      message.success("Xóa tòa nhà thành công");
-      fetchBuildings(pagination.current, pagination.pageSize);
-    } catch (error) {
-      message.error("Lỗi khi xóa tòa nhà");
-      console.error(error);
-    }
-  };
-
   const menuItems: MenuProps["items"] = [
     {
       key: "create-building",
       label: "Tạo tòa nhà mới",
       icon: <PlusOutlined />,
-      onClick: () => navigate("/owner/buildings/create"),
+      onClick: () => navigate("/create-rental-area"),
     },
   ];
 
@@ -148,9 +147,10 @@ export default function BuildingListPage() {
       key: "rentalAreaName",
       render: (text: string, record: RentalAreaResponse) => (
         <a
-          onClick={() =>
-            navigate(`/owner/buildings/${record.rentalAreaId}/courts`)
-          }
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/owner/buildings/${record.rentalAreaId}/courts`);
+          }}
           style={{ fontWeight: 500 }}
         >
           {text}
@@ -159,9 +159,17 @@ export default function BuildingListPage() {
     },
     {
       title: "Địa chỉ",
-      dataIndex: "address",
       key: "address",
       ellipsis: true,
+      render: (_: any, record: RentalAreaResponse) => {
+        const address = record.address;
+
+        return (
+          [address?.street, address?.ward, address?.city?.cityName]
+            .filter(Boolean)
+            .join(", ") || "---"
+        );
+      },
     },
     {
       title: "Trạng thái",
@@ -181,6 +189,29 @@ export default function BuildingListPage() {
         date ? new Date(date).toLocaleDateString("vi-VN") : "---",
     },
     {
+      title: "Ảnh",
+      key: "image",
+      render: (_: any, record: RentalAreaResponse) => {
+        const cover =
+          record.images?.find((img) => img.isCover) || record.images?.[0];
+
+        return cover ? (
+          <img
+            src={cover.imageUrl}
+            alt="building"
+            style={{
+              width: 70,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 6,
+            }}
+          />
+        ) : (
+          "---"
+        );
+      },
+    },
+    {
       title: "Thao tác",
       key: "actions",
       render: (_: any, record: RentalAreaResponse) => (
@@ -190,7 +221,8 @@ export default function BuildingListPage() {
             icon={<EditOutlined />}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/owner/buildings/edit/${record.rentalAreaId}`);
+              setEditingBuildingId(record.rentalAreaId);
+              setEditOpen(true);
             }}
           >
             Sửa
@@ -239,12 +271,7 @@ export default function BuildingListPage() {
           width={280}
           style={{ background: "transparent", marginRight: 20 }}
         >
-          <Card
-            size="small"
-            className="mb-4"
-            bodyStyle={{ padding: 16 }}
-            style={{ borderRadius: 8 }}
-          >
+          <Card size="small" className="mb-4" bodyStyle={{ padding: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
               Tìm kiếm
             </div>
@@ -260,12 +287,7 @@ export default function BuildingListPage() {
             />
           </Card>
 
-          <Card
-            size="small"
-            className="mb-4"
-            bodyStyle={{ padding: 16 }}
-            style={{ borderRadius: 8 }}
-          >
+          <Card size="small" className="mb-4" bodyStyle={{ padding: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
               Lọc trạng thái
             </div>
@@ -283,11 +305,7 @@ export default function BuildingListPage() {
             />
           </Card>
 
-          <Card
-            size="small"
-            bodyStyle={{ padding: 16 }}
-            style={{ borderRadius: 8 }}
-          >
+          <Card size="small" bodyStyle={{ padding: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
               Trạng thái
             </div>
@@ -300,7 +318,6 @@ export default function BuildingListPage() {
               <Radio value="ALL">Tất cả</Radio>
               <Radio value="ACTIVE">Đang hoạt động</Radio>
               <Radio value="INACTIVE">Ngừng hoạt động</Radio>
-              <Radio value="SUSPENDED">Tạm dừng</Radio>
             </Radio.Group>
           </Card>
         </Sider>
@@ -315,23 +332,40 @@ export default function BuildingListPage() {
                 <Skeleton active paragraph={{ rows: 5 }} />
               </div>
             ) : (
-              <Table
-                columns={columns}
-                dataSource={filteredBuildings}
-                rowKey="rentalAreaId"
-                loading={loading}
-                pagination={{
-                  ...pagination,
-                  total: filteredBuildings.length,
-                  onChange: (page, pageSize) => fetchBuildings(page, pageSize),
-                }}
-                scroll={{ x: 1200 }}
-                onRow={(record) => ({
-                  onClick: () =>
-                    navigate(`/owner/buildings/${record.rentalAreaId}/courts`),
-                  style: { cursor: "pointer" },
-                })}
-              />
+              <>
+                <Table
+                  columns={columns}
+                  dataSource={filteredBuildings}
+                  rowKey="rentalAreaId"
+                  loading={loading}
+                  pagination={{
+                    ...pagination,
+                    total: filteredBuildings.length,
+                    onChange: (page, pageSize) =>
+                      fetchBuildings(page, pageSize),
+                  }}
+                  scroll={{ x: 1200 }}
+                  onRow={(record) => ({
+                    onClick: () =>
+                      navigate(
+                        `/owner/buildings/${record.rentalAreaId}/courts`,
+                      ),
+                    style: { cursor: "pointer" },
+                  })}
+                />
+
+                <BuildingEditModal
+                  open={editOpen}
+                  buildingId={editingBuildingId}
+                  onClose={() => {
+                    setEditOpen(false);
+                    setEditingBuildingId(null);
+                  }}
+                  onSuccess={() =>
+                    fetchBuildings(pagination.current, pagination.pageSize)
+                  }
+                />
+              </>
             )}
           </Card>
         </Content>

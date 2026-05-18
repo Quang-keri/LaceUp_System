@@ -26,13 +26,9 @@ export const financeService = {
   // =========================
 
   generateDailySettlements: async (date: string) => {
-    const res = await api.post(
-      `/settlements/admin/generate`,
-      null,
-      {
-        params: { date },
-      },
-    );
+    const res = await api.post(`/settlements/admin/generate`, null, {
+      params: { date },
+    });
 
     return res.data.result;
   },
@@ -69,10 +65,7 @@ export const financeService = {
   // ADMIN - MONTHLY REPORT
   // =========================
 
-  getMonthlySettlements: async (
-    month: number,
-    year: number,
-  ) => {
+  getMonthlySettlements: async (month: number, year: number) => {
     const res = await api.get(`/settlements/admin/monthly`, {
       params: { month, year },
     });
@@ -85,12 +78,9 @@ export const financeService = {
     month: number,
     year: number,
   ) => {
-    const res = await api.get(
-      `/settlements/admin/monthly/${rentalAreaId}`,
-      {
-        params: { month, year },
-      },
-    );
+    const res = await api.get(`/settlements/admin/monthly/${rentalAreaId}`, {
+      params: { month, year },
+    });
 
     return res.data.result;
   },
@@ -116,21 +106,18 @@ export const financeService = {
     return res.data.result;
   },
 
-  createCommissionConfig: async (
-    data: CommissionConfigDTO,
-  ) => {
-    const res = await api.post(
-      `/admin/commission-configs`,
-      data,
-    );
+  createCommissionConfig: async (data: CommissionConfigDTO) => {
+    const res = await api.post(`/admin/commission-configs`, data);
 
+    return res.data.result;
+  },
+  updateCommissionConfig: async (id: string, data: CommissionConfigDTO) => {
+    const res = await api.put(`/admin/commission-configs/${id}`, data);
     return res.data.result;
   },
 
   getRentalAreaOptions: async () => {
-    const res = await api.get(
-      `/rental-areas/dropdown/options`,
-    );
+    const res = await api.get(`/rental-areas/dropdown/options`);
 
     return res.data.result;
   },
@@ -141,10 +128,7 @@ export const financeService = {
   },
 
   saveOwnerBankAccount: async (data: any) => {
-    const res = await api.put(
-      `/owner/bank-accounts`,
-      data,
-    );
+    const res = await api.post(`/bank-accounts`, data);
 
     return res.data.result;
   },

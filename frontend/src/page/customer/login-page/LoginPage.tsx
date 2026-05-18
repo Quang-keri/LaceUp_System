@@ -59,7 +59,7 @@ const LoginPage: React.FC = () => {
       if (response.code === 200) {
         message.success("Đăng nhập thành công!");
         await refreshProfile();
-        navigate("/");
+        navigate("/home");
       }
     } catch (error: any) {
       const errorData = error.response?.data;
@@ -134,8 +134,8 @@ const LoginPage: React.FC = () => {
               if (hasEmailError) setHasEmailError(false);
             }}
             placeholder="Email"
-            className={`w-full px-4 py-2 border rounded-lg outline-none transition focus:ring-2 ${
-              hasEmailError
+            className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
+              hasPasswordError
                 ? "border-red-500 focus:ring-red-500"
                 : "focus:ring-[#9156F1] border-gray-300"
             }`}
@@ -149,7 +149,7 @@ const LoginPage: React.FC = () => {
               if (hasPasswordError) setHasPasswordError(false);
             }}
             placeholder="Mật khẩu"
-            className={`w-full px-4 py-2 border rounded-lg outline-none transition focus:ring-2 ${
+            className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
               hasPasswordError
                 ? "border-red-500 focus:ring-red-500"
                 : "focus:ring-[#9156F1] border-gray-300"

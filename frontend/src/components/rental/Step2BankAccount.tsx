@@ -3,7 +3,7 @@ import { Form, Input, Button, Card, Row, Col, Select, Avatar } from "antd";
 import { BankOutlined, LeftOutlined } from "@ant-design/icons";
 import { useRentalForm } from "../../context/RentalFormContext";
 import { BANKS, type Bank } from "../../utils/banks";
-
+import bankAccountService from "../../service/bankAccountService";
 export default function Step2BankAccount({
   next,
   prev,
@@ -15,10 +15,43 @@ export default function Step2BankAccount({
   const [form] = Form.useForm();
 
   const banks = BANKS;
-
   useEffect(() => {
-    form.setFieldsValue(formData.bankAccount);
-  }, [formData.bankAccount, form]);
+    loadBankAccount();
+  }, []);
+
+  const loadBankAccount = async () => {
+    try {
+      const response = await bankAccountService.getMyBankAccount();
+
+      const bankAccount = response?.result;
+
+      if (!bankAccount) return;
+
+      const selectedBank = banks.find(
+        (bank) =>
+          bank.shortName === bankAccount.bankName ||
+          bank.name === bankAccount.bankName,
+      );
+
+      const values = {
+        bankName: selectedBank?.shortName || bankAccount.bankName,
+        bankFullName: selectedBank?.name || bankAccount.bankName,
+        bankCode: selectedBank?.code,
+        bankBin: selectedBank?.bin,
+        bankLogo: selectedBank?.logo,
+
+        accountNumber: bankAccount.accountNumber,
+        accountHolderName: bankAccount.accountHolderName,
+        branchName: bankAccount.branchName,
+      };
+
+      form.setFieldsValue(values);
+
+      updateFormData("bankAccount", values);
+    } catch (error) {
+      console.log("Chưa có tài khoản ngân hàng", error);
+    }
+  };
 
   const handleBankChange = (value?: string) => {
     if (!value) {

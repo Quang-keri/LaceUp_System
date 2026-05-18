@@ -1,5 +1,5 @@
-import { Modal, Form, Input, InputNumber, Select, message, Upload } from "antd";
-import { useEffect, useState } from "react";
+import { Modal, Form, Input, Select, message, Upload } from "antd";
+import { useEffect, useMemo, useState } from "react";
 import CourtService from "../../../service/courtService";
 import amenityService from "../../../service/amenityService";
 
@@ -8,6 +8,7 @@ export default function UpdateCourtModal({
   onClose,
   categories,
   court,
+  courtId,
   onSuccess,
 }: any) {
   const [form] = Form.useForm();
@@ -24,30 +25,45 @@ export default function UpdateCourtModal({
   const [amenities, setAmenities] = useState<any[]>([]);
   const [fileList, setFileList] = useState<any[]>([]);
 
+  const initialValues = useMemo(
+    () => ({
+      courtName: court?.courtName,
+      categoryId: court?.categoryId || court?.category?.categoryId,
+      surfaceType: court?.surfaceType,
+      indoor:
+        court?.indoor === true
+          ? "true"
+          : court?.indoor === false
+          ? "false"
+          : undefined,
+      status: court?.status,
+      amenityIds:
+        court?.amenityIds ||
+        court?.amenities?.map((a: any) => a.amenityId) ||
+        [],
+    }),
+    [court],
+  );
+
   useEffect(() => {
-    if (court) {
-      form.setFieldsValue({
-        courtName: court.courtName,
-        categoryId: court.categoryId,
-        price: court.pricePerHour,
-        surfaceType: court.surfaceType,
-        indoor: court.indoor,
-        amenityIds: court.amenityIds || [],
-      });
-      // populate existing images into upload list
-      if (court.images && Array.isArray(court.images)) {
-        const list = court.images.map((img: any, idx: number) => ({
+    if (!open) {
+      setFileList([]);
+      return;
+    }
+
+    if (court && court.images && Array.isArray(court.images)) {
+      setFileList(
+        court.images.map((img: any, idx: number) => ({
           uid: img.courtImageId || `img-${idx}`,
           name: `img-${idx}`,
           status: "done",
           url: img.imageUrl,
-        }));
-        setFileList(list);
-      } else {
-        setFileList([]);
-      }
+        })),
+      );
+    } else {
+      setFileList([]);
     }
-  }, [court]);
+  }, [open, court]);
 
   useEffect(() => {
     (async () => {
@@ -55,7 +71,7 @@ export default function UpdateCourtModal({
         const res = await amenityService.getAllAmenities();
         setAmenities(res.result || []);
       } catch (err) {
-        // ignore
+        console.log(err);
       }
     })();
   }, []);
@@ -64,17 +80,30 @@ export default function UpdateCourtModal({
     try {
       setLoading(true);
 
+      const idToUpdate = courtId || court?.courtId;
+      if (!idToUpdate) {
+        throw new Error("courtId is required to update court");
+      }
+
+      const newImages = fileList
+        .filter((f) => f.originFileObj)
+        .map((f) => f.originFileObj as File);
+
       await CourtService.updateCourt(
-        court.courtId,
+        idToUpdate,
         {
+          courtId: idToUpdate,
           courtName: values.courtName,
           categoryId: values.categoryId,
-          pricePerHour: values.price,
+          rentalAreaId: court?.rentalAreaId,
+          status: values.status,
+          courtCodes:
+            court?.courtCopies?.map((copy: any) => copy.courtCode) || [],
           surfaceType: values.surfaceType,
-          indoor: values.indoor,
+          indoor: values.indoor === "true",
           amenityIds: values.amenityIds || [],
         },
-        fileList.map((f) => f.originFileObj || f),
+        newImages,
       );
 
       message.success("Cập nhật sân thành công");
@@ -96,7 +125,13 @@ export default function UpdateCourtModal({
       onOk={() => form.submit()}
       confirmLoading={loading}
     >
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+      <Form
+        key={`${court?.courtId ?? "update"}-${open ? "open" : "closed"}`}
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={initialValues}
+      >
         <Form.Item
           label="Tên sân"
           name="courtName"
@@ -118,18 +153,21 @@ export default function UpdateCourtModal({
           />
         </Form.Item>
 
-        <Form.Item label="Giá" name="price" rules={[{ required: true }]}>
-          <InputNumber style={{ width: "100%" }} min={0} />
-        </Form.Item>
-
-        <Form.Item label="Bề mặt (surfaceType)" name="surfaceType">
-          <Input placeholder="Ví dụ: Thảm, Gỗ, Xi măng..." />
+        <Form.Item label="Bề mặt " name="surfaceType">
+          <Input placeholder="Ví dụ: Thảm PVC, Nhận tạo, Xi măng..." />
         </Form.Item>
 
         <Form.Item label="Trong nhà / Ngoài trời" name="indoor">
           <Select>
-            <Select.Option value={true}>Trong nhà</Select.Option>
-            <Select.Option value={false}>Ngoài trời</Select.Option>
+            <Select.Option value="true">Trong nhà</Select.Option>
+            <Select.Option value="false">Ngoài trời</Select.Option>
+          </Select>
+        </Form.Item>
+
+        <Form.Item label="Trạng thái" name="status">
+          <Select>
+            <Select.Option value="ACTIVE">Đang kinh doanh</Select.Option>
+            <Select.Option value="INACTIVE">Ngừng kinh doanh</Select.Option>
           </Select>
         </Form.Item>
 

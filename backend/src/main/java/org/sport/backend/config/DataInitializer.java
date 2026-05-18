@@ -381,8 +381,12 @@ public class DataInitializer implements CommandLineRunner {
                 .owner(owner)
                 .openTime(LocalTime.of(5, 0))
                 .closeTime(LocalTime.of(22, 0))
+                .contactName(owner.getUserName())
+                .contactPhone(owner.getPhone())
+                .gmail(owner.getEmail())
                 .isActive(true)
                 .status(RentalAreaStatus.ACTIVE)
+                .verificationStatus(VerificationStatus.VERIFIED)
                 .createdAt(LocalDateTime.now().minusMonths(2))
                 .build();
         rentalAreaRepository.save(area);
@@ -539,7 +543,7 @@ public class DataInitializer implements CommandLineRunner {
                 .filter(a -> a.getOwner().equals(owner)).findFirst().orElseThrow();
         Court court = courtRepository.findAllByRentalArea(area).getFirst();
         Post post = Post.builder()
-                .title("Chào mừng đến với " + area.getRentalAreaName()).description("Sân bãi tiêu chuẩn, đầy đủ tiện nghi cho mọi lứa tuổi.")
+                .title(area.getRentalAreaName()).description("Sân bãi tiêu chuẩn, đầy đủ tiện nghi cho mọi lứa tuổi.")
                 .postStatus(PostStatus.PUBLISHED).user(owner).court(court).rentalArea(area).build();
         postRepository.save(post);
     }
@@ -561,11 +565,15 @@ public class DataInitializer implements CommandLineRunner {
                     .rentalAreaName("Khu sân của " + owner.getUserName())
                     .address(Address.builder().street("Đường " + index).ward("Thạnh Mỹ Lợi").city(city).build())
                     .owner(owner)
+                    .contactName(owner.getUserName())
+                    .contactPhone(owner.getPhone())
+                    .gmail(owner.getEmail())
                     .isActive(true)
                     .status(RentalAreaStatus.ACTIVE)
                     .verificationStatus(VerificationStatus.VERIFIED)
                     .openTime(LocalTime.of(5, 00))
                     .closeTime(LocalTime.of(23, 00))
+                    .createdAt(LocalDateTime.now())
                     .build();
             rentalAreaRepository.save(area);
 
@@ -601,8 +609,8 @@ public class DataInitializer implements CommandLineRunner {
             }
 
             Post post = Post.builder()
-                    .title("Ưu đãi đặc biệt từ " + owner.getUserName())
-                    .description("Giảm giá 10% cho khách hàng mới đặt sân lần đầu.")
+                    .title(area.getRentalAreaName())
+                    .description("Nhiều ưu đãi cho khách hàng mới đặt sân lần đầu.")
                     .postStatus(PostStatus.PUBLISHED)
                     .user(owner)
                     .court(firstCourt)

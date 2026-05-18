@@ -23,7 +23,7 @@ export default function BookingManagementPage() {
   const [keyword, setKeyword] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
-  // Modal States
+ 
   const [detailOpen, setDetailOpen] = useState(false);
   const [slotEditOpen, setSlotEditOpen] = useState(false);
   const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
@@ -31,7 +31,7 @@ export default function BookingManagementPage() {
     useState<any>(null);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
 
-  // View States
+ 
   const [viewMode, setViewMode] = useState<"table" | "detail">("table");
   const [selectedBookingIdForDetail, setSelectedBookingIdForDetail] = useState<
     string | null
@@ -70,7 +70,7 @@ export default function BookingManagementPage() {
         page,
         size,
         status,
-        searchKwd, // Đảm bảo backend service có nhận param này
+        searchKwd,
       );
       setBookings(res.result.data);
       setPagination({
@@ -219,7 +219,6 @@ export default function BookingManagementPage() {
         keyword: keyword,
       });
 
-      // Xử lý tải file blob
       const blob = new Blob([response.data || response], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
@@ -261,7 +260,7 @@ export default function BookingManagementPage() {
           />
 
           <Card
-            title="Quản lý Booking"
+            title="Quản lý Đơn Đặt"
             style={{ marginTop: "20px" }}
             extra={
               <Button
@@ -281,7 +280,7 @@ export default function BookingManagementPage() {
               onChange={(pageInfo: any) =>
                 fetchBookings(pageInfo.current, pageInfo.pageSize)
               }
-              onViewDetail={handleViewDetail} // Chuyển sang dùng hàm handleViewDetail mới
+              onViewDetail={handleViewDetail} 
               onEditSlot={handleEditSlot}
               onUpdateStatus={handleUpdateStatus}
               onCollectPayment={handleCollectPayment}
@@ -293,7 +292,6 @@ export default function BookingManagementPage() {
             />
           </Card>
 
-          {/* Các Modals dùng cho chế độ Table */}
           <BookingDetailModal
             open={detailOpen}
             booking={selectedBooking}
@@ -327,7 +325,6 @@ export default function BookingManagementPage() {
           />
         </>
       ) : (
-        /* Chế độ chi tiết trang riêng */
         selectedBookingIdForDetail &&
         selectedBuildingId && (
           <BookingDetailPage
@@ -335,7 +332,7 @@ export default function BookingManagementPage() {
             rentalAreaId={selectedBuildingId}
             onBack={() => {
               setViewMode("table");
-              fetchBookings(); // Tải lại danh sách khi quay về
+              fetchBookings(); 
             }}
           />
         )

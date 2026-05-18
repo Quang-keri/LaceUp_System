@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin/commission-configs")
@@ -36,6 +37,19 @@ public class AdminCommissionController {
                 200,
                 "Lấy danh sách cấu hình thành công",
                 commissionService.getAllConfigs()
+        );
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_COMMISSION')")
+    public ApiResponse<CommissionConfigResponse> updateConfig(
+            @PathVariable UUID id,
+            @RequestBody CommissionConfigDTO request
+    ) {
+        return ApiResponse.success(
+                200,
+                "Cập nhật cấu hình hoa hồng thành công",
+                commissionService.updateConfig(id, request)
         );
     }
 }

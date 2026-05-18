@@ -9,7 +9,8 @@ import {
   LogoutOutlined,
   DashboardOutlined,
   TrophyOutlined,
-  BarChartOutlined, // <-- Thêm icon này
+  BarChartOutlined,
+  BankOutlined, 
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.tsx";
@@ -35,6 +36,9 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
 
   const [localDashboardData, setLocalDashboardData] =
     useState<UserDashboardResponse | null>(null);
+
+  
+  const isOwner = user?.role === "OWNER";
 
   useEffect(() => {
     if (dashboardData !== undefined) {
@@ -67,7 +71,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
       case "2":
         navigate("/my-matches");
         break;
-      case "8": // <-- ĐIỀU HƯỚNG SANG TRANG RANK RIÊNG
+      case "8":
         navigate("/my-ranks");
         break;
       case "7":
@@ -75,6 +79,9 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
         break;
       case "3":
         navigate("/booking-history");
+        break;
+      case "9": 
+        navigate("/bank-account");
         break;
       case "4":
         message.info("Cài đặt chưa được phát triển");
@@ -90,7 +97,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
     }
   };
 
-  // --- ĐÃ SỬA LẠI HÀM HELPER ĐỂ KHÔNG BỊ BUG LÊN CAO THỦ NỮA ---
   const getRankInfo = (points: number = 0, backendDisplayRank?: string) => {
     if (points >= 3000) {
       if (backendDisplayRank === "Thách Đấu")
@@ -142,7 +148,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
     };
   };
 
-  // TÌM RANK CAO NHẤT TỪ CÁC CATEGORY
   const categoryRanks: CategoryRankResponse[] =
     localDashboardData?.categoryRanks || [];
   const highestRank =
@@ -161,9 +166,14 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
     { key: "0", icon: <DashboardOutlined />, label: "Bảng điều khiển" },
     { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
     { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
-    { key: "8", icon: <BarChartOutlined />, label: "Xếp hạng của tôi" }, // <-- Menu mới
+    { key: "8", icon: <BarChartOutlined />, label: "Xếp hạng của tôi" },
     { key: "7", icon: <TrophyOutlined />, label: "Thành tựu" },
     { key: "3", icon: <HistoryOutlined />, label: "Lịch sử đặt sân" },
+
+    ...(isOwner
+      ? [{ key: "9", icon: <BankOutlined />, label: "Tài khoản ngân hàng" }]
+      : []),
+
     { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
     {
       key: "5",
@@ -190,7 +200,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
         {user ? `${user.userName}` : "N/A"}
       </Title>
 
-      {/* KHỐI HIỂN THỊ RANK ĐẠI DIỆN CAO NHẤT */}
       <div
         style={{
           display: "flex",

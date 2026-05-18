@@ -26,8 +26,6 @@ public class RentalAreaUpdateRequest {
     private String street;
     @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
     private String ward;
-    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
-    private String district;
     @NotNull(message = "thành phố không bỏ trống")
     private Long cityId;
 

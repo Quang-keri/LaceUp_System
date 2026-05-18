@@ -3,14 +3,13 @@ import type { CourtResponse } from "./court";
 export enum RentalAreaStatus {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
-  PENDING = "PENDING",
   REJECTED = "REJECTED",
 }
 
 export interface Address {
   street: string;
   ward: string;
-  district: string;
+  
 }
 
 export interface RentalAreaResponse {
@@ -52,6 +51,7 @@ export interface UpdateRentalAreaRequest {
   openTime?: string;
   closeTime?: string;
   isActive?: boolean;
+  status:RentalAreaStatus;
 }
 
 export interface RentalAreaListResponse {

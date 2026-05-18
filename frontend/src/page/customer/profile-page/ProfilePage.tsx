@@ -67,7 +67,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Dữ liệu hoạt động gần đây
   const recentActivities = [
     {
       id: 1,
@@ -94,15 +93,12 @@ const ProfilePage: React.FC = () => {
       }}
     >
       <Row gutter={[24, 24]} justify="center">
-        {/* Cột 1: Sidebar Menu */}
         <Col xs={24} md={8} lg={6}>
           <UserSidebar selectedKey="1" />
         </Col>
 
-        {/* Cột 2: Form Thông tin cá nhân & Thành tựu */}
         <Col xs={24} md={16} lg={12}>
           <Space direction="vertical" size={24} style={{ display: "flex" }}>
-            {/* CARD 1: FORM HỒ SƠ */}
             <Card
               title={
                 <span style={{ fontSize: "20px", fontWeight: 600 }}>
@@ -111,7 +107,10 @@ const ProfilePage: React.FC = () => {
               }
               extra={
                 !isEditing && (
-                  <Button type="primary" onClick={() => setIsEditing(true)}>
+                  <Button
+                    style={{ background: "#9156F1", color: "white" }}
+                    onClick={() => setIsEditing(true)}
+                  >
                     Chỉnh sửa hồ sơ
                   </Button>
                 )
@@ -206,9 +205,7 @@ const ProfilePage: React.FC = () => {
           </Space>
         </Col>
 
-        {/* Cột 3: Thống kê & Hoạt động */}
         <Col xs={24} md={24} lg={6}>
-          {/* Card Thể thao */}
           <Card
             title="Các môn đang chơi"
             bordered={false}
@@ -224,7 +221,6 @@ const ProfilePage: React.FC = () => {
                     borderRadius: "8px",
                   }}
                 >
-                  <div style={{ fontSize: "24px" }}>⚽</div>
                   <Text strong>12</Text>
                   <br />
                   <Text type="secondary" style={{ fontSize: "12px" }}>
@@ -241,7 +237,6 @@ const ProfilePage: React.FC = () => {
                     borderRadius: "8px",
                   }}
                 >
-                  <div style={{ fontSize: "24px" }}>🏸</div>
                   <Text strong>4</Text>
                   <br />
                   <Text type="secondary" style={{ fontSize: "12px" }}>
@@ -252,7 +247,6 @@ const ProfilePage: React.FC = () => {
             </Row>
           </Card>
 
-          {/* Card Hoạt động gần đây */}
           <Card
             title="Hoạt động gần đây"
             bordered={false}
