@@ -6,6 +6,7 @@ import org.sport.backend.dto.response.notification.NotificationResponse;
 import org.sport.backend.entity.Notification;
 import org.sport.backend.entity.User;
 import org.sport.backend.mapper.NotificationMapper;
+import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.NotificationRepository;
 import org.sport.backend.service.NotificationService;
 import org.sport.backend.service.UserService;
@@ -20,10 +21,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
+
     private final NotificationRepository notificationRepository;
+
     private final NotificationMapper notificationMapper;
+
     private final SimpMessagingTemplate messagingTemplate;
+
     private final UserService userService;
+
+    private final UrlProperties urlProperties;
 
     @Transactional
     @Override
@@ -69,7 +76,7 @@ public class NotificationServiceImpl implements NotificationService {
                 if (rawContent != null) {
                     String preview = rawContent.length() > 50 ? rawContent.substring(0, 47) + "..." : rawContent;
                     notification.setNotificationBody(senderName + ": " + preview);
-                    notification.setLink("http://localhost:5173/chat");
+                    notification.setLink(urlProperties.getFrontend() + "/chat");
                 } else {
                     notification.setNotificationBody("Bạn có tin nhắn mới từ " + senderName);
                 }

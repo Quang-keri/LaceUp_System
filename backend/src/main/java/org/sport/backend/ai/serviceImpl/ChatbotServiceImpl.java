@@ -3,6 +3,7 @@ package org.sport.backend.ai.serviceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.ai.service.ChatbotService;
 import org.sport.backend.properties.ChatBoxProperties;
+import org.sport.backend.properties.UrlProperties;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -18,12 +19,16 @@ public class ChatbotServiceImpl implements ChatbotService {
 
     private final ChatClient chatClient;
     private final VectorStore vectorStore;
-    private final ChatBoxProperties chatBoxProperties;
 
-    public ChatbotServiceImpl(ChatClient.Builder builder, VectorStore vectorStore, ChatBoxProperties chatBoxProperties) {
+    private final ChatBoxProperties chatBoxProperties;
+    private final UrlProperties urlProperties;
+
+    public ChatbotServiceImpl(
+            ChatClient.Builder builder, VectorStore vectorStore, ChatBoxProperties chatBoxProperties, UrlProperties urlProperties) {
         this.chatClient = builder.build();
         this.vectorStore = vectorStore;
         this.chatBoxProperties = chatBoxProperties;
+        this.urlProperties = urlProperties;
     }
 
     @Override
@@ -56,8 +61,9 @@ public class ChatbotServiceImpl implements ChatbotService {
                         Yêu cầu bắt buộc đối với bạn:
                         - CHỈ trả lời đúng trọng tâm câu hỏi của khách hàng.
                         - QUAN TRỌNG: Khi gợi ý một sân cụ thể, BẠN BẮT BUỘC PHẢI DÙNG CÚ PHÁP TAG SAU ĐỂ HỆ THỐNG VẼ UI (Viết liền trên 1 dòng):
-                                                  [RENTAL|Tên sân|Địa chỉ cụ thể|Giá thuê|Điểm đánh giá|Link URL]
-                                                  (Ví dụ: [RENTAL|Sân Cầu Lông Pro|456 Lê Văn Việt|80,000 VNĐ/giờ|1 lượt đánh giá 5 sao|http://localhost:5173/rental-area/123])
+                                                  [RENTAL|Tên sân|Địa chỉ cụ thể|Giá thuê|Điểm đánh giá|Đường dẫn chi tiết sân]
+                        - LƯU Ý VỀ ĐƯỜNG DẪN (URL): Bạn phải kết hợp mã định danh (ID) hoặc đường dẫn tương đối của sân với tên miền Frontend chính thức được cấp ở đây: %s
+                                                  (Ví dụ mẫu: [RENTAL|Sân Cầu Lông Pro|456 Lê Văn Việt|80,000 VNĐ/giờ|1 lượt đánh giá 5 sao|%s/rental-area/123])
                         - TUYỆT ĐỐI KHÔNG tự liệt kê lại Địa chỉ, Giá, Đánh giá, hay Link ra dạng gạch đầu dòng văn bản thường nữa. Chỉ nói 1 câu dẫn dắt ngắn gọn rồi chèn ngay block [RENTAL|...] vào.
                         - KHÔNG tự ý cung cấp thêm thông tin dư thừa.
                         - Phân biệt rõ loại hình thể thao trong dữ liệu, không tự ý suy diễn.
@@ -67,9 +73,8 @@ public class ChatbotServiceImpl implements ChatbotService {
                         - Nếu khách hàng hỏi về sân có đánh giá 5 sao (hoặc sân tốt), hãy dựa vào điểm đánh giá trung bình hoặc số lượt đánh giá 5 sao trong dữ liệu để liệt kê các sân phù hợp nhất. Nếu không có sân nào nhắc đến 5 sao, hãy thông báo rõ ràng.
                         
                         Khách hàng: %s""",
-                context, userMessage
+                context, urlProperties.getFrontend(), urlProperties.getFrontend(), userMessage
         );
-
         try {
             String aiResponse = chatClient.prompt()
                     .user(finalPrompt)

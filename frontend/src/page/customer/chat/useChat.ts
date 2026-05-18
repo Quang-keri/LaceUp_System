@@ -47,7 +47,6 @@ export const useChat = (
     setLoading(false);
   };
 
-  // Trong useChat.ts - Tìm hàm loadMessages
   const loadMessages = async (id: string, isLoadMore = false) => {
     if (!id || (isLoadMore && (!hasMore || isFetchingMore))) return;
 
@@ -65,10 +64,7 @@ export const useChat = (
         }));
 
         setMessages((prev) => {
-          // Nếu loadMore (cuộn lên), nối vào ĐẦU. Nếu load lần đầu, lấy hoàn toàn tin nhắn mới
           const combined = isLoadMore ? [...transformed, ...prev] : transformed;
-
-          // Lọc trùng theo messageId để chắc chắn không bị lặp tin nhắn
           const map = new Map();
           combined.forEach((m) => map.set(String(m.messageId), m));
           return Array.from(map.values()).sort(
@@ -88,7 +84,23 @@ export const useChat = (
   };
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      setConversations([]);
+      setMessages([]);
+      setSelectedChat(null);
+      currentConversationIdRef.current = null;
+      setPage(0);
+      setHasMore(true);
+
+      if (websocketService.disconnect) {
+        websocketService.disconnect();
+      }
+      return;
+    }
+    if (websocketService.connect && !websocketService.isConnected()) {
+      websocketService.connect();
+    }
+
     loadConversations();
 
     const unsubscribeNewMsg = websocketService.onNewMessage((data: any) => {
@@ -184,8 +196,6 @@ export const useChat = (
       (data: any) => {
         setMessages((prev) =>
           prev.map((m) => {
-            // Nếu tin nhắn đó là do mình gửi (sender === "user")
-            // và thuộc đúng hội thoại vừa được đọc
             if (
               m.sender === "user" &&
               String(data.conversationId) ===
@@ -196,7 +206,7 @@ export const useChat = (
             return m;
           }),
         );
-        loadConversations(); // Để cập nhật icon/số thông báo ở danh sách ngoài
+        loadConversations();
       },
     );
 
@@ -278,7 +288,6 @@ export const useChat = (
         console.warn(
           "WS chưa kết nối, bạn có muốn fallback sang gọi API không?",
         );
-        // Nếu muốn không bao giờ bị lỗi 'WS chưa kết nối', hãy copy logic gọi API ở trên vào đây
       }
     }
   };
@@ -290,7 +299,6 @@ export const useChat = (
     currentConversationIdRef.current = chat.conversationId;
 
     if (chat.conversationId) {
-      // GỌI NGAY: Đánh dấu đã đọc khi click vào chat
       chatService.markMessageAsRead(chat.conversationId, currentUserId!);
 
       if (isChangingConversation) {

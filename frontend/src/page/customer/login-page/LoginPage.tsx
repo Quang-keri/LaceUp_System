@@ -6,15 +6,53 @@ import { useAuth } from "../../../context/AuthContext";
 import { GoogleOutlined } from "@ant-design/icons";
 import { useGoogleLogin } from "@react-oauth/google";
 
+// 1. Cập nhật thêm các câu lỗi tiếng Anh của Backend vào từ điển
+const BACKEND_ERRORS: Record<string, string> = {
+  PASSWORD_TOO_SHORT: "Mật khẩu quá ngắn (cần ít nhất 6-8 ký tự).",
+  WRONG_PASSWORD: "Mật khẩu không chính xác.",
+  USER_NOT_FOUND: "Tài khoản không tồn tại.",
+  EMAIL_ALREADY_EXISTS: "Email này đã được sử dụng.",
+  "Email or Password is invalid!": "Email hoặc mật khẩu không chính xác.",
+  "Validation failed": "Thông tin nhập vào không hợp lệ.",
+};
+
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [hasEmailError, setHasEmailError] = useState(false);
+  const [hasPasswordError, setHasPasswordError] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    setHasEmailError(false);
+    setHasPasswordError(false);
+
+    let isValid = true;
+
+    if (!email.trim()) {
+      message.error("Vui lòng nhập email của bạn.");
+      setHasEmailError(true);
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      message.error("Định dạng email không hợp lệ.");
+      setHasEmailError(true);
+      isValid = false;
+    }
+
+    if (!password) {
+      if (isValid) message.error("Vui lòng nhập mật khẩu.");
+      setHasPasswordError(true);
+      isValid = false;
+    }
+
+    if (!isValid) return;
+
     setLoading(true);
     try {
       const response = await authService.login({ email, password });
@@ -24,10 +62,34 @@ const LoginPage: React.FC = () => {
         navigate("/");
       }
     } catch (error: any) {
-      message.error(
-        "Đăng nhập thất bại: " +
-          (error.response?.data?.message || "Lỗi kết nối"),
-      );
+      const errorData = error.response?.data;
+
+      if (errorData?.result) {
+        const { email: emailErrCode, password: passwordErrCode } =
+          errorData.result;
+
+        if (emailErrCode) {
+          setHasEmailError(true);
+          message.error(BACKEND_ERRORS[emailErrCode] || emailErrCode);
+        }
+
+        if (passwordErrCode) {
+          setHasPasswordError(true);
+          message.error(BACKEND_ERRORS[passwordErrCode] || passwordErrCode);
+        }
+      } else {
+        // 2. Sửa lại chỗ này: Dịch message của backend, nếu không có trong từ điển thì dùng câu tiếng Việt mặc định.
+        const backendMessage = errorData?.message;
+        const translatedMessage =
+          BACKEND_ERRORS[backendMessage] ||
+          "Email hoặc mật khẩu không chính xác.";
+
+        // Đổi màu viền cả 2 ô để người dùng biết thông tin bị sai
+        setHasEmailError(true);
+        setHasPasswordError(true);
+
+        message.error(translatedMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -45,10 +107,7 @@ const LoginPage: React.FC = () => {
           navigate("/");
         }
       } catch (error: any) {
-        message.error(
-          "Đăng nhập Google thất bại: " +
-            (error.response?.data?.message || "Lỗi kết nối"),
-        );
+        message.error("Đăng nhập bằng Google thất bại. Vui lòng thử lại!");
       } finally {
         setLoading(false);
       }
@@ -66,35 +125,47 @@ const LoginPage: React.FC = () => {
           Đăng nhập
         </h2>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" noValidate>
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (hasEmailError) setHasEmailError(false);
+            }}
             placeholder="Email"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+            className={`w-full px-4 py-2 border rounded-lg outline-none transition focus:ring-2 ${
+              hasEmailError
+                ? "border-red-500 focus:ring-red-500"
+                : "focus:ring-[#9156F1] border-gray-300"
+            }`}
           />
 
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (hasPasswordError) setHasPasswordError(false);
+            }}
             placeholder="Mật khẩu"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9156F1] outline-none"
+            className={`w-full px-4 py-2 border rounded-lg outline-none transition focus:ring-2 ${
+              hasPasswordError
+                ? "border-red-500 focus:ring-red-500"
+                : "focus:ring-[#9156F1] border-gray-300"
+            }`}
           />
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#9156F1] hover:bg-[#7E46D6] text-white font-semibold py-2 rounded-lg transition"
+            className="w-full bg-[#9156F1] hover:bg-[#7E46D6] text-white font-semibold py-2 rounded-lg transition disabled:opacity-70 mt-2"
           >
             {loading ? "Đang xử lý..." : "Đăng nhập"}
           </button>
         </form>
 
-        <div className="my-4 text-center text-gray-400">HOẶC</div>
+        <div className="my-4 text-center text-gray-400 text-sm">HOẶC</div>
 
         <button
           onClick={() => handleGoogleLogin()}
@@ -104,11 +175,11 @@ const LoginPage: React.FC = () => {
           <GoogleOutlined /> Tiếp tục với Google
         </button>
 
-        <div className="mt-4 text-center text-sm">
+        <div className="mt-6 text-center text-sm">
           Chưa có tài khoản?{" "}
           <button
             onClick={() => navigate("/register")}
-            className="text-[#9156F1] hover:underline"
+            className="text-[#9156F1] font-medium hover:underline"
           >
             Đăng ký
           </button>

@@ -17,6 +17,7 @@ import org.sport.backend.entity.mongo.PasswordResetToken;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.UserMapper;
+import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.PermissionRepository;
 import org.sport.backend.repository.ReputationLogRepository;
 import org.sport.backend.repository.RoleRepository;
@@ -58,6 +59,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     private final UserMapper userMapper;
+
+    private final UrlProperties urlProperties;
 
     @Value("${token_reset_password_expire_seconds}")
     private long EXPIRATION_SEC;
@@ -157,7 +160,7 @@ public class UserServiceImpl implements UserService {
 
         if (userOpt.isPresent()) {
             String token = createTokenResetPassword(email);
-            String resetLink = "http://localhost:5173/reset-password?token=" + token;
+            String resetLink = urlProperties.getFrontend() + "/reset-password?token=" + token;
             emailService.sendResetPasswordEmail(email, resetLink);
         }
     }
@@ -165,22 +168,16 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public void processResetPassword(ResetPasswordRequest request) {
-        // 1. Validate token bên Mongo -> Lấy ra email
         String email = validateTokenResetPassword(request.getToken());
 
-        // 2. Tìm user
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // 3. Mã hóa và cập nhật mật khẩu mới
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // 4. Xóa token để không dùng lại được nữa
         deleteTokenResetPassword(request.getToken());
     }
-
-    // --- RBAC & PERMISSION LOGIC ---
 
     @Override
     public Set<String> getUserAuthorities(UUID userId) {
@@ -241,27 +238,22 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        // Các biến dùng để cộng dồn thống kê tổng quan
         int globalTotalMatches = 0;
         int globalTotalWins = 0;
 
         List<CategoryRankResponse> categoryRanksList = new ArrayList<>();
 
-        // Duyệt qua từng rank của người dùng
         for (UserCategoryRank rank : user.getCategoryRanks()) {
-            // Cộng dồn vào biến tổng
             globalTotalMatches += rank.getTotalMatches();
             globalTotalWins += rank.getTotalWins();
 
-            // Tính tỉ lệ thắng riêng cho môn thể thao này
             double catWinRate = 0.0;
             if (rank.getTotalMatches() > 0) {
                 catWinRate = Math.round(((double) rank.getTotalWins() / rank.getTotalMatches() * 100) * 10.0) / 10.0;
             }
 
-            Integer leaderboardPosition = null; // Thêm logic lấy vị trí bảng xếp hạng nếu cần
+            Integer leaderboardPosition = null;
 
-            // Thêm vào danh sách trả về
             categoryRanksList.add(CategoryRankResponse.builder()
                     .categoryId(rank.getCategory().getCategoryId())
                     .categoryName(rank.getCategory().getCategoryName())
@@ -274,24 +266,19 @@ public class UserServiceImpl implements UserService {
                     .build());
         }
 
-        // Tính tỉ lệ thắng tổng quan cho toàn bộ tài khoản
         double globalWinRate = 0.0;
         if (globalTotalMatches > 0) {
             globalWinRate = Math.round(((double) globalTotalWins / globalTotalMatches * 100) * 10.0) / 10.0;
         }
 
-        // Trả kết quả về cho Controller
         return UserDashboardResponse.builder()
                 .userId(user.getUserId())
                 .userName(user.getUserName())
                 // .avatarUrl(user.getAvatarUrl())
 
-                // Stats tổng quan đã được cộng dồn
                 .totalMatches(globalTotalMatches)
                 .totalWins(globalTotalWins)
                 .winRate(globalWinRate)
-
-                // Danh sách chi tiết
                 .categoryRanks(categoryRanksList)
                 .build();
     }
@@ -327,11 +314,9 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
 
-        // Cập nhật điểm
         user.setCreditScore(user.getCreditScore() + points);
         userRepository.save(user);
 
-        // Lưu log
         ReputationLog log = ReputationLog.builder()
                 .user(user)
                 .pointsChanged(points)
@@ -392,7 +377,6 @@ public class UserServiceImpl implements UserService {
 
         Page<ReputationLog> logs = reputationLogRepository.findByUser_UserIdOrderByCreatedAtDesc(userId, pageable);
 
-        // Map sang Response DTO
         List<ReputationLogResponse> logResponses = logs.getContent().stream()
                 .map(log -> ReputationLogResponse.builder()
                         .id(log.getId())
@@ -424,7 +408,6 @@ public class UserServiceImpl implements UserService {
         if (principal instanceof CustomUserDetails customUserDetails) {
             email = customUserDetails.getUsername();
         } else if (principal instanceof String) {
-            // Thông thường getName() sẽ là email do JwtAuthenticationFilter set
             email = authentication.getName();
         } else {
             throw new AppException(ErrorCode.USER_NOT_AUTHENTICATED);
@@ -444,7 +427,6 @@ public class UserServiceImpl implements UserService {
 
         String tokenString = UUID.randomUUID().toString();
 
-        // 3. Tính thời gian hết hạn
         Instant expiryDate = Instant.now().plusSeconds(EXPIRATION_SEC);
 
         PasswordResetToken resetToken = PasswordResetToken.builder()
@@ -462,7 +444,6 @@ public class UserServiceImpl implements UserService {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Token không hợp lệ hoặc không tồn tại"));
 
-        // Kiểm tra hết hạn thủ công (đề phòng MongoDB chưa kịp xóa background)
         if (resetToken.getExpiryDate().isBefore(Instant.now())) {
             passwordResetTokenRepository.delete(resetToken);
             throw new RuntimeException("Token đã hết hạn");

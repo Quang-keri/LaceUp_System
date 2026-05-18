@@ -8,6 +8,7 @@ import org.sport.backend.entity.Court;
 import org.sport.backend.entity.CourtPrice;
 import org.sport.backend.entity.Match;
 import org.sport.backend.entity.RentalArea;
+import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.MatchRepository;
 import org.sport.backend.repository.RentalAreaRepository;
 import org.springframework.ai.document.Document;
@@ -33,6 +34,8 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     private final MatchRepository matchRepository;
 
     private final JdbcTemplate jdbcTemplate;
+
+    private final UrlProperties urlProperties;
 
     @Override
     public void importTextData(String text) {
@@ -121,7 +124,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
         String suggestInfo = "Nếu khung giờ bạn tìm không khớp, hệ thống sẽ ưu tiên gợi ý các sân có giờ mở cửa gần nhất với nhu cầu của bạn.";
 
-        String linkInfo = "Link chi tiết: http://localhost:5173/rental-area/" + area.getRentalAreaId();
+        String linkInfo = "Link chi tiết: " + urlProperties.getFrontend() + "/rental-area/" + area.getRentalAreaId();
 
         String content = String.format(
                 "Tại %s có cơ sở thể thao tên là %s. Địa chỉ: %s, %s, %s. %s %s " +
@@ -208,7 +211,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         } else if (match.getAddress() != null) {
             locationInfo = String.format("đang tìm sân quanh khu vực %s, %s",
                     match.getAddress().getWard() != null ? match.getAddress().getWard() : "",
-            cityForMetadata = match.getAddress().getCity() != null ? match.getAddress().getCity().getCityName() : "");
+                    cityForMetadata = match.getAddress().getCity() != null ? match.getAddress().getCity().getCityName() : "");
         } else {
             locationInfo = "chưa chốt địa điểm cụ thể";
         }
