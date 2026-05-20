@@ -21,7 +21,7 @@ export default function PaymentSuccessPage() {
               Xem lịch đặt sân
             </Button>,
 
-            <Button key="home" onClick={() => navigate("/")}>
+            <Button key="home" onClick={() => navigate("/home")}>
               Về trang chủ
             </Button>,
           ]}

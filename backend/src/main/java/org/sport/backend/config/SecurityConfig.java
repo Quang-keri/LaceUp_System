@@ -57,7 +57,6 @@ public class SecurityConfig {
             "/api/v1/lace-up/ws/**",
 
             "/matches/open",
-            "/chat/**"
     };
     UrlProperties urlProperties;
 
@@ -100,7 +99,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/lace-up/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/lace-up/news/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/lace-up/reviews/rental/{rentalId}").permitAll()
-
+                        .requestMatchers("/chat/**").authenticated()
+                        .requestMatchers("/api/v1/lace-up/chat/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

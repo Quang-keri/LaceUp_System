@@ -60,9 +60,8 @@ export default function PaymentSummary({
           className="flex flex-col gap-2"
         >
           <Radio value="PAY_OS">Chuyển khoản PAY OS</Radio>
-             <Radio value="VN_PAY">Chuyển khoản VNPay</Radio>
+          <Radio value="VN_PAY">Chuyển khoản VNPay</Radio>
           <Radio value="CASH">Thanh toán tại sân (Tiền mặt)</Radio>
-
         </Radio.Group>
       </Card>
 
@@ -76,7 +75,9 @@ export default function PaymentSummary({
       </div>
 
       <Button
-        type="primary"
+        style={{
+          background: "#9156F1",
+        }}
         size="large"
         block
         loading={loading}

@@ -103,7 +103,7 @@ public class EmailServiceImpl implements EmailService {
                  <body>
                      <div class="email-container">
                          <h1>Xin chào, %s!</h1>
-                         <p>Cảm ơn bạn đã đăng ký thành viên tại <strong>RentRoom</strong>.</p>
+                         <p>Cảm ơn bạn đã đăng ký thành viên tại <strong>LaceUp</strong>.</p>
                          <p>Vui lòng nhấn vào nút bên dưới để hoàn tất quá trình xác thực tài khoản:</p>
                 \s
                          <div style="text-align: center;">
