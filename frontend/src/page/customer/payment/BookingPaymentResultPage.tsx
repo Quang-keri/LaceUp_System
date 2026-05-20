@@ -135,7 +135,7 @@ export default function BookingPaymentResultPage() {
             <Button
               style={{ color: "#9156F1" }}
               size="large"
-              onClick={() => navigate(`/booking/${state.bookingId}`)}
+              onClick={() => navigate(`/booking-history`)}
             >
               Xem chi tiết booking
             </Button>

@@ -22,13 +22,13 @@ const sectionData = [
     imageSrc: tennis,
   },
   {
-    t: "Thanh toán 1 chạm",
-    c: "Tích hợp Payos, Momo, VNPay tiện lợi.",
+    t: "Thanh toán dễ dàng",
+    c: "Tích hợp Payos, VNPay tiện lợi.",
     imageSrc: payos,
   },
   {
     t: "Cộng đồng năng động",
-    c: "Dễ dàng tìm đối thủ cùng trình độ.",
+    c: "Dễ dàng tìm đối thủ cùng trình độ,đăng bài tìm kiếm sân chơi.",
     imageSrc: comnunity,
   },
 ];

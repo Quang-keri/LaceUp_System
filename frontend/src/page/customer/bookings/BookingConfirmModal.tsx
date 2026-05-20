@@ -100,9 +100,10 @@ export default function BookingConfirmModal({
       onCancel={onClose}
       onOk={onConfirm}
       okText="Xác nhận và thanh toán"
+       cancelText="Hủy"
       width={520}
     >
-      {/* Thông tin người đặt */}
+    
       <div className="border-t pt-4">
         <h3 className="font-semibold mb-3 text-gray-700">
           Thông tin người đặt
@@ -149,7 +150,6 @@ export default function BookingConfirmModal({
 
       <div className="space-y-4 mb-6 max-h-[260px] overflow-y-auto pr-2 mt-4">
         {cart.map((item: any, index: number) => {
-          // Tính lại số giờ để hiển thị cho UI đẹp hơn
           const startObj = dayjs(`${item.date}T${item.startTime}`);
           const endObj = dayjs(`${item.date}T${item.endTime}`);
           const hours = endObj.diff(startObj, "minute") / 60;

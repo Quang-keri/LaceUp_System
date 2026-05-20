@@ -32,6 +32,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     JwtService jwtService;
 
     @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String path = request.getServletPath();
+        String method = request.getMethod();
+
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            return true;
+        }
+        if (path.equals("/rental-areas/my-rentals")
+                || path.equals("/api/v1/lace-up/rental-areas/my-rentals")) {
+            return false;
+        }
+        return path.startsWith("/auth")
+                || path.startsWith("/posts")
+                || path.startsWith("/rental-areas")
+                || path.startsWith("/amenities")
+                || path.startsWith("/categories")
+                || path.startsWith("/news")
+                || path.startsWith("/reviews/rental")
+                || path.startsWith("/ws")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui");
+    }
+
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
