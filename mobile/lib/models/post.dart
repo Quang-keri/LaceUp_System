@@ -1,74 +1,99 @@
 class PostResponse {
   final String postId;
   final String title;
-  final String description;
+  final String? description;
   final String postStatus;
-  final String? createdAt;
-
   final String courtId;
   final String courtName;
-  final double price; // Vẫn giữ tên biến là price trong Flutter cho gọn
-  final String courtCoverImageUrl;
-
+  final double? minPrice;
+  final String? courtCoverImageUrl;
   final String rentalAreaId;
   final String rentalAreaName;
-  final String address;
+  final AddressResponse? address;
+  final double? avgRating;
 
   PostResponse({
     required this.postId,
     required this.title,
-    required this.description,
+    this.description,
     required this.postStatus,
-    this.createdAt,
     required this.courtId,
     required this.courtName,
-    required this.price,
-    required this.courtCoverImageUrl,
+    this.minPrice,
+    this.courtCoverImageUrl,
     required this.rentalAreaId,
     required this.rentalAreaName,
-    required this.address,
+    this.address,
+    this.avgRating,
   });
 
   factory PostResponse.fromJson(Map<String, dynamic> json) {
-    // 1. XỬ LÝ ĐỊA CHỈ LỒNG NHAU (Nested JSON)
-    String fullAddress = '';
-    if (json['address'] != null && json['address'] is Map) {
-      final addressData = json['address'];
-      final street = addressData['street'] ?? '';
-      final ward = addressData['ward'] ?? '';
-      final district = addressData['district'] ?? '';
-      final cityName = addressData['city']?['cityName'] ?? ''; // Lấy sâu vào trong object city
-
-      // Ghép các thành phần lại thành 1 chuỗi, cách nhau bởi dấu phẩy
-      // Lệnh where để loại bỏ những khoảng trắng nếu API thiếu dữ liệu
-      fullAddress = [street, ward, district, cityName]
-          .where((element) => element.toString().trim().isNotEmpty)
-          .join(', ');
-    } else {
-      // Đề phòng trường hợp đôi khi backend lại trả về string
-      fullAddress = json['address']?.toString() ?? '';
-    }
-
     return PostResponse(
-      postId: json['postId']?.toString() ?? '',
-      title: json['title']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
-      postStatus: json['postStatus']?.toString() ?? '',
-      createdAt: json['createdAt']?.toString(),
+      postId: json['postId'] ?? '',
+      title: json['title'] ?? '',
+      description: json['description'],
+      postStatus: json['postStatus'] ?? '',
+      courtId: json['courtId'] ?? '',
+      courtName: json['courtName'] ?? '',
+      minPrice: json['minPrice'] != null
+          ? double.tryParse(json['minPrice'].toString())
+          : null,
+      courtCoverImageUrl: json['courtCoverImageUrl'],
+      rentalAreaId: json['rentalAreaId'] ?? '',
+      rentalAreaName: json['rentalAreaName'] ?? '',
+      address: json['address'] != null
+          ? AddressResponse.fromJson(json['address'])
+          : null,
+      avgRating: json['avgRating'] != null
+          ? double.tryParse(json['avgRating'].toString())
+          : null,
+    );
+  }
+}
 
-      courtId: json['courtId']?.toString() ?? '',
-      courtName: json['courtName']?.toString() ?? '',
+class AddressResponse {
+  final String? street;
+  final String? ward;
+  final CityResponse? city;
 
-      // 2. SỬA 'price' THÀNH 'minPrice' THEO ĐÚNG JSON
-      price: double.tryParse(json['minPrice']?.toString() ?? '0') ?? 0.0,
+  AddressResponse({
+    this.street,
+    this.ward,
+    this.city,
+  });
 
-      courtCoverImageUrl: json['courtCoverImageUrl']?.toString() ?? '',
+  factory AddressResponse.fromJson(Map<String, dynamic> json) {
+    return AddressResponse(
+      street: json['street'],
+      ward: json['ward'],
+      city: json['city'] != null
+          ? CityResponse.fromJson(json['city'])
+          : null,
+    );
+  }
 
-      rentalAreaId: json['rentalAreaId']?.toString() ?? '',
-      rentalAreaName: json['rentalAreaName']?.toString() ?? '',
+  String get fullAddress {
+    return [
+      street,
+      ward,
+      city?.cityName,
+    ].where((e) => e != null && e.toString().isNotEmpty).join(', ');
+  }
+}
 
-      // Gán chuỗi địa chỉ đã được xử lý ở trên
-      address: fullAddress,
+class CityResponse {
+  final int? cityId;
+  final String? cityName;
+
+  CityResponse({
+    this.cityId,
+    this.cityName,
+  });
+
+  factory CityResponse.fromJson(Map<String, dynamic> json) {
+    return CityResponse(
+      cityId: json['cityId'],
+      cityName: json['cityName'],
     );
   }
 }

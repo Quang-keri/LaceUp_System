@@ -1,42 +1,66 @@
-// lib/services/post_service.dart
 
 import 'package:dio/dio.dart';
-import '../config/api_client.dart'; // Import apiClient dùng chung
+import '../config/api_client.dart';
 import '../models/page_response.dart';
 import '../models/post.dart';
 
 class PostService {
   final String _endpoint = '/posts';
 
-  // Trả về thẳng PageResponse<PostResponse> thay vì dynamic
-  Future<PageResponse<PostResponse>> getPosts(Map<String, dynamic> filters) async {
-    Map<String, dynamic> params = Map.from(filters);
+  Future<PageResponse<PostResponse>> getPosts({
+    int page = 1,
+    int size = 10,
+    String? title,
+    double? minPrice,
+    double? maxPrice,
+    String? sortBy,
+    List<int>? cityIds,
+    List<int>? categoryIds,
+    List<int>? amenityIds,
+    double? minRating,
+  }) async {
+    final Map<String, dynamic> params = {
+      'page': page,
+      'size': size,
+    };
 
-    if (params['cityIds'] is List) params['cityIds'] = params['cityIds'].join(',');
-    if (params['categoryIds'] is List) params['categoryIds'] = params['categoryIds'].join(',');
-    if (params['amenityIds'] is List) params['amenityIds'] = params['amenityIds'].join(',');
+    if (title != null && title.isNotEmpty) params['title'] = title;
+    if (minPrice != null) params['minPrice'] = minPrice;
+    if (maxPrice != null) params['maxPrice'] = maxPrice;
+    if (sortBy != null && sortBy.isNotEmpty) params['sortBy'] = sortBy;
+    if (minRating != null) params['minRating'] = minRating;
 
-    params.removeWhere((key, value) => value == null || value == '');
+    if (cityIds != null && cityIds.isNotEmpty) {
+      params['cityIds'] = cityIds.join(',');
+    }
+
+    if (categoryIds != null && categoryIds.isNotEmpty) {
+      params['categoryIds'] = categoryIds.join(',');
+    }
+
+    if (amenityIds != null && amenityIds.isNotEmpty) {
+      params['amenityIds'] = amenityIds.join(',');
+    }
 
     try {
-      final response = await apiClient.get(_endpoint, queryParameters: params);
+      final response = await apiClient.get(
+        '/posts',
+        queryParameters: params,
+      );
 
-      // 1. Trích xuất cục "result" từ JSON gốc
       final resultData = response.data['result'];
 
-      // 2. Parse cục result đó thành PageResponse
       return PageResponse<PostResponse>.fromJson(
         resultData,
             (json) => PostResponse.fromJson(json),
       );
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Lỗi khi tải danh sách sân');
-    } catch (e) {
-      throw Exception('Lỗi xử lý dữ liệu: $e');
+      throw Exception(
+        e.response?.data['message'] ?? 'Lỗi khi tải danh sách bài đăng',
+      );
     }
   }
 
-  // Lấy danh sách bài viết của tôi
   Future<List<PostResponse>> getMyPosts({String? status}) async {
     try {
       Map<String, dynamic> params = {};
@@ -44,7 +68,6 @@ class PostService {
 
       final response = await apiClient.get('$_endpoint/me', queryParameters: params);
 
-      // Cập nhật lại key 'data' hay 'result' tùy thuộc vào JSON thực tế backend trả về
       final List<dynamic> data = response.data['result'] ?? response.data['data'] ?? [];
       return data.map((json) => PostResponse.fromJson(json)).toList();
     } on DioException catch (e) {
@@ -52,18 +75,15 @@ class PostService {
     }
   }
 
-  // Lấy chi tiết bài viết của tôi
   Future<PostResponse> getMyPostDetail(String postId) async {
     try {
       final response = await apiClient.get('$_endpoint/me/$postId');
-      // Trả về thẳng Model thay vì dynamic
       return PostResponse.fromJson(response.data['result'] ?? response.data);
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? 'Không tìm thấy thông tin sân');
     }
   }
 
-  // Tạo bài viết mới
   Future<dynamic> createPost({
     required String title,
     required String description,
@@ -81,7 +101,6 @@ class PostService {
     }
   }
 
-  // Cập nhật bài viết
   Future<dynamic> updatePost(
       String postId, {
         String? title,
@@ -101,7 +120,6 @@ class PostService {
     }
   }
 
-  // Xóa bài viết
   Future<dynamic> deletePost(String postId) async {
     try {
       final response = await apiClient.delete('$_endpoint/$postId');

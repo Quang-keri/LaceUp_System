@@ -1,20 +1,21 @@
 class Address {
   final String street;
   final String ward;
-  final String district;
+  final String cityName;
 
-  Address({required this.street, required this.ward, required this.district});
+  Address({required this.street, required this.ward, required this.cityName});
 
   factory Address.fromJson(Map<String, dynamic> json) {
     return Address(
       street: json['street']?.toString() ?? '',
       ward: json['ward']?.toString() ?? '',
-      district: json['district']?.toString() ?? '',
+      cityName: json['city']?['cityName']?.toString() ?? '',
     );
   }
 
-  // Tiện ích để in ra địa chỉ đầy đủ dễ dàng
-  String get fullAddress => [street, ward, district]
-      .where((e) => e.isNotEmpty)
-      .join(', ');
+  String get fullAddress => [
+    street,
+    ward,
+    cityName,
+  ].where((e) => e.isNotEmpty).join(', ');
 }

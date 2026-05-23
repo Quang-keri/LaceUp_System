@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:mobile/views/login/login_screen.dart';
+import 'package:mobile/widgets/main_navigation.dart';
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
-
 
   try {
     await dotenv.load(fileName: ".env");
@@ -28,7 +26,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      home: const MainNavigation(),
     );
   }
 }

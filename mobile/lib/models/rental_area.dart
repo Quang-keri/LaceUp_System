@@ -9,8 +9,6 @@ class RentalAreaResponse {
   final String status;
   final int cityId;
   final String cityName;
-  // Tạm thời dùng List<dynamic> cho courts nếu bạn chưa tạo court_model.dart
-  // Nếu tạo rồi, hãy đổi thành List<CourtResponse>
   final List<dynamic> courts;
 
   RentalAreaResponse({
@@ -33,9 +31,23 @@ class RentalAreaResponse {
       contactName: json['contactName']?.toString() ?? '',
       contactPhone: json['contactPhone']?.toString() ?? '',
       status: json['status']?.toString() ?? 'PENDING',
-      cityId: int.tryParse(json['cityId']?.toString() ?? '0') ?? 0,
-      cityName: json['cityName']?.toString() ?? '',
+      cityId: json['city']?['cityId'] ?? 0,
+      cityName: json['city']?['cityName'] ?? '',
       courts: json['courts'] != null ? List<dynamic>.from(json['courts']) : [],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'rentalAreaId': rentalAreaId,
+      'rentalAreaName': rentalAreaName,
+      'address': address,
+      'contactName': contactName,
+      'contactPhone': contactPhone,
+      'status': status,
+      'cityId': cityId,
+      'cityName': cityName,
+      'courts': courts,
+    };
   }
 }

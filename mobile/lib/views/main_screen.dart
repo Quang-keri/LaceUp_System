@@ -17,7 +17,7 @@ class MainScreen extends StatelessWidget {
         backgroundColor: Color(0xFFF8F9FA),
         body: TabBarView(
           children: [
-            AreaTab(),
+            // AreaTab(),
             MatchTab(),
           ],
         ),

@@ -11,12 +11,12 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final UserService _userService = UserService();
 
-  bool _isLoadingData = true; // Cờ báo đang tải dữ liệu API
+  bool _isLoadingData = true;
   bool _isEditing = false;
   bool _isLoadingSave = false;
 
-  Map<String, dynamic>? _userData; // Biến lưu toàn bộ thông tin user
-  String? _userId; // Cần giữ lại userId để gọi hàm update
+  Map<String, dynamic>? _userData;
+  String? _userId;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -34,10 +34,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _fetchMyInfo(); // Gọi API ngay khi mở trang
+    _fetchMyInfo();
   }
 
-  // Hàm gọi API lấy thông tin
   Future<void> _fetchMyInfo() async {
     setState(() => _isLoadingData = true);
 
@@ -47,7 +46,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final data = result['data'];
       setState(() {
         _userData = data;
-        _userId = data['userId']; // Mapping chuẩn theo DTO
+        _userId = data['userId'];
 
         _nameController.text = data['userName'] ?? '';
         _emailController.text = data['email'] ?? '';
@@ -56,7 +55,6 @@ class _ProfilePageState extends State<ProfilePage> {
         String dobText = '';
         if (data['dateOfBirth'] != null) {
         if (data['dateOfBirth'] is List) {
-        // Nếu Java trả về mảng [YYYY, MM, DD]
         List dobList = data['dateOfBirth'];
         if (dobList.length >= 3) {
         String year = dobList[0].toString();
@@ -65,7 +63,6 @@ class _ProfilePageState extends State<ProfilePage> {
         dobText = '$year-$month-$day';
         }
         } else {
-        // Nếu Java trả về chuỗi String bình thường
         dobText = data['dateOfBirth'].toString();
         }
         }

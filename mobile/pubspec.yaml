@@ -13,10 +13,10 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   http: ^1.2.0
-  shared_preferences: ^2.2.3  # Thêm thư viện này để lưu token cục bộ
+  shared_preferences: ^2.2.3
   flutter_dotenv: ^5.1.0
   dio: ^5.9.2
-
+  curved_navigation_bar: ^1.0.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

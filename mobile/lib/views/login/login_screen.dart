@@ -1,10 +1,7 @@
-// lib/views/login/login_screen.dart
-
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart'; // Nơi chứa singleton authService
-import '../../services/user_service.dart'; // Nơi chứa singleton userService
-// Nhớ import model UserResponse của bạn
-// import '../../models/user.dart';
+import '../../services/auth_service.dart';
+import '../../services/user_service.dart';
+
 import '../main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,26 +19,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   Future<void> _handleLogin() async {
-    // Ẩn bàn phím khi bấm đăng nhập
     FocusScope.of(context).unfocus();
-
     setState(() => _isLoading = true);
 
     try {
-      // 1. Gọi API Login (Dùng biến authService toàn cục)
-      // Nếu lỗi (sai pass, mất mạng), nó sẽ tự động văng xuống khối catch
       await authService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      // 2. Lấy thông tin cá nhân (Dùng biến userService toàn cục)
-      // Hàm này giờ sẽ trả thẳng về model UserResponse (nếu bạn đã áp dụng Model)
       final userInfo = await userService.getMyInfo();
 
       if (!mounted) return;
 
-      // 3. Chuyển sang MainScreen và truyền dữ liệu
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -49,11 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } catch (e) {
-      // 4. Bắt mọi lỗi từ Service ném ra và hiển thị lên UI
-      // Hàm replaceAll để xóa chữ "Exception: " mặc định của Dart
+
       _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
     } finally {
-      // 5. Khối finally luôn chạy dù thành công hay thất bại để tắt Loading
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -65,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating, // Gợi ý: Dùng floating nhìn hiện đại hơn
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
