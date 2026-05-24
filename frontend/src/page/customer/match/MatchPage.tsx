@@ -1,60 +1,63 @@
 import React, { useEffect, useState } from "react";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  MessageCircle,
-  Smile,
-  Trophy,
-  Users,
-  Zap,
-  Flame,
-  Search,
-} from "lucide-react";
+import { Calendar, Zap } from "lucide-react";
 import matchService from "../../../service/match/matchService.ts";
 import type { MatchResponse } from "../../../types/match.ts";
-import CreateMatchModal from "./CreateMatchModal";
 import JoinMatchModal from "./JoinMatchModal";
 import AutoMatchModal from "./AutoMatchModal";
+import MatchFilter from "./MatchFilter";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext.tsx";
-import { message } from "antd";
 import { locationService } from "../../../service/locationService.ts";
+import {
+  Button,
+  Input,
+  message,
+  Space,
+  Row,
+  Col,
+  Spin,
+  Empty,
+  Typography,
+  Pagination,
+} from "antd";
+import MatchCard from "./MatchCard.tsx";
+
+const { Title, Text } = Typography;
 
 const MatchPage: React.FC = () => {
   const [matches, setMatches] = useState<MatchResponse[]>([]);
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isAutoMatchOpen, setIsAutoMatchOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
     null,
   );
 
-  // --- STATE CHO DỮ LIỆU ĐỊA LÝ ---
   const [provinces, setProvinces] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
 
-  // --- STATE CHO BỘ LỌC TÌM KIẾM ---
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [sortOrder, setSortOrder] = useState("NEWEST");
   const [selectedLocation, setSelectedLocation] = useState<string>("");
-  const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+  const [selectedWard, setSelectedWard] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [roomCodeInput, setRoomCodeInput] = useState("");
 
-  const fetchMatches = async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const PAGE_SIZE = 6;
+
+  const fetchMatches = async (pageToFetch = 1) => {
     setLoading(true);
     try {
       const response = await matchService.getOpenMatches({
-        page: 1,
-        size: 100,
+        page: pageToFetch,
+        size: PAGE_SIZE,
       });
       if (response.code === 200) {
         setMatches(response.result.data || []);
+        setTotalElements(response.result.totalElements || 0);
       }
     } catch (error) {
       message.error("Lỗi kết nối máy chủ");
@@ -63,143 +66,34 @@ const MatchPage: React.FC = () => {
     }
   };
 
-  // Gọi Tỉnh/Thành ngay khi component mount
   useEffect(() => {
-    fetchMatches();
+    fetchMatches(currentPage);
+  }, [currentPage]);
+
+  useEffect(() => {
     locationService.getProvinces().then((data) => {
       setProvinces(data || []);
     });
   }, []);
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const resetFilters = () => {
     setSortOrder("NEWEST");
     setSelectedLocation("");
-    setSelectedDistrict("");
+    setSelectedWard("");
     setSelectedCategory("");
     setTypeFilter("ALL");
-    setDistricts([]); // Clear luôn list Quận/Huyện
+    setWards([]);
+    setCurrentPage(1);
   };
 
   const handleOpenJoinModal = (match: MatchResponse) => {
     setSelectedMatch(match);
     setIsJoinModalOpen(true);
-  };
-
-  const handleJoinMatch = async (matchId: string) => {
-    try {
-      const response = await matchService.joinMatch(matchId);
-      if (response.code === 200) {
-        message.success("Tham gia trận thành công!");
-        fetchMatches();
-        navigate("/my-matches");
-      }
-    } catch (error: any) {
-      message.error(error.response?.data?.message || "Lỗi tham gia");
-    }
-  };
-
-  const renderActionButton = (match: MatchResponse) => {
-    const isParticipant = match.participants?.some(
-      (p: any) => p.userId === user?.userId,
-    );
-
-    if (
-      match.status === "OPEN" ||
-      (match.status === "CONFIRMED" && match.remainingSlots > 0)
-    ) {
-      if (isParticipant)
-        return (
-          <button
-            disabled
-            className="bg-slate-100 text-slate-500 px-4 py-2 rounded-xl font-semibold text-sm border border-slate-200"
-          >
-            Đã Tham Gia
-          </button>
-        );
-      return (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleJoinMatch(match.matchId);
-          }}
-          className="bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all shadow-sm"
-        >
-          Tham Gia
-        </button>
-      );
-    }
-
-    if (
-      match.status === "READY" ||
-      match.status === "CONFIRMED" ||
-      match.status === "FULL"
-    ) {
-      if (isParticipant)
-        return (
-          <button
-            disabled
-            className="bg-purple-600 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-sm"
-          >
-            Sẵn Sàng
-          </button>
-        );
-      return (
-        <button
-          disabled
-          className="bg-slate-100 text-slate-400 px-4 py-2 rounded-xl font-semibold text-sm"
-        >
-          Đã Đầy
-        </button>
-      );
-    }
-
-    return (
-      <button
-        disabled
-        className="bg-slate-100 text-slate-400 px-4 py-2 rounded-xl font-semibold text-sm"
-      >
-        Đã Chốt
-      </button>
-    );
-  };
-
-  const handleChatClick = (e: React.MouseEvent, match: MatchResponse) => {
-    e.stopPropagation();
-    const hostUser = match.participants?.find(
-      (p: any) => p.userName === match.hostName,
-    );
-    const hostId = (match as any).hostId || hostUser?.userId;
-    if (!hostId) {
-      message.error("Không tìm thấy thông tin chủ phòng để chat");
-      return;
-    }
-    if (hostId === user?.userId) {
-      message.info("Bạn đang là chủ phòng của trận đấu này.");
-      return;
-    }
-    window.dispatchEvent(
-      new CustomEvent("OPEN_CHAT_WITH_USER", {
-        detail: { userId: hostId, userName: match.hostName || "Chủ phòng" },
-      }),
-    );
-  };
-
-  const formatDate = (dateData: any) => {
-    if (Array.isArray(dateData))
-      return `${dateData[2].toString().padStart(2, "0")}/${dateData[1]
-        .toString()
-        .padStart(2, "0")}/${dateData[0]}`;
-    return new Date(dateData).toLocaleDateString("vi-VN");
-  };
-
-  const formatTime = (timeData: any) => {
-    if (Array.isArray(timeData))
-      return `${(timeData[3]?.toString() || "00").padStart(2, "0")}:${(
-        timeData[4]?.toString() || "00"
-      ).padStart(2, "0")}`;
-    if (typeof timeData === "string" && timeData.includes("T"))
-      return timeData.split("T")[1].substring(0, 5);
-    return "--:--";
   };
 
   const handleJoinByRoomCode = () => {
@@ -211,7 +105,7 @@ const MatchPage: React.FC = () => {
         if (res.code === 200) {
           message.success("Vào phòng thành công!");
           setRoomCodeInput("");
-          fetchMatches();
+          fetchMatches(currentPage);
           navigate("/my-matches");
         }
       })
@@ -219,9 +113,6 @@ const MatchPage: React.FC = () => {
         message.error(err.response?.data?.message || "Mã không hợp lệ!"),
       );
   };
-
-  const isValidPrice = (price: any) =>
-    price != null && price !== "" && !isNaN(Number(price));
 
   const filteredMatches = matches
     .filter((m) => ["OPEN", "READY", "CONFIRMED", "FULL"].includes(m.status))
@@ -232,23 +123,26 @@ const MatchPage: React.FC = () => {
         m.categoryName?.toLowerCase().includes(selectedCategory.toLowerCase()),
     )
     .filter((m) => {
-      if (!selectedLocation && !selectedDistrict) return true;
+      if (!selectedLocation && !selectedWard) return true;
+
       const isStringAddress = typeof m.address === "string";
       const cityString = String(
         isStringAddress ? m.address : m.address?.city?.cityName || "",
       );
-      const districtString = String(
-        isStringAddress ? m.address : m.address?.district || "",
+
+      const wardString = String(
+        isStringAddress ? m.address : m.address?.ward || "",
       );
 
       const matchCity =
         !selectedLocation ||
         cityString.toLowerCase().includes(selectedLocation.toLowerCase());
-      const matchDistrict =
-        !selectedDistrict ||
-        districtString.toLowerCase().includes(selectedDistrict.toLowerCase());
 
-      return matchCity && matchDistrict;
+      const matchWard =
+        !selectedWard ||
+        wardString.toLowerCase().includes(selectedWard.toLowerCase());
+
+      return matchCity && matchWard;
     })
     .sort((a, b) => {
       if (sortOrder === "PRICE_ASC")
@@ -259,436 +153,150 @@ const MatchPage: React.FC = () => {
     });
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 font-sans">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-800">
-            Trận Đấu Vãng Lai
-          </h1>
-          <p className="text-slate-500 mt-1 font-medium">
-            Tìm đồng đội giao lưu hoặc tham gia kèo có sẵn
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-50 py-8 font-sans">
+      <div className="w-[90%] mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 lg:px-6 xl:px-8">
+          <div className="flex-1">
+            <Title
+              level={2}
+              style={{ margin: 0, fontWeight: 800, color: "#1e293b" }}
+            >
+              Trận Đấu Vãng Lai
+            </Title>
+            <Text type="secondary" className="font-medium text-base mt-1 block">
+              Tìm đồng đội giao lưu hoặc tham gia kèo có sẵn
+            </Text>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
-          <div className="flex items-center bg-white rounded-xl border border-slate-300 overflow-hidden focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all shadow-sm h-[42px]">
-            <input
-              type="text"
+          <Space
+            size="middle"
+            className="w-full md:w-auto mt-4 md:mt-0 justify-end"
+          >
+            <Input.Search
               placeholder="Nhập mã phòng..."
               value={roomCodeInput}
               onChange={(e) => setRoomCodeInput(e.target.value)}
-              className="px-4 py-2 w-36 outline-none text-sm font-semibold uppercase placeholder:normal-case"
+              onSearch={handleJoinByRoomCode}
               maxLength={6}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleJoinByRoomCode();
-              }}
+              size="large"
+              className="min-w-[200px] md:w-[280px] font-semibold uppercase"
+              style={{ borderRadius: "12px" }}
             />
-            <button
-              onClick={handleJoinByRoomCode}
-              className="pr-3 pl-2 h-full text-slate-400 hover:text-purple-600 transition-colors flex items-center justify-center bg-slate-50 hover:bg-purple-50 border-l border-slate-200"
-              title="Tìm và vào phòng"
-            >
-              <Search size={18} />
-            </button>
-          </div>
 
-          <button
-            onClick={() => setIsAutoMatchOpen(true)}
-            className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm border-0 h-[42px]"
-          >
-            <Zap size={18} className="fill-white" /> Ghép Trận
-          </button>
-
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all active:scale-95 shadow-sm border-0 h-[42px]"
-          >
-            <span className="text-xl leading-none">+</span> Tạo Kèo Tìm Bạn
-          </button>
-        </div>
-      </div>
-
-      <CreateMatchModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSuccess={fetchMatches}
-      />
-      <JoinMatchModal
-        isOpen={isJoinModalOpen}
-        onClose={() => setIsJoinModalOpen(false)}
-        onSuccess={fetchMatches}
-        match={selectedMatch}
-      />
-      <AutoMatchModal
-        isOpen={isAutoMatchOpen}
-        onClose={() => setIsAutoMatchOpen(false)}
-        onSuccess={fetchMatches}
-      />
-
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* SIDEBAR BỘ LỌC TÌM KIẾM */}
-        <div className="w-full lg:w-1/4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 shrink-0 sticky top-6">
-          <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-extrabold text-slate-800">Bộ lọc</h2>
-            <button
-              onClick={resetFilters}
-              className="text-sm text-purple-500 hover:text-purple-700 font-medium hover:underline"
-            >
-              Làm mới
-            </button>
-          </div>
-
-          {/* Sắp xếp */}
-          <div className="mb-8">
-            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
-              Sắp xếp
-            </h3>
-            <div className="space-y-3">
-              {[
-                { id: "NEWEST", label: "Mới nhất" },
-                { id: "PRICE_ASC", label: "Giá thấp → cao" },
-                { id: "PRICE_DESC", label: "Giá cao → thấp" },
-              ].map((sort) => (
-                <label
-                  key={sort.id}
-                  className="flex items-center gap-3 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="sort"
-                    checked={sortOrder === sort.id}
-                    onChange={() => setSortOrder(sort.id)}
-                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
-                  />
-                  <span className="text-slate-600 group-hover:text-slate-800 font-medium">
-                    {sort.label}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Loại sân */}
-          <div>
-            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
-              Loại sân
-            </h3>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-              {["Cầu lông", "Bóng đá", "Pickleball", "Tennis"].map((cat) => (
-                <label
-                  key={cat}
-                  className="flex items-center gap-2 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="categoryCourt"
-                    checked={selectedCategory === cat}
-                    onChange={() => setSelectedCategory(cat)}
-                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
-                  />
-                  <span
-                    className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
-                    title={cat}
-                  >
-                    {cat}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <br />
-
-          {/* Thể thức */}
-          <div className="mb-8">
-            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
-              Thể thức
-            </h3>
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-              {[
-                { id: "ALL", label: "Tất cả" },
-                { id: "NORMAL", label: "Đánh thường" },
-                { id: "BET", label: "Đánh kèo" },
-                { id: "RANKED", label: "Đánh Rank" },
-              ].map((type) => (
-                <label
-                  key={type.id}
-                  className="flex items-center gap-2 cursor-pointer group"
-                >
-                  <input
-                    type="radio"
-                    name="matchType"
-                    checked={typeFilter === type.id}
-                    onChange={() => setTypeFilter(type.id)}
-                    className="w-4 h-4 text-purple-600 bg-slate-100 border-slate-300 focus:ring-purple-500 cursor-pointer"
-                  />
-                  <span
-                    className="text-slate-600 text-sm font-medium group-hover:text-slate-800 truncate"
-                    title={type.label}
-                  >
-                    {type.label}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Khu vực Tỉnh/Thành */}
-          <div className="mb-6">
-            <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider">
-              Tỉnh / Thành phố
-            </h3>
-            <select
-              value={selectedLocation}
-              onChange={(e) => {
-                const name = e.target.value;
-                setSelectedLocation(name);
-                setSelectedDistrict("");
-                setDistricts([]);
-
-                const selectedProv = provinces.find((p) => p.name === name);
-                if (selectedProv) {
-                  locationService
-                    .getWardsByProvince(selectedProv.code)
-                    .then((data) => setDistricts(data || []));
-                }
+            <Button
+              type="primary"
+              size="large"
+              icon={<Zap size={18} className="fill-white" />}
+              onClick={() => setIsAutoMatchOpen(true)}
+              style={{
+                backgroundColor: "#9156F1",
+                borderColor: "#9156F1",
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                padding: "0 24px",
               }}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer text-sm transition-colors hover:border-slate-300"
+              className="font-bold shadow-sm hover:opacity-90"
             >
-              <option value="">-- Tất cả Tỉnh/Thành --</option>
-              {provinces.map((city) => (
-                <option key={city.code} value={city.name}>
-                  {city.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              Ghép Trận
+            </Button>
 
-          {/* Khu vực Quận/Huyện */}
-          <div className="mb-8">
-            <h3 className="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">
-              Quận / Huyện
-            </h3>
-            <select
-              value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
-              disabled={!selectedLocation || districts.length === 0}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm transition-colors hover:border-slate-300"
+            <Button
+              size="large"
+              icon={<Calendar size={18} />} 
+              onClick={() => navigate("/my-matches")}
+              style={{
+                borderRadius: "12px",
+                display: "flex",
+                alignItems: "center",
+                padding: "0 24px",
+                color: "#f97316",
+                borderColor: "#f97316",
+              }}
+              className="font-bold shadow-sm hover:opacity-80"
             >
-              <option value="">
-                {selectedLocation
-                  ? "-- Tất cả Quận/Huyện --"
-                  : "-- Chọn Tỉnh/Thành trước --"}
-              </option>
-              {districts.map((district) => (
-                <option key={district.code} value={district.name}>
-                  {district.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              Trận Của Tôi
+            </Button>
+          </Space>
         </div>
 
-        {/* GRID DANH SÁCH MATCHES */}
-        <div className="flex-1 w-full">
-          {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-purple-600 border-t-transparent"></div>
-            </div>
-          ) : filteredMatches.length === 0 ? (
-            <div className="bg-white p-10 rounded-2xl border border-slate-200 text-center text-slate-500 flex flex-col items-center justify-center">
-              <p className="font-semibold text-lg mb-2">
-                Không tìm thấy trận đấu nào!
-              </p>
-              <p className="text-sm">
-                Hãy thử chọn "Làm mới" hoặc thay đổi tiêu chí bộ lọc của bạn.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMatches.map((match) => (
-                <div
-                  key={match.matchId}
-                  className="bg-white rounded-2xl border border-slate-200 relative shadow-sm hover:shadow-md hover:border-purple-200 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden"
-                >
-                  <div
-                    className="p-5 pb-2 cursor-pointer group flex-grow relative"
-                    onClick={() => handleOpenJoinModal(match)}
-                  >
-                    <div className="absolute top-5 right-5 flex flex-col items-end gap-2">
-                      <span
-                        className={`text-[11px] px-2 py-1 rounded-md font-bold whitespace-nowrap shadow-sm ${
-                          match.matchType === "RANKED"
-                            ? "bg-purple-50 text-purple-700"
-                            : match.matchType === "BET"
-                            ? "bg-orange-50 text-orange-700 border border-orange-100"
-                            : "bg-slate-50 text-slate-600"
-                        }`}
-                      >
-                        <span className="flex items-center gap-1.5">
-                          {match.matchType === "RANKED" && (
-                            <>
-                              <Trophy size={14} />
-                              Rank ({match.minRank}-{match.maxRank})
-                            </>
-                          )}
-                          {match.matchType === "BET" && (
-                            <>
-                              <Flame size={14} />
-                              Kèo: {match.note || "Tự thỏa thuận"}
-                            </>
-                          )}
-                          {match.matchType !== "RANKED" &&
-                            match.matchType !== "BET" && (
-                              <>
-                                <Smile size={14} />
-                                Giao lưu
-                              </>
-                            )}
-                        </span>
-                      </span>
-                    </div>
+        <JoinMatchModal
+          isOpen={isJoinModalOpen}
+          onClose={() => setIsJoinModalOpen(false)}
+          onSuccess={() => fetchMatches(currentPage)}
+          match={selectedMatch}
+        />
+        <AutoMatchModal
+          isOpen={isAutoMatchOpen}
+          onClose={() => setIsAutoMatchOpen(false)}
+          onSuccess={() => fetchMatches(currentPage)}
+        />
 
-                    <div className="flex flex-col items-start mb-4 mt-6">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span
-                          className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider inline-block ${
-                            match.hasCourt
-                              ? "bg-purple-50 text-purple-600"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {match.hasCourt ? "Sân cố định" : "Kèo tự do"}
-                        </span>
-                        <span className="text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider bg-orange-100 text-orange-700">
-                          Mã: {match.roomCode || "TRỐNG"}
-                        </span>
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-800 pr-4 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                        {match.title || `Giao lưu ${match.categoryName}`}
-                      </h3>
-                      <p className="text-purple-600 text-sm font-semibold mt-1">
-                        {match.categoryName}
-                      </p>
-                    </div>
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          <MatchFilter
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            typeFilter={typeFilter}
+            setTypeFilter={setTypeFilter}
+            selectedLocation={selectedLocation}
+            setSelectedLocation={setSelectedLocation}
+            selectedWard={selectedWard}
+            setSelectedWard={setSelectedWard}
+            provinces={provinces}
+            wards={wards}
+            setWards={setWards}
+            resetFilters={resetFilters}
+          />
 
-                    <div className="space-y-3 mb-4 text-slate-600">
-                      <div className="flex items-start gap-2.5">
-                        <MapPin
-                          size={16}
-                          className="text-slate-400 shrink-0 mt-0.5"
-                        />
-                        <span className="text-sm font-medium line-clamp-2 leading-tight">
-                          {match.address?.street +
-                            ", " +
-                            match.address?.ward +
-                            ", " +
-                            match.address?.district +
-                            ", " +
-                            match.address?.city?.cityName}
-                        </span>
-                      </div>
+          <div className="flex-1 w-full">
+            {loading ? (
+              <div className="flex justify-center items-center py-20">
+                <Spin size="large" />
+              </div>
+            ) : filteredMatches.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <span className="text-slate-500 font-medium text-base">
+                    Không tìm thấy trận đấu nào! <br />
+                    <span className="text-sm font-normal">
+                      Hãy thử chọn "Làm mới" hoặc thay đổi tiêu chí bộ lọc của
+                      bạn.
+                    </span>
+                  </span>
+                }
+                className="bg-white p-10 rounded-2xl border border-slate-200"
+              />
+            ) : (
+              <>
+                <Row gutter={[24, 24]}>
+                  {filteredMatches.map((match) => (
+                    <Col xs={24} md={12} xl={8} key={match.matchId}>
+                      <MatchCard
+                        match={match}
+                        onOpenJoinModal={handleOpenJoinModal}
+                        onJoinSuccess={() => fetchMatches(currentPage)}
+                      />
+                    </Col>
+                  ))}
+                </Row>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar
-                            size={16}
-                            className="text-slate-400 shrink-0"
-                          />
-                          <span className="text-sm font-medium">
-                            {formatDate(match.startTime)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock
-                            size={16}
-                            className="text-slate-400 shrink-0"
-                          />
-                          <span className="text-sm font-medium">
-                            {formatTime(match.startTime)} -{" "}
-                            {formatTime(match.endTime)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 pt-2">
-                        <div className="flex justify-between items-center text-xs font-semibold">
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <Users size={14} />
-                            <span>
-                              {match.currentPlayers}/{match.maxPlayers} người
-                            </span>
-                          </div>
-                          <span className="text-emerald-600">
-                            Còn {match.remainingSlots} slot
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="bg-purple-500 h-full transition-all duration-700 rounded-full"
-                            style={{
-                              width: `${Math.min(
-                                (match.currentPlayers /
-                                  (match.maxPlayers || 1)) *
-                                  100,
-                                100,
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                {totalElements > PAGE_SIZE && (
+                  <div className="flex justify-center mt-8">
+                    <Pagination
+                      current={currentPage}
+                      pageSize={PAGE_SIZE}
+                      total={totalElements}
+                      onChange={handlePageChange}
+                      showSizeChanger={false}
+                    />
                   </div>
-
-                  <div className="flex justify-between items-center border-t border-slate-100 bg-slate-50/80 p-4 mt-auto">
-                    <div>
-                      {isValidPrice(match.courtPrice) ? (
-                        <p className="font-bold text-slate-800 text-base">
-                          {Number(match.courtPrice).toLocaleString()}đ
-                        </p>
-                      ) : (
-                        <p className="font-medium text-slate-500 text-sm">
-                          Sân tự thỏa thuận
-                        </p>
-                      )}
-                      <p
-                        className="text-[12px] text-slate-500 font-medium mt-0.5 cursor-pointer hover:text-purple-600 hover:underline transition-colors flex items-center gap-1"
-                        title="Xem hồ sơ người tạo"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const hostUser = match.participants?.find(
-                            (p: any) => p.userName === match.hostName,
-                          );
-                          const hostId =
-                            (match as any).hostId || hostUser?.userId;
-                          if (hostId) navigate(`/player/${hostId}`);
-                          else
-                            message.info(
-                              "Không tìm thấy thông tin hồ sơ của Host!",
-                            );
-                        }}
-                      >
-                        Host:{" "}
-                        <span className="text-purple-600 font-semibold">
-                          {match.hostName}
-                        </span>
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2.5">
-                      <button
-                        onClick={(e) => handleChatClick(e, match)}
-                        className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-purple-600 rounded-xl transition-all shadow-sm"
-                        title="Chat với chủ phòng"
-                      >
-                        <MessageCircle size={18} />
-                      </button>
-                      {renderActionButton(match)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

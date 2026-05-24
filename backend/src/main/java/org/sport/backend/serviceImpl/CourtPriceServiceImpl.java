@@ -1,5 +1,6 @@
 package org.sport.backend.serviceImpl;
 
+import org.sport.backend.constant.DayType;
 import org.sport.backend.constant.PriceType;
 import org.sport.backend.dto.request.court_price.CourtPriceRequest;
 import org.sport.backend.dto.response.court_price.CourtPriceResponse;
@@ -39,9 +40,12 @@ public class CourtPriceServiceImpl implements CourtPriceService {
                 .court(court)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
                 .pricePerHour(request.getPricePerHour())
                 .specificDate(request.getSpecificDate())
                 .priceType(request.getPriceType())
+                .dayType(request.getDayType())
                 .priority(request.getPriority())
                 .build();
 
@@ -65,9 +69,12 @@ public class CourtPriceServiceImpl implements CourtPriceService {
 
         if (request.getStartTime() != null) price.setStartTime(request.getStartTime());
         if (request.getEndTime() != null) price.setEndTime(request.getEndTime());
+        if (request.getStartDate() != null) price.setStartDate(request.getStartDate());
+        if (request.getEndDate() != null) price.setEndDate(request.getEndDate());
         if (request.getPricePerHour() != null) price.setPricePerHour(request.getPricePerHour());
         if (request.getSpecificDate() != null) price.setSpecificDate(request.getSpecificDate());
         if (request.getPriceType() != null) price.setPriceType(request.getPriceType());
+        if (request.getDayType() != null) price.setDayType(request.getDayType());
         if (request.getPriority() != null) price.setPriority(request.getPriority());
 
         return mapToResponse(courtPriceRepository.save(price));
@@ -84,9 +91,12 @@ public class CourtPriceServiceImpl implements CourtPriceService {
                 .courtId(p.getCourt().getCourtId())
                 .startTime(p.getStartTime())
                 .endTime(p.getEndTime())
+                .startDate(p.getStartDate())
+                .endDate(p.getEndDate())
                 .pricePerHour(p.getPricePerHour())
                 .specificDate(p.getSpecificDate())
                 .priceType(p.getPriceType())
+                .dayType(p.getDayType())
                 .priority(p.getPriority())
                 .build();
     }
@@ -124,27 +134,31 @@ public class CourtPriceServiceImpl implements CourtPriceService {
         return totalPrice.setScale(0, RoundingMode.HALF_UP);
     }
 
-
     private BigDecimal findBestPrice(List<CourtPrice> prices, LocalDateTime moment) {
         LocalTime time = moment.toLocalTime();
         LocalDate date = moment.toLocalDate();
-        DayOfWeek dow  = date.getDayOfWeek();
+        DayOfWeek dow = date.getDayOfWeek();
+        boolean isWeekend = (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY);
 
         for (CourtPrice cp : prices) {
             if (!isTimeInRange(time, cp.getStartTime(), cp.getEndTime())) {
                 continue;
             }
 
+            if (cp.getStartDate() != null && date.isBefore(cp.getStartDate())) continue;
+            if (cp.getEndDate() != null && date.isAfter(cp.getEndDate())) continue;
+            if (cp.getSpecificDate() != null && !cp.getSpecificDate().equals(date)) {
+                continue;
+            }
+            if (cp.getDayType() != null && cp.getDayType() != DayType.ALL) {
+                if (cp.getDayType() == DayType.WEEKDAY && isWeekend) continue;
+                if (cp.getDayType() == DayType.WEEKEND && !isWeekend) continue;
+            }
+
             switch (cp.getPriceType()) {
 
                 case NORMAL -> {
                     return cp.getPricePerHour();
-                }
-
-                case WEEKEND -> {
-                    if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
-                        return cp.getPricePerHour();
-                    }
                 }
 
                 case PEAK -> {
@@ -167,14 +181,12 @@ public class CourtPriceServiceImpl implements CourtPriceService {
             }
         }
 
-
         return prices.stream()
                 .filter(cp -> cp.getPriceType() == PriceType.NORMAL)
                 .map(CourtPrice::getPricePerHour)
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
     }
-
 
     private boolean isTimeInRange(LocalTime time, LocalTime start, LocalTime end) {
         if (start == null || end == null) return true; // null = áp dụng cả ngày

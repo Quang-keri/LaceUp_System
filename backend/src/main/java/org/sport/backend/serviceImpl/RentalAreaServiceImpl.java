@@ -8,7 +8,6 @@ import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.bank.BankAccountResponse;
-import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtImageResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
@@ -22,7 +21,6 @@ import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
 import org.sport.backend.dto.response.rental.RentalAreaOptionResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
-import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
@@ -293,6 +291,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .verificationStatus(rentalArea.getVerificationStatus())
                 .serviceItems(serviceItems)
                 .legalProfileResponse(legalProfileResponse)
+                .closeTime(rentalArea.getCloseTime())
+                .openTime(rentalArea.getOpenTime())
                 .build();
     }
 
@@ -381,6 +381,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             int size,
             String keyword,
             Integer provinceCode,
+            String ward,
             VerificationStatus verificationStatus,
             LocalDateTime fromDate,
             LocalDateTime toDate
@@ -394,6 +395,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         Specification<RentalArea> spec = Specification
                 .where(RentalAreaSpecification.isNotDeleted())
                 .and(RentalAreaSpecification.hasProvinceCode(provinceCode))
+                .and(RentalAreaSpecification.hasWard(ward))
                 .and(RentalAreaSpecification.hasVerificationStatus(verificationStatus))
                 .and(RentalAreaSpecification.hasKeyword(keyword))
                 .and(RentalAreaSpecification.fromDate(fromDate))
@@ -698,6 +700,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .contactPhone(rentalArea.getContactPhone())
                 .status(rentalArea.getStatus())
                 .city(cityResponse)
+                .openTime(rentalArea.getOpenTime())
+                .closeTime(rentalArea.getCloseTime())
                 .images(images)
                 .courts(courtResponses)
                 .ownerId(rentalArea.getOwner().getUserId())

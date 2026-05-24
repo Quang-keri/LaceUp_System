@@ -1,7 +1,6 @@
 import api from "../../config/axios";
 import type {
   RentalAreaResponse,
-  CreateRentalAreaRequest,
   UpdateRentalAreaRequest,
   RentalAreaListResponse,
 } from "../../types/rental";
@@ -43,6 +42,7 @@ class RentalService {
     size = 10,
     keyword?: string,
     provinceCode?: number,
+    ward?: string,
     verificationStatus?: string,
   ) {
     const res = await api.get("/rental-areas", {
@@ -51,6 +51,7 @@ class RentalService {
         size,
         keyword: keyword || undefined,
         provinceCode,
+        ward,
         verificationStatus,
       },
     });
@@ -132,7 +133,6 @@ class RentalService {
   }
 
   async approveRentalArea(rentalAreaId: string) {
-
     const response = await api.put<ApiResponse<void>>(
       `/rental-areas/${rentalAreaId}/approve`,
     );

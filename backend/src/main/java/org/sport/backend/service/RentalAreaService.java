@@ -19,11 +19,13 @@ public interface RentalAreaService {
      void approveRentalArea(UUID rentalAreaId);
     void rejectRentalArea(UUID rentalAreaId, String reason);
     RentalAreaResponse createRentalArea(RentalAreaRequest request, List<MultipartFile> images);
+
     PageResponse<RentalAreaResponse> getAllRentalAreas(
             int page,
             int size,
             String keyword,
             Integer provinceCode,
+            String ward,
             VerificationStatus verificationStatus,
             LocalDateTime fromDate,
             LocalDateTime toDate

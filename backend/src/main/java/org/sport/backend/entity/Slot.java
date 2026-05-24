@@ -46,4 +46,8 @@ public class Slot extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "court_copy_id")
     CourtCopy courtCopy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_id")
+    Match match;
 }

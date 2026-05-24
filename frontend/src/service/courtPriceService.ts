@@ -2,12 +2,15 @@ import api from "../config/axios";
 import type { ApiResponse } from "../types/ApiResponse";
 
 export interface CourtPriceRequest {
-   courtId: string;
+  courtId?: string;
   startTime?: string;
   endTime?: string;
+  startDate?: string;
+  endDate?: string;
   pricePerHour?: number;
   specificDate?: string;
   priceType?: string;
+  dayType?: string;
   priority?: number;
 }
 
@@ -15,9 +18,12 @@ export interface CourtPriceResponse {
   courtPriceId: string;
   startTime: string;
   endTime: string;
+  startDate: string;
+  endDate: string;
   pricePerHour: number;
   specificDate?: string;
   priceType: string;
+  dayType: string;
   priority: number;
 }
 

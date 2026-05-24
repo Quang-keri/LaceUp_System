@@ -6,13 +6,9 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.util.UUID;
 
-
-
 import org.sport.backend.constant.RentalAreaStatus;
 
-
 import java.time.LocalDateTime;
-
 
 public class RentalAreaSpecification {
 
@@ -20,9 +16,7 @@ public class RentalAreaSpecification {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }
 
-    public static Specification<RentalArea> hasVerificationStatus(
-            VerificationStatus verificationStatus
-    ) {
+    public static Specification<RentalArea> hasVerificationStatus(VerificationStatus verificationStatus) {
         return (root, query, cb) -> {
             if (verificationStatus == null) return null;
             return cb.equal(root.get("verificationStatus"), verificationStatus);
@@ -32,11 +26,8 @@ public class RentalAreaSpecification {
     public static Specification<RentalArea> hasProvinceCode(Integer provinceCode) {
         return (root, query, cb) -> {
             if (provinceCode == null) return null;
-
             return cb.equal(
-                    root.get("address")
-                            .get("city")
-                            .get("provinceCode"),
+                    root.get("address").get("city").get("provinceCode"),
                     provinceCode
             );
         };
@@ -50,26 +41,9 @@ public class RentalAreaSpecification {
 
             return cb.or(
                     cb.like(cb.lower(root.get("rentalAreaName")), like),
-
-                    cb.like(
-                            cb.lower(root.get("address").get("street")),
-                            like
-                    ),
-
-                    cb.like(
-                            cb.lower(root.get("address").get("ward")),
-                            like
-                    ),
-
-                    cb.like(
-                            cb.lower(root.get("address").get("cityName")),
-                            like
-                    ),
-
-                    cb.like(
-                            cb.lower(root.get("address").get("city").get("cityName")),
-                            like
-                    )
+                    cb.like(cb.lower(root.get("address").get("street")), like),
+                    cb.like(cb.lower(root.get("address").get("ward")), like),
+                    cb.like(cb.lower(root.get("address").get("city").get("cityName")), like)
             );
         };
     }
@@ -99,6 +73,13 @@ public class RentalAreaSpecification {
         return (root, query, cb) -> {
             if (to == null) return null;
             return cb.lessThanOrEqualTo(root.get("createdAt"), to);
+        };
+    }
+
+    public static Specification<RentalArea> hasWard(String ward) {
+        return (root, query, cb) -> {
+            if (ward == null || ward.isBlank()) return null;
+            return cb.equal(root.get("address").get("ward"), ward.trim());
         };
     }
 }

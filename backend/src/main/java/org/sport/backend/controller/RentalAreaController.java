@@ -2,7 +2,6 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.RentalAreaStatus;
@@ -28,11 +27,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/rental-areas")
 @Tag(name = "9. Rental Area")
-
 public class RentalAreaController {
 
     @Autowired
-    private  RentalAreaService rentalAreaService;
+    private RentalAreaService rentalAreaService;
     @Autowired
     private ServiceItemService serviceItemService;
 
@@ -101,6 +99,7 @@ public class RentalAreaController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer provinceCode,
+            @RequestParam(required = false) String ward,
             @RequestParam(required = false) VerificationStatus verificationStatus,
             @RequestParam(required = false) LocalDateTime fromDate,
             @RequestParam(required = false) LocalDateTime toDate
@@ -113,6 +112,7 @@ public class RentalAreaController {
                         size,
                         keyword,
                         provinceCode,
+                        ward,
                         verificationStatus,
                         fromDate,
                         toDate

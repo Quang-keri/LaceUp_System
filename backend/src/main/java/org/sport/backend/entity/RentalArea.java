@@ -33,13 +33,13 @@ public class RentalArea extends BaseEntity {
     private String rentalAreaName;
 
     @Embedded
-    private  Address address;
+    private Address address;
 
     @Column(name = "contact_name", length = 100)
     private String contactName;
 
     @Column(name = "contact_phone", length = 20)
-    private  String contactPhone;
+    private String contactPhone;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
@@ -68,7 +68,7 @@ public class RentalArea extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
-    private  User owner;
+    private User owner;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     private List<Court> courts;

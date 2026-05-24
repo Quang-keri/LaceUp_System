@@ -2,7 +2,7 @@ import {
   Layout,
   Menu,
   Avatar,
-  Badge,
+  // Badge,
   Dropdown,
   Space,
   Button,
@@ -10,13 +10,13 @@ import {
   ConfigProvider,
 } from "antd";
 import {
-  BellOutlined,
+  // BellOutlined,
   UserOutlined,
   LogoutOutlined,
   WalletOutlined,
   SettingOutlined,
   LoginOutlined,
-  MessageOutlined,
+  // MessageOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -101,16 +101,16 @@ const AppHeader = () => {
         },
       ];
 
-  const iconButtonStyle = {
-    padding: "8px",
-    borderRadius: "50%",
-    background: "#f5f5f5",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.3s",
-  };
+  // const iconButtonStyle = {
+  //   padding: "8px",
+  //   borderRadius: "50%",
+  //   background: "#f5f5f5",
+  //   cursor: "pointer",
+  //   display: "flex",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   transition: "all 0.3s",
+  // };
 
   return (
     <div style={{ position: "sticky", top: 0, zIndex: 50, padding: "10px" }}>
@@ -204,7 +204,7 @@ const AppHeader = () => {
           >
             {isLoggedIn ? (
               <>
-                <Badge size="small" offset={[-2, 2]}>
+                {/* <Badge size="small" offset={[-2, 2]}>
                   <div
                     style={iconButtonStyle}
                     onClick={() => navigate("/chat")}
@@ -222,7 +222,7 @@ const AppHeader = () => {
                   >
                     <BellOutlined style={{ fontSize: 18, color: "#595959" }} />
                   </div>
-                </Badge>
+                </Badge> */}
 
                 <Dropdown
                   menu={{ items: userMenuItems }}

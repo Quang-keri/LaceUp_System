@@ -245,8 +245,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
                       ", " +
                       match.address?.ward +
                       ", " +
-                      match.address?.district +
-                      ", " +
                       match.address?.city?.cityName || "Tự thỏa thuận"}
               </Text>
             </div>

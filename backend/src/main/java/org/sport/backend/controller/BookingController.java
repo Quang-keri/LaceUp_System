@@ -37,7 +37,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/bookings")
 @Tag(name = "10. Booking")
-
 public class BookingController {
 
     @Autowired
@@ -351,6 +350,7 @@ public class BookingController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
     @PutMapping("/{bookingId}/cancel")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<BookingResponse>> cancelBooking(

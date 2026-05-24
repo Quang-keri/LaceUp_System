@@ -17,7 +17,6 @@ public class MatchResponse {
     private String roomCode;
     private String courtName;
     private String courtPrice;
-    private AddressResponse address;
     private String categoryName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

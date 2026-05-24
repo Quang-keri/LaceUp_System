@@ -14,7 +14,7 @@ import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useRentalForm } from "../../context/RentalFormContext";
 
 const PRICE_TYPES = [
-  { label: "Thường", value: "NORMAL" },
+  { label: "Thứ 2 - thứ 6", value: "NORMAL" },
   { label: "Cuối tuần", value: "WEEKEND" },
   { label: "Giờ cao điểm", value: "PEAK" },
   { label: "Ngày lễ", value: "HOLIDAY" },

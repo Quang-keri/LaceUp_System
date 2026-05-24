@@ -16,14 +16,14 @@ import {
     ReloadOutlined,
     EyeOutlined,
     CalendarOutlined,
-    PlusOutlined // Import thêm icon dấu cộng
+    PlusOutlined
 } from "@ant-design/icons";
 import type {ColumnsType} from "antd/es/table";
 import matchService from "../../../service/match/matchService.ts";
 import type {MatchResponse} from "../../../types/match.ts";
 import dayjs from "dayjs";
 import MatchDetailModal from "./MatchDetailModal.tsx";
-import CreateMatchModal from "./CreateMatchModal.tsx"; // Import Modal tạo trận
+import CreateMatchModal from "./CreateMatchModal.tsx";
 
 const {Title} = Typography;
 const {RangePicker} = DatePicker;
@@ -33,14 +33,11 @@ const MatchManagement: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [totalElements, setTotalElements] = useState(0);
 
-    // Quản lý Modal Chi tiết
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(null);
 
-    // Quản lý Modal Tạo trận
     const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
 
-    // State cho bộ lọc
     const [params, setParams] = useState({
         page: 1,
         size: 10,
@@ -59,8 +56,7 @@ const MatchManagement: React.FC = () => {
                 params.size
             );
 
-            if (res.code === 1000 || res.code === 0) {
-                // Kiểm tra cấu trúc trả về của PageResponse
+            if (res.code === 200) {
                 setData(res.result.data);
                 setTotalElements(res.result.totalElements);
             }

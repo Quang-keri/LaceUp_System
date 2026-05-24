@@ -1,4 +1,9 @@
-const Section = ({ title, children }) => (
+interface SectionProps {
+  title?: string;
+  children: React.ReactNode;
+}
+
+const Section = ({ title, children }: SectionProps) => (
   <div
     style={{
       background: "#fff",

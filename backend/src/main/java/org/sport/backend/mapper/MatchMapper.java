@@ -18,16 +18,14 @@ import java.util.stream.Collectors;
 public interface MatchMapper {
 
     UserMapper userMapper = Mappers.getMapper(UserMapper.class);
-    AddressMapper addressMapper = Mappers.getMapper(AddressMapper.class);
 
     default MatchResponse toResponse(Match match) {
         if (match == null) return null;
 
         return MatchResponse.builder()
                 .matchId(match.getMatchId())
-                .roomCode(match.getRoomCode()) // ✅ Ánh xạ mã phòng
+                .roomCode(match.getRoomCode())
                 .courtName(match.getCourt() != null ? match.getCourt().getCourtName() : "Sân tự thỏa thuận")
-                .address(addressMapper.toAddressResponse(match.getAddress()))
                 .categoryName(match.getCategory() != null ? match.getCategory().getCategoryName() : "Chưa xác định")
                 .startTime(match.getStartTime())
                 .endTime(match.getEndTime())

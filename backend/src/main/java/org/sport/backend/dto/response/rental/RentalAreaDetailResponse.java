@@ -7,6 +7,7 @@ import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,9 +25,8 @@ public class RentalAreaDetailResponse {
     private String contactPhone;
     private UUID ownerId;
     private CityResponse city;
-    private String street;
-    private String ward;
-    private String district;
+    private LocalTime openTime;
+    private LocalTime closeTime;
     private String gmailLink;
     private String facebookLink;
     private BankAccountResponse bankAccount;

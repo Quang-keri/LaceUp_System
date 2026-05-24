@@ -1,6 +1,11 @@
+interface SectionProps {
+  title?: string;
+  children: React.ReactNode;
+}
+
 const PURPLE = "#9156F1";
 
-const Section = ({ title, children }) => {
+const Section = ({ title, children }: SectionProps) => {
   return (
     <div
       style={{

@@ -6,7 +6,6 @@ export interface MatchRequest {
   categoryId: number;
   street: string;
   ward: string;
-  district: string;
   cityId: number;
   startTime: string;
   endTime: string;

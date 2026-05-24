@@ -6,4 +6,7 @@ public enum SlotStatus {
     COMPLETED,
     CANCELLED,
     PENDING,
+    MATCH_FULL,
+    MATCH_PENDING,
+    LOCKED,
 }

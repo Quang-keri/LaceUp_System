@@ -29,7 +29,6 @@ public class TotalWinsChecker implements AchievementChecker {
     public boolean hasQualified(User user, MatchResult currentResult) {
         long totalWins = matchResultRepository.countTotalWinsByUserId(user.getUserId());
 
-        // In log ra để xem đếm đúng không
         log.info("       * [Checker - {}] User [{}] đang có tổng {} trận thắng. (Mục tiêu cần: {})",
                 this.type.name(), user.getUserName(), totalWins, targetWins);
 

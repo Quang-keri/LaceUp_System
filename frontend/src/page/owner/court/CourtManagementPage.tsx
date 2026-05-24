@@ -11,7 +11,6 @@ import {
   Table,
   Dropdown,
   Tabs,
-  Popconfirm,
   Tag,
   Typography,
   Select,
@@ -21,9 +20,7 @@ import {
   PlusOutlined,
   DownOutlined,
   EditOutlined,
-  DeleteOutlined,
   DollarOutlined,
-  AppstoreAddOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -89,6 +86,10 @@ export default function CourtManagementPage() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedCourtForDetail, setSelectedCourtForDetail] =
     useState<string>("");
+
+  const currentBranch = branches.find(
+    (b) => b.rentalAreaId === selectedBranchId,
+  );
 
   useEffect(() => {
     loadBranches();
@@ -270,7 +271,14 @@ export default function CourtManagementPage() {
           <Button
             size="small"
             icon={<DollarOutlined />}
-            onClick={() => navigate(`/owner/courts/${record.courtId}/prices`)}
+            onClick={() =>
+              navigate(`/owner/courts/${record.courtId}/prices`, {
+                state: {
+                  openTime: currentBranch?.openTime,
+                  closeTime: currentBranch?.closeTime,
+                },
+              })
+            }
           >
             Giá sân
           </Button>
@@ -407,7 +415,7 @@ export default function CourtManagementPage() {
             style={{ borderRadius: 8 }}
           >
             <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 16 }}>
-              Chọn Chi nhánh
+              Cơ sở
             </div>
             {branches.length === 0 ? (
               <Skeleton.Input active block />

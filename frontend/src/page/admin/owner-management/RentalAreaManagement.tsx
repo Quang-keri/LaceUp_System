@@ -31,6 +31,10 @@ const RentalAreaManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(
     undefined,
   );
+  const [provinceCode, setProvinceCode] = useState<number | undefined>(
+    undefined,
+  );
+  const [ward, setWard] = useState<string | undefined>(undefined);
 
   const [page, setPage] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -91,7 +95,8 @@ const RentalAreaManagement: React.FC = () => {
         p,
         size,
         keyword,
-        undefined,
+        provinceCode,
+        ward,
         statusFilter,
       );
 
@@ -137,8 +142,9 @@ const RentalAreaManagement: React.FC = () => {
   };
 
   useEffect(() => {
+    setPage(1);
     fetchRentalAreas(1);
-  }, [statusFilter, keyword]);
+  }, [statusFilter, provinceCode, ward]);
 
   const handleApprove = async (id: string) => {
     try {
@@ -173,6 +179,15 @@ const RentalAreaManagement: React.FC = () => {
   };
 
   const columns = [
+    // --- THÊM CỘT STT Ở ĐÂY ---
+    {
+      title: "STT",
+      key: "stt",
+      width: 60,
+      align: "center" as const,
+      render: (_: any, __: any, index: number) => (page - 1) * size + index + 1,
+    },
+    // -------------------------
     {
       title: "Tên cơ sở",
       dataIndex: "name",
@@ -287,6 +302,10 @@ const RentalAreaManagement: React.FC = () => {
         keyword={keyword}
         setKeyword={setKeyword}
         setStatusFilter={setStatusFilter}
+        provinceCode={provinceCode}
+        setProvinceCode={setProvinceCode}
+        ward={ward}
+        setWard={setWard}
         onSearch={() => {
           setPage(1);
           fetchRentalAreas(1);
