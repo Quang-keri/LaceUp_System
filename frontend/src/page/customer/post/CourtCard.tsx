@@ -9,7 +9,7 @@ export default function CourtCard({ post, onClick }: any) {
   const hasRating = post.avgRating && post.avgRating > 0;
 
   return (
-    <div className="relative">
+    <div className="relative cursor-pointer" onClick={onClick}>
       {hasRating && (
         <div className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full shadow-md flex items-center gap-1">
           <StarFilled style={{ color: "#facc15" }} />
@@ -43,10 +43,6 @@ export default function CourtCard({ post, onClick }: any) {
           <Button
             size="small"
             type="primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
             style={{
               background: "#9156F1",
             }}

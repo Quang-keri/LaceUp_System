@@ -376,6 +376,8 @@ public class DataInitializer implements CommandLineRunner {
                 .status(RentalAreaStatus.ACTIVE)
                 .verificationStatus(VerificationStatus.VERIFIED)
                 .createdAt(LocalDateTime.now().minusMonths(2))
+                .latitude(10.80155)
+                .longitude(106.65421)
                 .build();
         rentalAreaRepository.save(area);
 
@@ -404,10 +406,28 @@ public class DataInitializer implements CommandLineRunner {
             courtCopyRepository.save(CourtCopy.builder()
                     .court(court).courtCode("STD-0" + i).courtCopyStatus(CourtCopyStatus.ACTIVE).build());
 
-            courtPriceRepository.save(CourtPrice.builder()
-                    .court(court).startTime(LocalTime.of(5, 0)).endTime(LocalTime.of(22, 0))
-                    .pricePerHour(BigDecimal.valueOf(80000)).priceType(PriceType.NORMAL).dayType(DayType.WEEKDAY).priority(1).build());
-        }
+            LocalDate eventStart = LocalDate.of(2026, 6, 1);
+            LocalDate eventEnd = LocalDate.of(2026, 6, 15);
+
+            List<CourtPrice> prices = new ArrayList<>();
+
+            prices.add(createPrice(court, 5, 12, eventStart, eventEnd, 170000, DayType.WEEKDAY, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 12, 18, eventStart, eventEnd, 160000, DayType.WEEKDAY, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 18, 22, eventStart, eventEnd, 180000, DayType.WEEKDAY, PriceType.EVENT, 2));
+
+            prices.add(createPrice(court, 5, 12, eventStart, eventEnd, 190000, DayType.WEEKEND, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 12, 18, eventStart, eventEnd, 180000, DayType.WEEKEND, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 18, 22, eventStart, eventEnd, 200000, DayType.WEEKEND, PriceType.EVENT, 2));
+
+            prices.add(createPrice(court, 5, 12, null, null, 90000, DayType.WEEKDAY, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 12, 18, null, null, 80000, DayType.WEEKDAY, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 18, 22, null, null, 100000, DayType.WEEKDAY, PriceType.NORMAL, 1));
+
+            prices.add(createPrice(court, 5, 12, null, null, 110000, DayType.WEEKEND, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 12, 18, null, null, 100000, DayType.WEEKEND, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 18, 22, null, null, 120000, DayType.WEEKEND, PriceType.NORMAL, 1));
+
+            courtPriceRepository.saveAll(prices);}
     }
 
     private void seedCategories() {
@@ -474,6 +494,22 @@ public class DataInitializer implements CommandLineRunner {
                 .title(area.getRentalAreaName()).description("Sân bãi tiêu chuẩn, đầy đủ tiện nghi cho mọi lứa tuổi.")
                 .postStatus(PostStatus.PUBLISHED).user(owner).court(court).rentalArea(area).build();
         postRepository.save(post);
+    }
+
+    private CourtPrice createPrice(Court court, int startHour, int endHour,
+                                   LocalDate startDate, LocalDate endDate,
+                                   int price, DayType dayType, PriceType priceType, int priority) {
+        return CourtPrice.builder()
+                .court(court)
+                .startTime(LocalTime.of(startHour, 0))
+                .endTime(LocalTime.of(endHour, 0))
+                .startDate(startDate)
+                .endDate(endDate)
+                .pricePerHour(BigDecimal.valueOf(price))
+                .dayType(dayType)
+                .priceType(priceType)
+                .priority(priority)
+                .build();
     }
 
 }

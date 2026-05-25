@@ -20,7 +20,6 @@ const SubmitResultModal: React.FC<SubmitResultModalProps> = ({
   const [winningTeam, setWinningTeam] = useState<number | null>(null);
   const [absentUsers, setAbsentUsers] = useState<string[]>([]);
 
-  // Phân tách danh sách người chơi theo từng đội hình
   const { team1, team2, allPlayers } = useMemo(() => {
     if (!match?.participants) return { team1: [], team2: [], allPlayers: [] };
     return {
@@ -82,14 +81,12 @@ const SubmitResultModal: React.FC<SubmitResultModalProps> = ({
       centered
     >
       <div className="mt-5 space-y-5">
-        {/* 1. CHỌN ĐỘI CHIẾN THẮNG (CUSTOM CARDS) */}
         <div>
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2.5">
             1. Đội hình nào chiến thắng?
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* CARD ĐỘI 1 */}
             <div
               onClick={() => setWinningTeam(1)}
               className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 select-none ${
@@ -127,7 +124,6 @@ const SubmitResultModal: React.FC<SubmitResultModalProps> = ({
               </div>
             </div>
 
-            {/* CARD ĐỘI 2 */}
             <div
               onClick={() => setWinningTeam(2)}
               className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 select-none ${
@@ -167,7 +163,6 @@ const SubmitResultModal: React.FC<SubmitResultModalProps> = ({
           </div>
         </div>
 
-        {/* 2. ĐIỂM DANH VẮNG MẶT */}
         <div className="bg-rose-50/60 p-4 rounded-xl border border-rose-100/70">
           <div className="flex items-center gap-2 font-bold text-rose-800 text-xs uppercase tracking-wider mb-1.5">
             <UserX size={15} /> 2. Điểm danh thành viên vắng mặt

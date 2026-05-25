@@ -30,6 +30,8 @@ export interface RentalAreaResponse {
   openTime?: string;
   closeTime?: string;
   isActive?: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface CreateRentalAreaRequest {

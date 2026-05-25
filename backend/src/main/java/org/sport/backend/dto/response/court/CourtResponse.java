@@ -19,22 +19,15 @@ import java.util.UUID;
 public class CourtResponse {
 
     private UUID courtId;
-
     private String courtName;
-
-//    private String courtCode;
-
     private BigDecimal pricePerHour;
-
     private CourtStatus status;
-
     private UUID rentalAreaId;
-
-    private List<CourtImageResponse> images;
-    private List<CourtCopyResponse> courtCopies;
-   private CategoryResponse category;
+    private CategoryResponse category;
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
     private List<CourtPriceResponse> priceRules;
+    private List<CourtImageResponse> images;
+    private List<CourtCopyResponse> courtCopies;
     private List<AmenityResponse> amenities;
 }

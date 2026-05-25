@@ -31,7 +31,9 @@ public class RentalAreaDetailResponse {
     private String facebookLink;
     private BankAccountResponse bankAccount;
     private List<RentalAreaImageResponse> images;
-     private RentalAreaStatus status;
+    private RentalAreaStatus status;
     private List<CourtSummaryResponse> courts;
+    private Double latitude;
+    private Double longitude;
 
 }

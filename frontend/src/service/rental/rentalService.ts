@@ -44,6 +44,10 @@ class RentalService {
     provinceCode?: number,
     ward?: string,
     verificationStatus?: string,
+    minLat?: number,
+    maxLat?: number,
+    minLng?: number,
+    maxLng?: number,
   ) {
     const res = await api.get("/rental-areas", {
       params: {
@@ -53,6 +57,10 @@ class RentalService {
         provinceCode,
         ward,
         verificationStatus,
+        minLat,
+        maxLat,
+        minLng,
+        maxLng,
       },
     });
 

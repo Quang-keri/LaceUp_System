@@ -1,22 +1,21 @@
 package org.sport.backend.serviceImpl;
 
+import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.request.amenity.CreateAmenityRequest;
 import org.sport.backend.dto.request.amenity.UpdateAmenityRequest;
 import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.entity.Amenity;
 import org.sport.backend.repository.AmenityRepository;
 import org.sport.backend.service.AmenityService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-
+@RequiredArgsConstructor
 public class AmenityServiceImpl implements AmenityService {
 
-    @Autowired
-   private AmenityRepository amenityRepository;
+    private final AmenityRepository amenityRepository;
 
     @Override
     public AmenityResponse createAmenity(CreateAmenityRequest request) {

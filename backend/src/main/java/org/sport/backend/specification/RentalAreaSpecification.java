@@ -82,4 +82,16 @@ public class RentalAreaSpecification {
             return cb.equal(root.get("address").get("ward"), ward.trim());
         };
     }
+
+    public static Specification<RentalArea> withinBounds(Double minLat, Double maxLat, Double minLng, Double maxLng) {
+        return (root, query, cb) -> {
+            if (minLat == null || maxLat == null || minLng == null || maxLng == null) {
+                return cb.conjunction();
+            }
+            return cb.and(
+                    cb.between(root.get("latitude"), minLat, maxLat),
+                    cb.between(root.get("longitude"), minLng, maxLng)
+            );
+        };
+    }
 }

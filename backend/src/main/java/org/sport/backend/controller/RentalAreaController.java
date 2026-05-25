@@ -2,6 +2,7 @@ package org.sport.backend.controller;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.RentalAreaStatus;
@@ -13,7 +14,6 @@ import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.service.RentalAreaService;
 import org.sport.backend.service.ServiceItemService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,13 +26,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/rental-areas")
+@RequiredArgsConstructor
 @Tag(name = "9. Rental Area")
 public class RentalAreaController {
 
-    @Autowired
-    private RentalAreaService rentalAreaService;
-    @Autowired
-    private ServiceItemService serviceItemService;
+    private final RentalAreaService rentalAreaService;
+    private final ServiceItemService serviceItemService;
 
     @GetMapping("/dropdown/options")
 //    @PreAuthorize("hasAuthority('VIEW_RENTAL_AREA')")
@@ -102,20 +101,21 @@ public class RentalAreaController {
             @RequestParam(required = false) String ward,
             @RequestParam(required = false) VerificationStatus verificationStatus,
             @RequestParam(required = false) LocalDateTime fromDate,
-            @RequestParam(required = false) LocalDateTime toDate
+            @RequestParam(required = false) LocalDateTime toDate,
+            @RequestParam(required = false) Double minLat,
+            @RequestParam(required = false) Double maxLat,
+            @RequestParam(required = false) Double minLng,
+            @RequestParam(required = false) Double maxLng
     ) {
         return ApiResponse.success(
                 200,
                 "Get all rental areas successfully",
                 rentalAreaService.getAllRentalAreas(
-                        page,
-                        size,
-                        keyword,
-                        provinceCode,
-                        ward,
+                        page, size, keyword,
+                        provinceCode, ward,
                         verificationStatus,
-                        fromDate,
-                        toDate
+                        fromDate, toDate,
+                        minLat, maxLat, minLng, maxLng
                 )
         );
     }

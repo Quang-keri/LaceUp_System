@@ -80,7 +80,6 @@ const ApproveResultModal: React.FC<ApproveResultModalProps> = ({
 
   if (!match) return null;
 
-  // Lấy danh sách thành viên bị báo vắng mặt dựa theo mảng ID trả về từ API kết quả
   const missingPlayers =
     match.participants?.filter((p: any) =>
       pendingResult?.absentUserIds?.includes(p.userId),
@@ -117,7 +116,6 @@ const ApproveResultModal: React.FC<ApproveResultModalProps> = ({
         </div>
       ) : (
         <div className="mt-4 space-y-4">
-          {/* CASE 1: NẾU MÌNH LÀ NGƯỜI GỬI BÁO CÁO KẾT QUẢ TRƯỚC */}
           {isSubmitter ? (
             <div className="text-center p-5 bg-purple-50/40 rounded-xl border border-purple-100 flex flex-col items-center">
               <h4 className="text-sm font-bold text-purple-900 m-0 mb-1">
@@ -135,10 +133,8 @@ const ApproveResultModal: React.FC<ApproveResultModalProps> = ({
               </Button>
             </div>
           ) : (
-            // CASE 2: MÌNH LÀ ĐỐI THỦ VÀ CẦN ĐỌC THÔNG TIN ĐỂ DUYỆT
             <>
               <div className="bg-gray-50 border border-gray-200/60 p-4 rounded-xl flex flex-col gap-3">
-                {/* HIỂN THỊ ĐỘI THẮNG ĐƯỢC KHAI BÁO */}
                 <div>
                   <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
                      Kết quả đối thủ khai báo thắng:
@@ -173,7 +169,6 @@ const ApproveResultModal: React.FC<ApproveResultModalProps> = ({
                   </div>
                 </div>
 
-                {/* HIỂN THỊ THÀNH VIÊN VẮNG MẶT NẾU CÓ */}
                 <div>
                   <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
                     Danh sách báo vắng mặt (Bị trừ uy tín):
@@ -205,7 +200,6 @@ const ApproveResultModal: React.FC<ApproveResultModalProps> = ({
                 </div>
               </div>
 
-              {/* THÔNG BÁO NHẮC NHỞ */}
               <div className="bg-amber-50/60 border border-amber-200/80 p-3 rounded-xl flex items-start gap-2 text-amber-800">
                 <AlertTriangle size={15} className="shrink-0 mt-0.5" />
                 <p className="text-xs m-0 leading-relaxed font-medium">
@@ -218,7 +212,6 @@ const ApproveResultModal: React.FC<ApproveResultModalProps> = ({
                 </p>
               </div>
 
-              {/* HÀNG NÚT BẤM ACTION ĐỒNG BỘ THEME */}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <Button
                   danger

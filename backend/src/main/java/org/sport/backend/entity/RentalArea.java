@@ -2,7 +2,6 @@ package org.sport.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
 import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.BaseEntity;
@@ -76,10 +75,10 @@ public class RentalArea extends BaseEntity {
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     private List<Booking> bookings;
 
-    @Column(name = "facebook_link", length = 255)
+    @Column(name = "facebook_link")
     private String facebookLink;
 
-    @Column(name = "gmail", length = 255)
+    @Column(name = "gmail")
     private String gmail;
 
     @Column(name = "reason")

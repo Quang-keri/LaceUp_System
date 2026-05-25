@@ -20,7 +20,6 @@ import CourtCopyPage from "../page/owner/court/CourtCopyPage.tsx";
 import RentalAreaDetailPage from "../page/customer/rental/RentalAreaDetailPage.tsx";
 import ManageSchedulePage from "../page/owner/booking/ManageSchedule/ManageSchedulePage.tsx";
 import PostManagementPage from "../page/owner/post/PostManagementPage";
-
 import OwnerProfilePage from "../page/owner/profile/OwnerProfilePage.tsx";
 import NotFound from "../page/NotFoundPage.tsx";
 import PaymentPage from "../page/customer/payment/PaymentPage.tsx";
@@ -45,7 +44,6 @@ import SettlementManagement from "../page/admin/finance/SettlementManagement.tsx
 import PayoutHistory from "../page/admin/finance/PayoutHistory.tsx";
 import CommissionConfigManagement from "../page/admin/comission/CommissionConfigManagement.tsx";
 import PlayerDashboard from "../page/customer/profile-page/MyDashboard.tsx";
-
 import { useAuth } from "../context/AuthContext.tsx";
 import { Spin } from "antd";
 import MyAchievements from "../page/customer/profile-page/MyAchievements.tsx";
@@ -58,7 +56,6 @@ import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManag
 import NewsPage from "../page/admin/news/NewsPage.tsx";
 import UserNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import UserNewsDetail from "../page/customer/news/UserNewsDetail.tsx";
-
 import PolicyLayout from "../layouts/PolicyLayout.tsx";
 import AboutPage from "../components/Footer/AboutPage.tsx";
 import PoliciesPage from "../components/Footer/PoliciesPage.tsx";
@@ -72,6 +69,7 @@ import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 import AdminCustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
 import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
 import UserLayout from "../layouts/UserLayout.tsx";
+import AreaMap from "../page/customer/area-map/AreaMap.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -106,6 +104,7 @@ export const router = createBrowserRouter([
       { path: "courts", element: <PostPage /> },
       { path: "comunity", element: <MatchPage /> },
       { path: "rental-area/:id", element: <RentalAreaDetailPage /> },
+      { path: "map", element: <AreaMap /> },
       {
         path: "payment/booking-result",
         element: <BookingPaymentResultPage />,

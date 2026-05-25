@@ -1,5 +1,6 @@
 package org.sport.backend.serviceImpl;
 
+import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.RentalAreaStatus;
@@ -26,12 +27,12 @@ import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.AddressMapper;
+import org.sport.backend.mapper.CategoryMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.CloudinaryService;
 import org.sport.backend.service.RentalAreaService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.RentalAreaSpecification;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,51 +48,27 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class RentalAreaServiceImpl implements RentalAreaService {
 
-    @Autowired
-    private RentalAreaRepository rentalAreaRepository;
+    private final RentalAreaRepository rentalAreaRepository;
+    private final UserRepository userRepository;
+    private final CityRepository cityRepository;
+    private final CloudinaryService cloudinaryService;
+    private final CourtRepository courtRepository;
+    private final CourtCopyRepository courtCopyRepository;
+    private final CourtImageRepository courtImageRepository;
+    private final RentalAreaImageRepository rentalAreaImageRepository;
+    private final CourtPriceRepository courtPriceRepository;
+    private final RoleRepository roleRepository;
+    private final ServiceItemRepository serviceItemRepository;
+    private final LegalProfileRepository legalProfileRepository;
+    private final BankAccountRepository bankAccountRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserService userService;
 
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private CityRepository cityRepository;
-
-    @Autowired
-    private CloudinaryService cloudinaryService;
-
-    @Autowired
-    private CourtRepository courtRepository;
-
-    @Autowired
-    private CourtCopyRepository courtCopyRepository;
-
-    @Autowired
-    private CourtImageRepository courtImageRepository;
-
-    @Autowired
-    private RentalAreaImageRepository rentalAreaImageRepository;
-
-    @Autowired
-    private CourtPriceRepository courtPriceRepository;
-
-    @Autowired
-    private AddressMapper addressMapper;
-
-    @Autowired
-    private RoleRepository roleRepository;
-
-    @Autowired
-    private ServiceItemRepository serviceItemRepository;
-    @Autowired
-    private LegalProfileRepository legalProfileRepository;
-
-    @Autowired
-    private BankAccountRepository bankAccountRepository;
+    private final AddressMapper addressMapper;
+    private final CategoryMapper categoryMapper;
 
     @Override
     public List<RentalAreaOptionResponse> getRentalAreaOptions() {
@@ -209,6 +186,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .status(rentalArea.getStatus())
                 .images(imageResponses)
                 .verificationStatus(rentalArea.getVerificationStatus())
+                .latitude(rentalArea.getLatitude())
+                .longitude(rentalArea.getLongitude())
                 .build();
     }
 
@@ -293,6 +272,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .legalProfileResponse(legalProfileResponse)
                 .closeTime(rentalArea.getCloseTime())
                 .openTime(rentalArea.getOpenTime())
+                .latitude(rentalArea.getLatitude())
+                .longitude(rentalArea.getLongitude())
                 .build();
     }
 
@@ -353,7 +334,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         BigDecimal maxPrice = null;
 
         if (result != null && !result.isEmpty()) {
-            Object[] range = result.get(0);
+            Object[] range = result.getFirst();
 
             minPrice = range[0] != null ? (BigDecimal) range[0] : null;
             maxPrice = range[1] != null ? (BigDecimal) range[1] : null;
@@ -372,19 +353,17 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .images(imageResponses)
                 .courtCopies(copyResponses)
                 .amenities(amenityResponses)
+                .category(categoryMapper.toCategoryResponse(court.getCategory()))
                 .build();
     }
 
     @Override
     public PageResponse<RentalAreaResponse> getAllRentalAreas(
-            int page,
-            int size,
-            String keyword,
-            Integer provinceCode,
-            String ward,
+            int page, int size, String keyword,
+            Integer provinceCode, String ward,
             VerificationStatus verificationStatus,
-            LocalDateTime fromDate,
-            LocalDateTime toDate
+            LocalDateTime fromDate, LocalDateTime toDate,
+            Double minLat, Double maxLat, Double minLng, Double maxLng
     ) {
         Pageable pageable = PageRequest.of(
                 page - 1,
@@ -399,7 +378,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .and(RentalAreaSpecification.hasVerificationStatus(verificationStatus))
                 .and(RentalAreaSpecification.hasKeyword(keyword))
                 .and(RentalAreaSpecification.fromDate(fromDate))
-                .and(RentalAreaSpecification.toDate(toDate));
+                .and(RentalAreaSpecification.toDate(toDate))
+                .and(RentalAreaSpecification.withinBounds(minLat, maxLat, minLng, maxLng));
 
         Page<RentalArea> rentalPage = rentalAreaRepository.findAll(spec, pageable);
 
@@ -611,7 +591,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                     .filter(img -> Boolean.TRUE.equals(img.getIsCover()))
                     .findFirst()
                     .map(CourtImageResponse::getImageUrl)
-                    .orElse(courtImages.isEmpty() ? null : courtImages.get(0).getImageUrl());
+                    .orElse(courtImages.isEmpty() ? null : courtImages.getFirst().getImageUrl());
 
             List<CourtCopyResponse> copies = courtCopyRepository
                     .findByCourt(court)
@@ -708,6 +688,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .gmailLink(rentalArea.getOwner().getEmail())
                 .facebookLink(rentalArea.getFacebookLink())
                 .bankAccount(bankAccountResponse)
+                .longitude(rentalArea.getLongitude())
+                .latitude(rentalArea.getLatitude())
                 .build();
     }
 

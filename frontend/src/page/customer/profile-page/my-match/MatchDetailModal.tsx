@@ -101,8 +101,8 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   const renderStatusTag = (status: string) => {
     const statusMap: Record<string, { text: string; color: string }> = {
       OPEN: { text: "Đang chờ người", color: "blue" },
-      READY: { text: "Sẵn sàng", color: "success" },
-      PLAYING: { text: "Đang thi đấu", color: "processing" },
+      READY: { text: "Sẵn sàng", color: "cyan" },
+      PLAYING: { text: "Đang thi đấu", color: "geekblue" },
       COMPLETED: { text: "Đã kết thúc", color: "default" },
       CANCELLED: { text: "Đã hủy", color: "error" },
     };
@@ -110,7 +110,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
     return (
       <Tag
         color={current.color}
-        className="font-semibold m-0 px-2.5 py-0.5 rounded-md"
+        className="font-medium m-0 px-2.5 py-1 rounded-md border-0 bg-gray-100"
       >
         {current.text}
       </Tag>
@@ -122,7 +122,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
     const date = new Date(isoString);
     return (
       date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) +
-      " " +
+      " - " +
       date.toLocaleDateString("vi-VN")
     );
   };
@@ -173,7 +173,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
               ? "Chi tiết kết quả"
               : match.matchType === "NORMAL"
               ? "Chi tiết trận đấu"
-              : "🏆 Đội hình trận đấu"}
+              : "Đội hình trận đấu"}
           </span>
           {renderStatusTag(match.status)}
         </div>
@@ -181,22 +181,21 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
       open={isOpen}
       onCancel={onClose}
       footer={null}
-      width={520}
+      width={540}
       centered
     >
-      <div className="mt-4 space-y-4">
-        {/* BANNER HIỂN THỊ ĐỘI THẮNG */}
+      <div className="mt-5 space-y-5">
         {match.status === "COMPLETED" &&
           (loadingResult ? (
-            <div className="flex justify-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="flex justify-center p-4 bg-gray-50 rounded-xl">
               <Spin size="small" />
             </div>
           ) : finalWinningTeam ? (
-            <div className="bg-emerald-50/60 border border-emerald-200/80 p-3.5 rounded-xl flex items-center gap-2.5 text-emerald-800">
-              <Trophy className="text-emerald-600 shrink-0" size={18} />
-              <div className="text-xs font-medium">
+            <div className="bg-green-50 border border-green-200 p-4 rounded-xl flex items-center gap-3 text-green-800">
+              <Trophy className="text-green-600 shrink-0" size={20} />
+              <div className="text-sm">
                 Trận đấu đã kết thúc. Kết quả chung cuộc:{" "}
-                <span className="font-bold text-emerald-700">
+                <span className="font-bold text-green-700">
                   Đội {finalWinningTeam} chiến thắng
                 </span>
                 .
@@ -204,49 +203,52 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
             </div>
           ) : null)}
 
-        {/* THÔNG TIN CHI TIẾT TRẬN ĐẤU */}
-        <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-200/60 flex flex-col gap-2.5">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3">
           <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-0.5">
-              Tên trận / Bộ môn
+            <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider block mb-1">
+              {match.categoryName || "Bộ môn"}
             </span>
-            <p className="font-extrabold text-gray-800 text-base m-0">
+            <p className="font-bold text-gray-900 text-lg m-0">
               {match.title || `Giao lưu ${match.categoryName}`}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 border-t border-b border-gray-200/50 py-2 my-0.5">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <ClockCircleOutlined className="text-orange-500" />
+          <div className="grid grid-cols-2 gap-4 border-y border-gray-100 py-3 my-1">
+            <div className="flex items-center gap-3">
+              <div className="bg-gray-50 p-2 rounded-lg">
+                <ClockCircleOutlined className="text-gray-500 text-lg" />
+              </div>
               <div>
-                <span className="text-[10px] text-gray-400 block font-medium">
-                  Bắt đầu
+                <span className="text-xs text-gray-500 block">
+                  Thời gian bắt đầu
                 </span>
-                <span className="font-bold text-gray-700 text-xs">
+                <span className="font-semibold text-gray-800 text-sm">
                   {formatTime(match.startTime)}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <KeyOutlined className="text-purple-500" />
+            <div className="flex items-center gap-3">
+              <div className="bg-gray-50 p-2 rounded-lg">
+                <KeyOutlined className="text-gray-500 text-lg" />
+              </div>
               <div>
-                <span className="text-[10px] text-gray-400 block font-medium">
-                  Mã phòng
-                </span>
-                <span className="font-mono font-black text-gray-800 text-xs">
+                <span className="text-xs text-gray-500 block">Mã phòng</span>
+                <span className="font-mono font-bold text-gray-800 text-sm">
                   {match.roomCode || "N/A"}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-start gap-2 text-sm text-gray-600">
-            <EnvironmentOutlined className="text-orange-500 mt-0.5 shrink-0" />
+          <div className="flex items-start gap-3">
+            <div className="bg-gray-50 p-2 rounded-lg mt-1 shrink-0">
+              <EnvironmentOutlined className="text-gray-500 text-lg" />
+            </div>
             <div>
-              <span className="font-bold text-gray-800 text-xs">
+              <span className="font-semibold text-gray-800 text-sm">
                 {match.courtName}
               </span>
-              <p className="text-[11px] text-gray-400 m-0 font-medium">
+              <p className="text-xs text-gray-500 m-0 mt-0.5 leading-relaxed">
                 {match.address
                   ? `${match.address.street}, ${match.address.ward}, ${match.address.city?.cityName}`
                   : "Chưa cập nhật địa chỉ"}
@@ -254,12 +256,12 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-200/60 text-xs mt-0.5">
-            <div className="flex items-center gap-1.5 text-gray-600 font-medium">
-              <DollarOutlined className="text-green-600 font-bold" />
+          <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg mt-2">
+            <div className="flex items-center gap-2 text-gray-600 font-medium text-sm">
+              <DollarOutlined />
               <span>Giá sân tham khảo:</span>
             </div>
-            <span className="font-black text-orange-600 text-sm">
+            <span className="font-bold text-gray-900 text-base">
               {match.courtPrice && !isNaN(Number(match.courtPrice))
                 ? Number(match.courtPrice).toLocaleString("vi-VN") + " đ"
                 : match.courtPrice || "Miễn phí"}
@@ -267,200 +269,185 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
           </div>
 
           {match.matchType === "BET" && (
-            <p className="text-orange-600 text-xs m-0 font-bold flex items-center gap-2 pt-0.5">
+            <p className="text-purple-600 text-sm m-0 font-medium flex items-center gap-2 mt-1">
               <FireOutlined /> Phần thưởng Kèo:{" "}
               {match.note || "Thỏa thuận tại sân"}
             </p>
           )}
         </div>
 
-        {/* CẢNH BÁO CHƯA CHỌN ĐỘI */}
         {isNeedSubmit && unassigned.length > 0 && (
-          <div className="bg-orange-50/50 border border-orange-200 p-3 rounded-xl text-orange-700 flex items-start gap-2">
-            <WarningOutlined className="mt-0.5" />
-            <p className="text-xs m-0 leading-tight font-medium">
+          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl text-amber-800 flex items-start gap-3">
+            <WarningOutlined className="mt-1 text-amber-600" />
+            <p className="text-sm m-0 leading-relaxed">
               Đang có{" "}
               <span className="font-bold">{unassigned.length} người chơi</span>{" "}
-              chưa chọn đội hình. Bắt buộc tất cả thành viên phải chọn đội thì
-              mới có thể gửi báo cáo kết quả trận đấu!
+              chưa chọn đội hình. Cần chia đội đầy đủ để có thể báo cáo kết quả!
             </p>
           </div>
         )}
 
-        {/* TIÊU ĐỀ DANH SÁCH NGƯỜI CHƠI */}
-        <div className="flex justify-between items-center pt-1">
-          <p className="font-bold text-gray-800 text-sm m-0">
-            Danh sách người chơi
-          </p>
-          <span className="text-purple-600 font-bold bg-purple-50 px-2.5 py-0.5 rounded-full text-[11px]">
-            {match.currentPlayers} / {match.maxPlayers} thành viên
-          </span>
-        </div>
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-gray-800 text-base m-0">
+              Đội hình & Người chơi
+            </h3>
+            <span className="text-gray-500 font-medium bg-gray-100 px-3 py-1 rounded-full text-xs">
+              {match.currentPlayers} / {match.maxPlayers} thành viên
+            </span>
+          </div>
 
-        {/* LIST NGƯỜI CHƠI */}
-        <div className="bg-gray-50/40 rounded-xl border border-gray-100 p-1.5 max-h-[220px] overflow-y-auto custom-scrollbar">
-          <List
-            dataSource={match.participants || []}
-            renderItem={(player: any) => {
-              const isMe = player.userId === user?.userId;
-              const isPlayerWinner =
-                finalWinningTeam && player.teamNumber === finalWinningTeam;
-              const isPlayerLoser =
-                finalWinningTeam &&
-                player.teamNumber &&
-                player.teamNumber !== finalWinningTeam;
+          <div className="bg-white rounded-xl border border-gray-200 p-2 max-h-[260px] overflow-y-auto custom-scrollbar shadow-sm">
+            <List
+              dataSource={match.participants || []}
+              renderItem={(player: any) => {
+                const isMe = player.userId === user?.userId;
+                const isPlayerWinner =
+                  finalWinningTeam && player.teamNumber === finalWinningTeam;
+                const isPlayerLoser =
+                  finalWinningTeam &&
+                  player.teamNumber &&
+                  player.teamNumber !== finalWinningTeam;
 
-              const exactRankObj = player.categoryRanks?.find(
-                (cr: any) => cr.categoryName === match.categoryName,
-              );
-              const displayRankPoint = exactRankObj
-                ? exactRankObj.rankPoint
-                : 3000;
+                const exactRankObj = player.categoryRanks?.find(
+                  (cr: any) => cr.categoryName === match.categoryName,
+                );
+                const displayRankPoint = exactRankObj
+                  ? exactRankObj.rankPoint
+                  : 3000;
+                const pointChange =
+                  matchResultData?.rankChanges?.[player.userId];
 
-              // Lấy điểm cộng trừ từ Backend
-              const pointChange = matchResultData?.rankChanges?.[player.userId];
-
-              return (
-                <List.Item
-                  className={`border transition-all rounded-xl px-3 py-2 mb-1.5 flex-col items-start ${
-                    isMe
-                      ? "bg-purple-50/40 border-purple-200/70"
-                      : "bg-white border-gray-200/60 shadow-2xs"
-                  }`}
-                >
-                  <div className="flex w-full justify-between items-center">
-                    <List.Item.Meta
-                      avatar={
-                        <Avatar className="bg-gradient-to-tr from-orange-500 to-purple-600 font-bold size-8 text-xs">
-                          {player.userName?.charAt(0)}
-                        </Avatar>
-                      }
-                      title={
-                        <span className="font-bold text-gray-800 text-xs flex items-center gap-1.5">
-                          {player.userName}
-                          {isMe && (
-                            <span className="text-purple-600 text-[10px] font-extrabold bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded">
-                              (Bạn)
-                            </span>
-                          )}
-                        </span>
-                      }
-                      description={
-                        <span className="text-[11px] text-gray-400 font-medium">
-                          Rank {match.categoryName}:{" "}
-                          <span className="text-orange-500 font-bold">
-                            {displayRankPoint}
+                return (
+                  <List.Item
+                    className={`border-b last:border-b-0 border-gray-100 px-3 py-3 flex-col items-start transition-colors ${
+                      isMe ? "bg-purple-50/30 rounded-lg" : ""
+                    }`}
+                  >
+                    <div className="flex w-full justify-between items-center">
+                      <List.Item.Meta
+                        avatar={
+                          <Avatar className="bg-purple-100 text-purple-600 font-bold size-10">
+                            {player.userName?.charAt(0)?.toUpperCase()}
+                          </Avatar>
+                        }
+                        title={
+                          <span className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                            {player.userName}
+                            {isMe && (
+                              <Tag
+                                color="purple"
+                                className="m-0 border-0 font-bold text-[10px]"
+                              >
+                                BẠN
+                              </Tag>
+                            )}
                           </span>
-                        </span>
-                      }
-                    />
-
-                    <div className="ml-2 shrink-0 flex items-center gap-2">
-                      {isMe && match.status !== "COMPLETED" ? (
-                        <Radio.Group
-                          size="small"
-                          buttonStyle="solid"
-                          value={teamAssignments[player.userId]}
-                          onChange={(e) =>
-                            setTeamAssignments((prev) => ({
-                              ...prev,
-                              [player.userId]: e.target.value,
-                            }))
-                          }
-                          className="custom-radio-team-detail"
-                        >
-                          <Radio.Button
-                            value={1}
-                            disabled={
-                              teamAssignments[player.userId] !== 1 &&
-                              isTeam1Full
-                            }
-                            className="text-[11px] font-semibold"
-                          >
-                            Đội 1
-                          </Radio.Button>
-                          <Radio.Button
-                            value={2}
-                            disabled={
-                              teamAssignments[player.userId] !== 2 &&
-                              isTeam2Full
-                            }
-                            className="text-[11px] font-semibold"
-                          >
-                            Đội 2
-                          </Radio.Button>
-                        </Radio.Group>
-                      ) : player.teamNumber ? (
-                        <Tag
-                          color={player.teamNumber === 1 ? "orange" : "purple"}
-                          className="m-0 font-bold px-2.5 py-0.5 rounded-md text-[11px]"
-                        >
-                          Đội {player.teamNumber}
-                        </Tag>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic font-medium">
-                          Chưa chọn đội
-                        </span>
-                      )}
-
-                      {/* BADGE THẮNG / THUA & ĐIỂM CỘNG TRỪ */}
-                      {match.status === "COMPLETED" && (
-                        <>
-                          {isPlayerWinner ? (
-                            <span className="flex items-center gap-1 text-green-700 font-black text-[10px] bg-green-50 border border-green-200 px-2 py-0.5 rounded-md shadow-2xs">
-                              <CheckCircle2
-                                size={11}
-                                className="text-green-600"
-                              />{" "}
-                              THẮNG
+                        }
+                        description={
+                          <span className="text-xs text-gray-500 mt-0.5 block">
+                            Điểm Rank:{" "}
+                            <span className="font-semibold text-gray-700">
+                              {displayRankPoint}
                             </span>
-                          ) : isPlayerLoser ? (
-                            <span className="flex items-center gap-1 text-red-600 font-black text-[10px] bg-red-50 border border-red-100 px-2 py-0.5 rounded-md shadow-2xs">
-                              <XCircle size={11} className="text-red-500" />{" "}
-                              THUA
-                            </span>
-                          ) : null}
+                          </span>
+                        }
+                      />
 
-                          {/* SỬA Ở ĐÂY: Thêm isMe && vào trước điều kiện */}
-                          {isMe && pointChange !== undefined && (
-                            <span
-                              className={`flex items-center justify-center min-w-[38px] font-black text-[10px] px-1.5 py-0.5 rounded-md shadow-2xs border ${
-                                pointChange > 0
-                                  ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                  : pointChange < 0
-                                  ? "bg-rose-50 text-rose-600 border-rose-200"
-                                  : "bg-gray-100 text-gray-500 border-gray-200"
-                              }`}
+                      <div className="ml-3 shrink-0 flex items-center gap-3">
+                        {isMe && match.status !== "COMPLETED" ? (
+                          <Radio.Group
+                            size="small"
+                            buttonStyle="solid"
+                            value={teamAssignments[player.userId]}
+                            onChange={(e) =>
+                              setTeamAssignments((prev) => ({
+                                ...prev,
+                                [player.userId]: e.target.value,
+                              }))
+                            }
+                          >
+                            <Radio.Button
+                              value={1}
+                              disabled={
+                                teamAssignments[player.userId] !== 1 &&
+                                isTeam1Full
+                              }
                             >
-                              {pointChange > 0 && (
-                                <ArrowUpOutlined className="mr-0.5" />
-                              )}
-                              {pointChange < 0 && (
-                                <ArrowDownOutlined className="mr-0.5" />
-                              )}
-                              {pointChange === 0 && (
-                                <MinusCircle size={10} className="mr-0.5" />
-                              )}
-                              {pointChange > 0
-                                ? `+${pointChange}`
-                                : pointChange}
-                            </span>
-                          )}
-                        </>
-                      )}
+                              Đội 1
+                            </Radio.Button>
+                            <Radio.Button
+                              value={2}
+                              disabled={
+                                teamAssignments[player.userId] !== 2 &&
+                                isTeam2Full
+                              }
+                            >
+                              Đội 2
+                            </Radio.Button>
+                          </Radio.Group>
+                        ) : player.teamNumber ? (
+                          <span className="font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-md text-xs">
+                            Đội {player.teamNumber}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">
+                            Chưa chọn đội
+                          </span>
+                        )}
+
+                        {match.status === "COMPLETED" && (
+                          <div className="flex items-center gap-2">
+                            {isPlayerWinner && (
+                              <span className="flex items-center gap-1 text-green-700 font-bold text-xs bg-green-50 px-2 py-1 rounded-md">
+                                <CheckCircle2 size={14} /> THẮNG
+                              </span>
+                            )}
+                            {isPlayerLoser && (
+                              <span className="flex items-center gap-1 text-red-600 font-bold text-xs bg-red-50 px-2 py-1 rounded-md">
+                                <XCircle size={14} /> THUA
+                              </span>
+                            )}
+
+                            {isMe && pointChange !== undefined && (
+                              <span
+                                className={`flex items-center justify-center min-w-[44px] font-bold text-xs px-2 py-1 rounded-md ${
+                                  pointChange > 0
+                                    ? "bg-green-100 text-green-700"
+                                    : pointChange < 0
+                                    ? "bg-red-100 text-red-600"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
+                                {pointChange > 0 && (
+                                  <ArrowUpOutlined className="mr-1 text-[10px]" />
+                                )}
+                                {pointChange < 0 && (
+                                  <ArrowDownOutlined className="mr-1 text-[10px]" />
+                                )}
+                                {pointChange === 0 && (
+                                  <MinusCircle size={12} className="mr-1" />
+                                )}
+                                {pointChange > 0
+                                  ? `+${pointChange}`
+                                  : pointChange}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </List.Item>
-              );
-            }}
-          />
+                  </List.Item>
+                );
+              }}
+            />
+          </div>
         </div>
 
-        {/* FOOTER ACTION BUTTONS */}
-        <div className="mt-5 flex justify-end gap-3 border-t pt-4 border-gray-100">
+        <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
           <Button
             onClick={onClose}
-            className="rounded-xl font-semibold h-10 px-5 text-gray-500 hover:text-gray-700"
+            className="rounded-lg font-medium h-10 px-6"
           >
             Đóng
           </Button>
@@ -468,11 +455,11 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
           {isMyTeamChanged && (
             <Button
               type="primary"
-              className="bg-purple-600 hover:bg-purple-700 border-none rounded-xl font-bold h-10 px-5 shadow-sm"
+              className="bg-purple-600 hover:bg-purple-700 border-none rounded-lg font-medium h-10 px-6"
               onClick={handleSaveMyTeam}
               loading={loadingDivide}
             >
-              Xác nhận đội của tôi
+              Lưu đội hình
             </Button>
           )}
 
@@ -481,7 +468,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
             ["READY", "PLAYING", "DISPUTED"].includes(match.status) && (
               <Button
                 type="primary"
-                className="bg-gradient-to-r from-orange-500 to-purple-600 border-none hover:opacity-90 font-bold text-white rounded-xl h-10 px-6 shadow-md"
+                className="bg-purple-600 hover:bg-purple-700 border-none rounded-lg font-medium h-10 px-6"
                 onClick={() => {
                   onClose();
                   onOpenSubmitModal();
