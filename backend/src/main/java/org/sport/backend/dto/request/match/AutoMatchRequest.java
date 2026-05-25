@@ -8,5 +8,4 @@ public class AutoMatchRequest {
     private Integer categoryId;
     private MatchType matchType;
     private String city;
-    private String district;
 }

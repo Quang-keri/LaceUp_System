@@ -1,7 +1,7 @@
 import AppHeader from "../../components/Header/Header";
 import { Outlet } from "react-router-dom";
 import Footer from "../../components/Footer/Footer";
-import ChatBubble from "../../page/customer/chat/ChatBubble";
+// import ChatBubble from "../../page/customer/chat/ChatBubble";
 import ChatboxBubble from "../../page/customer/chat-box/ChatBoxBubble";
 import ScrollToTop from "../../components/scoll/ScrollToTop";
 
@@ -17,7 +17,7 @@ export default function DefaultLayout() {
 
       <Footer />
       <ChatboxBubble />
-      <ChatBubble />
+      {/* <ChatBubble /> */}
     </div>
   );
 }

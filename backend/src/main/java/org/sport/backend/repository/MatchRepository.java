@@ -58,4 +58,16 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             @Param("statuses") List<MatchStatus> statuses,
             @Param("thresholdTime") LocalDateTime thresholdTime
     );
+
+    @Query("SELECT COUNT(m) > 0 FROM Match m " +
+            "WHERE m.court.courtId = :courtId " +
+            "AND m.status NOT IN ('CANCELLED', 'COMPLETED') " +
+            "AND m.startTime < :endTime AND m.endTime > :startTime " +
+            "AND (:excludeMatchId IS NULL OR m.matchId != :excludeMatchId)")
+    boolean existsConflictMatch(
+            @Param("courtId") UUID courtId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            @Param("excludeMatchId") UUID excludeMatchId
+    );
 }

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { Card, message, Modal, Button } from "antd";
-import { FileExcelOutlined } from "@ant-design/icons";
+import { Card, message, Modal, Col, Row } from "antd";
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
-import { ReloadOutlined } from "@ant-design/icons";
 import RentalAreaFilter from "./RentalAreaFilter";
 import BookingTable from "./BookingTable";
 import BookingDetailModal from "./BookingDetailModal";
@@ -11,6 +9,7 @@ import SlotEditorModal from "./SlotEditorModal";
 import BookingStatusUpdateModal from "./BookingStatusUpdateModal";
 import AddServiceModal from "./AddServiceModal";
 import BookingDetailPage from "./BookingDetailPage";
+
 
 export default function BookingManagementPage() {
   const [buildings, setBuildings] = useState<any[]>([]);
@@ -34,6 +33,8 @@ export default function BookingManagementPage() {
   const [selectedBookingIdForDetail, setSelectedBookingIdForDetail] = useState<
     string | null
   >(null);
+
+  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
 
   const [pagination, setPagination] = useState({
     current: 1,
@@ -59,6 +60,7 @@ export default function BookingManagementPage() {
     size = pagination.pageSize,
     searchKwd = keyword,
     status = filterStatus,
+    range = dateRange,
   ) => {
     if (!selectedBuildingId) return;
     setLoading(true);
@@ -69,6 +71,8 @@ export default function BookingManagementPage() {
         size,
         status,
         searchKwd,
+        range?.[0],
+        range?.[1],
       );
       setBookings(res.result.data);
       setPagination({
@@ -82,6 +86,7 @@ export default function BookingManagementPage() {
       setLoading(false);
     }
   };
+
   const handleRefresh = async () => {
     await fetchBookings(
       pagination.current,
@@ -220,13 +225,22 @@ export default function BookingManagementPage() {
 
     try {
       message.loading({ content: "Đang chuẩn bị file...", key: "export" });
-      const response: any = await bookingService.exportBookingsExcel({
+
+      const params: any = {
         rentalId: selectedBuildingId,
         bookingStatus: filterStatus,
         keyword: keyword,
-      });
+      };
 
-      const blob = new Blob([response.data || response], {
+      if (dateRange) {
+        params.from = dateRange[0];
+        params.to = dateRange[1];
+      }
+
+      const response: any = await bookingService.exportBookingsExcel(params);
+
+      const fileData = response.data || response;
+      const blob = new Blob([fileData], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const url = window.URL.createObjectURL(blob);
@@ -239,6 +253,7 @@ export default function BookingManagementPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
       message.success({ content: "Xuất file thành công!", key: "export" });
     } catch (error) {
@@ -250,68 +265,57 @@ export default function BookingManagementPage() {
   return (
     <div style={{ padding: "20px" }}>
       {viewMode === "table" ? (
-        <>
-          <RentalAreaFilter
-            buildings={buildings}
-            selectedBuildingId={selectedBuildingId}
-            filterStatus={filterStatus}
-            onBuildingChange={(id: string) => setSelectedBuildingId(id)}
-            onStatusChange={(status?: string) => {
-              setFilterStatus(status);
-              fetchBookings(1, pagination.pageSize, keyword, status);
-            }}
-            onSearch={(value: string) => {
-              setKeyword(value);
-              fetchBookings(1, pagination.pageSize, value, filterStatus);
-            }}
-          />
-
-          <Card
-            title="Quản lý Đơn Đặt"
-            style={{ marginTop: "20px" }}
-            extra={
-              <div style={{ display: "flex", gap: 8 }}>
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={handleRefresh}
-                  loading={loading}
-                >
-                  Làm mới
-                </Button>
-
-                <Button
-                  type="primary"
-                  icon={<FileExcelOutlined />}
-                  onClick={handleExportExcel}
-                  style={{
-                    backgroundColor: "#52c41a",
-                    borderColor: "#52c41a",
-                  }}
-                >
-                  Xuất Excel
-                </Button>
-              </div>
-            }
-          >
-            <BookingTable
-              bookings={bookings}
+        <Row gutter={24}>
+          {/* CỘT TRÁI: Bộ lọc & Nút bấm */}
+          <Col xs={24} sm={24} md={8} lg={6} xl={5}>
+            <RentalAreaFilter
+              buildings={buildings}
+              selectedBuildingId={selectedBuildingId}
+              filterStatus={filterStatus}
+              dateRange={dateRange}
               loading={loading}
-              pagination={pagination}
-              onChange={(pageInfo: any) =>
-                fetchBookings(pageInfo.current, pageInfo.pageSize)
-              }
-              onViewDetail={handleViewDetail}
-              onEditSlot={handleEditSlot}
-              onUpdateStatus={handleUpdateStatus}
-              onCollectPayment={handleCollectPayment}
-              onPrintInvoice={handlePrintInvoice}
-              onAddService={(b: any) => {
-                setSelectedBooking(b);
-                setServiceModalOpen(true);
+              onBuildingChange={(id: string) => setSelectedBuildingId(id)}
+              onDateChange={(range: [string, string] | null) => {
+                setDateRange(range);
+                fetchBookings(1, pagination.pageSize, keyword, filterStatus, range);
               }}
+              onStatusChange={(status?: string) => {
+                setFilterStatus(status);
+                fetchBookings(1, pagination.pageSize, keyword, status, dateRange);
+              }}
+              onSearch={(value: string) => {
+                setKeyword(value);
+                fetchBookings(1, pagination.pageSize, value, filterStatus, dateRange);
+              }}
+              onRefresh={handleRefresh}
+              onExport={handleExportExcel}
             />
-          </Card>
+          </Col>
 
+          {/* CỘT PHẢI: Bảng dữ liệu chính */}
+          <Col xs={24} sm={24} md={16} lg={18} xl={19}>
+            <Card title="Quản lý Đơn Đặt">
+              <BookingTable
+                bookings={bookings}
+                loading={loading}
+                pagination={pagination}
+                onChange={(pageInfo: any) =>
+                  fetchBookings(pageInfo.current, pageInfo.pageSize, keyword, filterStatus, dateRange)
+                }
+                onViewDetail={handleViewDetail}
+                onEditSlot={handleEditSlot}
+                onUpdateStatus={handleUpdateStatus}
+                onCollectPayment={handleCollectPayment}
+                onPrintInvoice={handlePrintInvoice}
+                onAddService={(b: any) => {
+                  setSelectedBooking(b);
+                  setServiceModalOpen(true);
+                }}
+              />
+            </Card>
+          </Col>
+
+          {/* Các Modal giữ nguyên bên dưới */}
           <BookingDetailModal
             open={detailOpen}
             booking={selectedBooking}
@@ -343,7 +347,7 @@ export default function BookingManagementPage() {
             onClose={() => setServiceModalOpen(false)}
             onSuccess={handleRefreshAfterEdit}
           />
-        </>
+        </Row>
       ) : (
         selectedBookingIdForDetail &&
         selectedBuildingId && (
@@ -359,4 +363,4 @@ export default function BookingManagementPage() {
       )}
     </div>
   );
-}
+} 

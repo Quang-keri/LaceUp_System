@@ -1,7 +1,6 @@
 import api from "../config/axios";
 import type {
   CourtResponse,
-  CreateCourtRequest,
   UpdateCourtRequest,
   CourtListResponse,
   CategoryResponse,

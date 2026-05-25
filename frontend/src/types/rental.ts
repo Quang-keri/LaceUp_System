@@ -1,15 +1,17 @@
 import type { CourtResponse } from "./court";
 
-export enum RentalAreaStatus {
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
-  REJECTED = "REJECTED",
-}
+export const RentalAreaStatus = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  REJECTED: "REJECTED",
+} as const;
+
+export type RentalAreaStatus =
+  (typeof RentalAreaStatus)[keyof typeof RentalAreaStatus];
 
 export interface Address {
   street: string;
   ward: string;
-  
 }
 
 export interface RentalAreaResponse {
@@ -28,6 +30,8 @@ export interface RentalAreaResponse {
   openTime?: string;
   closeTime?: string;
   isActive?: boolean;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface CreateRentalAreaRequest {
@@ -51,7 +55,7 @@ export interface UpdateRentalAreaRequest {
   openTime?: string;
   closeTime?: string;
   isActive?: boolean;
-  status:RentalAreaStatus;
+  status: RentalAreaStatus;
 }
 
 export interface RentalAreaListResponse {

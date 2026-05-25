@@ -87,6 +87,11 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
       label: <Link to="/owner/service-items">Hàng hóa & Dịch vụ</Link>,
     },
     {
+      key: "/owner/matches",
+      icon: <InboxOutlined />,
+      label: <Link to="/owner/matches">Trận đấu</Link>,
+    },
+    {
       key: "submenu-transactions",
       icon: <SwapOutlined />,
       label: "Giao dịch",

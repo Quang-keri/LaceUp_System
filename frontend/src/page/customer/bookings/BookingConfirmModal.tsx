@@ -1,5 +1,5 @@
 import { Modal, Input } from "antd";
-import dayjs from "dayjs"; // Nhớ import dayjs vào nhé
+import dayjs from "dayjs";
 
 export default function BookingConfirmModal({
   open,
@@ -12,7 +12,6 @@ export default function BookingConfirmModal({
   const timeToMinutes = (timeValue: any) => {
     if (!timeValue) return 0;
 
-    // 1. Nếu dữ liệu đã là chuỗi chuẩn (VD: "08:30")
     if (typeof timeValue === "string") {
       const [hours, minutes] = timeValue.split(":").map(Number);
       return (hours || 0) * 60 + (minutes || 0);
@@ -35,10 +34,14 @@ export default function BookingConfirmModal({
   };
 
   const calculateItemPrice = (item: any) => {
+    console.log("=== BẮT ĐẦU TÍNH GIÁ ===");
+    console.log("1. Dữ liệu item đặt sân:", item);
+
     const fallbackPrice =
       item.court.pricePerHour || item.court.minPrice || item.court.price || 0;
 
     if (!item.court.priceRules || item.court.priceRules.length === 0) {
+      console.log("=> Không có priceRules, dùng fallbackPrice:", fallbackPrice);
       const startObj = dayjs(`${item.date}T${item.startTime}`);
       const endObj = dayjs(`${item.date}T${item.endTime}`);
       const hours = endObj.diff(startObj, "minute") / 60;
@@ -51,31 +54,73 @@ export default function BookingConfirmModal({
     const dayOfWeek = dayjs(item.date).day();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
+    console.log(`2. Ngày khách đặt: ${item.date} | Là cuối tuần? ${isWeekend}`);
+    console.log(`3. Khung giờ đặt (phút): ${reqStartMin} -> ${reqEndMin}`);
+
+    // Sort priority: Ép kiểu Number để chắc chắn sort đúng (lớn nhất lên đầu)
     const sortedRules = [...item.court.priceRules].sort(
-      (a: any, b: any) => b.priority - a.priority,
+      (a: any, b: any) => (Number(b.priority) || 0) - (Number(a.priority) || 0)
     );
+    console.log("4. Danh sách rules SAU KHI SORT Priority:", sortedRules.map(r => ({
+      priority: r.priority, price: r.pricePerHour, dayType: r.dayType, startDate: r.startDate
+    })));
 
     let totalPriceForOneCourt = 0;
+    let loggedFirstMinute = false; // Cờ để không bị spam log 60 lần/tiếng
 
     for (let min = reqStartMin; min < reqEndMin; min++) {
       let appliedRule = null;
 
       for (const rule of sortedRules) {
-        // Kiểm tra điều kiện Ngày
-        if (rule.specificDate && rule.specificDate !== item.date) continue;
-        if (!rule.specificDate) {
-          if (rule.priceType === "WEEKEND" && !isWeekend) continue;
-          if (rule.priceType === "NORMAL" && isWeekend) continue;
+        if (!loggedFirstMinute) {
+           console.log(`\n--- Đang test Rule giá ${rule.pricePerHour}đ (Priority: ${rule.priority}) ---`);
         }
 
+        // 1. Kiểm tra giờ
         const ruleStartMin = timeToMinutes(rule.startTime);
         const ruleEndMin = timeToMinutes(rule.endTime);
-
-        if (min >= ruleStartMin && min < ruleEndMin) {
-          appliedRule = rule;
-          break;
+        if (min < ruleStartMin || min >= ruleEndMin) {
+          if (!loggedFirstMinute) console.log("=> BỎ QUA: Khách đặt ngoài khung giờ của Rule này.");
+          continue;
         }
+
+        // 2. Kiểm tra Sự kiện
+        if (rule.startDate && item.date < rule.startDate) {
+           if (!loggedFirstMinute) console.log(`=> BỎ QUA: Ngày đặt (${item.date}) < startDate (${rule.startDate})`);
+           continue;
+        }
+        if (rule.endDate && item.date > rule.endDate) {
+           if (!loggedFirstMinute) console.log(`=> BỎ QUA: Ngày đặt (${item.date}) > endDate (${rule.endDate})`);
+           continue;
+        }
+
+        // 3. Kiểm tra Ngày cụ thể
+        if (rule.specificDate && rule.specificDate !== item.date) {
+           if (!loggedFirstMinute) console.log("=> BỎ QUA: Không trùng specificDate.");
+           continue;
+        }
+
+        // 4. Kiểm tra Thứ
+        const dayType = rule.dayType || "ALL";
+        if (dayType !== "ALL") {
+          if (dayType === "WEEKDAY" && isWeekend) {
+             if (!loggedFirstMinute) console.log("=> BỎ QUA: Rule T2-T6 nhưng khách đặt T7/CN.");
+             continue;
+          }
+          if (dayType === "WEEKEND" && !isWeekend) {
+             if (!loggedFirstMinute) console.log("=> BỎ QUA: Rule T7/CN nhưng khách đặt T2-T6.");
+             continue;
+          }
+        }
+
+        if (!loggedFirstMinute) {
+           console.log("=> ✓ HỢP LỆ! CHỌN RULE NÀY!");
+        }
+        appliedRule = rule;
+        break;
       }
+
+      loggedFirstMinute = true; // Xong phút đầu thì tắt log để khỏi rác màn hình
 
       const pricePerMin = appliedRule
         ? appliedRule.pricePerHour / 60
@@ -83,6 +128,9 @@ export default function BookingConfirmModal({
 
       totalPriceForOneCourt += pricePerMin;
     }
+
+    console.log(`\n=> TỔNG TIỀN 1 SÂN: ${totalPriceForOneCourt}`);
+    console.log("=== KẾT THÚC ===\n");
 
     return Math.round(totalPriceForOneCourt) * item.quantity;
   };
@@ -100,10 +148,9 @@ export default function BookingConfirmModal({
       onCancel={onClose}
       onOk={onConfirm}
       okText="Xác nhận và thanh toán"
-       cancelText="Hủy"
+      cancelText="Hủy"
       width={520}
     >
-    
       <div className="border-t pt-4">
         <h3 className="font-semibold mb-3 text-gray-700">
           Thông tin người đặt
@@ -162,12 +209,14 @@ export default function BookingConfirmModal({
                 </p>
 
                 <span className="text-blue-600 font-medium">
-                  {calculateItemPrice(item).toLocaleString()} VNĐ
+                  {calculateItemPrice(item).toLocaleString("vi-VN")} VNĐ
                 </span>
               </div>
 
               <p className="text-sm text-gray-500 mt-1">
-                {item.date} • {item.startTime} - {item.endTime}{" "}
+                {dayjs(item.date).format("DD/MM/YYYY")} •{" "}
+                {String(item.startTime).substring(0, 5)} -{" "}
+                {String(item.endTime).substring(0, 5)}{" "}
                 <span className="font-medium text-gray-700">({hours} giờ)</span>
               </p>
 
@@ -183,7 +232,7 @@ export default function BookingConfirmModal({
         <span className="text-gray-600 font-medium">Tổng chi phí dự kiến</span>
 
         <span className="text-2xl font-bold text-[#9156F1]">
-          {total.toLocaleString()} VNĐ
+          {total.toLocaleString("vi-VN")} VNĐ
         </span>
       </div>
     </Modal>

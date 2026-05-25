@@ -193,7 +193,6 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     private Document convertMatchToDocument(Match match) {
         String locationInfo;
-        String districtForMetadata = "";
         String cityForMetadata = "";
 
         if (match.getCourt() != null && match.getCourt().getRentalArea() != null) {
@@ -208,10 +207,10 @@ public class KnowledgeServiceImpl implements KnowledgeService {
                     ? area.getAddress().getCity().getCityName()
                     : "";
 
-        } else if (match.getAddress() != null) {
+        } else if (match.getCourt().getRentalArea().getAddress() != null) {
             locationInfo = String.format("đang tìm sân quanh khu vực %s, %s",
-                    match.getAddress().getWard() != null ? match.getAddress().getWard() : "",
-                    cityForMetadata = match.getAddress().getCity() != null ? match.getAddress().getCity().getCityName() : "");
+                    match.getCourt().getRentalArea().getAddress().getWard() != null ? match.getCourt().getRentalArea().getAddress().getWard() : "",
+                    cityForMetadata = match.getCourt().getRentalArea().getAddress().getCity() != null ? match.getCourt().getRentalArea().getAddress().getCity().getCityName() : "");
         } else {
             locationInfo = "chưa chốt địa điểm cụ thể";
         }

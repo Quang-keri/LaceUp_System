@@ -17,7 +17,6 @@ public class Address {
     @Column(name = "ward")
     private String ward;
 
-
     @Column(name = "city_name")
     private String cityName;
 

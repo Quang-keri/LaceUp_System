@@ -28,11 +28,4 @@ public class MatchRequest {
     private Integer minRank;
     private Integer maxRank;
     private String note;
-
-    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
-    private String street;
-    @NotNull(message = "địa chỉ tòa nhà không bỏ trống")
-    private String ward;
-    @NotNull(message = "thành phố không bỏ trống")
-    private Long cityId;
 }

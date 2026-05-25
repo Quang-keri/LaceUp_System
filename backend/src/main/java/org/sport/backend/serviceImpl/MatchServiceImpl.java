@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sport.backend.constant.SlotStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
@@ -15,6 +16,7 @@ import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.mapper.MatchMapper;
 import org.sport.backend.repository.*;
+import org.sport.backend.service.CourtPriceService;
 import org.sport.backend.service.MatchService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.MatchSpecifications;
@@ -26,8 +28,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,11 +44,13 @@ public class MatchServiceImpl implements MatchService {
     private final MatchRegistrationRepository registrationRepository;
     private final CourtRepository courtRepository;
     private final CategoryRepository categoryRepository;
-    private final CityRepository cityRepository;
     private final UserCategoryRankRepository userCategoryRankRepository;
+    private final SlotRepository slotRepository;
 
     private final MatchMapper matchMapper;
+
     private final UserService userService;
+    private final CourtPriceService courtPriceService;
 
     @Override
     @Transactional
@@ -60,6 +66,10 @@ public class MatchServiceImpl implements MatchService {
         MatchType type = request.getMatchType() != null ? request.getMatchType() : MatchType.NORMAL;
         if (currentUser.getCreditScore() < 60 && (type == MatchType.RANKED || type == MatchType.BET)) {
             throw new RuntimeException("Điểm uy tín của bạn (" + currentUser.getCreditScore() + ") dưới 60. Bạn chỉ có thể tạo trận thường (NORMAL)!");
+        }
+
+        if (!request.getStartTime().isBefore(request.getEndTime())) {
+            throw new RuntimeException("Thời gian bắt đầu và kết thúc không hợp lệ. Trận đấu không được qua đêm.");
         }
 
         Match.MatchBuilder<?, ?> matchBuilder = Match.builder()
@@ -80,17 +90,34 @@ public class MatchServiceImpl implements MatchService {
                 .roomCode(generateUniqueRoomCode())
                 .note(request.getNote());
 
-        City city = cityRepository.getReferenceById(request.getCityId());
-        Address address = Address.builder()
-                .ward(request.getWard())
-                .street(request.getStreet())
-                .city(city)
-                .build();
-        matchBuilder.address(address);
-
         if (request.getCourtId() != null) {
             Court court = courtRepository.findById(request.getCourtId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sân này"));
+
+            RentalArea area = court.getRentalArea();
+
+            if (area != null && area.getOpenTime() != null && area.getCloseTime() != null) {
+                LocalTime requestedStartTime = request.getStartTime().toLocalTime();
+                LocalTime requestedEndTime = request.getEndTime().toLocalTime();
+
+                if (requestedStartTime.isBefore(area.getOpenTime()) || requestedEndTime.isAfter(area.getCloseTime())) {
+                    throw new RuntimeException(String.format("Khung giờ không hợp lệ. Khu vực này chỉ hoạt động từ %s đến %s",
+                            area.getOpenTime(), area.getCloseTime()));
+                }
+            }
+
+            boolean isMatchConflict = matchRepository.existsConflictMatch(
+                    court.getCourtId(), request.getStartTime(), request.getEndTime(), null);
+            if (isMatchConflict) {
+                throw new RuntimeException("Đã có trận đấu khác (Match) được tổ chức tại sân này trong khung giờ bạn chọn!");
+            }
+
+            boolean isBookingConflict = slotRepository.existsConflictSlotForCourt(
+                    court.getCourtId(), request.getStartTime(), request.getEndTime());
+            if (isBookingConflict) {
+                throw new RuntimeException("Sân này đã được khách đặt (Booking) trong khung giờ bạn chọn!");
+            }
+
             matchBuilder.court(court);
             matchBuilder.category(court.getCategory());
         } else {
@@ -104,9 +131,49 @@ public class MatchServiceImpl implements MatchService {
 
         Match savedMatch = matchRepository.save(matchBuilder.build());
 
+        if (savedMatch.getCourt() != null) {
+            Court court = savedMatch.getCourt();
+            CourtCopy availableCourtCopy = null;
+
+            for (CourtCopy copy : court.getCourtCopies()) {
+                List<Slot> conflicts = slotRepository.findConflictSlot(
+                        copy.getCourtCopyId(),
+                        savedMatch.getStartTime(),
+                        savedMatch.getEndTime()
+                );
+
+                if (conflicts == null || conflicts.isEmpty()) {
+                    availableCourtCopy = copy;
+                    break;
+                }
+            }
+
+            if (availableCourtCopy == null) {
+                throw new RuntimeException("Hệ thống lỗi: Không tìm thấy sân con (CourtCopy) trống dù đã check tổng tổng thể.");
+            }
+
+            BigDecimal matchPrice = courtPriceService.calculatePrice(
+                    availableCourtCopy,
+                    savedMatch.getStartTime(),
+                    savedMatch.getEndTime()
+            );
+
+            Slot matchSlot = Slot.builder()
+                    .startTime(savedMatch.getStartTime())
+                    .endTime(savedMatch.getEndTime())
+                    .slotStatus(SlotStatus.MATCH_PENDING)
+                    .courtCopy(availableCourtCopy)
+                    .match(savedMatch)
+                    .price(matchPrice)
+                    .build();
+
+            slotRepository.save(matchSlot);
+        }
+
         if (currentUser.getRole().getRoleName().equals("RENTER")) {
             joinMatch(savedMatch.getMatchId());
         }
+
         return matchMapper.toResponse(savedMatch);
     }
 
@@ -166,6 +233,14 @@ public class MatchServiceImpl implements MatchService {
 
         if (match.getCurrentPlayers() >= match.getMaxPlayers()) {
             match.setStatus(MatchStatus.READY);
+
+            List<Slot> matchSlots = slotRepository.findByMatch(match);
+            if (matchSlots != null && !matchSlots.isEmpty()) {
+                for (Slot slot : matchSlots) {
+                    slot.setSlotStatus(SlotStatus.MATCH_FULL);
+                }
+                slotRepository.saveAll(matchSlots);
+            }
         }
 
         matchRepository.save(match);
@@ -196,7 +271,6 @@ public class MatchServiceImpl implements MatchService {
         Specification<Match> spec = Specification.where(MatchSpecifications.hasStatus(MatchStatus.OPEN))
                 .and(MatchSpecifications.hasMatchType(request.getMatchType()))
                 .and(MatchSpecifications.hasCity(request.getCity()))
-                .and(MatchSpecifications.hasDistrict(request.getDistrict()))
                 .and(MatchSpecifications.isNotParticipant(currentUser.getUserId()))
                 .and((root, query, cb) -> cb.equal(root.join("category").get("categoryId"), request.getCategoryId()))
                 .and((root, query, cb) -> cb.lessThan(root.get("currentPlayers"), root.get("maxPlayers")));
@@ -263,7 +337,7 @@ public class MatchServiceImpl implements MatchService {
     public PageResponse<MatchResponse> getOpenMatches(
             int page, int size, String category, String keyword,
             LocalDateTime startDate, LocalDateTime endDate, MatchType matchType,
-            String ward, String district, String city
+            String ward, String city
     ) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 
@@ -274,7 +348,6 @@ public class MatchServiceImpl implements MatchService {
                 .and(MatchSpecifications.isWithinTimeRange(startDate, endDate))
                 .and(MatchSpecifications.hasMatchType(matchType))
                 .and(MatchSpecifications.hasCity(city))
-                .and(MatchSpecifications.hasDistrict(district))
                 .and(MatchSpecifications.hasWard(ward));
 
         Page<Match> matchPage = matchRepository.findAll(spec, pageable);
@@ -364,15 +437,45 @@ public class MatchServiceImpl implements MatchService {
                 LocalDate targetDate = LocalDate.now().plusDays(i);
 
                 if (shouldCreateForDate(config, targetDate)) {
-                    LocalDateTime targetStart = targetDate.atTime(config.getStartTime().toLocalTime());
+                    LocalTime configStartTime = config.getStartTime().toLocalTime();
+                    LocalTime configEndTime = config.getEndTime().toLocalTime();
 
-                    boolean alreadyExists = matchRepository.existsByCourtAndStartTime(
-                            config.getCourt(),
-                            targetStart
+                    LocalDateTime targetStart = targetDate.atTime(configStartTime);
+                    LocalDateTime targetEnd = targetDate.atTime(configEndTime);
+
+                    if (!targetStart.isBefore(targetEnd)) {
+                        log.warn("Bỏ qua tạo Match tự động định kỳ cho sân [{}] do thời gian không hợp lệ (nghi ngờ qua đêm).",
+                                config.getCourt().getCourtId());
+                        continue;
+                    }
+
+                    RentalArea area = config.getCourt().getRentalArea();
+                    if (area != null && area.getOpenTime() != null && area.getCloseTime() != null) {
+                        if (configStartTime.isBefore(area.getOpenTime()) || configEndTime.isAfter(area.getCloseTime())) {
+                            log.warn("Bỏ qua tạo Match tự động định kỳ cho sân [{}] do nằm ngoài giờ hoạt động (Mở: {}, Đóng: {}).",
+                                    config.getCourt().getCourtId(), area.getOpenTime(), area.getCloseTime());
+                            continue;
+                        }
+                    }
+
+                    boolean isMatchConflict = matchRepository.existsConflictMatch(
+                            config.getCourt().getCourtId(),
+                            targetStart,
+                            targetEnd,
+                            null
                     );
 
-                    if (!alreadyExists) {
+                    boolean isBookingConflict = slotRepository.existsConflictSlotForCourt(
+                            config.getCourt().getCourtId(),
+                            targetStart,
+                            targetEnd
+                    );
+
+                    if (!isMatchConflict && !isBookingConflict) {
                         createNewMatchInstance(config, targetDate);
+                    } else {
+                        log.info("Bỏ qua tạo Match tự động định kỳ cho sân [{}] vào lúc [{}] vì đã có lịch (Match hoặc Booking) bị trùng.",
+                                config.getCourt().getCourtId(), targetStart);
                     }
                 }
             }
@@ -440,12 +543,15 @@ public class MatchServiceImpl implements MatchService {
     }
 
     private void createNewMatchInstance(Match config, LocalDate date) {
+        LocalDateTime targetStart = date.atTime(config.getStartTime().toLocalTime());
+        LocalDateTime targetEnd = date.atTime(config.getEndTime().toLocalTime());
+
         Match newMatch = Match.builder()
                 .host(config.getHost())
                 .court(config.getCourt())
                 .category(config.getCategory())
-                .startTime(date.atTime(config.getStartTime().toLocalTime()))
-                .endTime(date.atTime(config.getEndTime().toLocalTime()))
+                .startTime(targetStart)
+                .endTime(targetEnd)
                 .status(MatchStatus.OPEN)
                 .currentPlayers(0)
                 .maxPlayers(config.getMaxPlayers())
@@ -454,7 +560,47 @@ public class MatchServiceImpl implements MatchService {
                 .minRank(config.getMinRank())
                 .maxRank(config.getMaxRank())
                 .build();
-        matchRepository.save(newMatch);
+
+        Match savedMatch = matchRepository.save(newMatch);
+
+        if (savedMatch.getCourt() != null) {
+            Court court = savedMatch.getCourt();
+            CourtCopy availableCourtCopy = null;
+
+            for (CourtCopy copy : court.getCourtCopies()) {
+                List<Slot> conflicts = slotRepository.findConflictSlot(
+                        copy.getCourtCopyId(),
+                        savedMatch.getStartTime(),
+                        savedMatch.getEndTime()
+                );
+
+                if (conflicts == null || conflicts.isEmpty()) {
+                    availableCourtCopy = copy;
+                    break;
+                }
+            }
+
+            if (availableCourtCopy != null) {
+                BigDecimal matchPrice = courtPriceService.calculatePrice(
+                        availableCourtCopy,
+                        savedMatch.getStartTime(),
+                        savedMatch.getEndTime()
+                );
+
+                Slot matchSlot = Slot.builder()
+                        .startTime(savedMatch.getStartTime())
+                        .endTime(savedMatch.getEndTime())
+                        .slotStatus(SlotStatus.BOOKED)
+                        .courtCopy(availableCourtCopy)
+                        .match(savedMatch)
+                        .price(matchPrice)
+                        .build();
+
+                slotRepository.save(matchSlot);
+            } else {
+                log.error("Hệ thống lỗi: Không tìm thấy sân con (CourtCopy) trống để gán cho Match tự động ID [{}]", savedMatch.getMatchId());
+            }
+        }
     }
 
     private String generateUniqueRoomCode() {

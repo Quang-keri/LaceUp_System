@@ -2,7 +2,6 @@ package org.sport.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.FieldDefaults;
 import lombok.experimental.SuperBuilder;
 import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.BaseEntity;
@@ -33,13 +32,13 @@ public class RentalArea extends BaseEntity {
     private String rentalAreaName;
 
     @Embedded
-    private  Address address;
+    private Address address;
 
     @Column(name = "contact_name", length = 100)
     private String contactName;
 
     @Column(name = "contact_phone", length = 20)
-    private  String contactPhone;
+    private String contactPhone;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
@@ -68,7 +67,7 @@ public class RentalArea extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
-    private  User owner;
+    private User owner;
 
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     private List<Court> courts;
@@ -76,10 +75,10 @@ public class RentalArea extends BaseEntity {
     @OneToMany(mappedBy = "rentalArea", fetch = FetchType.LAZY)
     private List<Booking> bookings;
 
-    @Column(name = "facebook_link", length = 255)
+    @Column(name = "facebook_link")
     private String facebookLink;
 
-    @Column(name = "gmail", length = 255)
+    @Column(name = "gmail")
     private String gmail;
 
     @Column(name = "reason")

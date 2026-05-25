@@ -26,7 +26,7 @@ public class Match extends BaseEntity {
     private UUID matchId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "court_id")
+    @JoinColumn(name = "court_id", nullable = false)
     private Court court;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -58,8 +58,8 @@ public class Match extends BaseEntity {
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<MatchRegistration> registrations;
 
-    @Embedded
-    private Address address;
+    @OneToMany(mappedBy = "match", fetch = FetchType.LAZY)
+    private List<Slot> slots;
 
     @Enumerated(EnumType.STRING)
     private MatchType matchType;

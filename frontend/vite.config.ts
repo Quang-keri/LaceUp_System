@@ -1,17 +1,22 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react({
       babel: {
-        plugins: [['babel-plugin-react-compiler']],
+        plugins: [["babel-plugin-react-compiler"]],
       },
     }),
     tailwindcss(),
   ],
   define: {
-    global: 'window',
+    global: "window",
   },
-})
+  resolve: {
+    alias: {
+      "react-map-gl": "react-map-gl/dist/esm/index.js",
+    },
+  },
+});

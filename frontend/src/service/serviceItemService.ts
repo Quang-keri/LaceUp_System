@@ -1,5 +1,4 @@
 import api from "../config/axios";
-import type { ApiResponse } from "../types/ApiResponse.ts";
 
 export interface ServiceItemRequest {
   rentalAreaId: string;
@@ -10,7 +9,7 @@ export interface ServiceItemRequest {
   priceSell: number;
   priceOriginal: number;
   serviceNote?: string;
-  images?: any[]; // Mảng file từ Ant Design
+  images?: any[];
 }
 
 class ServiceItemService {
@@ -39,7 +38,7 @@ class ServiceItemService {
 
     if (data.images && data.images.length > 0) {
       data.images.forEach((file: any) => {
-        formData.append("imageUrls", file); // Key "imageUrls" khớp với backend
+        formData.append("imageUrls", file);
       });
     }
 
