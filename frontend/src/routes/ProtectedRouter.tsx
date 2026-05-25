@@ -30,7 +30,7 @@ export const ProtectedRouter: React.FC<ProtectedRouteProps> = ({
     if (location.pathname.startsWith("/admin")) {
       redirectPath = "/admin/login";
     } else if (location.pathname.startsWith("/owner")) {
-      redirectPath = "/owner/login";
+      redirectPath = "/login";
     }
 
     return <Navigate to={redirectPath} state={{ from: location }} replace />;

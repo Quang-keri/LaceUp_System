@@ -39,13 +39,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if ("OPTIONS".equalsIgnoreCase(method)) {
             return true;
         }
-        if (path.equals("/rental-areas/my-rentals")
-                || path.equals("/api/v1/lace-up/rental-areas/my-rentals")) {
-            return false;
-        }
         return path.startsWith("/auth")
                 || path.startsWith("/posts")
-                || path.startsWith("/rental-areas")
                 || path.startsWith("/amenities")
                 || path.startsWith("/categories")
                 || path.startsWith("/news")

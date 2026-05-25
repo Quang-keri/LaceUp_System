@@ -51,6 +51,12 @@ public class User extends BaseEntity {
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
+    
+    @Column(name = "avatar")
+    private String avatar;
+
+    @Embedded
+    private Address address;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id")

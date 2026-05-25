@@ -468,9 +468,12 @@ public class CourtServiceImpl implements CourtService {
                 .courtId(p.getCourt().getCourtId())
                 .startTime(p.getStartTime())
                 .endTime(p.getEndTime())
+                .startDate(p.getStartDate())
+                .endDate(p.getEndDate())
                 .pricePerHour(p.getPricePerHour())
                 .specificDate(p.getSpecificDate())
                 .priceType(p.getPriceType())
+                .dayType(p.getDayType())
                 .priority(p.getPriority())
                 .build();
     }

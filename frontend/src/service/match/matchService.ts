@@ -1,7 +1,7 @@
 import api from "../../config/axios.ts";
 import type { ApiResponse } from "../../types/ApiResponse.ts";
 import type { MatchResponse, MatchRequest } from "../../types/match.ts";
-import type { PageResponse } from "../../types/post.ts";
+import type { PageResponse } from "../../types/PageResponse.ts";
 
 const API_BASE_URL = "/matches";
 

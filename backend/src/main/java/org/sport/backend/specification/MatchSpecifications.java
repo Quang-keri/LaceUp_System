@@ -54,13 +54,6 @@ public class MatchSpecifications {
         };
     }
 
-    public static Specification<Match> hasDistrict(String district) {
-        return (root, query, cb) -> {
-            if (district == null || district.trim().isEmpty()) return null;
-            return cb.like(cb.lower(root.get("address").get("district")), "%" + district.toLowerCase() + "%");
-        };
-    }
-
     public static Specification<Match> hasWard(String ward) {
         return (root, query, cb) -> {
             if (ward == null || ward.trim().isEmpty()) return null;

@@ -2,6 +2,7 @@ package org.sport.backend.repository;
 
 
 import org.sport.backend.constant.SlotStatus;
+import org.sport.backend.entity.Match;
 import org.sport.backend.entity.Slot;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -72,4 +73,16 @@ public interface SlotRepository extends JpaRepository<Slot, UUID>, JpaSpecificat
             @Param("endDate") LocalDateTime endDate,
             @Param("ownerId") UUID ownerId
     );
+
+    @Query("SELECT COUNT(s) > 0 FROM Slot s " +
+            "WHERE s.courtCopy.court.courtId = :courtId " +
+            "AND s.slotStatus != 'CANCELLED' " +
+            "AND s.startTime < :endTime AND s.endTime > :startTime")
+    boolean existsConflictSlotForCourt(
+            @Param("courtId") UUID courtId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
+
+    List<Slot> findByMatch(Match match);
 }

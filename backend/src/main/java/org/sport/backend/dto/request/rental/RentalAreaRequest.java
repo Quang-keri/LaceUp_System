@@ -22,7 +22,6 @@ public class RentalAreaRequest {
     private String street;
     @NotNull(message = "Phường/xã bỏ trống")
     private String ward;
-    private String district;
 
     private Long cityId;
     private String cityName;

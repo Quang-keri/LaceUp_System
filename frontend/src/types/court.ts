@@ -1,12 +1,17 @@
-export enum CourtStatus {
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
-}
+export const CourtStatus = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+} as const;
 
-export enum CourtCopyStatus {
-  ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
-}
+export type CourtStatus = (typeof CourtStatus)[keyof typeof CourtStatus];
+
+export const CourtCopyStatus = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+} as const;
+
+export type CourtCopyStatus =
+  (typeof CourtCopyStatus)[keyof typeof CourtCopyStatus];
 
 export interface BookingShortResponse {
   bookingId: string;

@@ -8,6 +8,8 @@ import {
   Radio,
   Input,
   message,
+  Modal,
+  Button,
 } from "antd";
 import dayjs from "dayjs";
 import { useAuth } from "../../../context/AuthContext.tsx";
@@ -31,10 +33,12 @@ interface CreateMatchModalProps {
   onSuccess: () => void;
 }
 
-// Cập nhật cấu hình: Cầu lông (4), Bóng đá (Sân 5 hoặc sân 7 -> max là 14), Pickleball (4)
-const SPORT_DEFAULTS: Record<string, { max: number; min: number; limitMax: number }> = {
+const SPORT_DEFAULTS: Record<
+  string,
+  { max: number; min: number; limitMax: number }
+> = {
   "1": { max: 4, min: 2, limitMax: 4 },
-  "2": { max: 10, min: 5, limitMax: 14 }, // Bóng đá mặc định 10 người (5vs5), tối đa 14 người (7vs7)
+  "2": { max: 10, min: 5, limitMax: 14 },
   "3": { max: 4, min: 2, limitMax: 4 },
 };
 
@@ -55,9 +59,12 @@ const CreateMatchModal = ({
     const ranks = user?.categoryRanks || [];
     const rankData = ranks.find((r: any) => {
       if (r.categoryId?.toString() === catId) return true;
-      if (catId === "1" && r.categoryName?.toLowerCase().includes("cầu lông")) return true;
-      if (catId === "2" && r.categoryName?.toLowerCase().includes("bóng đá")) return true;
-      if (catId === "3" && r.categoryName?.toLowerCase().includes("pickleball")) return true;
+      if (catId === "1" && r.categoryName?.toLowerCase().includes("cầu lông"))
+        return true;
+      if (catId === "2" && r.categoryName?.toLowerCase().includes("bóng đá"))
+        return true;
+      if (catId === "3" && r.categoryName?.toLowerCase().includes("pickleball"))
+        return true;
       return false;
     });
     return rankData?.rankPoint || 0;
@@ -160,7 +167,7 @@ const CreateMatchModal = ({
       return message.warning("Điểm tối thiểu không được lớn hơn điểm tối đa!");
     }
 
-    const selectedCity = cities.find((c) => c.code === values.cityId);
+    // const selectedCity = cities.find((c) => c.code === values.cityId);
     const selectedWard = wards.find((w) => w.code === values.ward);
 
     setLoading(true);
@@ -208,21 +215,25 @@ const CreateMatchModal = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 bg-slate-900/70 flex items-center justify-center z-[60] p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl w-full max-w-4xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-hidden custom-scrollbar relative border-t-[5px] border-purple-700"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-4 text-slate-400 hover:text-orange-500 hover:rotate-90 transition-all duration-300 p-1"
-        >
+    <>
+      <Modal
+        open={isOpen}
+        onCancel={onClose}
+        footer={null}
+        width={900}
+        centered
+        className="create-match-modal"
+        style={{ maxWidth: "100%", padding: "10px" }}
+        title={
+          <div className="mb-1 md:mb-2 pr-6">
+            <h2 className="text-xl md:text-2xl font-black text-purple-900 flex items-center gap-1.5 md:gap-2 uppercase tracking-tight">
+              <Trophy className="text-orange-500 flex-shrink-0" size={24} />
+              <span className="truncate">Lên Kèo Giao Lưu</span>
+            </h2>
+          </div>
+        }
+        closeIcon={
           <svg
             width="22"
             height="22"
@@ -236,29 +247,22 @@ const CreateMatchModal = ({
             <path d="M18 6 6 18" />
             <path d="m6 6 12 12" />
           </svg>
-        </button>
-
-        <div className="mb-6">
-          <h2 className="text-2xl font-black text-purple-900 flex items-center gap-2 uppercase tracking-tight">
-            <Trophy className="text-orange-500" size={24} />
-            Lên Kèo Giao Lưu
-          </h2>
-        </div>
-
+        }
+      >
         <Form
           form={form}
           layout="vertical"
           onFinish={handleFinish}
-          className="create-match-form"
+          className="create-match-form mt-2 md:mt-4"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             {/* ================= CỘT BÊN TRÁI ================= */}
-            <div className="flex flex-col space-y-5">
+            <div className="flex flex-col space-y-4 md:space-y-5">
               {/* 1. Môn thể thao */}
-              <div className="bg-purple-50/50 px-4 py-3 rounded-xl border border-purple-100">
+              <div className="bg-purple-50/50 px-3 md:px-4 py-3 rounded-xl border border-purple-100">
                 <Form.Item
                   label={
-                    <span className="font-bold text-purple-800 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                    <span className="font-bold text-purple-800 uppercase text-[10px] md:text-[11px] tracking-wider flex items-center gap-1.5">
                       <Activity size={14} /> Môn thể thao
                     </span>
                   }
@@ -284,10 +288,10 @@ const CreateMatchModal = ({
               </div>
 
               {/* 2. Thể thức thi đấu */}
-              <div className="bg-purple-50/50 px-4 py-3 rounded-xl border border-purple-100">
+              <div className="bg-purple-50/50 px-3 md:px-4 py-3 rounded-xl border border-purple-100">
                 <Form.Item
                   label={
-                    <span className="font-black text-purple-900 uppercase text-[11px] tracking-wider flex items-center gap-1.5 mb-1">
+                    <span className="font-black text-purple-900 uppercase text-[10px] md:text-[11px] tracking-wider flex items-center gap-1.5 mb-1">
                       <Target className="text-orange-500" size={16} /> Thể thức
                       thi đấu
                     </span>
@@ -313,7 +317,8 @@ const CreateMatchModal = ({
                 <Form.Item
                   noStyle
                   shouldUpdate={(prev, curr) =>
-                    prev.matchType !== curr.matchType || prev.categoryId !== curr.categoryId
+                    prev.matchType !== curr.matchType ||
+                    prev.categoryId !== curr.categoryId
                   }
                 >
                   {({ getFieldValue }) => {
@@ -321,11 +326,11 @@ const CreateMatchModal = ({
 
                     if (type === "BET") {
                       return (
-                        <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 relative overflow-hidden animate-in slide-in-from-top-2 mt-4">
-                          <Flame className="absolute -right-4 -bottom-4 text-orange-100 w-20 h-20 rotate-12" />
+                        <div className="bg-orange-50 p-3 md:p-4 rounded-xl border border-orange-200 relative overflow-hidden animate-in slide-in-from-top-2 mt-3 md:mt-4">
+                          <Flame className="absolute -right-2 -bottom-2 md:-right-4 md:-bottom-4 text-orange-100 w-16 h-16 md:w-20 md:h-20 rotate-12" />
                           <Form.Item
                             label={
-                              <span className="text-orange-800 font-bold uppercase tracking-wider text-[10px]">
+                              <span className="text-orange-800 font-bold uppercase tracking-wider text-[9px] md:text-[10px]">
                                 Phần thưởng Kèo (Phe thua bao)
                               </span>
                             }
@@ -333,7 +338,7 @@ const CreateMatchModal = ({
                             rules={[
                               {
                                 required: true,
-                                message: "Vui lòng chọn hoặc nhập phần thưởng kèo!",
+                                message: "Vui lòng chọn hoặc nhập phần thưởng!",
                               },
                             ]}
                             className="!mb-0 relative z-10"
@@ -363,26 +368,46 @@ const CreateMatchModal = ({
                             >
                               <Select.Option value="Chầu nước giải khát">
                                 <div className="flex items-center gap-2">
-                                  <Coffee size={16} className="text-amber-600" />
-                                  <span>Chầu nước giải khát</span>
+                                  <Coffee
+                                    size={16}
+                                    className="text-amber-600"
+                                  />
+                                  <span className="text-xs md:text-sm">
+                                    Chầu nước
+                                  </span>
                                 </div>
                               </Select.Option>
                               <Select.Option value="Tiền sân">
                                 <div className="flex items-center gap-2">
-                                  <MapPin size={16} className="text-emerald-600" />
-                                  <span>Thanh toán tiền sân</span>
+                                  <MapPin
+                                    size={16}
+                                    className="text-emerald-600"
+                                  />
+                                  <span className="text-xs md:text-sm">
+                                    Thanh toán sân
+                                  </span>
                                 </div>
                               </Select.Option>
                               <Select.Option value="Bữa ăn sáng/tối">
                                 <div className="flex items-center gap-2">
-                                  <Utensils size={16} className="text-rose-600" />
-                                  <span>Bữa ăn sáng/tối</span>
+                                  <Utensils
+                                    size={16}
+                                    className="text-rose-600"
+                                  />
+                                  <span className="text-xs md:text-sm">
+                                    Bữa ăn
+                                  </span>
                                 </div>
                               </Select.Option>
                               <Select.Option value="Cầu/Bóng thi đấu">
                                 <div className="flex items-center gap-2">
-                                  <Activity size={16} className="text-blue-600" />
-                                  <span>Cầu/Bóng thi đấu</span>
+                                  <Activity
+                                    size={16}
+                                    className="text-blue-600"
+                                  />
+                                  <span className="text-xs md:text-sm">
+                                    Cầu/Bóng
+                                  </span>
                                 </div>
                               </Select.Option>
                             </Select>
@@ -393,14 +418,14 @@ const CreateMatchModal = ({
 
                     if (type === "RANKED") {
                       return (
-                        <div className="bg-purple-100/50 p-4 rounded-xl border border-purple-200 animate-in slide-in-from-top-2 mt-4">
+                        <div className="bg-purple-100/50 p-3 md:p-4 rounded-xl border border-purple-200 animate-in slide-in-from-top-2 mt-3 md:mt-4">
                           <div className="flex items-center gap-1.5 mb-2">
                             <Trophy className="text-purple-600" size={14} />
-                            <span className="text-purple-800 font-bold uppercase tracking-wider text-[10px]">
+                            <span className="text-purple-800 font-bold uppercase tracking-wider text-[9px] md:text-[10px]">
                               Khoảng Rank yêu cầu
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-2 md:gap-3">
                             <Form.Item
                               name="minRank"
                               rules={[{ required: true, message: "Nhập Min!" }]}
@@ -422,9 +447,14 @@ const CreateMatchModal = ({
                                 { required: true, message: "Nhập Max!" },
                                 ({ getFieldValue }) => ({
                                   validator(_, value) {
-                                    if (!value || getFieldValue("minRank") <= value)
+                                    if (
+                                      !value ||
+                                      getFieldValue("minRank") <= value
+                                    )
                                       return Promise.resolve();
-                                    return Promise.reject(new Error("Max ≥ Min!"));
+                                    return Promise.reject(
+                                      new Error("Max ≥ Min!"),
+                                    );
                                   },
                                 }),
                               ]}
@@ -445,26 +475,29 @@ const CreateMatchModal = ({
               </div>
 
               {/* 3. Số lượng người */}
-              <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 space-y-3">
+              <div className="bg-slate-50 px-3 md:px-4 py-3 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Users className="text-orange-500" size={14} />
-                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">
+                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] md:text-[11px]">
                     Số lượng người
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-500">
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-500">
                       TỐI ĐA (MAX)
                     </span>
                     <Form.Item
                       noStyle
-                      shouldUpdate={(prev, curr) => prev.categoryId !== curr.categoryId}
+                      shouldUpdate={(prev, curr) =>
+                        prev.categoryId !== curr.categoryId
+                      }
                     >
                       {({ getFieldValue }) => {
                         const catId = getFieldValue("categoryId");
-                        const currentSport = SPORT_DEFAULTS[catId] || SPORT_DEFAULTS["1"];
-                        
+                        const currentSport =
+                          SPORT_DEFAULTS[catId] || SPORT_DEFAULTS["1"];
+
                         return (
                           <Form.Item
                             name="maxPlayers"
@@ -474,12 +507,11 @@ const CreateMatchModal = ({
                           >
                             <InputNumber
                               min={2}
-                              max={currentSport.limitMax} // Giới hạn max theo môn (bóng đá max 14)
-                              step={2}                    // Bước nhảy là 2 để ép người dùng luôn nhập số chẵn
-                              className="w-16 rounded-lg font-bold custom-input-number"
+                              max={currentSport.limitMax}
+                              step={2}
+                              className="w-full sm:w-16 rounded-lg font-bold custom-input-number"
                               onChange={(val) => {
                                 if (val) {
-                                  // SỬA TẠI ĐÂY: Lấy max chia đôi làm tối thiểu (min = max / 2)
                                   form.setFieldsValue({
                                     minPlayersToStart: Math.floor(val / 2),
                                   });
@@ -491,8 +523,8 @@ const CreateMatchModal = ({
                       }}
                     </Form.Item>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-500">
                       TỐI THIỂU (MIN)
                     </span>
                     <Form.Item
@@ -512,7 +544,7 @@ const CreateMatchModal = ({
                     >
                       <InputNumber
                         min={1}
-                        className="w-16 rounded-lg font-bold custom-input-number"
+                        className="w-full sm:w-16 rounded-lg font-bold custom-input-number"
                       />
                     </Form.Item>
                   </div>
@@ -527,10 +559,10 @@ const CreateMatchModal = ({
                 {({ getFieldValue }) => {
                   if (getFieldValue("matchType") !== "BET") {
                     return (
-                      <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200">
+                      <div className="bg-slate-50 px-3 md:px-4 py-3 rounded-xl border border-slate-200">
                         <Form.Item
                           label={
-                            <span className="font-bold text-slate-600 uppercase text-[10px] tracking-wider">
+                            <span className="font-bold text-slate-600 uppercase text-[9px] md:text-[10px] tracking-wider">
                               Ghi chú thêm (Không bắt buộc)
                             </span>
                           }
@@ -539,7 +571,7 @@ const CreateMatchModal = ({
                           style={{ marginBottom: 0 }}
                         >
                           <Input.TextArea
-                            rows={3}
+                            rows={2}
                             placeholder="Trình độ trung bình khá..."
                             className="rounded-lg border-gray-300 p-2 text-sm"
                           />
@@ -553,20 +585,20 @@ const CreateMatchModal = ({
             </div>
 
             {/* ================= CỘT BÊN PHẢI ================= */}
-            <div className="flex flex-col space-y-5">
+            <div className="flex flex-col space-y-4 md:space-y-5">
               {/* 1. Khối Địa điểm */}
-              <div className="bg-slate-50 px-5 py-4 rounded-xl border border-slate-200">
-                <div className="flex items-center gap-1.5 mb-4">
-                  <MapPin className="text-orange-500" size={18} />
-                  <h3 className="font-bold text-slate-700 uppercase tracking-wider text-[12px]">
+              <div className="bg-slate-50 px-3 md:px-5 py-3 md:py-4 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1.5 mb-3 md:mb-4">
+                  <MapPin className="text-orange-500" size={16} />
+                  <h3 className="font-bold text-slate-700 uppercase tracking-wider text-[11px] md:text-[12px]">
                     Địa điểm thi đấu
                   </h3>
                 </div>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 md:gap-4">
                   <Form.Item
                     label={
-                      <span className="font-bold text-slate-500 text-[11px]">
+                      <span className="font-bold text-slate-500 text-[10px] md:text-[11px]">
                         Tỉnh / Thành phố
                       </span>
                     }
@@ -592,7 +624,7 @@ const CreateMatchModal = ({
 
                   <Form.Item
                     label={
-                      <span className="font-bold text-slate-500 text-[11px]">
+                      <span className="font-bold text-slate-500 text-[10px] md:text-[11px]">
                         Phường / Xã
                       </span>
                     }
@@ -619,7 +651,7 @@ const CreateMatchModal = ({
 
                   <Form.Item
                     label={
-                      <span className="font-bold text-slate-500 text-[11px]">
+                      <span className="font-bold text-slate-500 text-[10px] md:text-[11px]">
                         Đường / Tên Sân *
                       </span>
                     }
@@ -638,16 +670,16 @@ const CreateMatchModal = ({
               </div>
 
               {/* 2. Khung Thời gian */}
-              <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 space-y-3">
+              <div className="bg-slate-50 px-3 md:px-4 py-3 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Clock className="text-orange-500" size={14} />
-                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">
+                  <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] md:text-[11px]">
                     Thời Gian
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   <div>
-                    <div className="text-[10px] font-bold text-slate-500 mb-1">
+                    <div className="text-[9px] md:text-[10px] font-bold text-slate-500 mb-1">
                       GIỜ BẮT ĐẦU
                     </div>
                     <Form.Item
@@ -662,7 +694,7 @@ const CreateMatchModal = ({
                           hideDisabledOptions: true,
                         }}
                         format="HH:mm - DD/MM"
-                        className="w-full rounded-lg"
+                        className="w-full rounded-lg h-[40px]"
                         placeholder="Chọn giờ"
                         showNow={false}
                         disabledDate={(current) =>
@@ -673,7 +705,7 @@ const CreateMatchModal = ({
                     </Form.Item>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold text-slate-500 mb-1">
+                    <div className="text-[9px] md:text-[10px] font-bold text-slate-500 mb-1">
                       THỜI GIAN CHƠI
                     </div>
                     <Form.Item
@@ -682,7 +714,7 @@ const CreateMatchModal = ({
                       className="!mb-0"
                       style={{ marginBottom: 0 }}
                     >
-                      <Select className="w-full">
+                      <Select className="w-full" size="large">
                         <Select.Option value={0.5}>30 phút</Select.Option>
                         <Select.Option value={1}>1 giờ</Select.Option>
                         <Select.Option value={1.5}>1.5 giờ</Select.Option>
@@ -698,28 +730,46 @@ const CreateMatchModal = ({
           </div>
 
           {/* ================= BUTTON ACTION ================= */}
-          <div className="mt-4 border-t border-slate-100 pt-4 flex justify-end items-center gap-2">
-            <button
-              type="button"
+          <div className="mt-5 md:mt-6 border-t border-slate-100 pt-4 flex justify-end items-center gap-2 md:gap-3">
+            <Button
               onClick={onClose}
-              className="px-4 py-1.5 font-bold text-slate-400 hover:text-slate-600 transition-colors text-xs"
+              className="font-bold text-slate-500 border-none bg-slate-50 hover:bg-slate-100 px-4 md:px-5 h-9 md:h-10 rounded-xl text-xs md:text-sm"
             >
               Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-800 hover:to-purple-700 text-white px-5 py-2 rounded-xl font-bold uppercase tracking-wider shadow-sm shadow-purple-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition-all flex items-center gap-1.5 text-xs"
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              className="bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-800 hover:to-purple-700 text-white rounded-xl font-bold uppercase tracking-wider border-none h-9 md:h-10 px-4 md:px-6 shadow-md shadow-purple-200 text-xs md:text-sm"
             >
-              {loading ? "Đang xử lý..." : "Đăng Kèo Ngay"}
-            </button>
+              Đăng Kèo Ngay
+            </Button>
           </div>
         </Form>
-      </div>
+      </Modal>
 
+      {/* Style tùy biến cho Responsive Mobile */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
+        .create-match-modal .ant-modal-content {
+          border-top: 5px solid #7e22ce !important;
+          border-radius: 16px !important;
+          padding: 24px !important;
+          overflow: hidden;
+        }
+        .create-match-modal .ant-modal-close {
+          top: 20px;
+          inset-inline-end: 20px;
+          color: #94a3b8;
+          transition: all 0.3s;
+        }
+        .create-match-modal .ant-modal-close:hover {
+          color: #ea580c !important;
+          transform: rotate(90deg);
+          background: transparent;
+        }
         .custom-radio-group {
           display: flex !important;
           width: 100%;
@@ -736,6 +786,9 @@ const CreateMatchModal = ({
           font-size: 13px;
           text-align: center;
           padding: 0 !important;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .custom-radio-group .ant-radio-button-wrapper::before {
           display: none !important;
@@ -750,11 +803,37 @@ const CreateMatchModal = ({
         .custom-input-number .ant-input-number-input {
           text-align: center;
         }
-          
+
+        /* Responsive cho thiết bị di động (<= 640px) */
+        @media (max-width: 640px) {
+          .create-match-modal .ant-modal-content {
+            padding: 16px !important; 
+          }
+          .create-match-modal .ant-modal-close {
+            top: 14px;
+            inset-inline-end: 14px;
+          }
+          .custom-radio-group {
+            gap: 6px !important;
+          }
+          .custom-radio-group .ant-radio-button-wrapper {
+            font-size: 11px !important;
+            height: 36px !important;
+            line-height: 34px !important;
+          }
+        }
+        /* Mobile cực nhỏ (như iPhone SE) */
+        @media (max-width: 380px) {
+          .custom-radio-group .ant-radio-button-wrapper {
+            font-size: 10px !important;
+            height: 34px !important;
+            line-height: 32px !important;
+          }
+        }
         `,
         }}
       />
-    </div>
+    </>
   );
 };
 

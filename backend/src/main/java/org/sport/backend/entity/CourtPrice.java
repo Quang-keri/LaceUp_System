@@ -2,6 +2,7 @@ package org.sport.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.sport.backend.constant.DayType;
 import org.sport.backend.constant.PriceType;
 
 import java.math.BigDecimal;
@@ -33,6 +34,12 @@ public class CourtPrice {
     @Column(name = "end_time")
     private LocalTime endTime;
 
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
     @Column(name = "price_per_hour")
     private BigDecimal pricePerHour;
 
@@ -40,9 +47,14 @@ public class CourtPrice {
     private LocalDate specificDate;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "day_type")
+    private DayType dayType;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "price_type")
     private PriceType priceType;
 
     @Column(name = "priority")
-    private Integer priority;
+    @Builder.Default
+    private Integer priority = 1;
 }

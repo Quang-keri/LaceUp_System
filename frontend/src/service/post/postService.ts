@@ -1,8 +1,6 @@
 import api from "../../config/axios";
 import type { ApiResponse } from "../../types/ApiResponse";
-import type { PageResponse, PostResponse } from "../../types/post";
-// Nhớ import FilterState từ đúng đường dẫn nhé, ví dụ:
-// import type { FilterState } from "../../pages/PostPage";
+import type { PostResponse } from "../../types/post";
 
 class PostService {
   async getPosts(filters: any) {

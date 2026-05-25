@@ -11,6 +11,5 @@ public class AddressResponse {
 
     private String street;
     private String ward;
-//    private String district;
     private CityResponse city;
 }

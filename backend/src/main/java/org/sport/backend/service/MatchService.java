@@ -35,7 +35,7 @@ public interface MatchService {
             LocalDateTime startDate,
             LocalDateTime endDate,
             MatchType matchType,
-            String ward, String district, String city);
+            String ward, String city);
 
     MatchResponse getMatchDetail(UUID matchId);
 

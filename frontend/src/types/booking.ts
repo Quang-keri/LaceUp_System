@@ -1,9 +1,11 @@
-export enum BookingStatus {
-  BOOKED = "BOOKED",
-  USING = "USING",
-  CANCELLED = "CANCELLED",
-  COMPLETED = "COMPLETED",
-}
+export const BookingStatus = {
+  BOOKED: "BOOKED",
+  USING: "USING",
+  CANCELLED: "CANCELLED",
+  COMPLETED: "COMPLETED",
+} as const;
+
+export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
 
 export interface BookingResponse {
   userName: string;
@@ -57,8 +59,8 @@ export interface UpdateBookingRequest {
 }
 
 export interface BookingServiceResponse {
-    serviceId: string;
-    serviceName: string;
-    quantity: number;
-    price: number;
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  price: number;
 }

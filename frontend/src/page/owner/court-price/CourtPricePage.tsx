@@ -1,11 +1,25 @@
 import { useEffect, useState } from "react";
-import { Card, Button, Table, Space, message } from "antd";
+import { Card, Button, Table, Space, message, Tag } from "antd";
 import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Modal } from "antd";
 import courtPriceService from "../../../service/courtPriceService";
 import UpdateCourtPriceModal from "./UpdateCourtPriceModal";
 import CreateCourtPriceModal from "./CreateCourtPriceModal";
+
+const DAY_TYPE_MAP: Record<string, { label: string; color: string }> = {
+  WEEKDAY: { label: "T2 - T6", color: "blue" },
+  WEEKEND: { label: "T7 - CN", color: "purple" },
+  ALL: { label: "Tất cả", color: "default" },
+};
+
+const PRICE_TYPE_MAP: Record<string, { label: string; color: string }> = {
+  NORMAL: { label: "Bình thường", color: "default" },
+  HOLIDAY: { label: "Ngày lễ", color: "green" },
+  EVENT: { label: "Sự kiện", color: "orange" },
+  PEAK: { label: "Cao điểm", color: "red" },
+  OTHER: { label: "Khác", color: "default" },
+};
 
 export default function CourtPricePage() {
   const { courtId } = useParams();
@@ -17,6 +31,10 @@ export default function CourtPricePage() {
   const [openCreate, setOpenCreate] = useState(false);
   const [openUpdate, setOpenUpdate] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+
+  const location = useLocation();
+  const openTime = location.state?.openTime || "00:00:00";
+  const closeTime = location.state?.closeTime || "23:59:00";
 
   useEffect(() => {
     if (!courtId) return;
@@ -47,7 +65,6 @@ export default function CourtPricePage() {
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
-
       async onOk() {
         try {
           await courtPriceService.deleteCourtPrice(id);
@@ -64,20 +81,51 @@ export default function CourtPricePage() {
     {
       title: "Giờ",
       render: (_: any, record: any) =>
-        `${record.startTime} - ${record.endTime}`,
+        `${String(record.startTime).substring(0, 5)} - ${String(
+          record.endTime,
+        ).substring(0, 5)}`,
     },
     {
-      title: "Giá",
+      title: "Giá / Giờ",
       dataIndex: "pricePerHour",
+      render: (price: number) =>
+        new Intl.NumberFormat("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        }).format(price),
     },
     {
-      title: "Loại",
+      title: "Thứ",
+      dataIndex: "dayType",
+      render: (type: string) => {
+        const config = DAY_TYPE_MAP[type];
+        return config ? (
+          <Tag color={config.color}>{config.label}</Tag>
+        ) : (
+          <Tag>T2 - T6</Tag>
+        );
+      },
+    },
+    {
+      title: "Phân loại",
       dataIndex: "priceType",
+      render: (type: string) => {
+        const config = PRICE_TYPE_MAP[type];
+        return config ? (
+          <Tag color={config.color}>{config.label}</Tag>
+        ) : (
+          <Tag>{type}</Tag>
+        );
+      },
     },
     {
-      title: "Ngày cụ thể",
-      dataIndex: "specificDate",
-      render: (v: string) => v || "-",
+      title: "Ngày áp dụng",
+      render: (_: any, record: any) => {
+        if (record.startDate && record.endDate) {
+          return `${record.startDate} đến ${record.endDate}`;
+        }
+        return record.specificDate || "-";
+      },
     },
     {
       title: "Priority",
@@ -120,6 +168,7 @@ export default function CourtPricePage() {
           columns={columns}
           dataSource={data}
           loading={loading}
+          pagination={false}
         />
       </Card>
 
@@ -128,17 +177,23 @@ export default function CourtPricePage() {
         onClose={() => setOpenCreate(false)}
         courtId={courtId}
         onSuccess={loadData}
+        openTime={openTime}
+        closeTime={closeTime}
       />
 
-      <UpdateCourtPriceModal
-        open={openUpdate}
-        onClose={() => {
-          setOpenUpdate(false);
-          setEditing(null);
-        }}
-        data={editing}
-        onSuccess={loadData}
-      />
+      {openUpdate && (
+        <UpdateCourtPriceModal
+          open={openUpdate}
+          onClose={() => {
+            setOpenUpdate(false);
+            setEditing(null);
+          }}
+          data={editing}
+          onSuccess={loadData}
+          openTime={openTime}
+          closeTime={closeTime}
+        />
+      )}
     </div>
   );
 }

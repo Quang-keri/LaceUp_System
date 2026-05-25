@@ -92,6 +92,7 @@ public class BookingServiceImpl implements BookingService {
 
         return total;
     }
+
     @Override
     @Transactional
     public BookingResponse createOwnerBooking(OwnerBookingRequest request) {
@@ -242,6 +243,7 @@ public class BookingServiceImpl implements BookingService {
 
         return mapToBookingResponse(booking);
     }
+
     public BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime) {
         LocalDate bookingDate = startTime.toLocalDate();
         LocalTime start = startTime.toLocalTime();
@@ -334,6 +336,7 @@ public class BookingServiceImpl implements BookingService {
 
         bookingRepository.save(booking);
     }
+
     @Transactional
     public void collectRemainingPayment(UUID bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
@@ -343,7 +346,6 @@ public class BookingServiceImpl implements BookingService {
         if (amountToCollect == null || amountToCollect.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Đơn hàng này không còn nợ");
         }
-
 
         Transaction transaction = Transaction.builder()
                 .booking(booking)
@@ -364,6 +366,7 @@ public class BookingServiceImpl implements BookingService {
 
         bookingRepository.save(booking);
     }
+
     @Override
     @Transactional(readOnly = true)
     public CheckAvailabilityResponse checkAvailability(SlotRequest request) {
@@ -373,8 +376,6 @@ public class BookingServiceImpl implements BookingService {
         System.err.println(court.getCourtId());
         RentalArea rentalArea = court.getRentalArea();
 
-
-
         if (!Boolean.TRUE.equals(rentalArea.getIsActive()) || rentalArea.getStatus() != RentalAreaStatus.ACTIVE) {
             return new CheckAvailabilityResponse(false, "Khu vực sân hiện không hoạt động");
         }
@@ -383,7 +384,6 @@ public class BookingServiceImpl implements BookingService {
         }
         LocalTime reqStartTime = request.getStartTime().toLocalTime();
         LocalTime reqEndTime = request.getEndTime().toLocalTime();
-
 
         if (reqStartTime.isBefore(rentalArea.getOpenTime()) || reqEndTime.isAfter(rentalArea.getCloseTime())) {
             return new CheckAvailabilityResponse(
@@ -395,7 +395,6 @@ public class BookingServiceImpl implements BookingService {
         }
 
         int requestQuantity = request.getQuantity() == null ? 1 : request.getQuantity();
-
 
         List<CourtCopy> activeCopies = courtCopyRepository
                 .findByCourt_CourtIdAndCourtCopyStatus(court.getCourtId(), CourtCopyStatus.ACTIVE);
@@ -424,10 +423,8 @@ public class BookingServiceImpl implements BookingService {
             }
         }
 
-
         return new CheckAvailabilityResponse(true, "Sân khả dụng", availableCount);
     }
-
 
     @Override
     @Transactional
@@ -437,6 +434,12 @@ public class BookingServiceImpl implements BookingService {
         if (request.getUserId() != null) {
             user = userRepository.findById(request.getUserId())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+            String currentPhone = user.getPhone();
+            if (currentPhone == null || currentPhone.trim().isEmpty()) {
+                user.setPhone(request.getUserPhone());
+                userRepository.save(user);
+            }
         }
 
         BookingIntent intent = BookingIntent.builder()
@@ -570,80 +573,66 @@ public class BookingServiceImpl implements BookingService {
 
     private BigDecimal calculateSlotPrice(Court court, LocalDateTime start, LocalDateTime end) {
 
+        List<CourtPrice> rules = courtPriceRepository.findByCourtIdOrderByPriorityDesc(court.getCourtId());
+
+        if (rules.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
         BigDecimal total = BigDecimal.ZERO;
         LocalDateTime cursor = start;
 
         while (cursor.isBefore(end)) {
+            LocalDateTime nextMinute = cursor.plusMinutes(1);
 
-            List<CourtPrice> rules = courtPriceRepository.findAllMatchingRules(
-                    court.getCourtId(),
-                    cursor.toLocalTime(),
-                    cursor.toLocalDate()
-            );
+            BigDecimal pricePerHour = pickBestRulePerHour(rules, cursor);
 
-            CourtPrice rule = pickBestRule(rules, cursor);
+            BigDecimal pricePerMinute = pricePerHour.divide(BigDecimal.valueOf(60), 10, RoundingMode.HALF_UP);
+            total = total.add(pricePerMinute);
 
-
-            LocalDateTime ruleEnd = LocalDateTime.of(cursor.toLocalDate(), rule.getEndTime());
-
-            if (rule.getEndTime().equals(LocalTime.MIN)) {
-                ruleEnd = ruleEnd.plusDays(1);
-            }
-
-            LocalDateTime stepEnd = ruleEnd.isAfter(end) ? end : ruleEnd;
-
-            long minutes = Duration.between(cursor, stepEnd).toMinutes();
-
-            if (minutes > 0) {
-                BigDecimal hours = BigDecimal.valueOf(minutes)
-                        .divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
-
-                BigDecimal price = hours.multiply(rule.getPricePerHour());
-                total = total.add(price);
-            }
-
-
-
-            cursor = stepEnd;
+            cursor = nextMinute;
         }
 
-        return total;
+        return total.setScale(0, RoundingMode.HALF_UP);
     }
 
-    private CourtPrice pickBestRule(List<CourtPrice> rules, LocalDateTime time) {
+    private BigDecimal pickBestRulePerHour(List<CourtPrice> rules, LocalDateTime moment) {
+        LocalTime time = moment.toLocalTime();
+        LocalDate date = moment.toLocalDate();
+        DayOfWeek dow = date.getDayOfWeek();
+        boolean isWeekend = (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY);
 
-        boolean isWeekend = time.getDayOfWeek() == DayOfWeek.SATURDAY
-                || time.getDayOfWeek() == DayOfWeek.SUNDAY;
+        for (CourtPrice cp : rules) {
+            if (!isTimeInRange(time, cp.getStartTime(), cp.getEndTime())) {
+                continue;
+            }
 
-        return rules.stream()
-                .filter(r -> getPriorityScore(r, isWeekend) > 0)
-                .max(Comparator
-                        .comparing((CourtPrice r) -> getPriorityScore(r, isWeekend))
-                        .thenComparing(
-                                CourtPrice::getPriority,
-                                Comparator.nullsLast(Integer::compareTo)
-                        )
-                        .thenComparing(
-                                CourtPrice::getStartTime,
-                                Comparator.reverseOrder()
-                        )
-                )
-                .orElseThrow(() -> new RuntimeException("Không có rule phù hợp"));
+            if (cp.getStartDate() != null && date.isBefore(cp.getStartDate())) continue;
+            if (cp.getEndDate() != null && date.isAfter(cp.getEndDate())) continue;
+
+            if (cp.getSpecificDate() != null && !cp.getSpecificDate().equals(date)) {
+                continue;
+            }
+
+            if (cp.getDayType() != null && cp.getDayType() != DayType.ALL) {
+                if (cp.getDayType() == DayType.WEEKDAY && isWeekend) continue;
+                if (cp.getDayType() == DayType.WEEKEND && !isWeekend) continue;
+            }
+
+            return cp.getPricePerHour();
+        }
+
+        return BigDecimal.ZERO;
     }
 
-    private int getPriorityScore(CourtPrice p, boolean isWeekend) {
+    private boolean isTimeInRange(LocalTime time, LocalTime start, LocalTime end) {
+        if (start == null || end == null) return true;
 
-
-        if (p.getSpecificDate() != null) return 1000;
-
-        return switch (p.getPriceType()) {
-            case EVENT -> 900;
-            case HOLIDAY -> 800;
-            case WEEKEND -> isWeekend ? 700 : -1;
-            case PEAK -> 600;
-            case NORMAL -> 500;
-            default -> 0;
-        };
+        if (start.isBefore(end)) {
+            return !time.isBefore(start) && time.isBefore(end);
+        } else {
+            return !time.isBefore(start) || time.isBefore(end);
+        }
     }
 
     @Override
@@ -671,9 +660,7 @@ public class BookingServiceImpl implements BookingService {
 
         BigDecimal tax = BigDecimal.ZERO;
 
-
         BigDecimal discount = BigDecimal.ZERO;
-
 
         BigDecimal totalPrice = bookingIntent.getPreviewPrice()
                 .add(tax)
@@ -943,7 +930,6 @@ public class BookingServiceImpl implements BookingService {
                 .build();
     }
 
-
     @Override
     public PageResponse<BookingResponse> getAllBookings(
             BookingStatus bookingStatus,
@@ -953,7 +939,6 @@ public class BookingServiceImpl implements BookingService {
             int page,
             int size
     ) {
-
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
 
         Specification<Booking> spec = BookingSpecification.filterBooking(
@@ -1020,6 +1005,7 @@ public class BookingServiceImpl implements BookingService {
                         RentalAreaResponse.builder()
                                 .rentalAreaId(booking.getRentalArea().getRentalAreaId())
                                 .rentalAreaName(booking.getRentalArea().getRentalAreaName())
+
                                 .address(addressMapper.toAddressResponse(booking.getRentalArea().getAddress()))
                                 .build() : null)
                 .depositAmount(booking.getDepositAmount())
@@ -1181,14 +1167,11 @@ public class BookingServiceImpl implements BookingService {
 
         if (status == BookingStatus.BOOKED) {
             slotStatus = SlotStatus.BOOKED;
-        }
-        else if (status == BookingStatus.USING) {
+        } else if (status == BookingStatus.USING) {
             slotStatus = SlotStatus.BOOKED;
-        }
-        else if (status == BookingStatus.COMPLETED) {
+        } else if (status == BookingStatus.COMPLETED) {
             slotStatus = SlotStatus.COMPLETED;
-        }
-        else if (status == BookingStatus.CANCELLED) {
+        } else if (status == BookingStatus.CANCELLED) {
             slotStatus = SlotStatus.AVAILABLE;
         }
 
@@ -1253,9 +1236,6 @@ public class BookingServiceImpl implements BookingService {
             transactionRepository.save(refundTransaction);
         }
     }
-
-
-
 
     private BookingResponse mapToBookingResponse(Booking booking) {
         if (booking == null) {

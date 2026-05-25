@@ -97,7 +97,6 @@ public class MatchController {
             @RequestParam(required = false) LocalDateTime endDate,
             @RequestParam(required = false) MatchType matchType,
             @RequestParam(required = false) String ward,
-            @RequestParam(required = false) String district,
             @RequestParam(required = false) String city
     ) {
         return ResponseEntity.ok(
@@ -106,7 +105,7 @@ public class MatchController {
                         matchService.getOpenMatches(
                                 page, size, category, keyword,
                                 startDate, endDate, matchType,
-                                ward, district, city)));
+                                ward, city)));
     }
 
     @GetMapping("/{matchId}")

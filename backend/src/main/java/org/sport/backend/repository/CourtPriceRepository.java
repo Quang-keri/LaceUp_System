@@ -67,6 +67,7 @@ public interface CourtPriceRepository extends JpaRepository<CourtPrice, UUID>, J
         ORDER BY cp.priority DESC NULLS LAST
     """)
     List<CourtPrice> findByCourtIdOrderByPriorityDesc(@Param("courtId") UUID courtId);
+
     @Query("SELECT cp FROM CourtPrice cp WHERE cp.court.courtId = :courtId AND cp.specificDate = :date ORDER BY cp.startTime ASC")
     List<CourtPrice> findByCourtIdAndSpecificDate(
             @Param("courtId") UUID courtId,
@@ -91,4 +92,5 @@ public interface CourtPriceRepository extends JpaRepository<CourtPrice, UUID>, J
 
         return defaultPrices;
     }
+
 }

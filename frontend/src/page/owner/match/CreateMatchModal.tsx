@@ -12,7 +12,6 @@ import {
 import matchService from "../../../service/match/matchService.ts";
 import courtService from "../../../service/courtService.ts";
 
-// Khai báo danh sách các thứ trong tuần
 const DAYS_OF_WEEK = [
   { label: "Thứ 2", value: "MONDAY" },
   { label: "Thứ 3", value: "TUESDAY" },

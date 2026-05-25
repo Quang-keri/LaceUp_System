@@ -120,7 +120,7 @@ export default function PaymentPage() {
             contact={contact}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
-            isDeposit={isDeposit} // Truyền props mới
+            isDeposit={isDeposit}
             setIsDeposit={setIsDeposit}
             onConfirm={handleConfirm}
             loading={confirming}

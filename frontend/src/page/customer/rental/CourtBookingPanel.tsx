@@ -1,70 +1,97 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DatePicker,
-  TimePicker,
+  Select,
   InputNumber,
   Input,
   Button,
+  Form,
   message,
 } from "antd";
 import dayjs from "dayjs";
-
 import bookingService from "../../../service/bookingService";
 
 export default function CourtBookingPanel({
   court,
   onBook,
+  selectedDate,
+  selectedTime,
+  selectedDuration,
 }: {
   court: any;
   onBook: (data: any) => void;
+  selectedDate?: dayjs.Dayjs;
+  selectedTime?: string | null;
+  selectedDuration?: number;
 }) {
-  const [date, setDate] = useState<dayjs.Dayjs | null>(dayjs());
-  const [start, setStart] = useState<dayjs.Dayjs | null>(
-    dayjs().set("hour", 17).set("minute", 0),
-  );
-  const [end, setEnd] = useState<dayjs.Dayjs | null>(
-    dayjs().set("hour", 19).set("minute", 0),
-  );
-
-  const [quantity, setQuantity] = useState<number>(1);
+  const [form] = Form.useForm();
   const [isChecking, setIsChecking] = useState(false);
 
-  const displayPrice = court.minPrice || court.price || 0;
-  const maxCourts = court.totalCourts || court.courtCopies?.length || 1;
+  const displayPrice = court?.minPrice || court?.price || 0;
+  const maxCourts = court?.totalCourts || court?.courtCopies?.length || 1;
 
-  const handleBook = async () => {
-    if (!date || !start || !end) {
-      message.warning("Vui lòng chọn đầy đủ ngày và giờ"); // Đổi toast thành message
+  useEffect(() => {
+    let baseDate = selectedDate || dayjs();
+    let initialTime = baseDate.clone().hour(17).minute(0).second(0);
+
+    if (selectedTime) {
+      const [hour, minute] = selectedTime.split(":").map(Number);
+      initialTime = baseDate.clone().hour(hour).minute(minute).second(0);
+    }
+
+    form.setFieldsValue({
+      startTime: initialTime,
+      duration: selectedDuration || 1,
+      quantity: 1,
+      categoryName: court?.categoryName || "Sân thể thao",
+    });
+  }, [selectedDate, selectedTime, selectedDuration, court, form]);
+
+  const disabledDateTime = (current: any) => {
+    const now = dayjs();
+    const isToday = current && current.isSame(now, "day");
+
+    return {
+      disabledHours: () => {
+        if (!isToday) return [];
+        return Array.from({ length: now.hour() }, (_, i) => i);
+      },
+      disabledMinutes: (selectedHour: number) => {
+        const minuteOptions = [0, 30];
+        const disabledMin = Array.from({ length: 60 }, (_, i) => i).filter(
+          (m) => !minuteOptions.includes(m),
+        );
+
+        if (isToday && selectedHour === now.hour()) {
+          if (now.minute() >= 0) disabledMin.push(0);
+          if (now.minute() >= 30) disabledMin.push(30);
+        }
+
+        return disabledMin;
+      },
+    };
+  };
+
+  const handleBook = async (values: any) => {
+    const { startTime, duration, quantity } = values;
+
+    if (!startTime) {
+      message.warning("Vui lòng chọn ngày và giờ bắt đầu");
       return;
     }
 
-    const formattedDate = date.format("YYYY-MM-DD");
-    const startTimeStr = `${formattedDate}T${start.format("HH:mm")}:00`;
-    const endTimeStr = `${formattedDate}T${end.format("HH:mm")}:00`;
+    const endTime = startTime.add(duration, "hour");
+    const formattedDate = startTime.format("YYYY-MM-DD");
+    const startTimeStr = `${formattedDate}T${startTime.format("HH:mm")}:00`;
+    const endTimeStr = `${formattedDate}T${endTime.format("HH:mm")}:00`;
 
-    const startObj = dayjs(startTimeStr);
-    const endObj = dayjs(endTimeStr);
-    if (startObj.isBefore(dayjs())) {
+    if (startTime.isBefore(dayjs())) {
       message.warning(
-        "Không thể đặt sân trong quá khứ. Vui lòng chọn lại giờ bắt đầu!",
+        "Không thể đặt sân trong quá khứ. Vui lòng chọn lại giờ!",
       );
       return;
     }
-    if (startObj.isAfter(endObj) || startObj.isSame(endObj)) {
-      message.warning("Giờ kết thúc phải sau giờ bắt đầu");
-      return;
-    }
-
-    const durationMinutes = endObj.diff(startObj, "minute");
-    if (durationMinutes < 60) {
-      message.warning("Thời gian thuê tối thiểu là 1 tiếng");
-      return;
-    }
-    if (durationMinutes > 480) {
-      message.warning("Chỉ được thuê tối đa 8 tiếng cho một lần đặt");
-      return;
-    }
-    if (startObj.isAfter(dayjs().add(14, "day"))) {
+    if (startTime.isAfter(dayjs().add(14, "day"))) {
       message.warning("Chỉ được phép đặt trước tối đa 14 ngày");
       return;
     }
@@ -80,16 +107,14 @@ export default function CourtBookingPanel({
       };
 
       const res = await bookingService.checkAvailability(payload);
-
       const responseData = res.result || res.data;
 
       if (res.code === 200 && responseData?.available === true) {
         message.success(responseData?.message || "Sân khả dụng!");
-
         onBook({
           date: formattedDate,
-          start: start.format("HH:mm"),
-          end: end.format("HH:mm"),
+          start: startTime.format("HH:mm"),
+          end: endTime.format("HH:mm"),
           quantity: quantity,
         });
       } else {
@@ -111,118 +136,118 @@ export default function CourtBookingPanel({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-6">
-      <h3 className="text-xl font-bold text-gray-800 mb-2">
-        {court.courtName}
-      </h3>
+    <div className="animate-in fade-in duration-300">
+      {/* KHU VỰC CHUNG: Tên Sân */}
+      <div className="mb-5 p-3 bg-purple-50/50 rounded-lg border border-purple-100 flex items-center gap-2">
+        <p className="text-sm text-purple-900">
+          Sân áp dụng: <strong>{court?.courtName}</strong>
+        </p>
+      </div>
 
+      {/* KHU VỰC CHUNG: Giá tiền */}
       <div className="flex items-end gap-2 mb-6 border-b border-gray-100 pb-4">
         {displayPrice > 0 ? (
           <>
-            Giá từ
-            <span className="text-4xl font-extrabold text-[#e812d2]">
+            <span className="text-gray-600 font-medium pb-1">Giá từ</span>
+            <span className="text-4xl font-extrabold text-orange-500">
               {displayPrice.toLocaleString()}
             </span>
             <span className="text-gray-500 font-medium pb-1">VNĐ / giờ</span>
           </>
         ) : (
-          <span className="text-2xl font-extrabold text-[#3B82F6] pb-1">
+          <span className="text-2xl font-extrabold text-[#9156F1] pb-1">
             Liên hệ để biết giá
           </span>
         )}
       </div>
 
-      <div className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Ngày chơi
-          </label>
-          <DatePicker
-            value={date}
-            onChange={setDate}
-            className="w-full h-11 rounded-lg"
-            format="DD/MM/YYYY"
-            disabledDate={(current) =>
-              current && current < dayjs().startOf("day")
+      <Form form={form} layout="vertical" onFinish={handleBook}>
+        <div className="grid grid-cols-2 gap-4">
+          <Form.Item
+            label={
+              <span className="font-semibold text-gray-700">Giờ bắt đầu</span>
             }
-          />
+            name="startTime"
+            rules={[{ required: true, message: "Vui lòng chọn giờ bắt đầu!" }]}
+          >
+            <DatePicker
+              showTime={{ format: "HH:mm", hideDisabledOptions: true }}
+              format="HH:mm - DD/MM"
+              className="w-full h-11"
+              placeholder="Chọn giờ"
+              showNow={false}
+              disabledDate={(current) =>
+                current && current < dayjs().startOf("day")
+              }
+              disabledTime={disabledDateTime}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={
+              <span className="font-semibold text-gray-700">
+                Thời lượng chơi
+              </span>
+            }
+            name="duration"
+            rules={[{ required: true }]}
+          >
+            <Select className="w-full h-11">
+              <Select.Option value={1}>1 giờ</Select.Option>
+              <Select.Option value={1.5}>1.5 giờ</Select.Option>
+              <Select.Option value={2}>2 giờ</Select.Option>
+              <Select.Option value={2.5}>2 giờ 30 phút</Select.Option>
+              <Select.Option value={3}>3 giờ</Select.Option>
+              <Select.Option value={3.5}>3 giờ 30 phút</Select.Option>
+              <Select.Option value={4}>4 giờ</Select.Option>
+            </Select>
+          </Form.Item>
         </div>
+
+        <hr className="my-5 border-gray-100" />
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Giờ bắt đầu
-            </label>
-            <TimePicker
-              value={start}
-              onChange={setStart}
-              format="HH:mm"
-              className="w-full h-11 rounded-lg"
-              minuteStep={30}
+          <Form.Item
+            label={
+              <span className="font-semibold text-gray-700">
+                Số lượng sân (1 - {maxCourts})
+              </span>
+            }
+            name="quantity"
+            rules={[{ required: true, message: "Nhập số lượng sân!" }]}
+            className="mb-4"
+          >
+            <InputNumber
+              min={1}
+              max={maxCourts}
+              className="w-full h-11 flex items-center rounded-lg"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Giờ kết thúc
-            </label>
-            <TimePicker
-              value={end}
-              onChange={setEnd}
-              format="HH:mm"
-              className="w-full h-11 rounded-lg"
-              minuteStep={30}
+          </Form.Item>
+
+          <Form.Item
+            label={<span className="font-semibold text-gray-700">Loại sân</span>}
+            name="categoryName"
+            className="mb-4"
+          >
+            <Input
+              readOnly
+              className="w-full h-11 rounded-lg bg-gray-50 text-gray-600 border-gray-200"
             />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Số lượng sân cần đặt{" "}
-            <span className="text-xs text-gray-400 font-normal">
-              (Tối đa {maxCourts} sân)
-            </span>
-          </label>
-          <InputNumber
-            value={quantity}
-            onChange={(v) => setQuantity(v || 1)}
-            min={1}
-            max={maxCourts}
-            className="w-full h-11 flex items-center rounded-lg"
-            prefix={<span className="text-gray-400 mr-2"></span>}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Loại sân
-          </label>
-          <Input
-            value={court.categoryName || "Sân thể thao"}
-            readOnly
-            className="w-full h-11 rounded-lg bg-gray-50 text-gray-600 border-gray-200"
-          />
+          </Form.Item>
         </div>
 
         <Button
-          onClick={handleBook}
+          type="primary"
+          htmlType="submit"
           loading={isChecking}
-          className={`w-full h-[80px]
-    text-lg font-extrabold tracking-wide
-    rounded-2xl
-    transition-all duration-300
-    shadow-lg shadow-[#9156F1]/30
-    border-none !text-white
-    ${
-      isChecking
-        ? "!bg-[#d8c3fb] hover:!bg-[#d8c3fb]"
-        : "!bg-gradient-to-r from-[#9156F1] to-[#B57BFF] hover:from-[#7e43d9] hover:to-[#a86df5]"
-    }`}
+          className="w-full h-[52px] text-base font-bold rounded-xl mt-2
+            !bg-[#9156F1] !border-[#9156F1]
+            hover:!bg-[#7e43d9] hover:!border-[#7e43d9]
+            flex items-center justify-center gap-2 shadow-md"
         >
-          <span className="!text-white">
-            {isChecking ? "Đang kiểm tra lịch trống..." : "Đặt sân ngay"}
-          </span>
+          {isChecking ? "Đang kiểm tra lịch trống..." : "Đặt sân ngay"}
         </Button>
-      </div>
+      </Form>
     </div>
   );
 }

@@ -34,6 +34,7 @@ class BookingService {
     );
     return response.data;
   }
+
   async addExtraServices(
     bookingId: string,
     items: {
@@ -62,14 +63,20 @@ class BookingService {
     page: number = 1,
     size: number = 10,
     status?: string,
+    searchKeyword?: string,
+    from?: string,
+    to?: string,
   ) {
     const params = new URLSearchParams();
 
     params.append("rentalId", rentalAreaId);
     params.append("page", page.toString());
     params.append("size", size.toString());
+    params.append("keyword", searchKeyword || "");
 
-    if (status) params.append("status", status);
+    if (status) params.append("bookingStatus", status);
+    if (from) params.append("from", from);
+    if (to) params.append("to", to);
 
     const response = await api.get<ApiResponse<BookingListResponse>>(
       `/bookings/my-rentals?${params.toString()}`,
@@ -79,16 +86,20 @@ class BookingService {
   }
 
   async getMyBookings(
-    userId: string,
+    status?: string,
+    searchKeyword?: string,
+    from?: string,
+    to?: string,
     page: number = 1,
     size: number = 10,
-    status?: string,
   ) {
     const params = new URLSearchParams();
-    params.append("userId", userId);
     params.append("page", page.toString());
     params.append("size", size.toString());
-    if (status) params.append("status", status);
+    params.append("keyword", searchKeyword || "");
+    params.append("bookingStatus", status || "");
+    params.append("from", from || "");
+    params.append("to", to || "");
 
     const response = await api.get<ApiResponse<BookingListResponse>>(
       `/bookings/my-bookings?${params.toString()}`,
@@ -124,6 +135,7 @@ class BookingService {
     );
     return response.data;
   }
+
   async cancelBooking(bookingId: string) {
     const response = await api.put<ApiResponse<void>>(
       `/bookings/${bookingId}/cancel`,
@@ -173,10 +185,9 @@ class BookingService {
     from?: string;
     to?: string;
   }) {
-    // Sử dụng instance 'api' đã import từ config/axios
     const response = await api.get(`/bookings/export/excel`, {
       params,
-      responseType: "blob", // Bắt buộc để nhận dữ liệu nhị phân từ backend
+      responseType: "blob",
     });
     return response;
   }
