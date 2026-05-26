@@ -1,5 +1,6 @@
 package org.sport.backend.serviceImpl;
 
+import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.DayType;
 import org.sport.backend.constant.PriceType;
 import org.sport.backend.dto.request.court_price.CourtPriceRequest;
@@ -10,7 +11,6 @@ import org.sport.backend.entity.CourtPrice;
 import org.sport.backend.repository.CourtPriceRepository;
 import org.sport.backend.repository.CourtRepository;
 import org.sport.backend.service.CourtPriceService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,12 +23,11 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class CourtPriceServiceImpl implements CourtPriceService {
 
-    @Autowired
-    private CourtPriceRepository courtPriceRepository;
-    @Autowired
-    private CourtRepository courtRepository;
+    private final CourtPriceRepository courtPriceRepository;
+    private final CourtRepository courtRepository;
 
     @Override
     public CourtPriceResponse create(CourtPriceRequest request) {

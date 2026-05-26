@@ -26,6 +26,8 @@ const LoginPage: React.FC = () => {
   const [hasEmailError, setHasEmailError] = useState(false);
   const [hasPasswordError, setHasPasswordError] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState("");
+
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
@@ -37,21 +39,22 @@ const LoginPage: React.FC = () => {
 
     setHasEmailError(false);
     setHasPasswordError(false);
+    setErrorMessage("");
 
     let isValid = true;
 
     if (!email.trim()) {
-      message.error("Vui lòng nhập email của bạn.");
+      setErrorMessage("Vui lòng nhập email của bạn.");
       setHasEmailError(true);
       isValid = false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      message.error("Định dạng email không hợp lệ.");
+      setErrorMessage("Định dạng email không hợp lệ.");
       setHasEmailError(true);
       isValid = false;
     }
 
     if (!password) {
-      if (isValid) message.error("Vui lòng nhập mật khẩu.");
+      if (isValid) setErrorMessage("Vui lòng nhập mật khẩu.");
       setHasPasswordError(true);
       isValid = false;
     }
@@ -75,12 +78,10 @@ const LoginPage: React.FC = () => {
 
         if (emailErrCode) {
           setHasEmailError(true);
-          message.error(BACKEND_ERRORS[emailErrCode] || emailErrCode);
-        }
-
-        if (passwordErrCode) {
+          setErrorMessage(BACKEND_ERRORS[emailErrCode] || emailErrCode);
+        } else if (passwordErrCode) {
           setHasPasswordError(true);
-          message.error(BACKEND_ERRORS[passwordErrCode] || passwordErrCode);
+          setErrorMessage(BACKEND_ERRORS[passwordErrCode] || passwordErrCode);
         }
       } else {
         const backendMessage = errorData?.message;
@@ -90,8 +91,7 @@ const LoginPage: React.FC = () => {
 
         setHasEmailError(true);
         setHasPasswordError(true);
-
-        message.error(translatedMessage);
+        setErrorMessage(translatedMessage);
       }
     } finally {
       setLoading(false);
@@ -110,14 +110,14 @@ const LoginPage: React.FC = () => {
           navigate("/");
         }
       } catch (error: any) {
-        message.error("Đăng nhập bằng Google thất bại. Vui lòng thử lại!");
+        setErrorMessage("Đăng nhập bằng Google thất bại. Vui lòng thử lại!");
       } finally {
         setLoading(false);
       }
     },
     onError: (errorResponse) => {
       console.error(errorResponse);
-      message.error("Quá trình xác thực với Google thất bại.");
+      setErrorMessage("Quá trình xác thực với Google thất bại.");
     },
   });
 
@@ -135,6 +135,7 @@ const LoginPage: React.FC = () => {
             onChange={(e) => {
               setEmail(e.target.value);
               if (hasEmailError) setHasEmailError(false);
+              if (errorMessage) setErrorMessage("");
             }}
             placeholder="Email"
             className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 ${
@@ -151,6 +152,7 @@ const LoginPage: React.FC = () => {
               onChange={(e) => {
                 setPassword(e.target.value);
                 if (hasPasswordError) setHasPasswordError(false);
+                if (errorMessage) setErrorMessage("");
               }}
               placeholder="Mật khẩu"
               className={`w-full px-4 py-2 text-gray-900 placeholder-gray-400 bg-white border rounded-lg outline-none transition focus:ring-2 pr-10 ${
@@ -167,6 +169,12 @@ const LoginPage: React.FC = () => {
               {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
             </button>
           </div>
+
+          {errorMessage && (
+            <div className="text-red-500 text-sm px-1 font-medium">
+              {errorMessage}
+            </div>
+          )}
 
           <button
             type="submit"

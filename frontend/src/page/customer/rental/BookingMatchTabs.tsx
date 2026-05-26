@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Tabs } from "antd";
+import { Tabs, ConfigProvider } from "antd";
 import CourtBookingPanel from "./CourtBookingPanel";
 import CreateMatchForm from "./CreateMatchForm";
 import dayjs from "dayjs";
@@ -23,47 +23,59 @@ export default function BookingMatchTabs({
 
   return (
     <div className="sticky top-6 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        centered
-        className="pt-4 custom-tabs"
-        items={[
-          {
-            key: "booking",
-            label: <span className="font-bold text-base px-4">Đặt sân</span>,
-            children: (
-              <div className="px-6 pb-6">
-                <CourtBookingPanel
-                  court={court}
-                  onBook={onBook}
-                  selectedDate={selectedDate}
-                  selectedTime={selectedTime}
-                  selectedDuration={selectedDuration}
-                />
-              </div>
-            ),
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: activeTab === "booking" ? "#ea580c" : "#9156F1",
           },
-          {
-            key: "match",
-            label: (
-              <span className="font-bold text-base px-4 text-[#9156F1]">
-                Ghép kèo
-              </span>
-            ),
-            children: (
-              <div className="px-6 pb-6">
-                <CreateMatchForm
-                  court={court}
-                  address={data?.address}
-                  selectedDate={selectedDate}
-                  selectedTime={selectedTime}
-                />
-              </div>
-            ),
-          },
-        ]}
-      />
+        }}
+      >
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          centered
+          className="pt-4 custom-tabs"
+          items={[
+            {
+              key: "booking",
+              label: <span className="font-bold text-base px-4">Đặt sân</span>,
+              children: (
+                <div className="px-6 pb-6">
+                  <CourtBookingPanel
+                    court={court}
+                    onBook={onBook}
+                    selectedDate={selectedDate}
+                    selectedTime={selectedTime}
+                    selectedDuration={selectedDuration}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: "match",
+              label: <span className="font-bold text-base px-4">Ghép kèo</span>,
+              children: (
+                <div className="px-6 pb-6">
+                  <ConfigProvider
+                    theme={{
+                      token: {
+                        colorPrimary: "#9156F1",
+                      },
+                    }}
+                  >
+                    <CreateMatchForm
+                      court={court}
+                      address={data?.address}
+                      selectedDate={selectedDate}
+                      selectedTime={selectedTime}
+                    />
+                  </ConfigProvider>
+                </div>
+              ),
+            },
+          ]}
+        />
+      </ConfigProvider>
     </div>
   );
 }

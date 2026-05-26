@@ -11,6 +11,55 @@ import {
 import dayjs from "dayjs";
 import bookingService from "../../../service/bookingService";
 
+const calculateTotalPrice = (
+  court: any,
+  startTime: dayjs.Dayjs,
+  duration: number,
+  quantity: number,
+) => {
+  if (!court || !startTime || !duration || !quantity) return 0;
+
+  const rules = court.priceRules || [];
+
+  if (rules.length === 0) {
+    return (court.price || court.minPrice || 0) * duration * quantity;
+  }
+
+  let totalPrice = 0;
+  let currentTime = startTime.clone();
+  const chunks = duration * 2;
+
+  for (let i = 0; i < chunks; i++) {
+    const currentMinutes = currentTime.hour() * 60 + currentTime.minute();
+
+    const applicableRules = rules.filter((rule: any) => {
+      if (!rule.startTime || !rule.endTime) return false;
+      const [startHour, startMin] = rule.startTime.split(":").map(Number);
+      const [endHour, endMin] = rule.endTime.split(":").map(Number);
+
+      const ruleStartMins = startHour * 60 + startMin;
+      const ruleEndMins = endHour * 60 + endMin;
+
+      return currentMinutes >= ruleStartMins && currentMinutes < ruleEndMins;
+    });
+
+    applicableRules.sort(
+      (a: any, b: any) => (b.priority || 0) - (a.priority || 0),
+    );
+
+    const activeRule = applicableRules[0];
+    const pricePerHour = activeRule
+      ? activeRule.pricePerHour
+      : court.price || court.minPrice || 0;
+
+    totalPrice += pricePerHour * 0.5;
+
+    currentTime = currentTime.add(30, "minute");
+  }
+
+  return totalPrice * quantity;
+};
+
 export default function CourtBookingPanel({
   court,
   onBook,
@@ -26,9 +75,27 @@ export default function CourtBookingPanel({
 }) {
   const [form] = Form.useForm();
   const [isChecking, setIsChecking] = useState(false);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
 
-  const displayPrice = court?.minPrice || court?.price || 0;
   const maxCourts = court?.totalCourts || court?.courtCopies?.length || 1;
+
+  const watchStartTime = Form.useWatch("startTime", form);
+  const watchDuration = Form.useWatch("duration", form);
+  const watchQuantity = Form.useWatch("quantity", form);
+
+  useEffect(() => {
+    if (watchStartTime && watchDuration && watchQuantity) {
+      const price = calculateTotalPrice(
+        court,
+        watchStartTime,
+        watchDuration,
+        watchQuantity,
+      );
+      setCalculatedPrice(price);
+    } else {
+      setCalculatedPrice(0);
+    }
+  }, [watchStartTime, watchDuration, watchQuantity, court]);
 
   useEffect(() => {
     let baseDate = selectedDate || dayjs();
@@ -137,26 +204,24 @@ export default function CourtBookingPanel({
 
   return (
     <div className="animate-in fade-in duration-300">
-      {/* KHU VỰC CHUNG: Tên Sân */}
-      <div className="mb-5 p-3 bg-purple-50/50 rounded-lg border border-purple-100 flex items-center gap-2">
-        <p className="text-sm text-purple-900">
+      <div className="mb-5 p-3 bg-orange-50/50 rounded-lg border border-orange-100 flex items-center gap-2">
+        <p className="text-sm text-orange-900">
           Sân áp dụng: <strong>{court?.courtName}</strong>
         </p>
       </div>
 
-      {/* KHU VỰC CHUNG: Giá tiền */}
-      <div className="flex items-end gap-2 mb-6 border-b border-gray-100 pb-4">
-        {displayPrice > 0 ? (
+      <div className="flex items-end gap-2 mb-6 border-b border-gray-100 pb-4 min-h-[56px]">
+        {calculatedPrice > 0 ? (
           <>
-            <span className="text-gray-600 font-medium pb-1">Giá từ</span>
-            <span className="text-4xl font-extrabold text-orange-500">
-              {displayPrice.toLocaleString()}
+            <span className="text-gray-600 font-medium pb-1">Tạm tính</span>
+            <span className="text-3xl font-extrabold text-orange-500">
+              {calculatedPrice.toLocaleString()}
             </span>
-            <span className="text-gray-500 font-medium pb-1">VNĐ / giờ</span>
+            <span className="text-gray-500 font-medium pb-1">VNĐ</span>
           </>
         ) : (
-          <span className="text-2xl font-extrabold text-[#9156F1] pb-1">
-            Liên hệ để biết giá
+          <span className="text-xl font-extrabold text-[#9156F1] pb-1">
+            Vui lòng chọn giờ để xem giá
           </span>
         )}
       </div>
@@ -225,7 +290,9 @@ export default function CourtBookingPanel({
           </Form.Item>
 
           <Form.Item
-            label={<span className="font-semibold text-gray-700">Loại sân</span>}
+            label={
+              <span className="font-semibold text-gray-700">Loại sân</span>
+            }
             name="categoryName"
             className="mb-4"
           >
@@ -241,9 +308,9 @@ export default function CourtBookingPanel({
           htmlType="submit"
           loading={isChecking}
           className="w-full h-[52px] text-base font-bold rounded-xl mt-2
-            !bg-[#9156F1] !border-[#9156F1]
-            hover:!bg-[#7e43d9] hover:!border-[#7e43d9]
-            flex items-center justify-center gap-2 shadow-md"
+            !bg-[#ea580c] !border-[#ea580c]
+            hover:!bg-[#c2410c] hover:!border-[#c2410c]
+            flex items-center justify-center gap-2 shadow-md transition-colors"
         >
           {isChecking ? "Đang kiểm tra lịch trống..." : "Đặt sân ngay"}
         </Button>

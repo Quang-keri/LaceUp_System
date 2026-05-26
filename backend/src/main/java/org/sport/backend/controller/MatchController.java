@@ -32,7 +32,8 @@ public class MatchController {
     @PostMapping("/create")
     @PreAuthorize("isAuthenticated")
     public ResponseEntity<ApiResponse<MatchResponse>> createMatch(
-            @RequestBody @Valid MatchRequest request) {
+            @RequestBody @Valid MatchRequest request
+    ) {
         log.info("Request nhận được: isRecurring={}, type={}, days={}",
                 request.isRecurring(), request.getRecurringType(), request.getDayOfWeek());
         return ResponseEntity.ok(
@@ -45,7 +46,8 @@ public class MatchController {
     @PostMapping("/{matchId}/join")
     @PreAuthorize("hasAuthority('JOIN_MATCH')")
     public ResponseEntity<ApiResponse<Void>> joinMatch(
-            @PathVariable UUID matchId) {
+            @PathVariable UUID matchId
+    ) {
         matchService.joinMatch(matchId);
         return ResponseEntity.ok(ApiResponse.success(
                 200,
@@ -56,7 +58,8 @@ public class MatchController {
     @PostMapping("/join/code")
     @PreAuthorize("hasAuthority('JOIN_MATCH')")
     public ResponseEntity<ApiResponse<Void>> joinMatchByCode(
-            @RequestParam String roomCode) {
+            @RequestParam String roomCode
+    ) {
         matchService.joinByRoomCode(roomCode);
         return ResponseEntity.ok(ApiResponse.success(
                 200,
@@ -67,7 +70,8 @@ public class MatchController {
     @PostMapping("/auto-match")
     @PreAuthorize("hasAuthority('JOIN_MATCH')")
     public ResponseEntity<ApiResponse<MatchResponse>> autoMatch(
-            @RequestBody AutoMatchRequest request) {
+            @RequestBody AutoMatchRequest request
+    ) {
         MatchResponse matchedRoom = matchService.autoMatch(request);
         return ResponseEntity.ok(ApiResponse.success(
                 200,
@@ -79,7 +83,8 @@ public class MatchController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> divideTeams(
             @PathVariable UUID matchId,
-            @RequestBody DivideTeamRequest request) {
+            @RequestBody DivideTeamRequest request
+    ) {
         matchService.divideTeams(matchId, request);
         return ResponseEntity.ok(ApiResponse.success(
                 200,
@@ -110,7 +115,8 @@ public class MatchController {
 
     @GetMapping("/{matchId}")
     public ResponseEntity<ApiResponse<MatchResponse>> getMatchDetail(
-            @PathVariable UUID matchId) {
+            @PathVariable UUID matchId
+    ) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         200,
@@ -143,19 +149,26 @@ public class MatchController {
     @PreAuthorize("hasAuthority('VIEW_OWNER_MATCHES')")
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getOwnerMatches(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) MatchStatus status,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) LocalDateTime startDate,
+            @RequestParam(required = false) LocalDateTime endDate
+    ) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         200,
                         "Lấy danh sách trận đấu trên sân của owner thành công.",
-                        matchService.getOwnerMatchesPaged(page, size)));
+                        matchService.getOwnerMatchesPaged(page, size, status, category, keyword, startDate, endDate)));
     }
 
     @GetMapping("/my-matches")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getMyMatches(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size
+    ) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         200,
@@ -169,7 +182,8 @@ public class MatchController {
     public ResponseEntity<ApiResponse<PageResponse<MatchResponse>>> getUserMatchHistory(
             @PathVariable UUID userId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size
+    ) {
         return ResponseEntity.ok(
                 ApiResponse.success(200,
                         "Lấy danh sách trận đấu của người chơi thành công.",

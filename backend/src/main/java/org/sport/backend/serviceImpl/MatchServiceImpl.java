@@ -339,13 +339,14 @@ public class MatchServiceImpl implements MatchService {
             LocalDateTime startDate, LocalDateTime endDate, MatchType matchType,
             String ward, String city
     ) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").ascending());
 
         Specification<Match> spec = Specification.where(MatchSpecifications.fetchAllDetails())
                 .and(MatchSpecifications.hasStatus(MatchStatus.OPEN))
                 .and(MatchSpecifications.hasCategory(category))
                 .and(MatchSpecifications.searchByCourtName(keyword))
                 .and(MatchSpecifications.isWithinTimeRange(startDate, endDate))
+                .and(MatchSpecifications.fromTodayOnwards())
                 .and(MatchSpecifications.hasMatchType(matchType))
                 .and(MatchSpecifications.hasCity(city))
                 .and(MatchSpecifications.hasWard(ward));
@@ -380,10 +381,21 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public PageResponse<MatchResponse> getOwnerMatchesPaged(int page, int size) {
+    public PageResponse<MatchResponse> getOwnerMatchesPaged(
+            int page, int size, MatchStatus status, String category,
+            String keyword, LocalDateTime startDate, LocalDateTime endDate) {
+
         User currentUser = userService.getCurrentUserEntity();
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-        Page<Match> matchPage = matchRepository.findByOwnerSystem(currentUser, pageable);
+
+        Specification<Match> spec = Specification.where(MatchSpecifications.fetchAllDetails())
+                .and(MatchSpecifications.isOwnerSystem(currentUser.getUserId()))
+                .and(MatchSpecifications.hasStatus(status))
+                .and(MatchSpecifications.hasCategory(category))
+                .and(MatchSpecifications.searchByCourtName(keyword))
+                .and(MatchSpecifications.isWithinTimeRange(startDate, endDate));
+
+        Page<Match> matchPage = matchRepository.findAll(spec, pageable);
 
         return PageResponse.<MatchResponse>builder()
                 .currentPage(page)
@@ -521,8 +533,17 @@ public class MatchServiceImpl implements MatchService {
         log.info("Auto-Canceling Match [{}] - Lực lượng: {}/{} - Lý do: {}",
                 match.getMatchId(), match.getCurrentPlayers(), match.getMaxPlayers(), reason);
 
-        match.setStatus(MatchStatus.CANCELLED);
+        match.setStatus(MatchStatus.EXPIRED);
         matchRepository.save(match);
+
+        List<Slot> matchSlots = slotRepository.findByMatch(match);
+        if (matchSlots != null && !matchSlots.isEmpty()) {
+            for (Slot slot : matchSlots) {
+                slot.setSlotStatus(SlotStatus.CANCELLED);
+            }
+            slotRepository.saveAll(matchSlots);
+            log.info("Đã giải phóng {} slot(s) của trận [{}]", matchSlots.size(), match.getMatchId());
+        }
     }
 
     private boolean shouldCreateForDate(Match config, LocalDate date) {
@@ -536,8 +557,7 @@ public class MatchServiceImpl implements MatchService {
 
         if (config.getRecurringType() == RecurringType.WEEKLY) {
             if (config.getDayOfWeek() == null) return false;
-            String currentDay = date.getDayOfWeek().name();
-            return config.getDayOfWeek().contains(currentDay);
+            return config.getDayOfWeek() == date.getDayOfWeek();
         }
         return false;
     }

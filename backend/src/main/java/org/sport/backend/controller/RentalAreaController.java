@@ -76,7 +76,7 @@ public class RentalAreaController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
+//    @PreAuthorize("hasAuthority('CREATE_RENTAL_AREA')")
     public ApiResponse<?> createRentalArea(
             @Valid @ModelAttribute RentalAreaRequest request
     ) {
@@ -157,7 +157,7 @@ public class RentalAreaController {
 
     @PutMapping(value = "/{rentalAreaId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('UPDATE_RENTAL_AREA')")
+//    @PreAuthorize("hasAuthority('UPDATE_RENTAL_AREA')")
     public ApiResponse<RentalAreaResponse> updateRentalArea(
             @PathVariable UUID rentalAreaId,
             @Valid @ModelAttribute RentalAreaUpdateRequest request
@@ -168,7 +168,7 @@ public class RentalAreaController {
     }
 
     @DeleteMapping("/{rentalAreaId}")
-    @PreAuthorize("hasAuthority('DELETE_RENTAL_AREA')")
+//    @PreAuthorize("hasAuthority('DELETE_RENTAL_AREA')")
     public ApiResponse<?> deleteRentalArea(@PathVariable UUID rentalAreaId) {
         try {
             rentalAreaService.deleteRentalArea(rentalAreaId);

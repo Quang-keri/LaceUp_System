@@ -4,24 +4,63 @@ import {
   Form,
   InputNumber,
   Select,
-  Radio,
   Input,
   Button,
   message,
+  Tooltip,
 } from "antd";
 import dayjs from "dayjs";
 import matchService from "../../../service/match/matchService";
 import { useAuth } from "../../../context/AuthContext";
 import type { MatchRequest } from "../../../types/match";
-import {
-  Coffee,
-  MapPin,
-  Utensils,
-  Activity,
-  Settings2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { Info } from "lucide-react";
+
+const calculateTotalPrice = (
+  court: any,
+  startTime: dayjs.Dayjs,
+  duration: number,
+) => {
+  if (!court || !startTime || !duration) return 0;
+
+  const rules = court.priceRules || [];
+
+  if (rules.length === 0) {
+    return (court.price || court.minPrice || 0) * duration;
+  }
+
+  let totalPrice = 0;
+  let currentTime = startTime.clone();
+  const chunks = duration * 2;
+
+  for (let i = 0; i < chunks; i++) {
+    const currentMinutes = currentTime.hour() * 60 + currentTime.minute();
+
+    const applicableRules = rules.filter((rule: any) => {
+      if (!rule.startTime || !rule.endTime) return false;
+      const [startHour, startMin] = rule.startTime.split(":").map(Number);
+      const [endHour, endMin] = rule.endTime.split(":").map(Number);
+
+      const ruleStartMins = startHour * 60 + startMin;
+      const ruleEndMins = endHour * 60 + endMin;
+
+      return currentMinutes >= ruleStartMins && currentMinutes < ruleEndMins;
+    });
+
+    applicableRules.sort(
+      (a: any, b: any) => (b.priority || 0) - (a.priority || 0),
+    );
+
+    const activeRule = applicableRules[0];
+    const pricePerHour = activeRule
+      ? activeRule.pricePerHour
+      : court.price || court.minPrice || 0;
+
+    totalPrice += pricePerHour * 0.5;
+    currentTime = currentTime.add(30, "minute");
+  }
+
+  return totalPrice;
+};
 
 export default function CreateMatchForm({
   court,
@@ -37,11 +76,30 @@ export default function CreateMatchForm({
   const { user } = useAuth();
   const [form] = Form.useForm();
   const [loadingMatch, setLoadingMatch] = useState(false);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
 
-  // State quản lý việc Ẩn/Hiện Cài đặt nâng cao
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const watchStartTime = Form.useWatch("startTime", form);
+  const watchDuration = Form.useWatch("duration", form);
 
-  const displayPrice = court?.minPrice || court?.price || 0;
+  const categoryName = (
+    court?.categoryName ||
+    court?.category?.categoryName ||
+    ""
+  ).toLowerCase();
+  const isFootball =
+    categoryName.includes("bóng đá") || categoryName.includes("đá banh");
+
+  const minAllowed = isFootball ? 10 : 2;
+  const maxAllowed = isFootball ? 12 : 4;
+
+  useEffect(() => {
+    if (watchStartTime && watchDuration) {
+      const price = calculateTotalPrice(court, watchStartTime, watchDuration);
+      setCalculatedPrice(price);
+    } else {
+      setCalculatedPrice(0);
+    }
+  }, [watchStartTime, watchDuration, court]);
 
   useEffect(() => {
     if (selectedDate && selectedTime) {
@@ -68,15 +126,15 @@ export default function CreateMatchForm({
     const currentRank = userRankData ? userRankData.rankPoint : 0;
 
     form.setFieldsValue({
-      maxPlayers: 4,
-      minPlayersToStart: 2,
+      maxPlayers: minAllowed,
+      minPlayersToStart: minAllowed / 2,
       duration: 1,
       matchType: "NORMAL",
       minRank: Math.max(0, currentRank - 500),
       maxRank: currentRank + 500,
       note: "",
     });
-  }, [court, user, form]);
+  }, [court, user, form, minAllowed]);
 
   const disabledDateTime = (current: any) => {
     const now = dayjs();
@@ -158,24 +216,24 @@ export default function CreateMatchForm({
         </p>
       </div>
 
-      <div className="flex items-end gap-2 mb-6 border-b border-gray-100 pb-4">
-        {displayPrice > 0 ? (
+      <div className="flex items-end gap-2 mb-6 border-b border-gray-100 pb-4 min-h-[56px]">
+        {calculatedPrice > 0 ? (
           <>
-            <span className="text-gray-600 font-medium pb-1">Giá từ</span>
-            <span className="text-4xl font-extrabold text-orange-500">
-              {displayPrice.toLocaleString()}
+            <span className="text-gray-600 font-medium pb-1">Tạm tính</span>
+            <span className="text-3xl font-extrabold text-[#9156F1]">
+              {calculatedPrice.toLocaleString()}
             </span>
-            <span className="text-gray-500 font-medium pb-1">VNĐ / giờ</span>
+            <span className="text-gray-500 font-medium pb-1">VNĐ</span>
           </>
         ) : (
-          <span className="text-2xl font-extrabold text-[#9156F1] pb-1">
-            Liên hệ để biết giá
+          <span className="text-xl font-extrabold text-[#9156F1] pb-1">
+            Vui lòng chọn giờ để xem giá
           </span>
         )}
       </div>
 
       <Form form={form} layout="vertical" onFinish={handleCreateMatch}>
-        <div className="grid grid-cols-2 gap-4 mb-2">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <Form.Item
             label={
               <span className="font-semibold text-gray-700">Giờ bắt đầu</span>
@@ -221,256 +279,131 @@ export default function CreateMatchForm({
 
         <hr className="my-5 border-gray-100" />
 
-        <Form.Item
-          label={
-            <span className="font-semibold text-gray-700">
-              Thể thức thi đấu
-            </span>
-          }
-          name="matchType"
-          className="mb-3"
-        >
-          <Radio.Group
-            optionType="button"
-            buttonStyle="solid"
-            className="flex w-full"
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <Form.Item
+            label={
+              <span className="font-semibold text-gray-700 text-sm flex items-center gap-1">
+                Thể thức
+                <Tooltip title="Luật chơi riêng biệt cho trận đấu này">
+                  <Info size={14} className="text-gray-400" />
+                </Tooltip>
+              </span>
+            }
+            name="matchType"
+            className="mb-0"
           >
-            <Radio.Button value="NORMAL" className="w-1/3 text-center">
-              Giao lưu
-            </Radio.Button>
-            <Radio.Button value="BET" className="w-1/3 text-center">
-              Chia Kèo
-            </Radio.Button>
-            <Radio.Button value="RANKED" className="w-1/3 text-center">
-              Đánh Rank
-            </Radio.Button>
-          </Radio.Group>
-        </Form.Item>
-
-        <Form.Item
-          noStyle
-          shouldUpdate={(prev, curr) => prev.matchType !== curr.matchType}
-        >
-          {({ getFieldValue }) => {
-            const type = getFieldValue("matchType");
-
-            if (type === "BET") {
-              return (
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 mb-6 animate-in fade-in duration-200">
-                  <Form.Item
-                    label={
-                      <span className="text-orange-800 font-bold uppercase tracking-wider text-[11px]">
-                        Phần thưởng Kèo (Phe thua bao)
-                      </span>
-                    }
-                    name="note"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn hoặc nhập phần thưởng kèo!",
-                      },
-                    ]}
-                    className="mb-0"
-                  >
-                    <Select
-                      placeholder="Chọn phần thưởng..."
-                      className="w-full font-bold"
-                      dropdownRender={(menu) => (
-                        <>
-                          {menu}
-                          <div className="p-2 border-t border-slate-100">
-                            <Input
-                              placeholder="Hoặc tự nhập kèo khác..."
-                              className="rounded-md"
-                              onKeyDown={(e) => e.stopPropagation()}
-                              onChange={(e) =>
-                                form.setFieldsValue({
-                                  note: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                        </>
-                      )}
-                    >
-                      <Select.Option value="Chầu nước giải khát">
-                        <div className="flex items-center gap-2">
-                          <Coffee size={16} className="text-amber-600" />
-                          <span>Chầu nước giải khát</span>
-                        </div>
-                      </Select.Option>
-                      <Select.Option value="Tiền sân">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-emerald-600" />
-                          <span>Thanh toán tiền sân</span>
-                        </div>
-                      </Select.Option>
-                      <Select.Option value="Bữa ăn sáng/tối">
-                        <div className="flex items-center gap-2">
-                          <Utensils size={16} className="text-rose-600" />
-                          <span>Bữa ăn sáng/tối</span>
-                        </div>
-                      </Select.Option>
-                      <Select.Option value="Cầu/Bóng thi đấu">
-                        <div className="flex items-center gap-2">
-                          <Activity size={16} className="text-blue-600" />
-                          <span>Cầu/Bóng thi đấu</span>
-                        </div>
-                      </Select.Option>
-                    </Select>
-                  </Form.Item>
+            <Select
+              className="w-full h-11 [&_.ant-select-selector]:!border-[#9156F1] [&_.ant-select-selector]:!shadow-[0_0_0_2px_rgba(145,86,241,0.15)]"
+              optionLabelProp="label"
+              popupMatchSelectWidth={false}
+            >
+              <Select.Option value="NORMAL" label="Giao lưu">
+                <div className="flex flex-col py-1">
+                  <span className="font-semibold text-gray-800">Giao lưu</span>
+                  <span className="text-[11px] text-gray-500">
+                    Chơi vui vẻ cọ xát, không ghi nhận kết quả
+                  </span>
                 </div>
-              );
-            }
-
-            if (type === "RANKED") {
-              return (
-                <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 mb-6 grid grid-cols-2 gap-4 animate-in fade-in duration-200">
-                  <Form.Item
-                    label={
-                      <span className="text-purple-700 font-bold">
-                        Rank tối thiểu
-                      </span>
-                    }
-                    name="minRank"
-                    className="mb-0"
-                  >
-                    <InputNumber
-                      min={0}
-                      step={100}
-                      readOnly
-                      className="w-full font-bold text-purple-700 text-lg bg-gray-100/50 cursor-not-allowed"
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    label={
-                      <span className="text-purple-700 font-bold">
-                        Rank tối đa
-                      </span>
-                    }
-                    name="maxRank"
-                    className="mb-0"
-                  >
-                    <InputNumber
-                      step={100}
-                      readOnly
-                      className="w-full font-bold text-purple-700 text-lg bg-gray-100/50 cursor-not-allowed"
-                    />
-                  </Form.Item>
+              </Select.Option>
+              <Select.Option value="BET" label="Chia Kèo">
+                <div className="flex flex-col py-1">
+                  <span className="font-semibold text-[#ea580c]">Chia Kèo</span>
+                  <span className="text-[11px] text-gray-500">
+                    Đội thua sẽ phải chịu phạt (tiền sân, nước, bữa ăn,...)
+                  </span>
                 </div>
-              );
+              </Select.Option>
+              <Select.Option value="RANKED" label="Đánh Rank">
+                <div className="flex flex-col py-1">
+                  <span className="font-semibold text-[#9156F1]">
+                    Đánh Rank
+                  </span>
+                  <span className="text-[11px] text-gray-500">
+                    Thi đấu nghiêm túc, tích lũy điểm hạng hệ thống
+                  </span>
+                </div>
+              </Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label={
+              <span className="font-semibold text-gray-700 text-sm flex items-center gap-1">
+                Tối đa
+                <Tooltip
+                  title={`Số người chơi tối đa được phép tham gia (từ ${minAllowed} đến ${maxAllowed} người)`}
+                >
+                  <Info size={14} className="text-gray-400" />
+                </Tooltip>
+              </span>
             }
+            name="maxPlayers"
+            rules={[
+              { required: true, message: "Nhập!" },
+              {
+                validator: (_, value) =>
+                  value % 2 === 0
+                    ? Promise.resolve()
+                    : Promise.reject(new Error("Phải chẵn!")),
+              },
+            ]}
+            className="mb-0"
+          >
+            <InputNumber
+              min={minAllowed}
+              max={maxAllowed}
+              step={2}
+              className="w-full h-11 flex items-center rounded-lg"
+              onChange={(val) => {
+                if (val && val % 2 === 0) {
+                  form.setFieldValue("minPlayersToStart", val / 2);
+                }
+              }}
+            />
+          </Form.Item>
 
-            return <div className="mb-2"></div>;
-          }}
-        </Form.Item>
-
-        {/* --- NÚT MỞ RỘNG CÀI ĐẶT NÂNG CAO --- */}
-        <div
-          className="flex items-center justify-between cursor-pointer py-3 border-t border-b border-gray-100 mb-5 text-gray-500 hover:text-[#9156F1] transition-colors"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-        >
-          <div className="flex items-center gap-2">
-            <Settings2 size={16} />
-            <span className="font-semibold text-sm">
-              Cài đặt nâng cao (Số người, Ghi chú)
-            </span>
-          </div>
-          {showAdvanced ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          <Form.Item
+            label={
+              <span className="font-semibold text-gray-700 text-sm flex items-center gap-1">
+                Tối thiểu
+                <Tooltip title="Số lượng tối thiểu chia đều 2 bên để trận đấu được phép bắt đầu.">
+                  <Info size={14} className="text-gray-400" />
+                </Tooltip>
+              </span>
+            }
+            name="minPlayersToStart"
+            rules={[{ required: true }]}
+            className="mb-0"
+          >
+            <InputNumber
+              readOnly
+              className="w-full h-11 flex items-center rounded-lg bg-gray-50 text-gray-500 border-gray-200"
+            />
+          </Form.Item>
         </div>
 
-        {/* --- KHU VỰC ẨN/HIỆN --- */}
-        {showAdvanced && (
-          <div className="animate-in slide-in-from-top-2 fade-in duration-300">
-            <div className="grid grid-cols-2 gap-4 mb-5">
-              <Form.Item
-                label={
-                  <span className="font-semibold text-gray-700">
-                    Số người tối đa
-                  </span>
-                }
-                name="maxPlayers"
-                rules={[{ required: true, message: "Nhập số người tối đa!" }]}
-                className="mb-0"
-              >
-                <InputNumber
-                  min={2}
-                  className="w-full h-11 flex items-center rounded-lg"
-                  onChange={(val) => {
-                    if (val)
-                      form.setFieldValue(
-                        "minPlayersToStart",
-                        Math.ceil(val / 2),
-                      );
-                  }}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label={
-                  <span className="font-semibold text-gray-700">
-                    Người tối thiểu
-                  </span>
-                }
-                name="minPlayersToStart"
-                tooltip="Trận đấu sẽ bị hủy nếu không đủ số lượng"
-                rules={[
-                  { required: true, message: "Nhập số người!" },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue("maxPlayers") >= value)
-                        return Promise.resolve();
-                      return Promise.reject(new Error("Tối thiểu ≤ Tối đa!"));
-                    },
-                  }),
-                ]}
-                className="mb-0"
-              >
-                <InputNumber
-                  min={1}
-                  className="w-full h-11 flex items-center rounded-lg"
-                />
-              </Form.Item>
-            </div>
-
-            <Form.Item
-              noStyle
-              shouldUpdate={(prev, curr) => prev.matchType !== curr.matchType}
-            >
-              {({ getFieldValue }) => {
-                if (getFieldValue("matchType") !== "BET") {
-                  return (
-                    <Form.Item
-                      label={
-                        <span className="font-semibold text-gray-700">
-                          Ghi chú thêm
-                        </span>
-                      }
-                      name="note"
-                      className="mb-6"
-                    >
-                      <Input.TextArea
-                        rows={3}
-                        placeholder="Ví dụ: Trình độ trung bình khá, vui lòng mang theo nước..."
-                        className="rounded-lg border-gray-300"
-                      />
-                    </Form.Item>
-                  );
-                }
-                return null;
-              }}
-            </Form.Item>
-          </div>
-        )}
+        <Form.Item
+          label={
+            <span className="font-semibold text-gray-700">Ghi chú thêm</span>
+          }
+          name="note"
+          className="mb-6"
+        >
+          <Input.TextArea
+            rows={3}
+            placeholder="Ví dụ: Trình độ trung bình khá, ai có bóng mang theo nha..."
+            className="rounded-lg border-gray-300"
+          />
+        </Form.Item>
 
         <Button
           type="primary"
           htmlType="submit"
           loading={loadingMatch}
           className="w-full h-[52px] text-base font-bold rounded-xl mt-1
-               !bg-orange-500 !border-orange-500
-               hover:!bg-orange-600 hover:!border-orange-600
-               flex items-center justify-center gap-2 shadow-md"
+               !bg-[#9156F1] !border-[#9156F1]
+               hover:!bg-[#7e43d9] hover:!border-[#7e43d9]
+               flex items-center justify-center gap-2 shadow-md transition-colors"
         >
           Xác nhận tạo kèo
         </Button>

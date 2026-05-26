@@ -13,15 +13,10 @@ import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
 import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
-import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
-import org.sport.backend.entity.ServiceItem;
-import org.sport.backend.repository.ServiceItemRepository;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.ExcelService;
 import org.sport.backend.service.InvoiceService;
-import org.sport.backend.service.ServiceItemService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,15 +31,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/bookings")
+@RequiredArgsConstructor
 @Tag(name = "10. Booking")
 public class BookingController {
 
-    @Autowired
-    private BookingService bookingService;
-    @Autowired
-    private InvoiceService invoiceService;
-    @Autowired
-    private ExcelService excelService;
+    private final BookingService bookingService;
+    private final InvoiceService invoiceService;
+    private final ExcelService excelService;
 
     @PostMapping("/preview-price")
     public ResponseEntity<?> previewOwnerBookingPrice(
@@ -246,7 +239,6 @@ public class BookingController {
             if (request.getSlots() != null && !request.getSlots().isEmpty()) {
                 for (int i = 0; i < request.getSlots().size(); i++) {
                     var slot = request.getSlots().get(i);
-                    System.out.println("   Slot " + i + ": " + slot.getStartTime() + " → " + slot.getEndTime());
                 }
             }
 

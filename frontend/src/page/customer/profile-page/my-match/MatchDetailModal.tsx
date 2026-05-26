@@ -10,10 +10,11 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined,
 } from "@ant-design/icons";
-import { Trophy, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import { Trophy, CheckCircle2, XCircle, MinusCircle, Flag } from "lucide-react";
 import { useAuth } from "../../../../context/AuthContext.tsx";
 import matchService from "../../../../service/match/matchService.ts";
 import { matchResultService } from "../../../../service/match/matchResultService.ts";
+import ReportModal from "./ReportModal.tsx";
 
 interface MatchDetailModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   const [loadingDivide, setLoadingDivide] = useState(false);
   const [matchResultData, setMatchResultData] = useState<any>(null);
   const [loadingResult, setLoadingResult] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && match) {
@@ -444,43 +446,61 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
           </div>
         </div>
 
-        <div className="pt-4 flex justify-end gap-3 border-t border-gray-100">
+        <div className="pt-4 flex items-center justify-between border-t border-gray-100">
           <Button
-            onClick={onClose}
-            className="rounded-lg font-medium h-10 px-6"
+            type="text"
+            danger
+            className="flex items-center gap-1.5 font-semibold text-rose-500 hover:bg-rose-50 px-3 h-10 rounded-lg"
+            onClick={() => setIsReportModalOpen(true)}
           >
-            Đóng
+            <Flag size={18} />
+            Báo cáo
           </Button>
 
-          {isMyTeamChanged && (
+          <div className="flex gap-3">
             <Button
-              type="primary"
-              className="bg-purple-600 hover:bg-purple-700 border-none rounded-lg font-medium h-10 px-6"
-              onClick={handleSaveMyTeam}
-              loading={loadingDivide}
+              onClick={onClose}
+              className="rounded-lg font-medium h-10 px-6"
             >
-              Lưu đội hình
+              Đóng
             </Button>
-          )}
 
-          {isNeedSubmit &&
-            unassigned.length === 0 &&
-            ["READY", "PLAYING", "DISPUTED"].includes(match.status) && (
+            {isMyTeamChanged && (
               <Button
                 type="primary"
                 className="bg-purple-600 hover:bg-purple-700 border-none rounded-lg font-medium h-10 px-6"
-                onClick={() => {
-                  onClose();
-                  onOpenSubmitModal();
-                }}
+                onClick={handleSaveMyTeam}
+                loading={loadingDivide}
               >
-                Báo cáo kết quả
+                Lưu đội hình
               </Button>
             )}
+
+            {isNeedSubmit &&
+              unassigned.length === 0 &&
+              ["READY", "PLAYING", "DISPUTED"].includes(match.status) && (
+                <Button
+                  type="primary"
+                  className="bg-purple-600 hover:bg-purple-700 border-none rounded-lg font-medium h-10 px-6"
+                  onClick={() => {
+                    onClose();
+                    onOpenSubmitModal();
+                  }}
+                >
+                  Báo cáo kết quả
+                </Button>
+              )}
+          </div>
         </div>
       </div>
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        matchId={match.matchId}
+        allPlayers={match.participants || []}
+      />
     </Modal>
   );
 };
-
 export default MatchDetailModal;

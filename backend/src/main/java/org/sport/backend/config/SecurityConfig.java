@@ -80,6 +80,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/rental-areas/my-rentals").authenticated()
                         .requestMatchers(HttpMethod.GET, "/rental-areas/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/courts/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/bookings/intent").permitAll()
                         .requestMatchers(HttpMethod.POST, "/bookings/check-availability").permitAll()
                         .requestMatchers(HttpMethod.GET, "/bookings/intent/**").permitAll()
@@ -159,7 +160,6 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        System.out.println("=== CORS CONFIG LOADED ===");
 
         CorsConfiguration config = new CorsConfiguration();
 

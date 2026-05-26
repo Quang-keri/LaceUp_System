@@ -9,9 +9,7 @@ import org.sport.backend.dto.response.address.AddressResponse;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
-import org.sport.backend.dto.response.post.AvailableCourtResponse;
 
 @Data
 @Builder

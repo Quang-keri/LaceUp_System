@@ -3,11 +3,12 @@ package org.sport.backend.serviceImpl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sport.backend.constant.MatchStatus;
-import org.sport.backend.constant.MatchType;
-import org.sport.backend.constant.ResultStatus;
+import org.sport.backend.constant.*;
 import org.sport.backend.dto.request.match.MatchResultRequest;
+import org.sport.backend.dto.request.match.ReportRequest;
+import org.sport.backend.dto.response.match.AbsentReportNotificationResponse;
 import org.sport.backend.dto.response.match.MatchResultResponse;
+import org.sport.backend.dto.response.notification.ReportNotificationResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.event.MatchResultApprovedEvent;
 import org.sport.backend.mapper.MatchResultMapper;
@@ -15,9 +16,12 @@ import org.sport.backend.repository.*;
 import org.sport.backend.service.MatchResultService;
 import org.sport.backend.service.UserService;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,15 +31,19 @@ public class MatchResultServiceImpl implements MatchResultService {
     private final MatchResultRepository matchResultRepository;
     private final MatchRepository matchRepository;
     private final MatchRegistrationRepository registrationRepository;
+    private final MatchReportRepository matchReportRepository;
     private final UserRepository userRepository;
     private final ReputationLogRepository reputationLogRepository;
     private final UserCategoryRankRepository userCategoryRankRepository;
+    private final SlotRepository slotRepository;
 
     private final UserService userService;
 
     private final MatchResultMapper matchResultMapper;
 
     private final ApplicationEventPublisher eventPublisher;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -77,20 +85,62 @@ public class MatchResultServiceImpl implements MatchResultService {
             }
         }
 
-        MatchResult result = MatchResult.builder()
-                .match(match)
-                .submitterId(currentUser.getUserId())
-                .winningTeamNumber(winningTeam)
-                .winnerIds(winnerIds)
-                .loserIds(loserIds)
-                .status(ResultStatus.PENDING)
-                .absentUserIds(request.getAbsentUserIds())
-                .build();
+        boolean isOpponentCompletelyAbsent = false;
+        List<UUID> absentIds = request.getAbsentUserIds() != null ? request.getAbsentUserIds() : new ArrayList<>();
 
-        match.setStatus(MatchStatus.WAITING_RESULT_APPROVAL);
-        matchRepository.save(match);
+        if (!loserIds.isEmpty() && !absentIds.isEmpty()) {
+            isOpponentCompletelyAbsent = new HashSet<>(absentIds).containsAll(loserIds);
+        }
 
-        return matchResultMapper.toResponse(matchResultRepository.save(result));
+        if (absentIds.contains(currentUser.getUserId())) {
+            throw new RuntimeException("Lỗi: Người chơi vắng mặt không thể thao tác gửi kết quả. Chỉ người có mặt mới được thực hiện!");
+        }
+
+        if (isOpponentCompletelyAbsent) {
+            MatchResult result = MatchResult.builder()
+                    .match(match)
+                    .submitterId(currentUser.getUserId())
+                    .winningTeamNumber(winningTeam)
+                    .winnerIds(winnerIds)
+                    .loserIds(loserIds)
+                    .status(ResultStatus.APPROVED)
+                    .absentUserIds(absentIds)
+                    .build();
+
+            match.setStatus(MatchStatus.COMPLETED);
+            matchRepository.save(match);
+
+            MatchResult savedResult = matchResultRepository.save(result);
+
+            processCreditScore(savedResult);
+            if (match.getMatchType() == MatchType.RANKED) {
+                processRankedMatch(savedResult);
+            } else if (match.getMatchType() == MatchType.BET) {
+                processBetMatch(savedResult);
+            }
+
+            notifyCourtOwnerAboutAbsence(savedResult);
+            eventPublisher.publishEvent(new MatchResultApprovedEvent(savedResult));
+
+            log.info("Trận đấu [{}] đã tự động chốt kết quả do đối thủ vắng mặt toàn bộ.", match.getMatchId());
+            return matchResultMapper.toResponse(savedResult);
+
+        } else {
+            MatchResult result = MatchResult.builder()
+                    .match(match)
+                    .submitterId(currentUser.getUserId())
+                    .winningTeamNumber(winningTeam)
+                    .winnerIds(winnerIds)
+                    .loserIds(loserIds)
+                    .status(ResultStatus.PENDING)
+                    .absentUserIds(absentIds)
+                    .build();
+
+            match.setStatus(MatchStatus.WAITING_RESULT_APPROVAL);
+            matchRepository.save(match);
+
+            return matchResultMapper.toResponse(matchResultRepository.save(result));
+        }
     }
 
     @Override
@@ -108,6 +158,10 @@ public class MatchResultServiceImpl implements MatchResultService {
 
         MatchRegistration currentReg = registrationRepository.findByMatchAndUser(match, currentUser)
                 .orElseThrow(() -> new RuntimeException("Chỉ người tham gia mới được duyệt kết quả!"));
+
+        if (result.getAbsentUserIds() != null && result.getAbsentUserIds().contains(currentUser.getUserId())) {
+            throw new RuntimeException("Hệ thống ghi nhận bạn đã vắng mặt (absent) ở trận này, do đó bạn không thể thao tác duyệt kết quả!");
+        }
 
         MatchRegistration submitterReg = registrationRepository.findByMatchAndUser_UserId(match, result.getSubmitterId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người gửi kết quả"));
@@ -128,6 +182,8 @@ public class MatchResultServiceImpl implements MatchResultService {
                 processBetMatch(result);
             }
 
+            notifyCourtOwnerAboutAbsence(result);
+
             eventPublisher.publishEvent(new MatchResultApprovedEvent(result));
         } else {
             result.setStatus(ResultStatus.REJECTED);
@@ -136,6 +192,84 @@ public class MatchResultServiceImpl implements MatchResultService {
 
         matchRepository.save(match);
         return matchResultMapper.toResponse(matchResultRepository.save(result));
+    }
+
+    @Transactional
+    @Override
+    public void createMatchReport(ReportRequest request) {
+        User currentUser = userService.getCurrentUserEntity();
+        Match match = matchRepository.findById(request.getMatchId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
+
+        MatchReport report = MatchReport.builder()
+                .match(match)
+                .reporter(currentUser)
+                .reportedUserIds(request.getReportedUserIds())
+                .reasonType(request.getReasonType())
+                .description(request.getDescription())
+                .evidenceImages(request.getEvidenceImages())
+                .status(MatchReportStatus.PENDING)
+                .build();
+
+        matchReportRepository.save(report);
+
+        notifyCourtOwnerAboutReport(report, currentUser);
+
+        log.info("Đã lưu báo cáo vi phạm từ user [{}] cho trận [{}]",
+                currentUser.getUserName(), match.getMatchId());
+    }
+
+    @Transactional
+    @Override
+    public void resolveMatchReport(UUID reportId, boolean isAccepted) {
+        User currentUser = userService.getCurrentUserEntity();
+        MatchReport report = matchReportRepository.findById(reportId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy báo cáo"));
+
+        if (report.getStatus() != MatchReportStatus.PENDING) {
+            throw new RuntimeException("Báo cáo này đã được xử lý!");
+        }
+
+        Match match = report.getMatch();
+        Court court = match.getCourt();
+
+        if (court == null || court.getRentalArea() == null ||
+                !court.getRentalArea().getOwner().getUserId().equals(currentUser.getUserId())) {
+            throw new RuntimeException("Chỉ chủ sân mới có quyền duyệt báo cáo này!");
+        }
+
+        if (!isAccepted) {
+            report.setStatus(MatchReportStatus.REJECTED);
+            matchReportRepository.save(report);
+            log.info("Chủ sân [{}] đã TỪ CHỐI báo cáo khẩn cấp cho trận [{}]", currentUser.getUserName(), match.getMatchId());
+            return;
+        }
+
+        report.setStatus(MatchReportStatus.RESOLVED);
+        matchReportRepository.save(report);
+
+        if ("EARLY_ABSENT".equalsIgnoreCase(report.getReasonType()) || "ABSENT".equalsIgnoreCase(report.getReasonType())) {
+
+            match.setStatus(MatchStatus.CANCELLED);
+            matchRepository.save(match);
+
+            List<Slot> matchSlots = slotRepository.findByMatch(match);
+            if (matchSlots != null && !matchSlots.isEmpty()) {
+                for (Slot slot : matchSlots) {
+                    slot.setSlotStatus(SlotStatus.CANCELLED);
+                }
+                slotRepository.saveAll(matchSlots);
+                log.info("Đã giải phóng {} slot(s) của trận [{}] do HỦY khẩn cấp", matchSlots.size(), match.getMatchId());
+            }
+
+            List<UUID> reportedIds = report.getReportedUserIds();
+            if (reportedIds != null && !reportedIds.isEmpty()) {
+                List<User> reportedUsers = userRepository.findAllById(reportedIds);
+                for (User u : reportedUsers) {
+                    updateCreditScore(u, -20, "Vắng mặt và bị hủy trận khẩn cấp (Owner duyệt)");
+                }
+            }
+        }
     }
 
     @Override
@@ -303,4 +437,81 @@ public class MatchResultServiceImpl implements MatchResultService {
             reputationLogRepository.save(log);
         }
     }
+
+    private void notifyCourtOwnerAboutAbsence(MatchResult result) {
+        List<UUID> absentIds = result.getAbsentUserIds();
+        if (absentIds == null || absentIds.isEmpty()) {
+            return;
+        }
+
+        Match match = result.getMatch();
+        Court court = match.getCourt();
+
+        if (court == null) {
+            return;
+        }
+
+        User courtOwner = court.getRentalArea().getOwner();
+        if (courtOwner == null) {
+            log.warn("Không tìm thấy chủ sân cho courtId: {}", court.getCourtId());
+            return;
+        }
+
+        List<User> absentUsers = userRepository.findAllById(absentIds);
+        List<AbsentReportNotificationResponse.AbsentUserInfo> absentUserInfoList = absentUsers.stream()
+                .map(u -> AbsentReportNotificationResponse.AbsentUserInfo.builder()
+                        .userId(u.getUserId())
+                        .userName(u.getUserName())
+                        .phoneNumber(u.getPhone())
+                        .email(u.getEmail())
+                        .build())
+                .collect(Collectors.toList());
+
+        AbsentReportNotificationResponse notification = AbsentReportNotificationResponse.builder()
+                .matchId(match.getMatchId())
+                .courtId(court.getCourtId())
+                .courtName(court.getCourtName())
+                .roomCode(match.getRoomCode())
+                .matchStartTime(match.getStartTime())
+                .matchEndTime(match.getEndTime())
+                .reportedAt(LocalDateTime.now())
+                .absentUsers(absentUserInfoList)
+                .message("Có " + absentUsers.size() + " người chơi vắng mặt trong trận đấu tại sân của bạn.")
+                .build();
+
+        String destination = "/queue/notifications/" + courtOwner.getUserId();
+        messagingTemplate.convertAndSend(destination, notification);
+
+        log.info("Đã gửi báo cáo vắng mặt trận {} cho chủ sân {}", match.getMatchId(), courtOwner.getUserId());
+    }
+
+    private void notifyCourtOwnerAboutReport(MatchReport report, User reporter) {
+        Match match = report.getMatch();
+        Court court = match.getCourt();
+
+        if (court == null || court.getRentalArea() == null || court.getRentalArea().getOwner() == null) {
+            return;
+        }
+
+        User courtOwner = court.getRentalArea().getOwner();
+
+        ReportNotificationResponse notification = ReportNotificationResponse.builder()
+                .type("VIOLATION_REPORT")
+                .reportId(report.getReportId())
+                .matchId(match.getMatchId())
+                .roomCode(match.getRoomCode())
+                .courtName(court.getCourtName())
+                .reporterName(reporter.getUserName())
+                .reasonType(report.getReasonType())
+                .message("Có người chơi vừa gửi báo cáo vi phạm tại sân của bạn!")
+                .reportedAt(LocalDateTime.now())
+                .build();
+
+        // Bắn vào topic riêng của Chủ sân
+        String destination = "/queue/notifications/" + courtOwner.getUserId();
+        messagingTemplate.convertAndSend(destination, notification);
+
+        log.info("Đã gửi thông báo báo cáo vi phạm trận {} cho chủ sân {}", match.getMatchId(), courtOwner.getUserId());
+    }
+
 }

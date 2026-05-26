@@ -43,7 +43,9 @@ public interface MatchService {
             int page, int size, MatchStatus status, String category, String keyword,
             LocalDateTime start, LocalDateTime end, MatchType matchType);
 
-    PageResponse<MatchResponse> getOwnerMatchesPaged(int page, int size);
+    PageResponse<MatchResponse> getOwnerMatchesPaged(
+            int page, int size, MatchStatus status, String category,
+            String keyword, LocalDateTime startDate, LocalDateTime endDate);
 
     PageResponse<MatchResponse> getMyMatches(int page, int size);
 

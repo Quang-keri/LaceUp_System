@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Input, Select, Button, ConfigProvider } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { FilterState } from "./PostPage";
 import { locationService } from "../../../service/locationService";
-import categoryService from "../../../service/categoryService";
+import { CategoryContext } from "../../../context/CategoryContext";
 
 interface SearchBarProps {
   initialTitle?: string;
@@ -30,7 +30,9 @@ export default function SearchBar({
   );
 
   const [provinces, setProvinces] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+
+  const { categories, loading: categoriesLoading } =
+    useContext(CategoryContext);
 
   useEffect(() => {
     setTitle(initialTitle || "");
@@ -42,7 +44,6 @@ export default function SearchBar({
 
   useEffect(() => {
     fetchProvinces();
-    fetchCategories();
   }, []);
 
   useEffect(() => {
@@ -57,21 +58,6 @@ export default function SearchBar({
     } catch (error) {
       console.error(error);
       setProvinces([]);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await categoryService.getAllCategories(1, 100);
-
-      if (res.result?.data) {
-        setCategories(res.result.data);
-      } else {
-        setCategories([]);
-      }
-    } catch (error) {
-      console.error(error);
-      setCategories([]);
     }
   };
 
@@ -141,7 +127,8 @@ export default function SearchBar({
             optionFilterProp="label"
             value={categoryId}
             onChange={(value) => setCategoryId(value)}
-            options={categories.map((c) => ({
+            loading={categoriesLoading}
+            options={categories.map((c: any) => ({
               value: c.categoryId,
               label: c.categoryName,
             }))}

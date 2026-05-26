@@ -108,9 +108,9 @@ const MyMatchPage: React.FC = () => {
       case "OPEN":
         return <Tag color="blue">Đang chờ người</Tag>;
       case "READY":
-        return <Tag color="green">Sẵn sàng đá</Tag>;
+        return <Tag color="green">Sẵn sàng chiến</Tag>;
       case "PLAYING":
-        return <Tag color="processing">Đang đá</Tag>;
+        return <Tag color="processing">Đang chiến</Tag>;
       case "WAITING_RESULT_APPROVAL":
         return <Tag color="warning">Chờ duyệt KQ</Tag>;
       case "DISPUTED":

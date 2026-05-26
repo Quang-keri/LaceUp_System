@@ -99,6 +99,7 @@ vnpay:
   return-url: ${VNPAY_RETURN_URL}
   version: "2.1.0"
   command: "pay"
+
 logging:
   file:
     name: logs/app.log
@@ -119,3 +120,6 @@ momo:
   access-key: ${MOMO_ACCESS_KEY}
   secret-key: ${MOMO_SECRET_KEY}
   request-type: ${MOMO_REQUEST_TYPE}
+
+goong:
+  api-key: ${GOONG_API_KEY}
