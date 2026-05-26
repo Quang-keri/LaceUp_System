@@ -223,14 +223,29 @@ export default function CourtScheduleTimeline({
         `}</style>
 
         <div className="w-max min-w-full">
-          <div className="flex border-b border-gray-400 bg-purple-50 relative">
-            <div className="sticky left-0 z-30 w-16 md:w-36 flex-shrink-0 border-r border-gray-400 bg-purple-50" />
+          {/* Timeline Header - Thay đổi sang màu tím nhạt bg-purple-50 */}
+          <div className="flex border-b border-gray-300 bg-purple-50 sticky top-0 z-40 h-10 md:h-12 shadow-sm">
+            <div className="sticky left-0 z-50 w-16 md:w-36 flex-shrink-0 border-r border-gray-300 bg-purple-50" />
+
             {timeSlots.map((time, idx) => (
               <div
                 key={idx}
-                className="w-10 md:w-24 text-center py-2 md:py-3 text-[10px] md:text-xs text-gray-700 border-r border-gray-400 font-semibold flex-shrink-0 bg-purple-50"
+                className="w-10 md:w-24 relative border-r border-gray-300 flex-shrink-0 bg-purple-50"
               >
-                {time}
+                <span
+                  className={`absolute top-2 text-[10px] md:text-xs text-gray-700 font-medium whitespace-nowrap ${
+                    idx === 0 ? "left-1.5" : "left-0 -translate-x-1/2"
+                  }`}
+                >
+                  {time}
+                </span>
+
+                {/* Vạch chia giờ - Đổi sang màu tím đậm hoặc cam */}
+                <div
+                  className={`absolute bottom-0 w-[2px] h-1.5 md:h-2 bg-[#9156F1] ${
+                    idx === 0 ? "left-0" : "left-0 -translate-x-1/2"
+                  }`}
+                ></div>
               </div>
             ))}
           </div>
@@ -238,10 +253,10 @@ export default function CourtScheduleTimeline({
           {courts.map((court: any) => (
             <div
               key={court.courtId}
-              className="flex border-b border-gray-400 relative"
+              className="flex border-b border-gray-300 relative"
             >
-              {/* FIX 2: Nâng cột tên sân lên z-20 (cao hơn ô xanh z-10) */}
-              <div className="sticky left-0 z-20 w-16 md:w-36 flex-shrink-0 bg-purple-50 flex items-center justify-center md:justify-start border-r border-gray-400 text-[10px] md:text-sm font-semibold text-gray-800 px-1 md:px-4 py-2 md:py-3 break-words text-center md:text-left">
+              {/* Tên sân - Đổi sang tone tím nhạt */}
+              <div className="sticky left-0 z-30 w-16 md:w-36 flex-shrink-0 bg-purple-50 flex items-center justify-center border-r border-gray-300 text-[10px] md:text-[13px] font-medium text-purple-900 px-1 md:px-4 py-2 md:py-3 break-words text-center shadow-[1px_0_2px_rgba(0,0,0,0.05)]">
                 <span className="leading-tight">{court.courtName}</span>
               </div>
 
@@ -256,40 +271,43 @@ export default function CourtScheduleTimeline({
                     idx <= selection.endIndex;
 
                   let dynamicClasses =
-                    "border-r border-gray-400 bg-white hover:bg-gray-50";
+                    "border-r border-gray-300 bg-white hover:bg-gray-50";
 
                   if (slot) {
                     switch (slot.slotStatus) {
-                      case "BOOKED":
-                        dynamicClasses = "border-r border-gray-400 bg-red-500";
-                        break;
-                      case "MATCH_FULL":
+                      case "BOOKED": // Cập nhật đúng màu Đã đặt lịch
                         dynamicClasses =
-                          "border-r border-gray-400 bg-purple-500";
+                          "border-r border-gray-300 bg-[#ea580c]";
                         break;
-                      case "MATCH_PENDING":
+                      case "MATCH_FULL": // Cập nhật đúng màu Đã có trận
                         dynamicClasses =
-                          "border-r border-gray-400 bg-orange-300";
+                          "border-r border-gray-300 bg-[#9156F1]";
                         break;
-                      case "LOCKED":
-                        dynamicClasses = "border-r border-gray-400 bg-gray-400";
+                      case "MATCH_PENDING": // Đã có trận (chưa đủ)
+                        dynamicClasses =
+                          "border-r border-gray-300 bg-orange-300";
+                        break;
+                      case "LOCKED": // Khóa
+                        dynamicClasses = "border-r border-gray-300 bg-gray-400";
                         break;
                       default:
-                        dynamicClasses = "border-r border-gray-400 bg-red-500";
+                        dynamicClasses =
+                          "border-r border-gray-300 bg-[#ea580c]";
                     }
                   }
 
+                  // Cập nhật trạng thái đang được chọn (Selected) theo màu Cam để đồng bộ với nút "Đặt sân ngay"
                   if (isSelected) {
                     dynamicClasses =
-                      "bg-[#dcfce7] border-y-[2px] border-y-[#22c55e] z-10 shadow-sm";
+                      "bg-orange-50 border-y-[2px] border-y-[#ea580c] z-10 shadow-sm";
 
                     if (idx === selection.startIndex) {
                       dynamicClasses +=
-                        " border-l-[2px] border-l-[#22c55e] rounded-l-md";
+                        " border-l-[2px] border-l-[#ea580c] rounded-l-md";
                     }
                     if (idx === selection.endIndex) {
                       dynamicClasses +=
-                        " border-r-[2px] border-r-[#22c55e] rounded-r-md";
+                        " border-r-[2px] border-r-[#ea580c] rounded-r-md";
                     }
                   }
 
@@ -317,7 +335,8 @@ export default function CourtScheduleTimeline({
             max="100"
             value={scrollProgress}
             onChange={handleSliderChange}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#4caf50]"
+            // Đổi màu thanh cuộn sang màu Tím
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#9156F1]"
           />
         </div>
       </div>

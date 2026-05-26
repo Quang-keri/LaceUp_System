@@ -69,7 +69,8 @@ import EndOfDayReport from "../page/owner/report/endOfDayReport.tsx";
 import AdminCustomerManagementPage from "../page/owner/customer-management/AdminCustomerManagementPage.tsx";
 import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
 import UserLayout from "../layouts/UserLayout.tsx";
-import AreaMap from "../page/customer/area-map/AreaMap.tsx";
+import AreaMapGoong from "../page/customer/area-map/AreaMapGoong.tsx";
+// import AreaMap from "../page/customer/area-map/AreaMap.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -104,7 +105,8 @@ export const router = createBrowserRouter([
       { path: "courts", element: <PostPage /> },
       { path: "comunity", element: <MatchPage /> },
       { path: "rental-area/:id", element: <RentalAreaDetailPage /> },
-      { path: "map", element: <AreaMap /> },
+      // { path: "map", element: <AreaMap /> },
+      { path: "map", element: <AreaMapGoong /> },
       {
         path: "payment/booking-result",
         element: <BookingPaymentResultPage />,

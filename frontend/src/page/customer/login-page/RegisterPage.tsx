@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { message } from "antd";
 import authService from "../../../service/authService";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
 
 const BACKEND_ERRORS: Record<string, string> = {
   EMAIL_ALREADY_EXISTS: "Email này đã được sử dụng.",
@@ -16,6 +17,8 @@ const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
+
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [values, setValues] = useState({
     userName: "",
@@ -38,41 +41,49 @@ const RegisterPage: React.FC = () => {
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: false }));
     }
+    if (errorMessage) {
+      setErrorMessage("");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFieldErrors({});
+    setErrorMessage("");
 
     if (!values.userName.trim()) {
       setFieldErrors({ userName: true });
-      return message.error("Vui lòng nhập họ và tên.");
+      setErrorMessage("Vui lòng nhập họ và tên.");
+      return;
     }
 
     if (!values.email.trim() || !/\S+@\S+\.\S+/.test(values.email)) {
       setFieldErrors({ email: true });
-      return message.error("Email không hợp lệ hoặc bị bỏ trống.");
+      setErrorMessage("Email không hợp lệ hoặc bị bỏ trống.");
+      return;
     }
 
     if (!values.dateOfBirth) {
       setFieldErrors({ dateOfBirth: true });
-      return message.error("Vui lòng chọn ngày sinh.");
+      setErrorMessage("Vui lòng chọn ngày sinh.");
+      return;
     }
 
     if (!values.password) {
       setFieldErrors({ password: true });
-      return message.error("Vui lòng nhập mật khẩu.");
+      setErrorMessage("Vui lòng nhập mật khẩu.");
+      return;
     }
 
     if (values.password !== values.confirmPassword) {
       setFieldErrors({ confirmPassword: true });
-      return message.error("Mật khẩu nhập lại không khớp!");
+      setErrorMessage("Mật khẩu nhập lại không khớp!");
+      return;
     }
 
     if (!isAgreed) {
-      return message.warning(
-        "Vui lòng đồng ý với chính sách trước khi đăng ký!",
-      );
+      setErrorMessage("Vui lòng đồng ý với chính sách trước khi đăng ký!");
+      return;
     }
 
     setLoading(true);
@@ -92,14 +103,18 @@ const RegisterPage: React.FC = () => {
       if (errorData?.result) {
         const backendResult = errorData.result;
         const newFieldErrors: Record<string, boolean> = {};
+        let firstErrorMessage = "";
 
-        Object.keys(backendResult).forEach((key) => {
+        Object.keys(backendResult).forEach((key, index) => {
           const errCode = backendResult[key];
           newFieldErrors[key] = true;
-          message.error(BACKEND_ERRORS[errCode] || errCode);
+          if (index === 0) {
+            firstErrorMessage = BACKEND_ERRORS[errCode] || errCode;
+          }
         });
 
         setFieldErrors(newFieldErrors);
+        setErrorMessage(firstErrorMessage);
       } else {
         const backendMessage = errorData?.message;
 
@@ -107,7 +122,7 @@ const RegisterPage: React.FC = () => {
           setFieldErrors({ email: true });
         }
 
-        message.error(
+        setErrorMessage(
           BACKEND_ERRORS[backendMessage] ||
             backendMessage ||
             "Lỗi kết nối máy chủ!",
@@ -218,16 +233,32 @@ const RegisterPage: React.FC = () => {
               type="checkbox"
               id="confirmInfo"
               checked={isAgreed}
-              onChange={(e) => setIsAgreed(e.target.checked)}
-              className="w-4 h-4 text-[#9156F1] focus:ring-[#9156F1] border-gray-300 rounded cursor-pointer"
+              onChange={(e) => {
+                setIsAgreed(e.target.checked);
+                if (errorMessage) setErrorMessage("");
+              }}
+              className="w-4 h-4 text-[#9156F1] focus:ring-[#9156F1] border-gray-300 rounded cursor-pointer shrink-0"
             />
-            <label
-              htmlFor="confirmInfo"
-              className="text-gray-600 cursor-pointer"
-            >
-              Đồng ý với chính sách của chúng tôi.
-            </label>
+            <div className="text-gray-600 text-sm">
+              <label htmlFor="confirmInfo" className="cursor-pointer">
+                Đồng ý với{" "}
+              </label>
+              <Link
+                to="/info/policies"
+                className="text-[#9156F1] font-medium hover:underline cursor-pointer"
+              >
+                chính sách của chúng tôi
+              </Link>
+              .
+            </div>
           </div>
+
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg mt-2">
+              <ExclamationCircleOutlined className="text-red-500 text-base" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           <button
             type="submit"

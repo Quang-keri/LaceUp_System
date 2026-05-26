@@ -6,14 +6,16 @@ import org.sport.backend.dto.request.bank.BankAccountRequest;
 
 import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.entity.User;
-import org.sport.backend.repository.UserRepository;
 import org.sport.backend.service.BankAccountService;
 import org.sport.backend.service.UserService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.UUID;
+
 @RestController
 @RequestMapping("/bank-accounts")
 @RequiredArgsConstructor
@@ -36,15 +38,15 @@ public class BankAccountController {
         );
     }
 
-    @PostMapping
+    @PostMapping(
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createOrUpdateBankAccount(
-            Principal principal,
-            @RequestBody BankAccountRequest request
+            @RequestPart("data") BankAccountRequest request,
+            @RequestPart(value = "qrCodeFile", required = false) MultipartFile qrCodeFile
     ) {
-        User user = userService.findByEmail(principal.getName());
 
         BankAccountResponse response =
-                bankAccountService.createOrUpdateBankAccount(user.getUserId(), request);
+                bankAccountService.createOrUpdateBankAccount(request, qrCodeFile);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(200, "Bank account updated successfully", response)
@@ -65,7 +67,8 @@ public class BankAccountController {
     }
 
     @DeleteMapping("/{bankAccountId}")
-    public ResponseEntity<?> deleteBankAccount(@PathVariable UUID bankAccountId) {
+    public ResponseEntity<?> deleteBankAccount(@PathVariable UUID bankAccountId
+    ) {
         bankAccountService.deleteBankAccount(bankAccountId);
 
         return ResponseEntity.ok(

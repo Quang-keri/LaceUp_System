@@ -22,11 +22,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MatchResult extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID resultId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "match_id")
     private Match match;
 
@@ -42,7 +43,7 @@ public class MatchResult extends BaseEntity {
     private List<UUID> loserIds;
 
     @Enumerated(EnumType.STRING)
-    private ResultStatus status; // PENDING, APPROVED, REJECTED
+    private ResultStatus status;
 
     @ElementCollection
     private List<UUID> absentUserIds;
@@ -51,5 +52,5 @@ public class MatchResult extends BaseEntity {
     @CollectionTable(name = "match_result_rank_changes", joinColumns = @JoinColumn(name = "result_id"))
     @MapKeyColumn(name = "user_id")
     @Column(name = "point_change")
-    private Map<UUID, Integer> rankChanges = new HashMap<>();;
+    private Map<UUID, Integer> rankChanges = new HashMap<>();
 }

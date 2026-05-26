@@ -51,4 +51,21 @@ export interface MatchResponse {
   minRank?: number;
   maxRank?: number;
   isFull: boolean;
+  reports?: MatchReportResponse[];
+}
+
+export interface ReportRequest {
+  matchId: string;
+  reportedUserIds?: string[];
+  reasonType: "BAD_BEHAVIOR" | "ABSENT" | "LATE" | "OTHER" | "EARLY_ABSENT";
+  description: string;
+  evidenceImages?: string[];
+}
+
+export interface MatchReportResponse {
+  reportId: string;
+  reporterName: string;
+  reasonType: string;
+  description: string;
+  status: "PENDING" | "RESOLVED" | "REJECTED";
 }

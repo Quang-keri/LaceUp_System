@@ -42,4 +42,6 @@ public class BankAccount extends BaseEntity {
 
     @Column(name = "verification_code", length = 50)
     private String verificationCode;
+
+    private String qrCode;
 }

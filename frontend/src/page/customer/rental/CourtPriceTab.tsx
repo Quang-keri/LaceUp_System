@@ -42,7 +42,7 @@ export default function CourtPriceTab({ activeCourt }: { activeCourt: any }) {
   const getPriceData = (rules: any[]) => {
     if (!rules || rules.length === 0) return [];
 
-    const mappedRules = rules.map((rule, index) => {
+    let mappedRules = rules.map((rule, index) => {
       const formatTime = (timeStr: string) => {
         if (!timeStr) return "";
         const [h, m] = String(timeStr).split(":");
@@ -61,10 +61,12 @@ export default function CourtPriceTab({ activeCourt }: { activeCourt: any }) {
       let typeLabel = "Tất cả";
       if (rule.dayType === "WEEKDAY") typeLabel = "T2 - T6";
       else if (rule.dayType === "WEEKEND") typeLabel = "T7 - CN";
-      else if (!rule.dayType) {
-        if (rule.priceType === "WEEKEND") typeLabel = "T7 - CN";
-        else typeLabel = "T2 - T6";
-      }
+
+      const timeForSort = rule.startTime
+        ? rule.startTime.length === 4
+          ? `0${rule.startTime}`
+          : rule.startTime
+        : "00:00";
 
       return {
         ...rule,
@@ -73,10 +75,26 @@ export default function CourtPriceTab({ activeCourt }: { activeCourt: any }) {
         typeLabel,
         time: `${formatTime(rule.startTime)} - ${formatTime(rule.endTime)}`,
         price: rule.pricePerHour,
-        dateRowSpan: 1,
-        typeRowSpan: 1,
+        timeForSort,
       };
     });
+
+    const uniqueRulesMap = new Map();
+    mappedRules.forEach((rule) => {
+      const uniqueKey = `${rule.dateLabel}_${rule.typeLabel}_${rule.time}`;
+
+      if (uniqueRulesMap.has(uniqueKey)) {
+        const existingRule = uniqueRulesMap.get(uniqueKey);
+        const currentPriority = rule.priority || 0;
+        const existingPriority = existingRule.priority || 0;
+        if (currentPriority > existingPriority) {
+          uniqueRulesMap.set(uniqueKey, rule);
+        }
+      } else {
+        uniqueRulesMap.set(uniqueKey, rule);
+      }
+    });
+    mappedRules = Array.from(uniqueRulesMap.values());
 
     mappedRules.sort((a, b) => {
       if (a.dateLabel !== b.dateLabel) {
@@ -91,35 +109,42 @@ export default function CourtPriceTab({ activeCourt }: { activeCourt: any }) {
         if (b.typeLabel === "T7 - CN") return 1;
         return a.typeLabel.localeCompare(b.typeLabel);
       }
-      return (a.startTime || "").localeCompare(b.startTime || "");
+      return a.timeForSort.localeCompare(b.timeForSort);
     });
 
-    let currentDateKey: string | null = null;
+    let finalRules = mappedRules.map((rule) => ({
+      ...rule,
+      dateRowSpan: 1,
+      typeRowSpan: 1,
+    }));
+
     let dateStartIndex = 0;
-    let currentTypeKey: string | null = null;
     let typeStartIndex = 0;
 
-    for (let i = 0; i < mappedRules.length; i++) {
-      const row = mappedRules[i];
-      if (row.dateLabel === currentDateKey) {
-        row.dateRowSpan = 0;
-        mappedRules[dateStartIndex].dateRowSpan += 1;
+    for (let i = 1; i < finalRules.length; i++) {
+      const currentRow = finalRules[i];
+      const prevRowDate = finalRules[dateStartIndex];
+      const prevRowType = finalRules[typeStartIndex];
+
+      if (currentRow.dateLabel === prevRowDate.dateLabel) {
+        currentRow.dateRowSpan = 0;
+        prevRowDate.dateRowSpan += 1;
       } else {
-        currentDateKey = row.dateLabel;
         dateStartIndex = i;
-        currentTypeKey = null;
       }
 
-      const typeKey = `${row.dateLabel}_${row.typeLabel}`;
-      if (typeKey === currentTypeKey) {
-        row.typeRowSpan = 0;
-        mappedRules[typeStartIndex].typeRowSpan += 1;
+      if (
+        currentRow.typeLabel === prevRowType.typeLabel &&
+        currentRow.dateLabel === prevRowType.dateLabel
+      ) {
+        currentRow.typeRowSpan = 0;
+        prevRowType.typeRowSpan += 1;
       } else {
-        currentTypeKey = typeKey;
         typeStartIndex = i;
       }
     }
-    return mappedRules;
+
+    return finalRules;
   };
 
   const priceData = activeCourt ? getPriceData(activeCourt.priceRules) : [];

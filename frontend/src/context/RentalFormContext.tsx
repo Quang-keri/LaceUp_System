@@ -1,7 +1,10 @@
-// RentalFormContext.tsx
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  type ReactNode,
+} from "react";
 
-// Định nghĩa kiểu dữ liệu tổng quát cho toàn bộ form
 interface FormData {
   basicInfo: any;
   bankAccount: any;
@@ -24,11 +27,13 @@ interface RentalFormContextType {
   updateFormData: (stepKey: keyof FormData, data: any) => void;
 }
 
+const RentalFormContext = createContext<RentalFormContextType | undefined>(
+  undefined,
+);
 
-
-const RentalFormContext = createContext<RentalFormContextType | undefined>(undefined);
-
-export const RentalFormProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const RentalFormProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [formData, setFormData] = useState<FormData>(defaultData);
 
   const updateFormData = (stepKey: keyof FormData, data: any) => {
@@ -44,6 +49,7 @@ export const RentalFormProvider: React.FC<{ children: ReactNode }> = ({ children
 
 export const useRentalForm = () => {
   const context = useContext(RentalFormContext);
-  if (!context) throw new Error('useRentalForm must be used within RentalFormProvider');
+  if (!context)
+    throw new Error("useRentalForm must be used within RentalFormProvider");
   return context;
 };

@@ -8,19 +8,24 @@ import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.constant.RecurringType;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "matches")
+@Table(name = "matches", indexes = {
+        @Index(name = "idx_match_status_time", columnList = "status, start_time"),
+        @Index(name = "idx_match_court", columnList = "court_id")
+})
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Match extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID matchId;
@@ -48,15 +53,20 @@ public class Match extends BaseEntity {
     private MatchStatus status;
 
     private boolean isRecurring;
+
     @Enumerated(EnumType.STRING)
     private RecurringType recurringType;
 
-    private String dayOfWeek;
+    @Enumerated(EnumType.STRING)
+    private DayOfWeek dayOfWeek;
 
     private LocalDate endDate;
 
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<MatchRegistration> registrations;
+
+    @OneToMany(mappedBy = "match", fetch = FetchType.LAZY)
+    private List<MatchReport> reports;
 
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY)
     private List<Slot> slots;

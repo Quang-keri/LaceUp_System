@@ -27,9 +27,11 @@ import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.AddressMapper;
+import org.sport.backend.mapper.BankAccountMapper;
 import org.sport.backend.mapper.CategoryMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.CloudinaryService;
+import org.sport.backend.service.GoongGeocodingService;
 import org.sport.backend.service.RentalAreaService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.RentalAreaSpecification;
@@ -66,9 +68,11 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     private final BankAccountRepository bankAccountRepository;
 
     private final UserService userService;
+    private final GoongGeocodingService goongGeocodingService;
 
     private final AddressMapper addressMapper;
     private final CategoryMapper categoryMapper;
+    private final BankAccountMapper bankAccountMapper;
 
     @Override
     public List<RentalAreaOptionResponse> getRentalAreaOptions() {
@@ -106,26 +110,40 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         int count = images == null ? 0 : (int) images.stream().filter(f -> f != null && !f.isEmpty()).count();
         if (count < 1 || count > 3) {
-            throw new IllegalArgumentException("RentalArea yêu cầu  1 tới 3 ảnh");
+            throw new IllegalArgumentException("RentalArea yêu cầu 1 tới 3 ảnh");
         }
 
-        User owner = userRepository.findById(request.getUserId()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        Role role = roleRepository.findByRoleName("OWNER").orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
-        System.err.println("Owner role: " + owner.getRole().getRoleName());
+        User owner = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        Role role = roleRepository.findByRoleName("OWNER")
+                .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
+
         if (!owner.getRole().getRoleName().equals("OWNER")) {
             owner.setRole(role);
             userRepository.save(owner);
         }
-        System.err.println("Owner role: " + owner.getRole().getRoleName());
-//        City city = cityRepository.findById(request.getCityId()).orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
 
         Address address = Address.builder()
                 .ward(request.getWard())
-
                 .street(request.getStreet())
                 .cityName(request.getCityName())
-//                .city(city)
                 .build();
+
+        Double lat = request.getLatitude() != null ? Double.parseDouble(request.getLatitude()) : null;
+        Double lng = request.getLongitude() != null ? Double.parseDouble(request.getLongitude()) : null;
+
+        if (lat == null || lng == null) {
+            String fullAddress = String.format("%s, %s, %s",
+                    request.getStreet(), request.getWard(), request.getCityName());
+
+            double[] coordinates = goongGeocodingService.getCoordinates(fullAddress);
+            if (coordinates != null) {
+                lat = coordinates[0];
+                lng = coordinates[1];
+            } else {
+                System.err.println("Không thể lấy tọa độ cho địa chỉ: " + fullAddress);
+            }
+        }
 
         RentalArea rentalArea = RentalArea.builder()
                 .rentalAreaName(request.getRentalAreaName())
@@ -136,8 +154,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .isActive(true)
                 .openTime(request.getOpenTime())
                 .closeTime(request.getCloseTime())
-                .latitude(request.getLatitude() != null ? Double.parseDouble(request.getLatitude()) : null)
-                .longitude(request.getLongitude() != null ? Double.parseDouble(request.getLongitude()) : null)
+                .latitude(lat)
+                .longitude(lng)
                 .facebookLink(request.getFacebookLink())
                 .gmail(request.getGmailLink())
                 .owner(owner)
@@ -175,7 +193,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                         .sortOrder(img.getSortOrder())
                         .build())
                 .collect(Collectors.toList());
-
 
         return RentalAreaResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
@@ -660,18 +677,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .findByUser_UserId(rentalArea.getOwner().getUserId())
                 .orElse(null);
 
-        BankAccountResponse bankAccountResponse = null;
+        BankAccountResponse bankAccountResponse = bankAccountMapper.toResponse(bankAccount);
 
-        if (bankAccount != null) {
-            bankAccountResponse = BankAccountResponse.builder()
-                    .bankAccountId(bankAccount.getBankAccountId())
-                    .accountNumber(bankAccount.getAccountNumber())
-                    .bankName(bankAccount.getBankName())
-                    .accountHolderName(bankAccount.getAccountHolderName())
-                    .branchName(bankAccount.getBranchName())
-                    .isVerified(bankAccount.getIsVerified())
-                    .build();
-        }
         return RentalAreaDetailResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())

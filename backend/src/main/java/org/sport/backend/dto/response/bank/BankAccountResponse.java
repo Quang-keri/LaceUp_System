@@ -18,6 +18,7 @@ public class BankAccountResponse {
     private String accountNumber;
     private String accountHolderName;
     private String branchName;
+    private String qrCode;
     private Boolean isVerified;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

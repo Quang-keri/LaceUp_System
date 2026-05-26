@@ -14,8 +14,6 @@ import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.CourtRepository;
-import org.sport.backend.repository.CourtCopyRepository;
-import org.sport.backend.repository.SlotRepository;
 import org.sport.backend.repository.PostRepository;
 import org.sport.backend.repository.RentalAreaRepository;
 import org.sport.backend.repository.UserRepository;
@@ -30,7 +28,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -42,9 +39,7 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CourtRepository courtRepository;
-        private final CourtCopyRepository courtCopyRepository;
     private final RentalAreaRepository rentalAreaRepository;
-        private final SlotRepository slotRepository;
 
     private final AddressMapper addressMapper;
 
@@ -122,6 +117,7 @@ public class PostServiceImpl implements PostService {
                 .data(data)
                 .build();
     }
+
     @Override
     public PostDetailResponse getPostDetail(UUID postId) {
 

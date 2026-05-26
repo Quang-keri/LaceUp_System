@@ -1,6 +1,5 @@
 package org.sport.backend.specification;
 
-import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -10,6 +9,7 @@ import org.sport.backend.entity.Match;
 import org.sport.backend.entity.MatchRegistration;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -65,12 +65,10 @@ public class MatchSpecifications {
         return (root, query, cb) -> {
             assert query != null;
             if (Long.class != query.getResultType()) {
-                root.fetch("court", JoinType.LEFT).fetch("category", JoinType.LEFT);
+                root.fetch("court", JoinType.LEFT);
+                root.fetch("category", JoinType.LEFT);
                 root.fetch("host", JoinType.LEFT);
-                Fetch<Object, Object> registrations = root.fetch("registrations", JoinType.LEFT);
-                registrations.fetch("user", JoinType.LEFT);
 
-                query.distinct(true);
             }
             return null;
         };
@@ -113,6 +111,27 @@ public class MatchSpecifications {
             );
 
             return cb.equal(subquery, 0L);
+        };
+    }
+
+    public static Specification<Match> isOwnerSystem(UUID ownerId) {
+        return (root, query, cb) -> {
+            if (ownerId == null) return null;
+            return cb.equal(
+                    root.join("court", JoinType.LEFT)
+                            .join("rentalArea", JoinType.LEFT)
+                            .join("owner", JoinType.LEFT)
+                            .get("userId"),
+                    ownerId
+            );
+        };
+    }
+
+    public static Specification<Match> fromTodayOnwards() {
+        return (root, query, criteriaBuilder) -> {
+            LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+
+            return criteriaBuilder.greaterThanOrEqualTo(root.get("startTime"), startOfToday);
         };
     }
 }

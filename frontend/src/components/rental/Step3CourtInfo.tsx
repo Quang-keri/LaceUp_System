@@ -1,13 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { Form, Input, Button, Card, Space, Select, Switch, Upload } from "antd";
-import {
-  MinusCircleOutlined,
-  PlusOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
+import { CategoryContext } from "../../context/CategoryContext";
 import { useRentalForm } from "../../context/RentalFormContext";
 import amenityService from "../../service/amenityService";
-import categoryService from "../../service/categoryService";
 
 export default function Step3CourtInfo({
   next,
@@ -17,8 +13,11 @@ export default function Step3CourtInfo({
   prev: () => void;
 }) {
   const { formData, updateFormData } = useRentalForm();
+
+  const { categories, loading: categoriesLoading } =
+    useContext(CategoryContext);
+
   const [form] = Form.useForm();
-  const [categories, setCategories] = useState([]);
   const [amenities, setAmenities] = useState([]);
 
   useEffect(() => {
@@ -26,22 +25,17 @@ export default function Step3CourtInfo({
   }, [formData.courts, form]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAmenities = async () => {
       try {
-        const [catRes, ameRes] = await Promise.all([
-          categoryService.getAllCategories(),
-          amenityService.getAllAmenities(),
-        ]);
-        setCategories(catRes.result.data);
-        setAmenities(ameRes.result);
+        const ameRes = await amenityService.getAllAmenities();
+        setAmenities(ameRes.result || []);
       } catch (error) {
-        console.error("Lỗi tải dữ liệu:", error);
+        console.error("Lỗi tải dữ liệu tiện ích:", error);
       }
     };
-    fetchData();
+    fetchAmenities();
   }, []);
 
-  // Hàm chuẩn hóa fileList cho Ant Design Upload
   const normFile = (e: any) => {
     if (Array.isArray(e)) {
       return e;
@@ -90,7 +84,6 @@ export default function Step3CourtInfo({
               <Card
                 key={field.key}
                 title={
-              
                   <span style={{ color: "#9156F1" }}>
                     Loại sân #{field.name + 1}
                   </span>
@@ -124,7 +117,12 @@ export default function Step3CourtInfo({
                     label="Môn thể thao"
                     rules={[{ required: true, message: "Chọn môn thể thao" }]}
                   >
-                    <Select placeholder="Chọn môn" style={{ width: 150 }}>
+                    {/* Sử dụng categories từ context, có thể thêm loading prop cho mượt */}
+                    <Select
+                      placeholder="Chọn môn"
+                      style={{ width: 150 }}
+                      loading={categoriesLoading}
+                    >
                       {categories.map((c: any) => (
                         <Select.Option key={c.categoryId} value={c.categoryId}>
                           {c.categoryName}
@@ -174,7 +172,6 @@ export default function Step3CourtInfo({
                   </Select>
                 </Form.Item>
 
-                {/* UPLOAD TỪNG LOẠI SÂN: Đã cấu hình lấy fileList */}
                 <Form.Item
                   {...field}
                   name={[field.name, "courtImages"]}

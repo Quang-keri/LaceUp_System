@@ -21,9 +21,6 @@ export interface RentalAreaOptionResponse {
 }
 
 export const financeService = {
-  // =========================
-  // ADMIN - SETTLEMENT
-  // =========================
 
   generateDailySettlements: async (date: string) => {
     const res = await api.post(`/settlements/admin/generate`, null, {
@@ -61,10 +58,6 @@ export const financeService = {
     return res.data.result;
   },
 
-  // =========================
-  // ADMIN - MONTHLY REPORT
-  // =========================
-
   getMonthlySettlements: async (month: number, year: number) => {
     const res = await api.get(`/settlements/admin/monthly`, {
       params: { month, year },
@@ -85,10 +78,6 @@ export const financeService = {
     return res.data.result;
   },
 
-  // =========================
-  // OWNER - SETTLEMENT HISTORY
-  // =========================
-
   getOwnerSettlements: async (rentalAreaId: string) => {
     const res = await api.get(
       `/settlements/owner/rental-areas/${rentalAreaId}`,
@@ -96,10 +85,6 @@ export const financeService = {
 
     return res.data.result;
   },
-
-  // =========================
-  // COMMISSION CONFIG
-  // =========================
 
   getCommissionConfigs: async () => {
     const res = await api.get(`/admin/commission-configs`);
@@ -127,8 +112,23 @@ export const financeService = {
     return res.data.result;
   },
 
-  saveOwnerBankAccount: async (data: any) => {
-    const res = await api.post(`/bank-accounts`, data);
+  saveOwnerBankAccount: async (data: any, file?: File) => {
+    const formData = new FormData();
+
+    formData.append(
+      "data",
+      new Blob([JSON.stringify(data)], { type: "application/json" })
+    );
+
+    if (file) {
+      formData.append("qrCodeFile", file);
+    }
+
+    const res = await api.post(`/bank-accounts`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     return res.data.result;
   },

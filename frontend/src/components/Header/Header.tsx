@@ -7,6 +7,8 @@ import {
   Button,
   message,
   ConfigProvider,
+  Grid,
+  Drawer,
 } from "antd";
 import {
   UserOutlined,
@@ -14,18 +16,25 @@ import {
   WalletOutlined,
   SettingOutlined,
   LoginOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 
 const { Header } = Layout;
+const { useBreakpoint } = Grid;
 
 const AppHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const screens = useBreakpoint();
+  const isMobile = screens.md === false;
+
   const [token, setToken] = useState(localStorage.getItem("accessToken"));
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   useEffect(() => {
     setToken(localStorage.getItem("accessToken"));
@@ -73,7 +82,7 @@ const AppHeader = () => {
                 onClick: () => navigate("/owner"),
               },
               {
-                key: "/owner/bank-account",
+                key: "/bank-account",
                 label: "Tài khoản của tôi",
                 icon: <WalletOutlined />,
                 onClick: () => navigate("/owner/bank-account"),
@@ -100,7 +109,14 @@ const AppHeader = () => {
       ];
 
   return (
-    <div style={{ position: "sticky", top: 0, zIndex: 50, padding: "10px" }}>
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        padding: isMobile ? "5px" : "10px",
+      }}
+    >
       <ConfigProvider
         theme={{
           colorPrimary: "#9156F1",
@@ -119,7 +135,7 @@ const AppHeader = () => {
         <Header
           style={{
             background: "#ffffff",
-            padding: "0 40px",
+            padding: isMobile ? "0 16px" : "0 40px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -144,75 +160,76 @@ const AppHeader = () => {
                 alt="Logo"
                 style={{ width: 42, height: 42 }}
               />
-              <span
-                style={{
-                  fontWeight: 800,
-                  fontSize: 22,
-                  color: "#1f1f1f",
-                  letterSpacing: "-0.5px",
-                }}
-              >
-                Lace<span style={{ color: "#9156F1" }}>Up</span>
-              </span>
+              {!isMobile && (
+                <span
+                  style={{
+                    fontWeight: 800,
+                    fontSize: 22,
+                    color: "#1f1f1f",
+                    letterSpacing: "-0.5px",
+                  }}
+                >
+                  Lace<span style={{ color: "#9156F1" }}>Up</span>
+                </span>
+              )}
             </div>
           </Link>
 
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              justifyContent: "center",
-              height: "100%",
-            }}
-          >
-            <Menu
-              mode="horizontal"
-              selectedKeys={[location.pathname]}
-              items={navItems}
-              onClick={(e) => navigate(e.key)}
+          {!isMobile && (
+            <div
               style={{
-                borderBottom: "none",
-                background: "transparent",
-                fontWeight: 600,
-                fontSize: "16px",
-                minWidth: "400px",
+                flex: 1,
+                display: "flex",
                 justifyContent: "center",
+                height: "100%",
               }}
-            />
-          </div>
+            >
+              <Menu
+                mode="horizontal"
+                selectedKeys={[location.pathname]}
+                items={navItems}
+                onClick={(e) => navigate(e.key)}
+                style={{
+                  borderBottom: "none",
+                  background: "transparent",
+                  fontWeight: 600,
+                  fontSize: "16px",
+                  minWidth: "400px",
+                  justifyContent: "center",
+                }}
+              />
+            </div>
+          )}
 
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 24,
+              gap: isMobile ? 12 : 24,
               height: "100%",
             }}
           >
             {isLoggedIn ? (
-              <>
-                <Dropdown
-                  menu={{ items: userMenuItems }}
-                  trigger={["click"]}
-                  placement="bottomRight"
-                >
-                  <Space style={{ cursor: "pointer" }}>
-                    <Avatar
-                      size={42}
-                      style={{
-                        backgroundColor: "#9156F1",
-                        border: "2px solid #f3eaff",
-                        cursor: "pointer",
-                      }}
-                      icon={<UserOutlined />}
-                    />
-                  </Space>
-                </Dropdown>
-              </>
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                trigger={["click"]}
+                placement="bottomRight"
+              >
+                <Space style={{ cursor: "pointer" }}>
+                  <Avatar
+                    size={42}
+                    style={{
+                      backgroundColor: "#9156F1",
+                      border: "2px solid #f3eaff",
+                    }}
+                    icon={<UserOutlined />}
+                  />
+                </Space>
+              </Dropdown>
             ) : (
               <Button
                 type="primary"
-                size="large"
+                size={isMobile ? "middle" : "large"}
                 icon={<LoginOutlined />}
                 onClick={() => navigate("/login")}
                 style={{
@@ -222,11 +239,39 @@ const AppHeader = () => {
                   borderColor: "#9156F1",
                 }}
               >
-                Đăng nhập
+                {!isMobile && "Đăng nhập"}
               </Button>
+            )}
+
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined style={{ fontSize: "20px" }} />}
+                onClick={() => setDrawerVisible(true)}
+              />
             )}
           </div>
         </Header>
+
+        <Drawer
+          title={<span style={{ fontWeight: 800 }}>LaceUp Menu</span>}
+          placement="right"
+          onClose={() => setDrawerVisible(false)}
+          open={drawerVisible}
+          styles={{ body: { padding: 0 } }}
+          width={250}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            items={navItems}
+            onClick={(e) => {
+              navigate(e.key);
+              setDrawerVisible(false);
+            }}
+            style={{ borderRight: "none", fontSize: "16px", fontWeight: 500 }}
+          />
+        </Drawer>
       </ConfigProvider>
     </div>
   );

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Calendar, Zap } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
+import { Calendar, Zap, MapPin } from "lucide-react";
 import matchService from "../../../service/match/matchService.ts";
 import type { MatchResponse } from "../../../types/match.ts";
 import JoinMatchModal from "./JoinMatchModal";
@@ -18,13 +18,16 @@ import {
   Empty,
   Typography,
   Pagination,
+  Avatar,
 } from "antd";
 import MatchCard from "./MatchCard.tsx";
+import rentalService from "../../../service/rental/rentalService.ts";
 
 const { Title, Text } = Typography;
 
 const MatchPage: React.FC = () => {
   const [matches, setMatches] = useState<MatchResponse[]>([]);
+  const [rentalAreas, setRentalAreas] = useState<any[]>([]);
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -46,8 +49,9 @@ const MatchPage: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
-  const PAGE_SIZE = 6;
+  const PAGE_SIZE = 12;
 
+  // Lấy danh sách trận đấu
   const fetchMatches = async (pageToFetch = 1) => {
     setLoading(true);
     try {
@@ -66,8 +70,21 @@ const MatchPage: React.FC = () => {
     }
   };
 
+  // Lấy danh sách toàn bộ Khu vực (Area) để làm data nguồn
+  const fetchRentalAreas = async () => {
+    try {
+      const res = await rentalService.getAllRentalAreas(1, 100);
+      if (res && res.result && res.result.data) {
+        setRentalAreas(res.result.data);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin khu vực:", error);
+    }
+  };
+
   useEffect(() => {
     fetchMatches(currentPage);
+    fetchRentalAreas();
   }, [currentPage]);
 
   useEffect(() => {
@@ -114,7 +131,18 @@ const MatchPage: React.FC = () => {
       );
   };
 
-  const filteredMatches = matches
+  const matchesWithArea = useMemo(() => {
+    return matches.map((match) => {
+      const matchedArea = rentalAreas.find((area) =>
+        area.courtResponses?.some(
+          (court: any) => court.courtName === match.courtName,
+        ),
+      );
+      return { ...match, areaInfo: matchedArea };
+    });
+  }, [matches, rentalAreas]);
+
+  const filteredMatches = matchesWithArea
     .filter((m) => ["OPEN", "READY", "CONFIRMED", "FULL"].includes(m.status))
     .filter((m) => typeFilter === "ALL" || m.matchType === typeFilter)
     .filter(
@@ -125,22 +153,15 @@ const MatchPage: React.FC = () => {
     .filter((m) => {
       if (!selectedLocation && !selectedWard) return true;
 
-      const isStringAddress = typeof m.address === "string";
-      const cityString = String(
-        isStringAddress ? m.address : m.address?.city?.cityName || "",
-      );
-
-      const wardString = String(
-        isStringAddress ? m.address : m.address?.ward || "",
-      );
+      const areaAddress = m.areaInfo?.address || {};
+      const cityString = String(areaAddress.city?.cityName || "").toLowerCase();
+      const wardString = String(areaAddress.ward || "").toLowerCase();
 
       const matchCity =
         !selectedLocation ||
-        cityString.toLowerCase().includes(selectedLocation.toLowerCase());
-
+        cityString.includes(selectedLocation.toLowerCase());
       const matchWard =
-        !selectedWard ||
-        wardString.toLowerCase().includes(selectedWard.toLowerCase());
+        !selectedWard || wardString.includes(selectedWard.toLowerCase());
 
       return matchCity && matchWard;
     })
@@ -149,12 +170,40 @@ const MatchPage: React.FC = () => {
         return Number(a.courtPrice || 0) - Number(b.courtPrice || 0);
       if (sortOrder === "PRICE_DESC")
         return Number(b.courtPrice || 0) - Number(a.courtPrice || 0);
-      return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+
+      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
     });
 
+  const groupedMatches = useMemo(() => {
+    const groups: Record<string, { area: any; matches: MatchResponse[] }> = {};
+
+    filteredMatches.forEach((m) => {
+      const areaId = m.areaInfo?.rentalAreaId || "unknown_area";
+
+      if (!groups[areaId]) {
+        groups[areaId] = {
+          area: m.areaInfo || {
+            rentalAreaName: "Khu vực khác (Chưa xác định)",
+          },
+          matches: [],
+        };
+      }
+      groups[areaId].matches.push(m);
+    });
+
+    return Object.values(groups);
+  }, [filteredMatches]);
+
+  const formatAreaAddress = (addressObj: any) => {
+    if (!addressObj) return "Chưa cập nhật địa chỉ";
+    const { street, ward, city } = addressObj;
+    const parts = [street, ward, city?.cityName].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : "Chưa cập nhật địa chỉ";
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 py-8 font-sans">
-      <div className="w-[90%] mx-auto">
+    <div className="min-h-screen bg-slate-50 py-9 font-sans">
+      <div className="w-[85%] mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 lg:px-6 xl:px-8">
           <div className="flex-1">
             <Title
@@ -203,7 +252,7 @@ const MatchPage: React.FC = () => {
 
             <Button
               size="large"
-              icon={<Calendar size={18} />} 
+              icon={<Calendar size={18} />}
               onClick={() => navigate("/my-matches")}
               style={{
                 borderRadius: "12px",
@@ -250,12 +299,12 @@ const MatchPage: React.FC = () => {
             resetFilters={resetFilters}
           />
 
-          <div className="flex-1 w-full">
+          <div className="flex-8 w-full">
             {loading ? (
               <div className="flex justify-center items-center py-20">
                 <Spin size="large" />
               </div>
-            ) : filteredMatches.length === 0 ? (
+            ) : groupedMatches.length === 0 ? (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
@@ -271,17 +320,56 @@ const MatchPage: React.FC = () => {
               />
             ) : (
               <>
-                <Row gutter={[24, 24]}>
-                  {filteredMatches.map((match) => (
-                    <Col xs={24} md={12} xl={8} key={match.matchId}>
-                      <MatchCard
-                        match={match}
-                        onOpenJoinModal={handleOpenJoinModal}
-                        onJoinSuccess={() => fetchMatches(currentPage)}
-                      />
-                    </Col>
+                <div className="flex flex-col gap-6">
+                  {groupedMatches.map((group, index) => (
+                    <div
+                      key={group.area.rentalAreaId || index}
+                      className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-slate-100 flex items-center gap-4 bg-white">
+                        <Avatar
+                          size={50}
+                          src={group.area.images?.[0]?.imageUrl || undefined}
+                          className="border border-slate-200"
+                        >
+                          {group.area.rentalAreaName?.[0]}
+                        </Avatar>
+                        <div>
+                          <Title
+                            level={5}
+                            style={{ margin: 0, color: "#1e293b" }}
+                          >
+                            {group.area.rentalAreaName}
+                          </Title>
+                          <Text
+                            type="secondary"
+                            className="flex items-center text-sm mt-1"
+                          >
+                            <MapPin
+                              size={14}
+                              className="mr-1 text-emerald-500"
+                            />
+                            {formatAreaAddress(group.area.address)}
+                          </Text>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-slate-50/50">
+                        <Row gutter={[16, 16]}>
+                          {group.matches.map((match) => (
+                            <Col xs={24} lg={12} xl={8} key={match.matchId}>
+                              <MatchCard
+                                match={match}
+                                onOpenJoinModal={handleOpenJoinModal}
+                                onJoinSuccess={() => fetchMatches(currentPage)}
+                              />
+                            </Col>
+                          ))}
+                        </Row>
+                      </div>
+                    </div>
                   ))}
-                </Row>
+                </div>
 
                 {totalElements > PAGE_SIZE && (
                   <div className="flex justify-center mt-8">

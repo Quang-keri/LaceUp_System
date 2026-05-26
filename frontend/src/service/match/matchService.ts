@@ -1,6 +1,10 @@
 import api from "../../config/axios.ts";
 import type { ApiResponse } from "../../types/ApiResponse.ts";
-import type { MatchResponse, MatchRequest } from "../../types/match.ts";
+import type {
+  MatchResponse,
+  MatchRequest,
+  ReportRequest,
+} from "../../types/match.ts";
 import type { PageResponse } from "../../types/PageResponse.ts";
 
 const API_BASE_URL = "/matches";
@@ -73,10 +77,20 @@ export const matchService = {
   getOwnerMatches: async (
     page: number,
     size: number,
+    status?: string,
+    category?: string,
+    keyword?: string,
+    startDate?: string,
+    endDate?: string,
   ): Promise<ApiResponse<PageResponse<MatchResponse>>> => {
-    const response = await api.get(`${API_BASE_URL}/owner`, {
-      params: { page, size },
-    });
+    const params: any = { page, size };
+    if (status) params.status = status;
+    if (category) params.category = category;
+    if (keyword) params.keyword = keyword;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
+    const response = await api.get(`${API_BASE_URL}/owner`, { params });
     return response.data;
   },
 
@@ -124,6 +138,23 @@ export const matchService = {
     absentUserIds: string[];
   }): Promise<ApiResponse<any>> => {
     const response = await api.post(`/match-results/submit`, data);
+    return response.data;
+  },
+
+  reportViolation: async (data: ReportRequest): Promise<ApiResponse<void>> => {
+    const response = await api.post(`/match-results/report`, data);
+    return response.data;
+  },
+
+  resolveMatchReport: async (
+    reportId: string,
+    isAccepted: boolean,
+  ): Promise<ApiResponse<void>> => {
+    const response = await api.post(
+      `/match-results/report/${reportId}/resolve`,
+      null,
+      { params: { isAccepted } },
+    );
     return response.data;
   },
 };
