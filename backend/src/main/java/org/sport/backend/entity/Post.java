@@ -16,6 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Post extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID postId;
@@ -28,7 +29,7 @@ public class Post extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "post_status", length = 20)
-    PostStatus postStatus;
+    private PostStatus postStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

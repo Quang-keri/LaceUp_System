@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
-   private final RentalAreaRepository rentalAreaRepository;
+    private final RentalAreaRepository rentalAreaRepository;
 
     @Override
     public PageResponse<TransactionResponse> getRentalAreaTransactions(
@@ -64,6 +64,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         return PageResponse.of(transactionPage, responses);
     }
+
     @Override
     public PageResponse<TransactionResponse> getOwnerTransactions(
             UUID ownerId,
@@ -92,6 +93,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         return PageResponse.of(transactionPage, responses);
     }
+
     @Override
     public PageResponse<TransactionResponse> getTransactions(int page, int size, String keyword, TransactionType type, LocalDateTime startDate, LocalDateTime endDate) {
         Specification<Transaction> spec = TransactionSpecification.filterTransactions(keyword, type, startDate, endDate);
@@ -148,7 +150,6 @@ public class TransactionServiceImpl implements TransactionService {
 
         return mapToResponse(transactionRepository.save(transaction));
     }
-
 
     private TransactionResponse mapToResponse(Transaction entity) {
         return TransactionResponse.builder()

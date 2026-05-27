@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
@@ -10,7 +10,7 @@ import tennis from "../../../assets/tennis.jpg";
 import payos from "../../../assets/payos_2.jpg";
 import comnunity from "../../../assets/comunity.png";
 
-import categoryService from "../../../service/categoryService";
+import { CategoryContext } from "../../../context/CategoryContext";
 import { locationService } from "../../../service/locationService";
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
@@ -47,7 +47,8 @@ export default function SportsBookingLanding() {
   });
 
   const [provinces, setProvinces] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+
+  const { categories } = useContext(CategoryContext);
 
   useEffect(() => {
     const rx = window.innerWidth < 1000 ? window.innerWidth / 1200 : 1;
@@ -190,7 +191,6 @@ export default function SportsBookingLanding() {
 
   useEffect(() => {
     fetchProvinces();
-    fetchCategories();
   }, []);
 
   const fetchProvinces = async () => {
@@ -200,17 +200,6 @@ export default function SportsBookingLanding() {
     } catch (error) {
       console.error("Lỗi tải tỉnh/thành:", error);
       setProvinces([]);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await categoryService.getAllCategories(1, 100);
-      if (res.result?.data) {
-        setCategories(res.result.data);
-      }
-    } catch (error) {
-      console.error("Lỗi tải môn chơi:", error);
     }
   };
 
@@ -332,7 +321,6 @@ export default function SportsBookingLanding() {
           </div>
         </div>
 
-       
         <div
           ref={indicatorRef}
           className="absolute bottom-10 animate-bounce text-[#9156F1]/60"

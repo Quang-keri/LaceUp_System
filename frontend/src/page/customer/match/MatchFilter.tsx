@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext } from "react";
 import { locationService } from "../../../service/locationService.ts";
-import categoryService from "../../../service/categoryService";
+import { CategoryContext } from "../../../context/CategoryContext";
 import {
   Radio,
   Select,
@@ -47,24 +47,11 @@ const MatchFilter: React.FC<MatchFilterProps> = ({
   setWards,
   resetFilters,
 }) => {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [isFetchingCategories, setIsFetchingCategories] = useState(true);
-
-  useEffect(() => {
-    setIsFetchingCategories(true);
-    categoryService
-      .getAllCategories(1, 100)
-      .then((res) => {
-        if (res.code === 200 && res.result?.data) {
-          setCategories(res.result.data);
-        }
-      })
-      .catch((err) => console.error("Lỗi khi lấy danh sách loại sân:", err))
-      .finally(() => setIsFetchingCategories(false));
-  }, []);
+  const { categories, loading: isFetchingCategories } =
+    useContext(CategoryContext);
 
   return (
-    <div className="w-full lg:w-[280px] xl:w-1/4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 shrink-0 lg:sticky lg:top-6 z-10">
+    <div className="w-full lg:w-[300px] xl:w-1/5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 shrink-0 lg:sticky lg:top-6 z-10">
       <div className="flex justify-between items-center mb-4">
         <Title
           level={4}
@@ -127,7 +114,7 @@ const MatchFilter: React.FC<MatchFilterProps> = ({
           onChange={(val) => setSelectedCategory(val || "")}
           style={{ width: "100%" }}
           loading={isFetchingCategories}
-          options={categories.map((cat) => ({
+          options={categories.map((cat: any) => ({
             label: cat.categoryName,
             value: cat.categoryName,
           }))}

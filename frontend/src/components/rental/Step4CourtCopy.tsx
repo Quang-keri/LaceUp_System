@@ -14,7 +14,7 @@ import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useRentalForm } from "../../context/RentalFormContext";
 
 const PRICE_TYPES = [
-  { label: "Thứ 2 - thứ 6", value: "NORMAL" },
+  { label: "Thứ 2 - thứ 6", value: "WEEKDAY" },
   { label: "Cuối tuần", value: "WEEKEND" },
   { label: "Giờ cao điểm", value: "PEAK" },
   { label: "Ngày lễ", value: "HOLIDAY" },
@@ -37,12 +37,29 @@ export default function Step4CourtCopy({ next, prev }: any) {
         return {
           ...existing,
           ...court,
-          // Format lại thời gian từ Dayjs sang string HH:mm để lưu Context
-          prices: (court.prices || []).map((p: any) => ({
-            ...p,
-            startTime: p.timeRange?.[0]?.format?.("HH:mm") || p.startTime,
-            endTime: p.timeRange?.[1]?.format?.("HH:mm") || p.endTime,
-          })),
+          prices: (court.prices || []).map((p: any) => {
+            let backendDayType = "ALL";
+            let backendPriceType = "NORMAL";
+
+            if (p.priceType === "WEEKDAY") {
+              backendDayType = "WEEKDAY";
+              backendPriceType = "NORMAL";
+            } else if (p.priceType === "WEEKEND") {
+              backendDayType = "WEEKEND";
+              backendPriceType = "NORMAL";
+            } else if (["PEAK", "HOLIDAY", "EVENT"].includes(p.priceType)) {
+              backendDayType = "ALL";
+              backendPriceType = p.priceType;
+            }
+
+            return {
+              ...p,
+              dayType: backendDayType,
+              priceType: backendPriceType,
+              startTime: p.timeRange?.[0]?.format?.("HH:mm") || p.startTime,
+              endTime: p.timeRange?.[1]?.format?.("HH:mm") || p.endTime,
+            };
+          }),
         };
       },
     );

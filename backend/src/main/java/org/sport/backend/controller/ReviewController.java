@@ -1,7 +1,5 @@
 package org.sport.backend.controller;
 
-
-
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.base.PageResponse;
@@ -14,12 +12,11 @@ import java.security.Principal;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/reviews") // Cấu hình tiền tố phù hợp với config Axios bên FE
+@RequestMapping("/reviews")
 @RequiredArgsConstructor
 public class ReviewController {
 
     private final ReviewService reviewService;
-
 
     @GetMapping("/rental/{rentalId}")
     public ApiResponse<PageResponse<ReviewResponse>> getReviewsByRentalArea(
@@ -30,7 +27,6 @@ public class ReviewController {
         PageResponse<ReviewResponse> pageResponse = reviewService.getReviewsByRentalArea(rentalId, page, size);
         return ApiResponse.success(pageResponse);
     }
-
 
     @GetMapping("/me/rental/{rentalId}")
     public ApiResponse<ReviewResponse> getMyReview(
@@ -46,7 +42,6 @@ public class ReviewController {
         return ApiResponse.success(response);
     }
 
-
     @GetMapping("/check-eligibility/{rentalId}")
     public ApiResponse<Boolean> checkEligibility(
             @PathVariable UUID rentalId,
@@ -61,7 +56,6 @@ public class ReviewController {
         return ApiResponse.success(isEligible);
     }
 
-
     @PostMapping("/rental/{rentalId}")
     public ApiResponse<String> submitReview(
             @PathVariable UUID rentalId,
@@ -75,4 +69,5 @@ public class ReviewController {
         reviewService.submitReview(rentalId, request, principal.getName());
         return ApiResponse.success("Đánh giá thành công");
     }
+
 }

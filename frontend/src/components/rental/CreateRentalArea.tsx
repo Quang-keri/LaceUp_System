@@ -1,14 +1,5 @@
-// CreateRentalArea.tsx
 import React, { useEffect, useState } from "react";
-import {
-  Steps,
-  Button,
-  Flex,
-  message,
-  theme,
-  ConfigProvider,
-  Spin,
-} from "antd";
+import { Steps, Button, Flex, message, ConfigProvider, Spin } from "antd";
 import {
   RentalFormProvider,
   useRentalForm,
@@ -93,12 +84,20 @@ const FormContainer: React.FC = () => {
         return;
       }
       if (completeData.bankAccount) {
-        await bankAccountService.createBankAccount({
-          bankName: completeData.bankAccount.bankName,
-          accountNumber: completeData.bankAccount.accountNumber,
-          accountHolderName: completeData.bankAccount.accountHolderName,
-          branchName: completeData.bankAccount.branchName || "",
-        });
+        const bankData = completeData.bankAccount;
+
+        const qrFile = bankData.qrCodeFile?.[0]?.originFileObj;
+
+        const requestJson = {
+          bankName: bankData.bankName,
+          accountNumber: bankData.accountNumber,
+          accountHolderName: bankData.accountHolderName,
+          branchName: bankData.branchName || "",
+          qrCode: bankData.qrCodeFile?.[0]?.url || "",
+        };
+
+        // Gọi service với 2 tham số: (JSON data, File)
+        await bankAccountService.createBankAccount(requestJson, qrFile);
       }
       for (const courtType of completeData.courts) {
         const courtCopyRequests = (courtType.courtCopies || []).map(

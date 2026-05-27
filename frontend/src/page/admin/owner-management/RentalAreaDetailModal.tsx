@@ -472,6 +472,25 @@ const RentalAreaDetailModal: React.FC<Props> = ({
                   <Tag color="orange">Chưa xác minh</Tag>
                 )}
               </Descriptions.Item>
+
+              <Descriptions.Item label="Mã QR nhận tiền">
+                {bankAccount.qrCode ? (
+                  <Image
+                    src={bankAccount.qrCode}
+                    width={180}
+                    style={{
+                      borderRadius: 8,
+                      border: "1px solid #f0f0f0",
+                      padding: 4,
+                      backgroundColor: "#fff",
+                    }}
+                    fallback="https://via.placeholder.com/180x180?text=Lỗi+Ảnh"
+                    alt="QR Code"
+                  />
+                ) : (
+                  <Text type="secondary">Chưa cập nhật mã QR</Text>
+                )}
+              </Descriptions.Item>
             </Descriptions>
           ) : (
             <Empty

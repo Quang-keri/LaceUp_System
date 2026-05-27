@@ -10,7 +10,6 @@ import {
   message,
 } from "antd";
 import {
-  MapPin,
   Calendar,
   Clock,
   Users,
@@ -210,12 +209,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
           {match.categoryName}
         </h3>
         <div className="space-y-2 mb-2 text-slate-600">
-          <div className="flex items-start gap-2.5">
-            <MapPin size={16} className="text-slate-400 shrink-0 mt-0.5" />
-            <Text className="text-sm font-medium line-clamp-2 leading-tight text-slate-600">
-              {`${match.address?.street}, ${match.address?.ward}, ${match.address?.city?.cityName}`}
-            </Text>
-          </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <Calendar size={16} className="text-slate-400 shrink-0" />
@@ -284,13 +277,13 @@ const MatchCard: React.FC<MatchCardProps> = ({
           </Text>
         </div>
         <Space>
-          <Tooltip title="Chat với chủ phòng">
+          {/* <Tooltip title="Chat với chủ phòng">
             <Button
               icon={<MessageCircle size={18} />}
               onClick={handleChatClick}
               className="rounded-xl border-slate-200 text-slate-500 hover:text-purple-600 hover:border-purple-300"
             />
-          </Tooltip>
+          </Tooltip> */}
           {renderActionButton()}
         </Space>
       </div>

@@ -87,10 +87,18 @@ public class PostSpecification {
                 Expression<Double> avgRating =
                         cb.avg(reviewJoin.get("rating"));
 
+                Expression<Double> finalAvgRating = cb.coalesce(avgRating, 0.0);
+
                 query.having(
-                        cb.greaterThanOrEqualTo(
-                                cb.coalesce(avgRating, 0.0),
-                                filter.getMinRating().doubleValue()
+                        cb.and(
+                                cb.greaterThanOrEqualTo(
+                                        finalAvgRating,
+                                        filter.getMinRating()
+                                ),
+                                cb.lessThan(
+                                        finalAvgRating,
+                                        filter.getMinRating() + 1.0
+                                )
                         )
                 );
             }
@@ -159,6 +167,7 @@ public class PostSpecification {
                 Join<Court, CourtPrice> priceJoin =
                         courtJoin.join("courtPrices", JoinType.LEFT);
 
+                assert query != null;
                 query.groupBy(root.get("postId"));
 
                 Expression<BigDecimal> minPrice =

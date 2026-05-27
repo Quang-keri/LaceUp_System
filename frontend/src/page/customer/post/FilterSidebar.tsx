@@ -1,11 +1,11 @@
 import { Slider, Checkbox, Radio, Select, ConfigProvider, Rate } from "antd";
-import type { CheckboxValueType } from "antd/es/checkbox/Group";
+import type { CheckboxValueType } from "antd/es/checkbox";
 import type { FilterState } from "./PostPage";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 
 import { locationService } from "../../../service/locationService";
-import categoryService from "../../../service/categoryService";
 import amenityService from "../../../service/amenityService";
+import { CategoryContext } from "../../../context/CategoryContext";
 
 interface FilterSidebarProps {
   filters: FilterState;
@@ -17,12 +17,13 @@ export default function FilterSidebar({
   onChange,
 }: FilterSidebarProps) {
   const [provinces, setProvinces] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
   const [amenities, setAmenities] = useState<any[]>([]);
+
+  const { categories, loading: categoriesLoading } =
+    useContext(CategoryContext);
 
   useEffect(() => {
     fetchProvinces();
-    fetchCategories();
     fetchAmenities();
   }, []);
 
@@ -33,15 +34,6 @@ export default function FilterSidebar({
     } catch (e) {
       console.error(e);
       setProvinces([]);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await categoryService.getAllCategories(1, 100);
-      if (res.result?.data) setCategories(res.result.data);
-    } catch (e) {
-      console.error(e);
     }
   };
 
@@ -183,6 +175,7 @@ export default function FilterSidebar({
             value={filters.categoryIds}
             onChange={(values: number[]) => onChange({ categoryIds: values })}
             style={{ width: "100%" }}
+            loading={categoriesLoading}
             options={categories.map((c: any) => ({
               label: c.categoryName,
               value: c.categoryId,

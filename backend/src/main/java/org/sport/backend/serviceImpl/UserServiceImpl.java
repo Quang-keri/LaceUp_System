@@ -221,7 +221,6 @@ public class UserServiceImpl implements UserService {
         User user = getUserEntity(userId);
         List<Permission> permissions = permissionRepository.findAllById(permissionIds);
 
-        // Khắc phục lỗi NullPointerException
         if (user.getExtraPermissions() == null) {
             user.setExtraPermissions(new ArrayList<>());
         }
@@ -284,8 +283,7 @@ public class UserServiceImpl implements UserService {
         return UserDashboardResponse.builder()
                 .userId(user.getUserId())
                 .userName(user.getUserName())
-                // .avatarUrl(user.getAvatarUrl())
-
+//                 .avatarUrl(user.getAvatarUrl())
                 .totalMatches(globalTotalMatches)
                 .totalWins(globalTotalWins)
                 .winRate(globalWinRate)

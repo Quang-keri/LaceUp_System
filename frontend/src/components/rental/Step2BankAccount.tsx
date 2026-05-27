@@ -1,9 +1,27 @@
-import React, { useEffect } from "react";
-import { Form, Input, Button, Card, Row, Col, Select, Avatar } from "antd";
-import { BankOutlined, LeftOutlined } from "@ant-design/icons";
+import { useEffect } from "react";
+import {
+  Form,
+  Input,
+  Button,
+  Card,
+  Row,
+  Col,
+  Select,
+  Avatar,
+  Upload,
+} from "antd";
+import { BankOutlined, LeftOutlined, PlusOutlined } from "@ant-design/icons";
 import { useRentalForm } from "../../context/RentalFormContext";
 import { BANKS, type Bank } from "../../utils/banks";
 import bankAccountService from "../../service/bankAccountService";
+
+const normFile = (e: any) => {
+  if (Array.isArray(e)) {
+    return e;
+  }
+  return e?.fileList;
+};
+
 export default function Step2BankAccount({
   next,
   prev,
@@ -22,7 +40,6 @@ export default function Step2BankAccount({
   const loadBankAccount = async () => {
     try {
       const response = await bankAccountService.getMyBankAccount();
-
       const bankAccount = response?.result;
 
       if (!bankAccount) return;
@@ -43,10 +60,20 @@ export default function Step2BankAccount({
         accountNumber: bankAccount.accountNumber,
         accountHolderName: bankAccount.accountHolderName,
         branchName: bankAccount.branchName,
+
+        qrCodeFile: bankAccount.qrCode
+          ? [
+              {
+                uid: "-1",
+                name: "qr-code.png",
+                status: "done",
+                url: bankAccount.qrCode,
+              },
+            ]
+          : undefined,
       };
 
       form.setFieldsValue(values);
-
       updateFormData("bankAccount", values);
     } catch (error) {
       console.log("Chưa có tài khoản ngân hàng", error);
@@ -142,15 +169,12 @@ export default function Step2BankAccount({
             <Form.Item name="bankFullName" hidden>
               <Input />
             </Form.Item>
-
             <Form.Item name="bankCode" hidden>
               <Input />
             </Form.Item>
-
             <Form.Item name="bankBin" hidden>
               <Input />
             </Form.Item>
-
             <Form.Item name="bankLogo" hidden>
               <Input />
             </Form.Item>
@@ -187,6 +211,27 @@ export default function Step2BankAccount({
           <Col xs={24} md={12}>
             <Form.Item name="branchName" label="Chi nhánh ngân hàng">
               <Input size="large" placeholder="VD: Chi nhánh TP.HCM" />
+            </Form.Item>
+          </Col>
+
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="qrCodeFile"
+              label="Ảnh mã QR (Tùy chọn)"
+              valuePropName="fileList"
+              getValueFromEvent={normFile}
+            >
+              <Upload
+                listType="picture-card"
+                maxCount={1}
+                accept="image/*"
+                beforeUpload={() => false}
+              >
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Tải ảnh lên</div>
+                </div>
+              </Upload>
             </Form.Item>
           </Col>
         </Row>
