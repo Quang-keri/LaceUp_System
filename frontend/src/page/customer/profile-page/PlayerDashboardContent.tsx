@@ -78,7 +78,6 @@ const PlayerDashboardContent: React.FC<PlayerDashboardContentProps> = ({
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        // Gọi song song 2 API để tiết kiệm thời gian tải
         const [dashRes, achRes] = await Promise.all([
           userService.getUserDashboard(userId).catch(() => null),
           achievementService.getUserAchievements(userId).catch(() => []),
@@ -95,7 +94,6 @@ const PlayerDashboardContent: React.FC<PlayerDashboardContentProps> = ({
           achArray = achRes.result;
         }
 
-        // Sắp xếp giảm dần và lấy 8 cái mới nhất
         achArray.sort(
           (a, b) =>
             new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime(),
@@ -111,7 +109,6 @@ const PlayerDashboardContent: React.FC<PlayerDashboardContentProps> = ({
     fetchAllData();
   }, [userId]);
 
-  // Hàm đánh giá uy tín
   const getReputationStatus = (score: number = 0) => {
     if (score >= 95)
       return (
@@ -193,7 +190,6 @@ const PlayerDashboardContent: React.FC<PlayerDashboardContentProps> = ({
             />
           </Col>
 
-          {/* Tổng số trận */}
           <Col
             xs={24}
             sm={12}
@@ -209,7 +205,6 @@ const PlayerDashboardContent: React.FC<PlayerDashboardContentProps> = ({
             <Text className="text-gray-500 font-medium">Trận Đã Chơi</Text>
           </Col>
 
-          {/* Điểm uy tín */}
           <Col
             xs={24}
             sm={12}

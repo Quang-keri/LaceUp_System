@@ -44,7 +44,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ItemGroupRepository itemGroupRepository;
     private final ObjectMapper objectMapper;
     private final WardRepository wardRepository;
-
+    private final  NewsRepository newsRepository;
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
@@ -172,9 +172,22 @@ public class DataInitializer implements CommandLineRunner {
         if (itemGroupRepository.count() == 0) {
             seedItemGroup();
         }
+        if(newsRepository.count() == 0 ){
+            seedNews();
+        }
 
     }
-
+    private void seedNews() {
+        User user = userRepository.findByEmail("admin@gmail.com").orElseThrow(null);;
+        News news = News.builder()
+                .title("Phát thành web booking cho hệ thống LaceUp")
+                .content("Website của hệ thống LaceUp đươc phát thành , nền tảng của ra mắt các chức năng đặt lịch ,quản lí lịch , quản lí sân , quản lí người dùng , quản lí tài chính và nhiều chức năng khác nhằm mang lại trải nghiệm tốt nhất cho khách hàng và chủ sân .")
+                .createdAt(LocalDateTime.now())
+                .createdBy(user)
+                .visibility(NewsVisibility.PUBLIC)
+                .build();
+        newsRepository.save(news);
+    }
     private void seedItemGroup() {
         ItemGroup group1 = new ItemGroup();
         group1.setName("Đồ ăn / Thức uống");

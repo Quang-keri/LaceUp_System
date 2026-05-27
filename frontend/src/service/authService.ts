@@ -9,7 +9,6 @@ import type {
 } from '../types/auth';
 
 class AuthService {
-    // Hàm phụ để lưu token tập trung
     private setTokens(result: LoginResponse) {
         localStorage.setItem('accessToken', result.accessToken);
         localStorage.setItem('refreshToken', result.refreshToken);
@@ -26,7 +25,6 @@ class AuthService {
     async loginWithGoogle(code: string): Promise<ApiResponse<LoginResponse>> {
         const request: LoginGoogleRequest = { code };
         const response = await api.post<ApiResponse<LoginResponse>>('/auth/google', request);
-        // Quan trọng: Lưu token sau khi đăng nhập Google thành công
         if (response.data.result) {
             this.setTokens(response.data.result);
         }

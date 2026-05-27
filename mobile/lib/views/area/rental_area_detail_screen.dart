@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../services/rental_service.dart';
+import 'booking_form_screen.dart'; // Nhớ import màn hình Form đặt sân (Màn 2)
 
 class RentalAreaDetailScreen extends StatefulWidget {
   final String rentalAreaId;
@@ -21,6 +23,9 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
 
   bool loading = true;
   String? error;
+
+  // Biến lưu trữ ngày đang chọn trên Lịch
+  DateTime selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -69,18 +74,62 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     }
   }
 
+
+  void _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(primary: primaryColor),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
+  void _onTimeSlotTapped(String time) {
+    if (activeCourt == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookingFormScreen(
+          court: activeCourt!,
+          selectedDate: selectedDate,
+          initialTime: time,
+        ),
+      ),
+    );
+  }
+
+
   String formatPrice(dynamic price) {
     if (price == null) return 'Liên hệ';
     final value = double.tryParse(price.toString()) ?? 0;
     return '${value.toStringAsFixed(0)}đ / giờ';
   }
 
+  String formatTime(dynamic time) {
+    if (time == null) return '--:--';
+    final value = time.toString();
+    if (value.length >= 5) return value.substring(0, 5);
+    return value;
+  }
+
   String getAddressText() {
     final address = rentalArea?['address'];
-
     if (address == null) return 'Đang cập nhật địa chỉ';
-
-    return address.fullAddress;
+       return address.toString();
   }
 
   dynamic getPrice() {
@@ -125,14 +174,16 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     return [];
   }
 
+  // ---- GIAO DIỆN CHÍNH ----
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Colors.white,
         body: Center(
           child: CircularProgressIndicator(
-            color: Color(0xFF9156F1),
+            color: primaryColor,
           ),
         ),
       );
@@ -170,10 +221,9 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: _buildBookingButton(),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.only(bottom: 100),
+          padding: const EdgeInsets.only(bottom: 40), // Cách đáy một chút cho thoáng
           children: [
             _buildImageHeader(),
             Padding(
@@ -184,7 +234,10 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
                   _buildRentalInfo(),
                   const SizedBox(height: 18),
                   _buildCourtInfo(),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
+                  _buildCalendarAndTimeSlots(),
+
+                  const SizedBox(height: 24),
                   _buildAmenities(),
                   const SizedBox(height: 18),
                   _buildPriceRules(),
@@ -198,6 +251,8 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       ),
     );
   }
+
+
 
   Widget _buildImageHeader() {
     final imageUrl = getImageUrl();
@@ -345,6 +400,79 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     );
   }
 
+  // WIDGET MỚI: Hiển thị lịch chọn ngày và khung giờ
+  Widget _buildCalendarAndTimeSlots() {
+    // Tạm tạo danh sách giờ mock. Sau này bạn có API check giờ trống thì map data vào đây nhé.
+    final List<String> timeSlots = [
+      '05:00', '06:00', '07:00', '08:00', '09:00', '10:00',
+      '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header Lịch sân + Nút chọn ngày
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Lịch đặt sân',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            InkWell(
+              onTap: () => _selectDate(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: primaryColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_month, size: 16, color: primaryColor),
+                    const SizedBox(width: 8),
+                    Text(
+                      DateFormat('dd/MM/yyyy').format(selectedDate),
+                      style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: timeSlots.map((time) {
+            return InkWell(
+              onTap: () => _onTimeSlotTapped(time),
+              child: Container(
+                width: (MediaQuery.of(context).size.width - 32 - 30) / 4,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  time,
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   Widget _buildAmenities() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,13 +582,6 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     );
   }
 
-  String formatTime(dynamic time) {
-    if (time == null) return '--:--';
-    final value = time.toString();
-    if (value.length >= 5) return value.substring(0, 5);
-    return value;
-  }
-
   Widget _buildOtherCourts() {
     final otherCourts = courts.where((court) {
       return court['courtId'] != activeCourt?['courtId'];
@@ -555,153 +676,6 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
               ),
             );
           }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBookingButton() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: ElevatedButton(
-        onPressed: _openBookingSheet,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-        child: const Text(
-          'Chọn lịch đặt sân',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-      ),
-    );
-  }
-
-  void _openBookingSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            18,
-            16,
-            MediaQuery.of(context).viewInsets.bottom + 18,
-          ),
-          child: BookingFormSheet(
-            court: activeCourt!,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class BookingFormSheet extends StatelessWidget {
-  final Map<String, dynamic> court;
-
-  const BookingFormSheet({
-    super.key,
-    required this.court,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF9156F1);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 42,
-          height: 5,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(99),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          court['courtName'] ?? 'Thông tin đặt sân',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 18),
-        TextField(
-          decoration: InputDecoration(
-            labelText: 'Ngày chơi',
-            hintText: 'VD: 2026-05-22',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: 'Giờ bắt đầu',
-                  hintText: '17:00',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  labelText: 'Giờ kết thúc',
-                  hintText: '19:00',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: 'Số lượng sân',
-            hintText: '1',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child: const Text(
-            'Kiểm tra lịch trống',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
         ),
       ],
     );

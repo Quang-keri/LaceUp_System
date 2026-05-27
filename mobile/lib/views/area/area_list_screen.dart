@@ -1,18 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/views/area/rental_area_detail_screen.dart';
+
 import '../../models/post.dart';
-import '../../models/page_response.dart';
 import '../../services/post_service.dart';
+import '../../services/location_service.dart';
+import '../../services/category_service.dart';
+import '../../services/amenity_service.dart';
+
+import 'widgets/area_card.dart';
+import 'widgets/area_header.dart';
+import 'widgets/area_search_box.dart';
+import 'widgets/area_pagination.dart';
+import 'widgets/area_filter_bottom_sheet.dart';
 
 class AreaListScreen extends StatefulWidget {
   const AreaListScreen({super.key});
-
   @override
   State<AreaListScreen> createState() => _AreaListScreenState();
 }
 
 class _AreaListScreenState extends State<AreaListScreen> {
   final TextEditingController searchController = TextEditingController();
+
 
   List<PostResponse> posts = [];
   bool loading = true;
@@ -22,12 +31,69 @@ class _AreaListScreenState extends State<AreaListScreen> {
   int size = 10;
   int totalElements = 0;
 
+  int minPrice = 0;
+  int maxPrice = 500000;
+  int minRating = 0;
   String? sortBy;
+
+  List<int> provinceCodes = [];
+  List<int> categoryIds = [];
+  List<int> amenityIds = [];
+
+  List<dynamic> provinces = [];
+  List<dynamic> categories = [];
+  List<dynamic> amenities = [];
 
   @override
   void initState() {
     super.initState();
+    fetchFilterData();
     fetchPosts();
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  int get totalPages {
+    if (totalElements == 0) return 1;
+    return (totalElements / size).ceil();
+  }
+
+  int get filterCount {
+    int count = 0;
+    if (sortBy != null) count++;
+    if (minRating > 0) count++;
+    if (minPrice > 0 || maxPrice < 500000) count++;
+    if (provinceCodes.isNotEmpty) count++;
+    if (categoryIds.isNotEmpty) count++;
+    if (amenityIds.isNotEmpty) count++;
+    return count;
+  }
+
+  bool get hasAnyFilter => filterCount > 0;
+
+  Future<void> fetchFilterData() async {
+    try {
+      final provinceRes = await locationService.getProvinces();
+      final categoryRes = await categoryService.getAllCategories(
+        page: 1,
+        size: 100,
+      );
+      final amenityRes = await amenityService.getAllAmenities();
+
+      if (!mounted) return;
+
+      setState(() {
+        provinces = provinceRes;
+        categories = categoryRes.data ?? [];
+        amenities = amenityRes;
+      });
+    } catch (e) {
+      debugPrint('Fetch filter data error: $e');
+    }
   }
 
   Future<void> fetchPosts() async {
@@ -37,243 +103,178 @@ class _AreaListScreenState extends State<AreaListScreen> {
         error = null;
       });
 
-      final PageResponse<PostResponse> response = await postService.getPosts(
+      final response = await postService.getPosts(
         page: page,
         size: size,
         title: searchController.text.trim(),
+        minPrice: minPrice,
+        maxPrice: maxPrice,
         sortBy: sortBy,
+        minRating: minRating,
+        provinceCodes: provinceCodes,
+        categoryIds: categoryIds,
+        amenityIds: amenityIds,
       );
+
+      if (!mounted) return;
 
       setState(() {
         posts = response.data;
         totalElements = response.totalElements;
       });
     } catch (e) {
-      setState(() {
-        error = e.toString();
-      });
+      if (!mounted) return;
+      setState(() => error = e.toString());
     } finally {
-      setState(() {
-        loading = false;
-      });
+      if (!mounted) return;
+      setState(() => loading = false);
     }
   }
 
-  String formatPrice(double? price) {
-    if (price == null) return 'Đang cập nhật';
-    return '${price.toStringAsFixed(0)}đ/giờ';
+  void clearFilter() {
+    setState(() {
+      page = 1;
+      minPrice = 0;
+      maxPrice = 500000;
+      minRating = 0;
+      sortBy = null;
+      provinceCodes = [];
+      categoryIds = [];
+      amenityIds = [];
+    });
+
+    fetchPosts();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildSearchBox(),
-            _buildFilterBar(),
-            _buildTitleRow(),
-            Expanded(
-              child: loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : error != null
-                  ? Center(
-                      child: Text(
-                        error!,
-                        style: const TextStyle(color: Colors.redAccent),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : posts.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Không tìm thấy sân nào',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: fetchPosts,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: posts.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == posts.length) {
-                            return _buildOwnerBox();
-                          }
+  void openFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.86,
+          minChildSize: 0.55,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return AreaFilterBottomSheet(
+              scrollController: scrollController,
+              minPrice: minPrice,
+              maxPrice: maxPrice,
+              minRating: minRating,
+              sortBy: sortBy,
+              provinceCodes: provinceCodes,
+              categoryIds: categoryIds,
+              amenityIds: amenityIds,
+              provinces: provinces,
+              categories: categories,
+              amenities: amenities,
+              onApply: ({
+                required newCategoryIds,
+                required newAmenityIds,
+                required newMaxPrice,
+                required newMinPrice,
+                required newMinRating,
+                required newProvinceCodes,
+                required newSortBy,
+              }) {
+                setState(() {
+                  minPrice = newMinPrice;
+                  maxPrice = newMaxPrice;
+                  minRating = newMinRating;
+                  sortBy = newSortBy;
+                  provinceCodes = newProvinceCodes;
+                  categoryIds = newCategoryIds;
+                  amenityIds = newAmenityIds;
+                  page = 1;
+                });
 
-                          return _buildPostCard(posts[index]);
-                        },
-                      ),
-                    ),
+                fetchPosts();
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCriteriaButton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: Color(0xFF7C5CFF),
-            child: Text(
-              'L',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+        child: Material(
+          color: hasAnyFilter ? const Color(0xFF9156F1) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: openFilterSheet,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: hasAnyFilter ? Colors.transparent : Colors.black12,
+                ),
+                borderRadius: BorderRadius.circular(18),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'LACE UP',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
-          ),
-          const Spacer(),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white.withOpacity(0.12),
-            child: const Icon(Icons.person, color: Colors.white, size: 20),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBox() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        height: 48,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
-        child: TextField(
-          controller: searchController,
-          style: const TextStyle(color: Colors.black),
-          textInputAction: TextInputAction.search,
-          onSubmitted: (_) {
-            page = 1;
-            fetchPosts();
-          },
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(
-                color: Colors.black,
-                width: 1,
-                style: BorderStyle.solid,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    color: hasAnyFilter ? Colors.white : const Color(0xFF9156F1),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      hasAnyFilter
+                          ? 'Đang lọc: $filterCount tiêu chí'
+                          : 'Chọn tiêu chí lọc',
+                      style: TextStyle(
+                        color: hasAnyFilter ? Colors.white : const Color(0xFF1F2937),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  if (hasAnyFilter)
+                    GestureDetector(
+                      onTap: clearFilter,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: const Text(
+                          'Xóa',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const Icon(
+                      Icons.keyboard_arrow_right_rounded,
+                      color: Color(0xFF9156F1),
+                    ),
+                ],
               ),
-            ),
-
-            icon: const Icon(Icons.search, color: Colors.black),
-            hintText: 'Tìm kiếm sân...',
-            hintStyle: const TextStyle(color: Colors.black),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.tune, color: Colors.black),
-              onPressed: _openFilterSheet,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterBar() {
-    return SizedBox(
-      height: 82,
-
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-        children: [
-          _filterChip(
-            label: 'Tất cả',
-            active: sortBy == null,
-            onTap: () {
-              setState(() {
-                sortBy = null;
-                page = 1;
-              });
-              fetchPosts();
-            },
-          ),
-          _filterChip(
-            label: 'Giá thấp',
-            active: sortBy == 'priceAsc',
-            onTap: () {
-              setState(() {
-                sortBy = 'priceAsc';
-                page = 1;
-              });
-              fetchPosts();
-            },
-          ),
-          _filterChip(
-            label: 'Giá cao',
-            active: sortBy == 'priceDesc',
-            onTap: () {
-              setState(() {
-                sortBy = 'priceDesc';
-                page = 1;
-              });
-              fetchPosts();
-            },
-          ),
-          _filterChip(
-            label: 'Đánh giá',
-            active: sortBy == 'ratingDesc',
-            onTap: () {
-              setState(() {
-                sortBy = 'ratingDesc';
-                page = 1;
-              });
-              fetchPosts();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterChip({
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF9156F1) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: active ? const Color(0xFF9156F1) : Colors.black12,
-            width: 1.2,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: active ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -283,13 +284,13 @@ class _AreaListScreenState extends State<AreaListScreen> {
 
   Widget _buildTitleRow() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: Row(
         children: [
           const Text(
             'Tất cả sân',
             style: TextStyle(
-              color: Colors.white,
+              color: Color(0xFF1F2937),
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -298,9 +299,9 @@ class _AreaListScreenState extends State<AreaListScreen> {
           Text(
             '$totalElements sân phù hợp',
             style: const TextStyle(
-              color: Color(0xFF51E58A),
+              color: Color(0xFF9156F1),
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -308,273 +309,117 @@ class _AreaListScreenState extends State<AreaListScreen> {
     );
   }
 
-  Widget _buildPostCard(PostResponse post) {
-    final imageUrl = post.courtCoverImageUrl;
+  void goPreviousPage() {
+    if (page <= 1) return;
+    setState(() => page--);
+    fetchPosts();
+  }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              imageUrl != null && imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
-                      height: 145,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _imagePlaceholder(),
-                    )
-                  : _imagePlaceholder(),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF48E083),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Còn sân',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        post.courtName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 15,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              post.address?.fullAddress ?? 'Đang cập nhật',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Icon(Icons.star, size: 15, color: Colors.amber),
-                          const SizedBox(width: 4),
-                          Text(
-                            post.avgRating?.toStringAsFixed(1) ?? 'Chưa có',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            formatPrice(post.minPrice),
-                            style: const TextStyle(
-                              color: Color(0xFF7C5CFF),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+  void goNextPage() {
+    if (page >= totalPages) return;
+    setState(() => page++);
+    fetchPosts();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FF),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const AreaHeader(),
+
+            AreaSearchBox(
+              controller: searchController,
+              onSearch: () {
+                page = 1;
+                fetchPosts();
+              },
+            ),
+
+            _buildCriteriaButton(),
+
+            _buildTitleRow(),
+
+            Expanded(
+              child: loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : error != null
+                  ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    error!,
+                    style: const TextStyle(color: Colors.redAccent),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => RentalAreaDetailScreen(
-                          rentalAreaId: post.rentalAreaId,
-                        ),
-                      ),
+              )
+                  : posts.isEmpty
+                  ? const Center(
+                child: Text(
+                  'Không tìm thấy sân nào phù hợp',
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+                  : RefreshIndicator(
+                onRefresh: fetchPosts,
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    0,
+                    16,
+                    90,
+                  ),
+                  itemCount: posts.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == posts.length) {
+                      return AreaPagination(
+                        page: page,
+                        totalPages: totalPages,
+                        onPrevious:
+                        page > 1 ? goPreviousPage : null,
+                        onNext: page < totalPages ? goNextPage : null,
+                      );
+                    }
+
+                    final post = posts[index];
+
+                    return AreaCard(
+                      post: post,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RentalAreaDetailScreen(
+
+                              rentalAreaId: post.rentalAreaId ?? '',
+                            ),
+                          ),
+                        );
+                      },
+                      onBookTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RentalAreaDetailScreen(
+                              rentalAreaId: post.rentalAreaId ?? '',
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE8DDFF),
-                    foregroundColor: const Color(0xFF7C5CFF),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  child: const Text('Đặt ngay'),
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _imagePlaceholder() {
-    return Container(
-      height: 145,
-      width: double.infinity,
-      color: const Color(0xFF243044),
-      child: const Center(
-        child: Icon(Icons.sports_soccer, color: Colors.white54, size: 42),
-      ),
-    );
-  }
-
-  Widget _buildOwnerBox() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 90, top: 6),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2536),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Bạn là chủ sân?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Đăng ký sân trên LaceUP và tiếp cận nhiều người chơi hơn.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.arrow_forward),
-            label: const Text('Bắt đầu ngay'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-
-  void _openFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Wrap(
-            runSpacing: 12,
-
-            children: [
-              const Text(
-                'Bộ lọc',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ListTile(
-                title: const Text(
-                  'Giá thấp đến cao',
-                  style: TextStyle(color: Colors.black),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() => sortBy = 'priceAsc');
-                  fetchPosts();
-                },
-              ),
-              ListTile(
-                title: const Text(
-                  'Giá cao đến thấp',
-                  style: TextStyle(color: Colors.black),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() => sortBy = 'priceDesc');
-                  fetchPosts();
-                },
-              ),
-              ListTile(
-                title: const Text(
-                  'Đánh giá cao',
-                  style: TextStyle(color: Colors.black),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() => sortBy = 'ratingDesc');
-                  fetchPosts();
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

@@ -7,15 +7,6 @@ export interface AmenityResponse {
   iconKey: string;
 }
 
-/*
-
-AmenityResponse
-export interface CityResponse {
-  id: number;
-  name: string;
-}
-
-*/
 class AmenityService {
   async getAllAmenities(): Promise<ApiResponse<AmenityResponse[]>> {
     const res = await api.get("/amenities");

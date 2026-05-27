@@ -11,54 +11,37 @@ class PostService {
     int page = 1,
     int size = 10,
     String? title,
-    double? minPrice,
-    double? maxPrice,
+    int? minPrice,
+    int? maxPrice,
     String? sortBy,
-    List<int>? cityIds,
+    int? minRating,
+    List<int>? provinceCodes,
     List<int>? categoryIds,
     List<int>? amenityIds,
-    double? minRating,
   }) async {
     final Map<String, dynamic> params = {
       'page': page,
       'size': size,
+      'title': title,
+      'minPrice': minPrice,
+      'maxPrice': maxPrice,
+      'sortBy': sortBy,
+      'minRating': minRating,
+      'provinceCodes': provinceCodes?.join(','),
+      'categoryIds': categoryIds?.join(','),
+      'amenityIds': amenityIds?.join(','),
     };
 
-    if (title != null && title.isNotEmpty) params['title'] = title;
-    if (minPrice != null) params['minPrice'] = minPrice;
-    if (maxPrice != null) params['maxPrice'] = maxPrice;
-    if (sortBy != null && sortBy.isNotEmpty) params['sortBy'] = sortBy;
-    if (minRating != null) params['minRating'] = minRating;
+    params.removeWhere((key, value) {
+      return value == null || value == '' || value == '[]';
+    });
 
-    if (cityIds != null && cityIds.isNotEmpty) {
-      params['cityIds'] = cityIds.join(',');
-    }
+    final response = await apiClient.get('$_endpoint', queryParameters: params);
 
-    if (categoryIds != null && categoryIds.isNotEmpty) {
-      params['categoryIds'] = categoryIds.join(',');
-    }
-
-    if (amenityIds != null && amenityIds.isNotEmpty) {
-      params['amenityIds'] = amenityIds.join(',');
-    }
-
-    try {
-      final response = await apiClient.get(
-        '/posts',
-        queryParameters: params,
-      );
-
-      final resultData = response.data['result'];
-
-      return PageResponse<PostResponse>.fromJson(
-        resultData,
-            (json) => PostResponse.fromJson(json),
-      );
-    } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['message'] ?? 'Lỗi khi tải danh sách bài đăng',
-      );
-    }
+    return PageResponse<PostResponse>.fromJson(
+      response.data['result'],
+          (json) => PostResponse.fromJson(json),
+    );
   }
 
   Future<List<PostResponse>> getMyPosts({String? status}) async {

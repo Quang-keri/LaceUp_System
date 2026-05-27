@@ -1,25 +1,21 @@
 import 'package:dio/dio.dart';
 import '../config/api_client.dart';
 
-// Nhớ tạo UserModel tương tự như PostResponse nhé!
-// import '../models/user.dart';
+
 
 class UserService {
   final String _endpoint = '/users';
 
-  // Lấy thông tin cá nhân
+
   Future<dynamic> getMyInfo() async {
     try {
       final response = await apiClient.get('$_endpoint/my-info');
-      // Tốt nhất là: return UserModel.fromJson(response.data['result']);
       return response.data['result'];
     } on DioException catch (e) {
-      // Bắt lỗi Dio cụ thể
       throw Exception(e.response?.data['message'] ?? 'Lỗi kết nối máy chủ');
     }
   }
 
-  // Cập nhật thông tin user
   Future<dynamic> updateUser(
     String userId,
     Map<String, dynamic> updateData,
