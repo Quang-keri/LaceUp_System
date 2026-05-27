@@ -425,6 +425,15 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
+    @Override
+    public User getCurrentUserEntityOrNull() {
+        try {
+            return getCurrentUserEntity();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private User getUserEntity(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

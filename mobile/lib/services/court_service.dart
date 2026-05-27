@@ -1,4 +1,3 @@
-// lib/services/court_service.dart
 
 import 'dart:io';
 import 'package:dio/dio.dart';
@@ -11,7 +10,6 @@ class CourtService {
   final String _endpoint = '/courts';
   final String _courtCopyEndpoint = '/court_copies';
 
-  // Lấy danh sách sân của tôi
   Future<PageResponse<CourtResponse>> getMyCourts({int page = 1, int size = 10, String? keyword}) async {
     Map<String, dynamic> params = {'page': page, 'size': size};
     if (keyword != null && keyword.isNotEmpty) params['keyword'] = keyword;
@@ -25,7 +23,6 @@ class CourtService {
     }
   }
 
-  // Lấy danh sách sân theo Khu vực (Rental Area)
   Future<PageResponse<CourtResponse>> getCourtsByRentalArea(String rentalAreaId, {int page = 1, int size = 10, String? keyword}) async {
     Map<String, dynamic> params = {'page': page, 'size': size};
     if (keyword != null && keyword.isNotEmpty) params['keyword'] = keyword;
@@ -39,7 +36,7 @@ class CourtService {
     }
   }
 
-  // Lấy chi tiết 1 sân
+
   Future<CourtResponse> getCourtById(String courtId) async {
     try {
       final response = await apiClient.get('$_endpoint/$courtId');
@@ -50,31 +47,27 @@ class CourtService {
     }
   }
 
-  // TẠO SÂN MỚI (CÓ UPLOAD ẢNH)
   Future<dynamic> createCourt({
     required String rentalAreaId,
     required String courtName,
     required String categoryId,
     List<int>? amenityIds,
-    List<Map<String, String>>? courtCopyRequests, // Dạng: [{'courtCode': 'A1', 'location': ''}]
-    List<File>? images, // Danh sách file ảnh từ thiết bị
+    List<Map<String, String>>? courtCopyRequests,
+    List<File>? images,
   }) async {
     try {
-      // 1. Tạo FormData
       FormData formData = FormData.fromMap({
         "rentalAreaId": rentalAreaId,
         "courtName": courtName,
         "categoryId": categoryId,
       });
 
-      // 2. Thêm mảng amenityIds
       if (amenityIds != null) {
         for (var id in amenityIds) {
           formData.fields.add(MapEntry("amenityIds", id.toString()));
         }
       }
 
-      // 3. Thêm danh sách sân con
       if (courtCopyRequests != null) {
         for (int i = 0; i < courtCopyRequests.length; i++) {
           formData.fields.add(MapEntry("courtCopyRequests[$i].courtCode", courtCopyRequests[i]['courtCode'] ?? ''));
@@ -82,7 +75,6 @@ class CourtService {
         }
       }
 
-      // 4. Đính kèm Files Ảnh
       if (images != null) {
         for (var file in images) {
           String fileName = file.path.split('/').last;
@@ -93,7 +85,6 @@ class CourtService {
         }
       }
 
-      // 5. Gửi request
       final response = await apiClient.post(
         _endpoint,
         data: formData,
@@ -105,7 +96,6 @@ class CourtService {
     }
   }
 
-  // CẬP NHẬT SÂN (CÓ UPLOAD ẢNH)
   Future<dynamic> updateCourt({
     required String courtId,
     String? courtName,
@@ -147,7 +137,6 @@ class CourtService {
     }
   }
 
-  // Xóa sân
   Future<void> deleteCourt(String courtId) async {
     try {
       await apiClient.delete('$_endpoint/$courtId');
@@ -156,7 +145,6 @@ class CourtService {
     }
   }
 
-  // Lấy danh sách danh mục (Bóng đá, Cầu lông...)
   Future<List<CategoryResponse>> getCategories() async {
     try {
       final response = await apiClient.get('/categories');
@@ -167,7 +155,6 @@ class CourtService {
     }
   }
 
-  // ================= COURT COPY (SÂN CON) API =================
 
   Future<dynamic> createCourtCopy(String courtId, String courtCode) async {
     try {
@@ -202,7 +189,6 @@ class CourtService {
     }
   }
 
-  // Kiểm tra lịch trống
   Future<bool> checkCourtCopyAvailability(String courtCopyId, String start, String end, {String? excludeSlotId}) async {
     Map<String, dynamic> params = {'start': start, 'end': end};
     if (excludeSlotId != null) params['excludeSlotId'] = excludeSlotId;
@@ -212,7 +198,6 @@ class CourtService {
         '$_courtCopyEndpoint/$courtCopyId/availability',
         queryParameters: params,
       );
-      // Giả sử API trả về { "result": true/false }
       return response.data['result'] == true;
     } on DioException catch (e) {
       throw Exception(e.response?.data['message'] ?? 'Lỗi kiểm tra lịch trống');

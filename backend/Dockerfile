@@ -9,6 +9,8 @@ RUN mvn package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 
+RUN apk add --no-cache libstdc++
+
 WORKDIR /app
 
 COPY --from=builder /app/target/*.jar app.jar

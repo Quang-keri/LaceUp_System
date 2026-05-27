@@ -8,7 +8,6 @@ extension CourtStatusExt on CourtStatus {
   String get name => toString().split('.').last;
 }
 
-// 2. Booking Short
 class BookingShortResponse {
   final String bookingId;
   final String? note;
@@ -32,7 +31,6 @@ class BookingShortResponse {
   }
 }
 
-// 7. Court Response (Sân chính)
 class CourtResponse {
   final String courtId;
   final String courtName;

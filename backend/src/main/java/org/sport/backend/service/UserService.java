@@ -57,7 +57,7 @@ public interface UserService {
     PageResponse<UserResponse> getCustomersByOwner(int page, int size, String keyword, String tier, Integer minScore, Integer maxScore);
 
     User getCurrentUserEntity();
-
+    User  getCurrentUserEntityOrNull();
     UserDashboardResponse getUserDashboard(UUID userId);
 
     void verifyOwnerAccount();

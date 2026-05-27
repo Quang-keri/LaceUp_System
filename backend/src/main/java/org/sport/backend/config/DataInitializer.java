@@ -44,8 +44,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ItemGroupRepository itemGroupRepository;
     private final ObjectMapper objectMapper;
     private final WardRepository wardRepository;
-
-    // Thêm ReviewRepository vào DataInitializer
+    private final  NewsRepository newsRepository;
     private final ReviewRepository reviewRepository;
 
     @Override
@@ -175,20 +174,20 @@ public class DataInitializer implements CommandLineRunner {
         if (itemGroupRepository.count() == 0) {
             seedItemGroup();
         }
+        if(newsRepository.count() == 0 ){
+            seedNews();
+        }
 
-        // Chạy hàm tạo dữ liệu Review
         if (reviewRepository.count() == 0) {
             seedReviews();
         }
 
     }
 
-    // Hàm tạo dữ liệu đánh giá (Reviews)
     private void seedReviews() {
         List<RentalArea> rentalAreas = rentalAreaRepository.findAll();
         if (rentalAreas.isEmpty()) return;
 
-        // Lấy RentalArea đầu tiên để test
         RentalArea area = rentalAreas.get(0);
 
         User renterMain = userRepository.findByEmail("renter@gmail.com").orElse(null);
@@ -245,7 +244,17 @@ public class DataInitializer implements CommandLineRunner {
             rentalAreaRepository.save(area);
         }
     }
-
+    private void seedNews() {
+        User user = userRepository.findByEmail("admin@gmail.com").orElseThrow(null);;
+        News news = News.builder()
+                .title("Phát thành web booking cho hệ thống LaceUp")
+                .content("Website của hệ thống LaceUp đươc phát thành , nền tảng của ra mắt các chức năng đặt lịch ,quản lí lịch , quản lí sân , quản lí người dùng , quản lí tài chính và nhiều chức năng khác nhằm mang lại trải nghiệm tốt nhất cho khách hàng và chủ sân .")
+                .createdAt(LocalDateTime.now())
+                .createdBy(user)
+                .visibility(NewsVisibility.PUBLIC)
+                .build();
+        newsRepository.save(news);
+    }
     private void seedItemGroup() {
         ItemGroup group1 = new ItemGroup();
         group1.setName("Đồ ăn / Thức uống");
@@ -449,8 +458,6 @@ public class DataInitializer implements CommandLineRunner {
                 .createdAt(LocalDateTime.now().minusMonths(2))
                 .latitude(10.80155)
                 .longitude(106.65421)
-                // Khởi tạo rating bằng 0 khi mới tạo
-                .rating(0.0)
                 .build();
         rentalAreaRepository.save(area);
 
@@ -584,4 +591,5 @@ public class DataInitializer implements CommandLineRunner {
                 .priority(priority)
                 .build();
     }
+
 }

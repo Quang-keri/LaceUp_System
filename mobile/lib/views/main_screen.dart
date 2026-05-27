@@ -1,27 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 
-import '../widgets/header.dart';
-import 'area/area_tab.dart';
-import 'match/match_tab.dart';
+import 'package:mobile/widgets/main_navigation.dart';
+import 'package:mobile/providers/auth_provider.dart';
 
-class MainScreen extends StatelessWidget {
-  const MainScreen({super.key, required userData});
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print("Error loading .env file: $e");
+  }
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AuthProvider()..loadUser(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const DefaultTabController(
-      length: 2,
-      initialIndex: 0,
-      child: Scaffold(
-        appBar: CustomHeader(),
-        backgroundColor: Color(0xFFF8F9FA),
-        body: TabBarView(
-          children: [
-            AreaTab(),
-            MatchTab(),
-          ],
-        ),
+    return MaterialApp(
+      title: 'LaceUp',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
+      home: const MainNavigation(),
     );
   }
 }

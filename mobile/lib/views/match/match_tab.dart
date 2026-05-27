@@ -23,7 +23,6 @@ class MatchTab extends StatelessWidget {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              // Xử lý tạo kèo tìm bạn ở đây
             },
             icon: const Icon(Icons.add),
             label: const Text('Tạo Kèo Tìm Bạn'),

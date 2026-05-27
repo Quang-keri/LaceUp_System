@@ -12,7 +12,7 @@ import BookingConfirmModal from "../bookings/BookingConfirmModal";
 import ReviewSection from "../../../components/review/ReviewSection";
 import BookingMatchTabs from "./BookingMatchTabs";
 
-// Import các Tab đã tách
+
 import CourtScheduleTab from "./CourtScheduleTab";
 import CourtInfoTab from "./CourtInfoTab";
 import CourtPriceTab from "./CourtPriceTab";

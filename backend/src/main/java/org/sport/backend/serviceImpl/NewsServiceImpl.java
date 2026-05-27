@@ -1,6 +1,7 @@
 package org.sport.backend.serviceImpl;
 
 import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.NewsVisibility;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.news.NewsRequest;
@@ -182,13 +183,21 @@ public class NewsServiceImpl implements NewsService {
         News news = newsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("News not found"));
 
-        User currentUser = userService.getCurrentUserEntity();
+        if (news.getVisibility() == NewsVisibility.PUBLIC) {
+            return mapToResponse(news);
+        }
 
-        if (news.getVisibility() == org.sport.backend.constant.NewsVisibility.PRIVATE) {
-            if (currentUser == null || currentUser.getRole() == null || !"ADMIN".equalsIgnoreCase(currentUser.getRole().getRoleName())) {
+        User currentUser = userService.getCurrentUserEntityOrNull();
+
+        if (news.getVisibility() == NewsVisibility.PRIVATE) {
+            if (currentUser == null
+                    || currentUser.getRole() == null
+                    || !"ADMIN".equalsIgnoreCase(currentUser.getRole().getRoleName())) {
                 throw new RuntimeException("Access denied");
             }
-        } else if (news.getVisibility() == org.sport.backend.constant.NewsVisibility.MEMBER) {
+        }
+
+        if (news.getVisibility() == NewsVisibility.MEMBER) {
             if (currentUser == null) {
                 throw new RuntimeException("Access denied");
             }
@@ -199,10 +208,18 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     public PageResponse<NewsResponse> getAll(int page, int size, String keyword) {
-        User currentUser = userService.getCurrentUserEntity();
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Specification<News> spec = Specification.where(NewsSpecification.search(keyword))
+        User currentUser = userService.getCurrentUserEntityOrNull();
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("createdAt").descending()
+        );
+
+        Specification<News> spec = Specification
+                .where(NewsSpecification.search(keyword))
                 .and(NewsSpecification.getNewsByVisibility(currentUser));
+
         Page<News> newsPage = newsRepository.findAll(spec, pageable);
 
         return PageResponse.<NewsResponse>builder()
@@ -211,8 +228,8 @@ public class NewsServiceImpl implements NewsService {
                 .totalPages(newsPage.getTotalPages())
                 .totalElements(newsPage.getTotalElements())
                 .data(newsPage.getContent().stream()
-                    .map(this::mapToResponse)
-                    .toList())
+                        .map(this::mapToResponse)
+                        .toList())
                 .build();
     }
 

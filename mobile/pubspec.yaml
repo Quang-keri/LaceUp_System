@@ -1,8 +1,7 @@
 name: mobile
 description: "Flutter project."
 
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
@@ -11,12 +10,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  provider: ^6.1.2
+  intl: ^0.19.0
+  top_snackbar_flutter: ^3.1.0
   cupertino_icons: ^1.0.8
   http: ^1.2.0
-  shared_preferences: ^2.2.3  # Thêm thư viện này để lưu token cục bộ
+  shared_preferences: ^2.2.3
   flutter_dotenv: ^5.1.0
   dio: ^5.9.2
-
+  curved_navigation_bar: ^1.0.6
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -28,4 +30,5 @@ flutter:
 
   assets:
     - .env
+    - assets/logo.png
 

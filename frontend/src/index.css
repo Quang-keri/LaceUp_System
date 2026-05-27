@@ -5,7 +5,6 @@ body {
   color: #1a1a1a;
 }
 
-/* Chỉ áp dụng màu tím (thương hiệu của user/landing) cho class .customer-theme */
 .customer-theme .ant-layout-header .ant-menu {
   background: transparent !important;
 }
