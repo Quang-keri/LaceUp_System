@@ -6,17 +6,14 @@ import 'package:mobile/widgets/main_navigation.dart';
 import 'package:mobile/providers/auth_provider.dart';
 
 Future<void> main() async {
-  // 1. Đảm bảo các dịch vụ hệ thống của Flutter được khởi tạo trước
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Load file cấu hình môi trường .env
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint("Error loading .env file: $e");
   }
 
-  // 3. Bọc AuthProvider ở bậc cao nhất (NGOÀI MyApp) để toàn bộ các Route/Màn hình đều dùng được
   runApp(
     ChangeNotifierProvider(
       create: (_) => AuthProvider()..loadUser(),

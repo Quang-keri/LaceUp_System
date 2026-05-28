@@ -1,8 +1,8 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile/views/area/area_list_screen.dart';
-import 'package:mobile/views/area/community_screen.dart';
 import 'package:mobile/views/map/map_screen.dart';
+import 'package:mobile/views/match/match_page.dart';
 import 'package:mobile/views/news/news_screen.dart';
 import 'package:mobile/views/profile/profile_screen.dart';
 
@@ -19,7 +19,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _pages = [
      AreaListScreen(),
     const MapScreen(),
-    const CommunityScreen(),
+    const MatchPage(),
     const NewsScreen(),
     const ProfileScreen(),
   ];
