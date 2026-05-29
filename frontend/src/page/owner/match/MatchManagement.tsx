@@ -146,7 +146,6 @@ const MatchManagement: React.FC = () => {
         if (record.status === "CANCELLED") color = "error";
         if (record.status === "COMPLETED") color = "default";
 
-        // Kiểm tra xem trận đấu có báo cáo chưa xử lý không
         const hasPendingReport = record.reports?.some(
           (r: any) => r.status === "PENDING",
         );
@@ -180,7 +179,6 @@ const MatchManagement: React.FC = () => {
             icon={<EyeOutlined />}
             size="small"
             onClick={() => handleViewDetail(record.matchId)}
-            // Nếu có báo cáo thì highlight nút Chi tiết lên
             type={
               record.reports?.some((r: any) => r.status === "PENDING")
                 ? "primary"
@@ -224,27 +222,33 @@ const MatchManagement: React.FC = () => {
         </Space>
       </div>
 
-      <MatchFilter
-        onFilterChange={handleFilterChange}
-        onDateRangeChange={handleDateRangeChange}
-      />
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="w-full lg:w-1/4 xl:w-1/5">
+          <MatchFilter
+            onFilterChange={handleFilterChange}
+            onDateRangeChange={handleDateRangeChange}
+          />
+        </div>
 
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="matchId"
-        loading={loading}
-        pagination={{
-          current: params.page,
-          pageSize: params.size,
-          total: totalElements,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50"],
-          showTotal: (total) => `Tổng cộng ${total} trận`,
-        }}
-        onChange={handleTableChange}
-        className="shadow-sm border rounded-lg"
-      />
+        <div className="w-full lg:w-3/4 xl:w-4/5">
+          <Table
+            columns={columns}
+            dataSource={data}
+            rowKey="matchId"
+            loading={loading}
+            pagination={{
+              current: params.page,
+              pageSize: params.size,
+              total: totalElements,
+              showSizeChanger: true,
+              pageSizeOptions: ["10", "20", "50"],
+              showTotal: (total) => `Tổng cộng ${total} trận`,
+            }}
+            onChange={handleTableChange}
+            className="shadow-sm border rounded-lg"
+          />
+        </div>
+      </div>
 
       <MatchDetailModal
         visible={isModalVisible}

@@ -1,7 +1,5 @@
 package org.sport.backend.dto.response.booking;
 
-
-import jakarta.persistence.Column;
 import lombok.*;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;

@@ -144,40 +144,21 @@ public class CourtPriceServiceImpl implements CourtPriceService {
                 continue;
             }
 
-            if (cp.getStartDate() != null && date.isBefore(cp.getStartDate())) continue;
-            if (cp.getEndDate() != null && date.isAfter(cp.getEndDate())) continue;
-            if (cp.getSpecificDate() != null && !cp.getSpecificDate().equals(date)) {
-                continue;
+            if (cp.getSpecificDate() != null) {
+                if (!cp.getSpecificDate().equals(date)) {
+                    continue;
+                }
+            } else {
+                if (cp.getStartDate() != null && date.isBefore(cp.getStartDate())) continue;
+                if (cp.getEndDate() != null && date.isAfter(cp.getEndDate())) continue;
             }
+
             if (cp.getDayType() != null && cp.getDayType() != DayType.ALL) {
                 if (cp.getDayType() == DayType.WEEKDAY && isWeekend) continue;
                 if (cp.getDayType() == DayType.WEEKEND && !isWeekend) continue;
             }
 
-            switch (cp.getPriceType()) {
-
-                case NORMAL -> {
-                    return cp.getPricePerHour();
-                }
-
-                case PEAK -> {
-                    return cp.getPricePerHour();
-                }
-
-                case HOLIDAY, EVENT -> {
-
-                    if (cp.getSpecificDate() != null && cp.getSpecificDate().equals(date)) {
-                        return cp.getPricePerHour();
-                    }
-                }
-
-                case OTHER -> {
-                    if (cp.getSpecificDate() == null
-                            || cp.getSpecificDate().equals(date)) {
-                        return cp.getPricePerHour();
-                    }
-                }
-            }
+           return cp.getPricePerHour();
         }
 
         return prices.stream()

@@ -266,7 +266,6 @@ export default function CourtList({ courts, onAddCourt }: any) {
         </div>
 
         <Form form={form} layout="vertical" onFinish={handleCreateMatch}>
-          {/* Lựa chọn Thể thức */}
           <Form.Item
             label={
               <span className="font-semibold text-gray-700">
@@ -398,7 +397,6 @@ export default function CourtList({ courts, onAddCourt }: any) {
 
           <hr className="my-5 border-gray-100" />
 
-          {/* Thời gian */}
           <div className="grid grid-cols-2 gap-4">
             <Form.Item
               label={
@@ -446,7 +444,6 @@ export default function CourtList({ courts, onAddCourt }: any) {
             </Form.Item>
           </div>
 
-          {/* Số lượng người */}
           <div className="grid grid-cols-2 gap-4">
             <Form.Item
               label={
@@ -491,7 +488,6 @@ export default function CourtList({ courts, onAddCourt }: any) {
             </Form.Item>
           </div>
 
-          {/* Thêm trường Ghi chú */}
           <Form.Item
             label={
               <span className="font-semibold text-gray-700">Ghi chú thêm</span>

@@ -335,7 +335,6 @@ export default function CourtScheduleTimeline({
             max="100"
             value={scrollProgress}
             onChange={handleSliderChange}
-            // Đổi màu thanh cuộn sang màu Tím
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#9156F1]"
           />
         </div>

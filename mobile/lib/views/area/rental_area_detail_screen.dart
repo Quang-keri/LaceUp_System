@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/rental_service.dart';
-import 'booking_form_screen.dart'; // Nhớ import màn hình Form đặt sân (Màn 2)
+import '../../models/rental_area.dart'; // Import model của bạn
+import '../../models/court.dart'; // Import model của bạn
+import 'booking_form_screen.dart';
 
 class RentalAreaDetailScreen extends StatefulWidget {
   final String rentalAreaId;
 
-  const RentalAreaDetailScreen({
-    super.key,
-    required this.rentalAreaId,
-  });
+  const RentalAreaDetailScreen({super.key, required this.rentalAreaId});
 
   @override
   State<RentalAreaDetailScreen> createState() => _RentalAreaDetailScreenState();
@@ -18,13 +17,12 @@ class RentalAreaDetailScreen extends StatefulWidget {
 class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
   final Color primaryColor = const Color(0xFF9156F1);
 
-  dynamic rentalArea;
-  Map<String, dynamic>? activeCourt;
+  RentalAreaResponse? rentalArea;
+  CourtResponse? activeCourt;
 
   bool loading = true;
   String? error;
 
-  // Biến lưu trữ ngày đang chọn trên Lịch
   DateTime selectedDate = DateTime.now();
 
   @override
@@ -45,22 +43,10 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       );
 
       setState(() {
-        rentalArea = {
-          'rentalAreaId': response.rentalAreaId,
-          'rentalAreaName': response.rentalAreaName,
-          'address': response.address,
-          'contactName': response.contactName,
-          'contactPhone': response.contactPhone,
-          'status': response.status,
-          'cityId': response.cityId,
-          'cityName': response.cityName,
-          'courts': response.courts,
-        };
+        rentalArea = response;
 
-        if (response.courts.isNotEmpty) {
-          activeCourt = Map<String, dynamic>.from(
-            response.courts.first,
-          );
+        if (response.courts != null && response.courts!.isNotEmpty) {
+          activeCourt = response.courts!.first;
         }
       });
     } catch (e) {
@@ -74,7 +60,6 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     }
   }
 
-
   void _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -83,9 +68,9 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: primaryColor),
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: ColorScheme.light(primary: primaryColor)),
           child: child!,
         );
       },
@@ -112,80 +97,40 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     );
   }
 
-
-  String formatPrice(dynamic price) {
-    if (price == null) return 'Liên hệ';
-    final value = double.tryParse(price.toString()) ?? 0;
-    return '${value.toStringAsFixed(0)}đ / giờ';
-  }
-
-  String formatTime(dynamic time) {
-    if (time == null) return '--:--';
-    final value = time.toString();
-    if (value.length >= 5) return value.substring(0, 5);
-    return value;
+  String formatPrice(double price) {
+    return '${price.toStringAsFixed(0)}đ / giờ';
   }
 
   String getAddressText() {
-    final address = rentalArea?['address'];
+    final address = rentalArea?.address;
     if (address == null) return 'Đang cập nhật địa chỉ';
-       return address.toString();
+
+    final parts = [
+      address.street,
+      address.ward,
+      rentalArea?.cityName,
+    ].where((e) => e != null && e.toString().isNotEmpty).join(', ');
+
+    return parts.isNotEmpty ? parts : 'Đang cập nhật địa chỉ';
   }
 
-  dynamic getPrice() {
-    return activeCourt?['minPrice'] ?? activeCourt?['price'];
-  }
-
-  String? getImageUrl() {
-    final coverImage = activeCourt?['coverImage'];
-
-    if (coverImage != null && coverImage.toString().isNotEmpty) {
-      return coverImage.toString();
+  String? getImageUrl(CourtResponse? court) {
+    if (court?.images != null && court!.images!.isNotEmpty) {
+      try {
+        return (court.images!.first as dynamic).imageUrl;
+      } catch (e) {
+        return null;
+      }
     }
-
-    final images = activeCourt?['images'];
-
-    if (images is List && images.isNotEmpty) {
-      final cover = images.firstWhere(
-            (img) => img['isCover'] == true,
-        orElse: () => images.first,
-      );
-      return cover['imageUrl'];
-    }
-
     return null;
   }
-
-  List get courts {
-    final data = rentalArea?['courts'];
-    if (data is List) return data;
-    return [];
-  }
-
-  List get priceRules {
-    final data = activeCourt?['priceRules'];
-    if (data is List) return data;
-    return [];
-  }
-
-  List get amenities {
-    final data = activeCourt?['amenities'];
-    if (data is List) return data;
-    return [];
-  }
-
-  // ---- GIAO DIỆN CHÍNH ----
 
   @override
   Widget build(BuildContext context) {
     if (loading) {
       return Scaffold(
         backgroundColor: Colors.white,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: primaryColor,
-          ),
-        ),
+        body: Center(child: CircularProgressIndicator(color: primaryColor)),
       );
     }
 
@@ -202,7 +147,6 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
             padding: const EdgeInsets.all(20),
             child: Text(
               error!,
-              textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.redAccent),
             ),
           ),
@@ -213,9 +157,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     if (rentalArea == null || activeCourt == null) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(
-          child: Text('Không có dữ liệu sân'),
-        ),
+        body: Center(child: Text('Không có dữ liệu sân')),
       );
     }
 
@@ -223,7 +165,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.only(bottom: 40), // Cách đáy một chút cho thoáng
+          padding: const EdgeInsets.only(bottom: 40),
           children: [
             _buildImageHeader(),
             Padding(
@@ -236,7 +178,6 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
                   _buildCourtInfo(),
                   const SizedBox(height: 24),
                   _buildCalendarAndTimeSlots(),
-
                   const SizedBox(height: 24),
                   _buildAmenities(),
                   const SizedBox(height: 18),
@@ -252,21 +193,19 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     );
   }
 
-
-
   Widget _buildImageHeader() {
-    final imageUrl = getImageUrl();
+    final imageUrl = getImageUrl(activeCourt);
 
     return Stack(
       children: [
         imageUrl != null
             ? Image.network(
-          imageUrl,
-          height: 240,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _imagePlaceholder(),
-        )
+                imageUrl,
+                height: 240,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _imagePlaceholder(),
+              )
             : _imagePlaceholder(),
         Positioned(
           top: 14,
@@ -290,7 +229,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
               borderRadius: BorderRadius.circular(30),
             ),
             child: Text(
-              activeCourt?['categoryName'] ?? 'Sân thể thao',
+              activeCourt?.categoryName ?? 'Sân thể thao',
               style: TextStyle(
                 color: primaryColor,
                 fontWeight: FontWeight.bold,
@@ -307,11 +246,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       height: 240,
       width: double.infinity,
       color: const Color(0xFFF3F4F6),
-      child: Icon(
-        Icons.sports_tennis,
-        size: 70,
-        color: primaryColor,
-      ),
+      child: Icon(Icons.sports_tennis, size: 70, color: primaryColor),
     );
   }
 
@@ -320,7 +255,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          rentalArea?['rentalAreaName'] ?? 'Thông tin sân',
+          rentalArea?.rentalAreaName ?? 'Thông tin sân',
           style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w800,
@@ -330,7 +265,11 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         const SizedBox(height: 6),
         Row(
           children: [
-            const Icon(Icons.location_on_outlined, size: 18, color: Colors.grey),
+            const Icon(
+              Icons.location_on_outlined,
+              size: 18,
+              color: Colors.grey,
+            ),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -346,7 +285,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
             Icon(Icons.phone, size: 17, color: primaryColor),
             const SizedBox(width: 6),
             Text(
-              rentalArea?['contactPhone'] ?? 'Chưa có số liên hệ',
+              rentalArea?.contactPhone ?? 'Chưa có số liên hệ',
               style: const TextStyle(
                 color: Color(0xFF374151),
                 fontWeight: FontWeight.w600,
@@ -359,6 +298,8 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
   }
 
   Widget _buildCourtInfo() {
+    final totalCourts = activeCourt?.courtCopies?.length ?? 1;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -370,19 +311,14 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            activeCourt?['courtName'] ?? 'Tên sân',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
+            activeCourt?.courtName ?? 'Tên sân',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Mặt sân đạt chuẩn, hệ thống chiếu sáng tốt, không gian thoáng đãng. Thích hợp cho tập luyện và thi đấu giao lưu.',
-            style: TextStyle(
-              color: Color(0xFF6B7280),
-              height: 1.4,
-            ),
+          Text(
+            activeCourt?.description ??
+                'Mặt sân đạt chuẩn, không gian thoáng đãng. Thích hợp tập luyện và thi đấu giao lưu.',
+            style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
           ),
           const SizedBox(height: 12),
           Row(
@@ -390,7 +326,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
               Icon(Icons.sports, color: primaryColor, size: 18),
               const SizedBox(width: 6),
               Text(
-                'Tổng cộng: ${activeCourt?['totalCourts'] ?? 1} sân',
+                'Số lượng: $totalCourts sân',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ],
@@ -400,18 +336,27 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     );
   }
 
-  // WIDGET MỚI: Hiển thị lịch chọn ngày và khung giờ
   Widget _buildCalendarAndTimeSlots() {
-    // Tạm tạo danh sách giờ mock. Sau này bạn có API check giờ trống thì map data vào đây nhé.
     final List<String> timeSlots = [
-      '05:00', '06:00', '07:00', '08:00', '09:00', '10:00',
-      '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'
+      '05:00',
+      '06:00',
+      '07:00',
+      '08:00',
+      '09:00',
+      '10:00',
+      '14:00',
+      '15:00',
+      '16:00',
+      '17:00',
+      '18:00',
+      '19:00',
+      '20:00',
+      '21:00',
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header Lịch sân + Nút chọn ngày
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -422,7 +367,10 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
             InkWell(
               onTap: () => _selectDate(context),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: primaryColor),
                   borderRadius: BorderRadius.circular(8),
@@ -434,8 +382,8 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
                     Text(
                       DateFormat('dd/MM/yyyy').format(selectedDate),
                       style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
@@ -445,7 +393,6 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           ],
         ),
         const SizedBox(height: 16),
-
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -463,7 +410,10 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
                 alignment: Alignment.center,
                 child: Text(
                   time,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
             );
@@ -476,43 +426,15 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
   Widget _buildAmenities() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
+      children: const [
+        Text(
           'Tiện ích sân',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 10),
-        amenities.isEmpty
-            ? const Text(
+        SizedBox(height: 10),
+        Text(
           'Sân này chưa cập nhật tiện ích.',
           style: TextStyle(color: Colors.grey),
-        )
-            : Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: amenities.map<Widget>((amenity) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F0FF),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle, color: primaryColor, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    amenity['amenityName'] ?? 'Tiện ích',
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
         ),
       ],
     );
@@ -537,45 +459,32 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Bảng giá tham khảo',
+            'Bảng giá',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
-          priceRules.isEmpty
-              ? const Text(
-            'Sân này chưa có bảng giá.',
-            style: TextStyle(color: Colors.grey),
-          )
-              : Column(
-            children: priceRules.map<Widget>((rule) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Giá thuê cơ bản (Mỗi giờ):',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${formatTime(rule['startTime'])} - ${formatTime(rule['endTime'])}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      formatPrice(rule['pricePerHour']),
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
+                Text(
+                  formatPrice(activeCourt?.pricePerHour ?? 0),
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              );
-            }).toList(),
+              ],
+            ),
           ),
         ],
       ),
@@ -583,9 +492,11 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
   }
 
   Widget _buildOtherCourts() {
-    final otherCourts = courts.where((court) {
-      return court['courtId'] != activeCourt?['courtId'];
-    }).toList();
+    final otherCourts =
+        rentalArea?.courts
+            ?.where((c) => c.courtId != activeCourt?.courtId)
+            .toList() ??
+        [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,86 +508,83 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         const SizedBox(height: 12),
         otherCourts.isEmpty
             ? const Text(
-          'Không có sân nào khác tại cơ sở này.',
-          style: TextStyle(color: Colors.grey),
-        )
+                'Không có sân nào khác tại cơ sở này.',
+                style: TextStyle(color: Colors.grey),
+              )
             : Column(
-          children: otherCourts.map<Widget>((court) {
-            final imageUrl = court['coverImage'];
+                children: otherCourts.map<Widget>((court) {
+                  final imgUrl = getImageUrl(court);
 
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  activeCourt = Map<String, dynamic>.from(court);
-                });
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 92,
-                      height: 76,
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        activeCourt = court;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: imageUrl != null && imageUrl.toString().isNotEmpty
-                          ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) {
-                            return Icon(
-                              Icons.sports_tennis,
-                              color: primaryColor,
-                            );
-                          },
-                        ),
-                      )
-                          : Icon(Icons.sports_tennis, color: primaryColor),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Text(
-                            court['courtName'] ?? 'Tên sân',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
+                          Container(
+                            width: 92,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(12),
                             ),
+                            child: imgUrl != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      imgUrl,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.sports_tennis,
+                                    color: primaryColor,
+                                  ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            court['categoryName'] ?? 'Sân thể thao',
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            formatPrice(court['minPrice'] ?? court['price']),
-                            style: TextStyle(
-                              color: primaryColor,
-                              fontWeight: FontWeight.w800,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  court.courtName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  court.categoryName ?? 'Sân thể thao',
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  formatPrice(court.pricePerHour),
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  );
+                }).toList(),
               ),
-            );
-          }).toList(),
-        ),
       ],
     );
   }

@@ -26,12 +26,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SettlementServiceImpl implements SettlementService {
 
-    private final PaymentRepository paymentRepo;
-    private final CommissionConfigService commissionService;
+    private final PaymentRepository paymentRepository;
     private final RentalAreaRepository rentalAreaRepository;
     private final SettlementRepository settlementRepository;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final SlotRepository slotRepository;
+
+    private final CommissionConfigService commissionService;
 
     @Override
     public List<MonthlySettlementDTO> calculateMonthlySettlements(int month, int year) {
@@ -39,7 +41,7 @@ public class SettlementServiceImpl implements SettlementService {
         LocalDateTime endDate = startDate.plusMonths(1);
 
         List<UUID> activeRentalAreaIds =
-                paymentRepo.findRentalAreasWithSuccessfulPayments(startDate, endDate);
+                paymentRepository.findRentalAreasWithSuccessfulPayments(startDate, endDate);
 
         List<MonthlySettlementDTO> result = new ArrayList<>();
 
@@ -55,7 +57,7 @@ public class SettlementServiceImpl implements SettlementService {
         LocalDateTime startDate = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime endDate = startDate.plusMonths(1);
 
-        BigDecimal totalRevenue = paymentRepo.sumRevenueByRentalAreaAndDate(
+        BigDecimal totalRevenue = paymentRepository.sumRevenueByRentalAreaAndDate(
                 rentalAreaId,
                 startDate,
                 endDate
@@ -65,7 +67,7 @@ public class SettlementServiceImpl implements SettlementService {
             totalRevenue = BigDecimal.ZERO;
         }
 
-        Long totalBookings = paymentRepo.countBookingsByRentalAreaAndDate(
+        Long totalBookings = paymentRepository.countBookingsByRentalAreaAndDate(
                 rentalAreaId,
                 startDate,
                 endDate
@@ -112,27 +114,18 @@ public class SettlementServiceImpl implements SettlementService {
         for (RentalArea rentalArea : rentalAreas) {
             UUID rentalAreaId = rentalArea.getRentalAreaId();
 
-            // Tổng tiền sân dùng để tính hoa hồng
-            BigDecimal bookingAmount =
-                    transactionRepository.sumCommissionableBookingIncome(
-                            rentalAreaId,
-                            date
-                    );
+            BigDecimal bookingAmount = slotRepository.sumCommissionableSlotPrice(
+                    rentalAreaId,
+                    date
+            );
 
-            // Tiền admin thực sự đang giữ, ví dụ: VNPay, chuyển khoản
-            BigDecimal adminCollectedAmount =
-                    transactionRepository.sumAdminCollectedBookingIncome(
-                            rentalAreaId,
-                            date
-                    );
+            BigDecimal adminCollectedAmount = transactionRepository.sumAdminCollectedBookingIncome(
+                    rentalAreaId,
+                    date
+            );
 
-            if (bookingAmount == null) {
-                bookingAmount = BigDecimal.ZERO;
-            }
-
-            if (adminCollectedAmount == null) {
-                adminCollectedAmount = BigDecimal.ZERO;
-            }
+            if (bookingAmount == null) bookingAmount = BigDecimal.ZERO;
+            if (adminCollectedAmount == null) adminCollectedAmount = BigDecimal.ZERO;
 
             if (adminCollectedAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
@@ -140,12 +133,10 @@ public class SettlementServiceImpl implements SettlementService {
 
             BigDecimal commissionRate = commissionService.getApplicableRate(rentalAreaId);
 
-            // Hoa hồng chỉ tính trên tiền sân, không tính tiền nước/dịch vụ
             BigDecimal commissionAmount = bookingAmount
                     .multiply(commissionRate)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            // Owner chỉ nhận lại phần tiền admin đang giữ sau khi trừ hoa hồng
             BigDecimal ownerAmount = adminCollectedAmount
                     .subtract(commissionAmount)
                     .setScale(2, RoundingMode.HALF_UP);

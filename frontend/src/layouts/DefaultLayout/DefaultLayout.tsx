@@ -17,7 +17,6 @@ export default function DefaultLayout() {
 
       <Footer />
       <ChatboxBubble />
-      {/* <ChatBubble /> */}
     </div>
   );
 }

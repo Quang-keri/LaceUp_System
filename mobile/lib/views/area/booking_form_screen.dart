@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'payment_screen.dart'; // Import màn 3
+import 'package:mobile/views/area/payment_screen.dart';
+import '../../models/court.dart';
 
 class BookingFormScreen extends StatefulWidget {
-  final Map<String, dynamic> court;
+  final CourtResponse court;
   final DateTime selectedDate;
   final String initialTime;
 
@@ -20,12 +21,13 @@ class BookingFormScreen extends StatefulWidget {
 
 class _BookingFormScreenState extends State<BookingFormScreen> {
   final Color primaryColor = const Color(0xFF9156F1);
-  double duration = 1.0; // Thời lượng (giờ)
-  int quantity = 1;      // Số lượng sân
+  double duration = 1.0;
+  int quantity = 1;
 
   void _goToPayment() {
-    // Tính giá (dựa vào minPrice hoặc logic của bạn)
-    final double pricePerHour = double.tryParse(widget.court['minPrice']?.toString() ?? '80000') ?? 80000;
+    final double pricePerHour = widget.court.pricePerHour > 0
+        ? widget.court.pricePerHour
+        : 80000;
     final double totalPrice = pricePerHour * duration * quantity;
 
     Navigator.push(
@@ -46,7 +48,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('dd/MM/yyyy').format(widget.selectedDate);
-    final priceStr = NumberFormat.currency(locale: 'vi_VN', symbol: 'VNĐ').format(widget.court['minPrice'] ?? 80000);
+    final priceStr = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: 'VNĐ',
+    ).format(widget.court.pricePerHour > 0 ? widget.court.pricePerHour : 80000);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -54,7 +59,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        title: const Text('Thông tin đặt sân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text(
+          'Thông tin đặt sân',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         centerTitle: true,
       ),
       bottomNavigationBar: Container(
@@ -66,11 +74,20 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         child: ElevatedButton(
           onPressed: _goToPayment,
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
+            backgroundColor: primaryColor, // Nút màu tím
             minimumSize: const Size(double.infinity, 54),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          child: const Text('Đặt sân ngay', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          child: const Text(
+            'Đặt sân ngay',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
         ),
       ),
       body: ListView(
@@ -86,10 +103,17 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
             ),
             child: Row(
               children: [
-                const Text('Sân áp dụng: ', style: TextStyle(color: Colors.grey)),
+                const Text(
+                  'Sân áp dụng: ',
+                  style: TextStyle(color: Colors.grey),
+                ),
                 Text(
-                  widget.court['courtName'] ?? 'Sân Standard 01',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor),
+                  // Sửa lỗi truy xuất bằng dấu chấm
+                  widget.court.courtName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
                 ),
               ],
             ),
@@ -102,7 +126,12 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               const Text('Giá từ ', style: TextStyle(fontSize: 16)),
               Text(
                 priceStr,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.deepOrange),
+                // Giá trị tiền nổi bật với màu cam
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.orange,
+                ),
               ),
               const Text(' / giờ', style: TextStyle(color: Colors.grey)),
             ],
@@ -113,13 +142,21 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildStaticField('Giờ bắt đầu', '${widget.initialTime} - ${DateFormat('dd/MM').format(widget.selectedDate)}'),
+                child: _buildStaticField(
+                  'Giờ bắt đầu',
+                  '${widget.initialTime} - ${DateFormat('dd/MM').format(widget.selectedDate)}',
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildDropdownField('Thời lượng chơi', duration, [1.0, 1.5, 2.0, 3.0], (val) {
-                  setState(() => duration = val as double);
-                }),
+                child: _buildDropdownField(
+                  'Thời lượng chơi',
+                  duration,
+                  [1.0, 1.5, 2.0, 3.0],
+                  (val) {
+                    setState(() => duration = val as double);
+                  },
+                ),
               ),
             ],
           ),
@@ -127,13 +164,21 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           Row(
             children: [
               Expanded(
-                child: _buildDropdownField('Số lượng sân', quantity, [1, 2, 3, 4], (val) {
-                  setState(() => quantity = val as int);
-                }),
+                child: _buildDropdownField(
+                  'Số lượng sân',
+                  quantity,
+                  [1, 2, 3, 4],
+                  (val) {
+                    setState(() => quantity = val as int);
+                  },
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildStaticField('Loại sân', widget.court['category']?['categoryName'] ?? 'Sân thể thao'),
+                child: _buildStaticField(
+                  'Loại sân',
+                  widget.court.categoryName ?? 'Sân thể thao',
+                ),
               ),
             ],
           ),
@@ -146,35 +191,67 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: Colors.black54,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-          child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildDropdownField(String label, dynamic currentValue, List<dynamic> options, Function(dynamic) onChanged) {
+  Widget _buildDropdownField(
+    String label,
+    dynamic currentValue,
+    List<dynamic> options,
+    Function(dynamic) onChanged,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: Colors.black54,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<dynamic>(
               value: currentValue,
               isExpanded: true,
-              items: options.map((val) => DropdownMenuItem(
-                value: val,
-                child: Text(val is double ? '$val giờ' : '$val sân'),
-              )).toList(),
+              items: options
+                  .map(
+                    (val) => DropdownMenuItem(
+                      value: val,
+                      child: Text(val is double ? '$val giờ' : '$val sân'),
+                    ),
+                  )
+                  .toList(),
               onChanged: onChanged,
             ),
           ),
