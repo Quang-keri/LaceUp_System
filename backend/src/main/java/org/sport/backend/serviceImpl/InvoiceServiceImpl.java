@@ -29,7 +29,7 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class InvoiceServiceImpl implements InvoiceService {
 
-    private static final String FONT_PATH = "src/main/resources/fonts/NotoSans-Regular.ttf";
+    private static final String FONT_PATH = "backend/src/main/resources/fonts/NotoSans-Regular.ttf";
 
     @Override
     public byte[] generateInvoicePdf(BookingResponse booking) {

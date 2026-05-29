@@ -6,7 +6,6 @@ const Footer = () => {
     <footer className="bg-[#9156F1] text-white mt-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {/* CONTACT */}
           <div>
             <h3 className="text-lg font-bold mb-5 text-white tracking-wide">
               Liên hệ với chúng tôi
@@ -18,7 +17,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* SPORTS */}
           <div>
             <h3 className="text-lg font-bold mb-5 text-white tracking-wide">
               Nền tảng thể thao
@@ -43,7 +41,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* POLICY */}
           <div>
             <h3 className="text-lg font-bold mb-5 text-white tracking-wide">
               Chính sách
@@ -88,7 +85,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* SOCIAL */}
           <div>
             <h3 className="text-lg font-bold mb-5 text-white tracking-wide">
               Tham gia cùng chúng tôi
@@ -117,7 +113,6 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* BOTTOM */}
         <div className="border-t border-slate-700 mt-12 pt-6 text-center">
           <p className="text-sm text-gray-400 tracking-wide">
             © 2026 LaceUp. Bản quyền đã được bảo hộ.

@@ -1,11 +1,11 @@
 package org.sport.backend.serviceImpl;
 
+import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.slot.ExtendRequest;
 import org.sport.backend.dto.request.slot.SwapRequest;
 import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
-import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 import org.sport.backend.dto.response.slot.ExtendCheckResponse;
 import org.sport.backend.dto.response.slot.SwapCheckResponse;
 import org.sport.backend.entity.*;
@@ -14,34 +14,25 @@ import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.CourtPriceService;
 import org.sport.backend.service.SlotService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class SlotServiceImpl implements SlotService {
 
-
-    @Autowired
-    private SlotRepository slotRepository;
-    @Autowired
-    private CourtCopyRepository courtCopyRepository;
-    @Autowired
-    private CourtPriceService courtPriceService;
-    @Autowired
-    private BookingRepository bookingRepository;
-    @Autowired
-    private RentalAreaRepository rentalAreaRepository;
-    @Autowired
-    private CourtRepository courtRepository;
-    @Autowired
-    private CourtPriceRepository courtPriceRepository;
+    private final SlotRepository slotRepository;
+    private final CourtCopyRepository courtCopyRepository;
+    private final CourtPriceService courtPriceService;
+    private final BookingRepository bookingRepository;
+    private final RentalAreaRepository rentalAreaRepository;
+    private final CourtRepository courtRepository;
+    private final CourtPriceRepository courtPriceRepository;
 
     public List<CourtResponse> getCourtsByRental(UUID rentalAreaId) {
 
@@ -58,7 +49,7 @@ public class SlotServiceImpl implements SlotService {
             BigDecimal maxPrice = null;
 
             if (result != null && !result.isEmpty()) {
-                Object[] range = result.get(0);
+                Object[] range = result.getFirst();
 
                 minPrice = range[0] != null ? (BigDecimal) range[0] : null;
                 maxPrice = range[1] != null ? (BigDecimal) range[1] : null;
@@ -84,7 +75,6 @@ public class SlotServiceImpl implements SlotService {
 
         }).toList();
 
-
         return courtResponses;
     }
 
@@ -93,7 +83,7 @@ public class SlotServiceImpl implements SlotService {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
 
-        if(slot != null && slot.getBooking() != null) {
+        if (slot != null && slot.getBooking() != null) {
             Booking booking = slot.getBooking();
             if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
                 return ExtendCheckResponse.builder()
@@ -101,7 +91,7 @@ public class SlotServiceImpl implements SlotService {
                         .conflictReason("Không thể gia hạn vì booking đã bị hủy")
                         .build();
             }
-            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
+            if (booking.getBookingStatus() == BookingStatus.COMPLETED) {
                 return ExtendCheckResponse.builder()
                         .available(false)
                         .conflictReason("Không thể gia hạn vì booking đã hoàn thành")
@@ -139,12 +129,12 @@ public class SlotServiceImpl implements SlotService {
     public void confirmExtend(UUID slotId, ExtendRequest req) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
-        if(slot != null && slot.getBooking() != null) {
+        if (slot != null && slot.getBooking() != null) {
             Booking booking = slot.getBooking();
             if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
                 throw new RuntimeException("Không thể gia hạn vì booking đã bị hủy");
             }
-            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
+            if (booking.getBookingStatus() == BookingStatus.COMPLETED) {
                 throw new RuntimeException("Không thể gia hạn vì booking đã hoàn thành");
             }
         }
@@ -199,23 +189,30 @@ public class SlotServiceImpl implements SlotService {
         bookingRepository.save(booking);
     }
 
+    @Override
     public SwapCheckResponse checkSwap(UUID slotId, SwapRequest req) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
-        if(slot != null && slot.getBooking() != null) {
+
+        if (slot != null && slot.getBooking() != null) {
             Booking booking = slot.getBooking();
             if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
-                throw new RuntimeException("Không thể gia hạn vì booking đã bị hủy");
+                return SwapCheckResponse.builder()
+                        .available(false)
+                        .conflictReason("Không thể đổi slot vì booking đã bị hủy")
+                        .build();
             }
-            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
-                throw new RuntimeException("Không thể gia hạn vì booking đã hoàn thành");
+            if (booking.getBookingStatus() == BookingStatus.COMPLETED) {
+                return SwapCheckResponse.builder()
+                        .available(false)
+                        .conflictReason("Không thể đổi slot vì booking đã hoàn thành")
+                        .build();
             }
         }
-        // 1. Backend TỰ ĐỘNG ép buộc thời gian mới = thời lượng cũ
+
         long oldDuration = ChronoUnit.MINUTES.between(slot.getStartTime(), slot.getEndTime());
         LocalDateTime newEnd = req.getNewStartTime().plusMinutes(oldDuration);
 
-        // 2. Check trùng lịch với khung giờ mới (đã được fix cứng thời lượng)
         boolean conflict = slotRepository.existsConflictSlot(
                 req.getCourtCopyId(), req.getNewStartTime(), newEnd, slotId
         );
@@ -227,45 +224,68 @@ public class SlotServiceImpl implements SlotService {
                     .build();
         }
 
-        // 3. Trả về đúng giá cũ, độ chênh lệch tiền = 0
+        CourtCopy targetCourt = courtCopyRepository.findById(req.getCourtCopyId())
+                .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
+
+        BigDecimal newPrice = courtPriceService.calculatePrice(targetCourt, req.getNewStartTime(), newEnd);
+        BigDecimal priceDiff = newPrice.subtract(slot.getPrice());
+
         return SwapCheckResponse.builder()
                 .available(true)
-                .newPrice(slot.getPrice())
-                .priceDiff(BigDecimal.ZERO)
+                .newPrice(newPrice)
+                .priceDiff(priceDiff)
                 .build();
     }
 
+    @Override
     public void confirmSwap(UUID slotId, SwapRequest req) {
         Slot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new AppException(ErrorCode.SLOT_NOT_FOUND));
-        if(slot != null && slot.getBooking() != null) {
+
+        if (slot != null && slot.getBooking() != null) {
             Booking booking = slot.getBooking();
             if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
-                throw new RuntimeException("Không thể gia hạn vì booking đã bị hủy");
+                throw new RuntimeException("Không thể đổi slot vì booking đã bị hủy");
             }
-            if(booking.getBookingStatus() == BookingStatus.COMPLETED) {
-                throw new RuntimeException("Không thể gia hạn vì booking đã hoàn thành");
+            if (booking.getBookingStatus() == BookingStatus.COMPLETED) {
+                throw new RuntimeException("Không thể đổi slot vì booking đã hoàn thành");
             }
         }
+
         long durationMinutes = ChronoUnit.MINUTES.between(slot.getStartTime(), slot.getEndTime());
         LocalDateTime newEnd = req.getNewStartTime().plusMinutes(durationMinutes);
 
         CourtCopy targetCourt = courtCopyRepository.findById(req.getCourtCopyId())
                 .orElseThrow(() -> new AppException(ErrorCode.COURT_NOT_FOUND));
 
-
         boolean conflict = slotRepository.existsConflictSlot(
                 req.getCourtCopyId(), req.getNewStartTime(), newEnd, slotId);
         if (conflict) throw new AppException(ErrorCode.SLOT_CONFLICT);
 
+        BigDecimal oldSlotPrice = slot.getPrice();
+        BigDecimal newPrice = courtPriceService.calculatePrice(targetCourt, req.getNewStartTime(), newEnd);
+        BigDecimal priceDiff = newPrice.subtract(oldSlotPrice);
 
         slot.setCourtCopy(targetCourt);
         slot.setStartTime(req.getNewStartTime());
         slot.setEndTime(newEnd);
-
+        slot.setPrice(newPrice);
         slotRepository.save(slot);
-    }
 
+        if (priceDiff.compareTo(BigDecimal.ZERO) != 0) {
+            Booking booking = slot.getBooking();
+
+            BigDecimal oldTotal = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
+            BigDecimal newTotal = oldTotal.add(priceDiff);
+            booking.setTotalPrice(newTotal);
+
+            BigDecimal currentRemaining = booking.getRemainingAmount() != null ? booking.getRemainingAmount() : BigDecimal.ZERO;
+            BigDecimal newRemaining = currentRemaining.add(priceDiff);
+
+            booking.setRemainingAmount(newRemaining.max(BigDecimal.ZERO));
+            bookingRepository.save(booking);
+        }
+    }
 
     private LocalDateTime computeNewEnd(LocalDateTime endTime, ExtendRequest req) {
         return req.getUnit().equals("hour")

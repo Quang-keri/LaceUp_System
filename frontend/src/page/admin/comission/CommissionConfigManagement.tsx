@@ -285,7 +285,6 @@ const CommissionConfigManagement: React.FC = () => {
         loading={loading}
       />
 
-      {/* MODAL CREATE RIÊNG */}
       <Modal
         title="Thêm cấu hình hoa hồng"
         open={createOpen}
@@ -392,7 +391,6 @@ const CommissionConfigManagement: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* MODAL UPDATE RIÊNG */}
       <Modal
         title="Cập nhật cấu hình hoa hồng"
         open={updateOpen}

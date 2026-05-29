@@ -11,6 +11,7 @@ import {
   Empty,
   Space,
   message,
+  Popover,
 } from "antd";
 import {
   HomeOutlined,
@@ -126,18 +127,67 @@ const RentalAreaDetailModal: React.FC<Props> = ({
       title: "Khoảng giá",
       key: "priceRange",
       render: (_: any, record: any) => {
-        if (!record.minPrice && !record.maxPrice) {
+        if (!record.priceRules || record.priceRules.length === 0) {
           return <Text type="secondary">Chưa cập nhật</Text>;
         }
 
-        if (record.minPrice === record.maxPrice) {
-          return <Text type="danger">{formatVND(record.minPrice)}</Text>;
-        }
+        const sortedRules = [...record.priceRules].sort((a, b) => {
+          if (a.priceType !== b.priceType) {
+            return a.priceType === "EVENT" ? -1 : 1;
+          }
+          if (a.dayType !== b.dayType) {
+            return a.dayType === "WEEKDAY" ? -1 : 1;
+          }
+          return a.startTime.localeCompare(b.startTime);
+        });
+
+        const content = (
+          <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+            {sortedRules.map((r: any, idx: number) => (
+              <div
+                key={idx}
+                style={{
+                  marginBottom: 6,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <Tag
+                  color={r.priceType === "EVENT" ? "orange" : "purple"}
+                  style={{ minWidth: 65, textAlign: "center", marginRight: 8 }}
+                >
+                  {r.priceType === "EVENT" ? "Sự kiện" : "Thường"}
+                </Tag>
+
+                <Text style={{ fontSize: 12 }}>
+                  <span style={{ fontWeight: 500, marginRight: 4 }}>
+                    {r.dayType === "WEEKDAY" ? "[T2-T6]" : "[T7-CN]"}
+                  </span>
+                  {r.startTime.slice(0, 5)} - {r.endTime.slice(0, 5)}:{" "}
+                  <b
+                    style={{
+                      color: r.priceType === "EVENT" ? "orange" : "purple",
+                    }}
+                  >
+                    {formatVND(r.pricePerHour)}
+                  </b>
+                </Text>
+              </div>
+            ))}
+          </div>
+        );
 
         return (
-          <Text type="danger">
-            {formatVND(record.minPrice)} - {formatVND(record.maxPrice)}
-          </Text>
+          <Popover
+            content={content}
+            title="Chi tiết bảng giá"
+            trigger="hover"
+            placement="right"
+          >
+            <Button type="link" style={{ padding: 0, height: "auto" }}>
+              Xem chi tiết giá
+            </Button>
+          </Popover>
         );
       },
     },

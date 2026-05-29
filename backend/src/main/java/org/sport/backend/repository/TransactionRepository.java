@@ -38,6 +38,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             TransactionType type,
             Pageable pageable
     );
+
     @Query("""
     SELECT COALESCE(SUM(t.amount), 0)
     FROM Transaction t
@@ -55,25 +56,28 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             @Param("rentalAreaId") UUID rentalAreaId,
             @Param("settlementDate") LocalDate settlementDate
     );
+
     @Query("""
-    SELECT COALESCE(SUM(t.amount), 0)
-    FROM Transaction t
-    WHERE t.rentalArea.rentalAreaId = :rentalAreaId
-    AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
-    AND t.type = org.sport.backend.constant.TransactionType.INCOME
-    AND t.paymentMethod <> org.sport.backend.constant.PaymentMethod.CASH
-    AND t.category IN (
-        org.sport.backend.constant.TransactionCategory.BOOKING_DEPOSIT,
-        org.sport.backend.constant.TransactionCategory.BOOKING_FULL_PAYMENT,
-        org.sport.backend.constant.TransactionCategory.BOOKING_REMAINING_PAYMENT
-    )
-    AND DATE(t.booking.startTime) = :settlementDate
-""")
+                SELECT COALESCE(SUM(t.amount), 0)
+                FROM Transaction t
+                WHERE t.rentalArea.rentalAreaId = :rentalAreaId
+                AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
+                AND t.type = org.sport.backend.constant.TransactionType.INCOME
+                AND t.paymentMethod IN (
+                            org.sport.backend.constant.PaymentMethod.VN_PAY,
+                            org.sport.backend.constant.PaymentMethod.PAY_OS
+                        )
+                AND t.category IN (
+                    org.sport.backend.constant.TransactionCategory.BOOKING_DEPOSIT,
+                    org.sport.backend.constant.TransactionCategory.BOOKING_FULL_PAYMENT,
+                    org.sport.backend.constant.TransactionCategory.BOOKING_REMAINING_PAYMENT
+                )
+                AND DATE(t.booking.startTime) = :settlementDate
+            """)
     BigDecimal sumAdminCollectedBookingIncome(
             @Param("rentalAreaId") UUID rentalAreaId,
             @Param("settlementDate") LocalDate settlementDate
     );
-
 
     @Query("""
     SELECT COALESCE(SUM(t.amount), 0)
@@ -91,6 +95,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             @Param("endDate") LocalDateTime endDate,
             @Param("ownerId") UUID ownerId
     );
-
 
 }

@@ -35,14 +35,18 @@ const BookingHistoryPage: React.FC = () => {
       message.error("Vui lòng đăng nhập lại");
       return;
     }
+
     setLoading(true);
     try {
       const response = await bookingService.getMyBookings(
-        user.userId,
+        status,
+        undefined,
+        undefined,
+        undefined,
         page,
         size,
-        status,
       );
+
       if (response?.code === 200 && response?.result) {
         setBookings(response.result.data);
         setPagination({

@@ -29,6 +29,7 @@ import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.mapper.BankAccountMapper;
 import org.sport.backend.mapper.CategoryMapper;
+import org.sport.backend.mapper.CourtPriceMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.CloudinaryService;
 import org.sport.backend.service.GoongGeocodingService;
@@ -73,6 +74,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     private final AddressMapper addressMapper;
     private final CategoryMapper categoryMapper;
     private final BankAccountMapper bankAccountMapper;
+    private final CourtPriceMapper courtPriceMapper;
 
     @Override
     public List<RentalAreaOptionResponse> getRentalAreaOptions() {
@@ -339,10 +341,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         List<CourtPrice> prices =
                 courtPriceRepository.findByCourt_CourtId(court.getCourtId());
 
-        List<CourtPriceResponse> priceResponses = prices.stream()
-                .sorted(Comparator.comparing(CourtPrice::getStartTime))
-                .map(this::mapToPriceResponse)
-                .toList();
+        List<CourtPriceResponse> priceResponses =
+                courtPriceMapper.toCourtPriceResponseList(prices);
 
 
         List<Object[]> result = courtPriceRepository.getPriceRange(court.getCourtId());
@@ -501,7 +501,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 throw new IllegalArgumentException("RentalArea yêu cầu tối đa 5 ảnh");
             }
 
-
             rentalAreaImageRepository.deleteAll(currentImages);
 
             String folder = "rentals/" + rentalArea.getRentalAreaId();
@@ -624,10 +623,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             List<CourtPrice> prices =
                     courtPriceRepository.findByCourt_CourtId(court.getCourtId());
 
-            List<CourtPriceResponse> priceResponses = prices.stream()
-                    .sorted(Comparator.comparing(CourtPrice::getStartTime))
-                    .map(this::mapToPriceResponse)
-                    .toList();
+            List<CourtPriceResponse> priceResponses =
+                    courtPriceMapper.toCourtPriceResponseList(prices);
 
 
             List<Object[]> result = courtPriceRepository.getPriceRange(court.getCourtId());
@@ -697,19 +694,6 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .bankAccount(bankAccountResponse)
                 .longitude(rentalArea.getLongitude())
                 .latitude(rentalArea.getLatitude())
-                .build();
-    }
-
-    private CourtPriceResponse mapToPriceResponse(CourtPrice p) {
-        return CourtPriceResponse.builder()
-                .courtPriceId(p.getCourtPriceId())
-                .courtId(p.getCourt().getCourtId())
-                .startTime(p.getStartTime())
-                .endTime(p.getEndTime())
-                .pricePerHour(p.getPricePerHour())
-                .specificDate(p.getSpecificDate())
-                .priceType(p.getPriceType())
-                .priority(p.getPriority())
                 .build();
     }
 

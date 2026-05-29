@@ -53,7 +53,6 @@ export default function Step6Legal({
         onFinish={onFinish}
         initialValues={formData.legalInfo}
       >
-        {/* Sử dụng Row và Col để chia Grid, gutter để tạo khoảng cách giữa các cột/hàng */}
         <Row gutter={[16, 0]}>
           <Col xs={24} md={12}>
             <Form.Item
@@ -109,7 +108,6 @@ export default function Step6Legal({
             </Form.Item>
           </Col>
 
-          {/* Ghi chú và Hình ảnh để full chiều rộng (span 24) cho đẹp UI */}
           <Col span={24}>
             <Form.Item
               name="legalNote"

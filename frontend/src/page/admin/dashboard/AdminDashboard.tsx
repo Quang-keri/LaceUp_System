@@ -264,7 +264,6 @@
         </div>
 
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          {/* CARD 1: DOANH THU */}
           <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
             <Card bordered={false} style={{ height: "100%" }}>
               <Statistic
@@ -289,7 +288,6 @@
             </Card>
           </Col>
 
-          {/* CARD 2: NGƯỜI DÙNG MỚI */}
           <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
             <Card bordered={false} style={{ height: "100%" }}>
               <Statistic
@@ -313,7 +311,6 @@
             </Card>
           </Col>
 
-          {/* CARD 3: TỶ LỆ HỦY */}
           <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
             <Card bordered={false} style={{ height: "100%" }}>
               <Statistic
