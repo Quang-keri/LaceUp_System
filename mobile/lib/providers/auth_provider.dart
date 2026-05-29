@@ -9,10 +9,11 @@ class AuthProvider extends ChangeNotifier {
 
   bool get isLoggedIn => user != null;
   String? get userName => user?['userName']?.toString();
-
+  String? get userId => user?['userId']?.toString();
   Future<void> loadUser() async {
     try {
       user = await userLocalService.getUser();
+      debugPrint('LOCAL USER ID: $userId');
     } catch (e) {
       debugPrint('Error loading local user: $e');
       user = null;

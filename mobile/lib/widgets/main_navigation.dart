@@ -17,7 +17,7 @@ class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-     AreaListScreen(),
+    AreaListScreen(),
     const MapScreen(),
     const CommunityScreen(),
     const NewsScreen(),
@@ -26,6 +26,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       extendBody: true,
 
@@ -34,75 +36,80 @@ class _MainNavigationState extends State<MainNavigation> {
         children: _pages,
       ),
 
-      bottomNavigationBar: CurvedNavigationBar(
-        index: _selectedIndex,
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+          bottom: bottomSafeArea + 8,
+        ),
+        child: CurvedNavigationBar(
+          index: _selectedIndex,
 
-        backgroundColor: Colors.transparent,
+          backgroundColor: Colors.transparent,
 
-        color: const Color(0xFF9156F1),
+          color: const Color(0xFF9156F1),
 
-        buttonBackgroundColor: const Color(0xFF9156F1),
+          buttonBackgroundColor: const Color(0xFF9156F1),
 
-        height: 62,
+          height: 75,
 
-        animationDuration: const Duration(milliseconds: 250),
+          animationDuration: const Duration(milliseconds: 250),
 
-        letIndexChange: (index) => true,
+          letIndexChange: (index) => true,
 
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
 
-        items: [
-          const Icon(
-            Icons.home_rounded,
-            size: 26,
-            color: Colors.white,
-          ),
-
-          const Icon(
-            Icons.location_on_rounded,
-            size: 26,
-            color: Colors.white,
-          ),
-
-          Container(
-            height: 46,
-            width: 46,
-            decoration: BoxDecoration(
+          items: [
+            const Icon(
+              Icons.home_rounded,
+              size: 26,
               color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
-            child: const Center(
-              child: Icon(
-                Icons.groups_rounded,
-                size: 28,
-                color: Color(0xFF9156F1),
+
+            const Icon(
+              Icons.location_on_rounded,
+              size: 26,
+              color: Colors.white,
+            ),
+
+            Container(
+              height: 46,
+              width: 46,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.groups_rounded,
+                  size: 28,
+                  color: Color(0xFF9156F1),
+                ),
               ),
             ),
-          ),
 
-          const Icon(
-            Icons.article_rounded,
-            size: 26,
-            color: Colors.white,
-          ),
+            const Icon(
+              Icons.article_rounded,
+              size: 26,
+              color: Colors.white,
+            ),
 
-          const Icon(
-            Icons.person_rounded,
-            size: 26,
-            color: Colors.white,
-          ),
-        ],
+            const Icon(
+              Icons.person_rounded,
+              size: 26,
+              color: Colors.white,
+            ),
+          ],
+        ),
       ),
     );
   }

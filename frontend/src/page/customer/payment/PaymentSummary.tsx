@@ -77,6 +77,7 @@ export default function PaymentSummary({
       <Button
         style={{
           background: "#9156F1",
+          color: "white",
         }}
         size="large"
         block
