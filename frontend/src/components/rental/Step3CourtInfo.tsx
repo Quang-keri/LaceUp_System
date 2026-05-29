@@ -117,7 +117,6 @@ export default function Step3CourtInfo({
                     label="Môn thể thao"
                     rules={[{ required: true, message: "Chọn môn thể thao" }]}
                   >
-                    {/* Sử dụng categories từ context, có thể thêm loading prop cho mượt */}
                     <Select
                       placeholder="Chọn môn"
                       style={{ width: 150 }}

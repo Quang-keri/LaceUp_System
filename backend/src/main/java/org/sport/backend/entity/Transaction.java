@@ -23,6 +23,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class Transaction {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -69,6 +70,3 @@ public class Transaction {
     @JoinColumn(name = "owner_id")
     private User owner;
 }
-
-
-

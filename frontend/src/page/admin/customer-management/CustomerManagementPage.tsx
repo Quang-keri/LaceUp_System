@@ -16,27 +16,20 @@ import {
   Spin,
   Timeline,
   Pagination,
-  Select,
 } from "antd";
-import {
-  StarOutlined,
-  HistoryOutlined,
-  EditOutlined,
-  SearchOutlined,
-  FilterOutlined,
-} from "@ant-design/icons";
+import { StarOutlined, HistoryOutlined, EditOutlined } from "@ant-design/icons";
 import { userService } from "../../../service/userService";
 import type { ReputationLogResponse, UserResponse } from "../../../types/user";
+import CustomerFilter from "./CustomerFilter";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 const getScoreColor = (score: number) => {
-  if (score >= 90) return "success"; // Xanh lá
-  if (score >= 70) return "processing"; // Xanh dương
-  if (score >= 50) return "warning"; // Vàng cam
-  if (score >= 30) return "volcano"; // Đỏ cam
-  return "error"; // Đỏ đậm
+  if (score >= 90) return "success";
+  if (score >= 70) return "processing";
+  if (score >= 50) return "warning";
+  if (score >= 30) return "volcano";
+  return "error";
 };
 
 const CustomerManagementPage: React.FC = () => {
@@ -46,7 +39,6 @@ const CustomerManagementPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
 
-  // States cho Drawer
   const [scoreDrawerVisible, setScoreDrawerVisible] = useState(false);
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false);
   const [reputationLogs, setReputationLogs] = useState<ReputationLogResponse[]>(
@@ -56,7 +48,6 @@ const CustomerManagementPage: React.FC = () => {
   const [logPage, setLogPage] = useState(1);
   const [totalLogs, setTotalLogs] = useState(0);
 
-  // States cho Filter
   const [keyword, setKeyword] = useState<string>("");
   const [tierFilter, setTierFilter] = useState<string | undefined>(undefined);
   const [scoreRange, setScoreRange] = useState<string | undefined>(undefined);
@@ -74,7 +65,6 @@ const CustomerManagementPage: React.FC = () => {
       let minScore: number | undefined = undefined;
       let maxScore: number | undefined = undefined;
 
-      // Xử lý khoảng điểm
       if (range) {
         const [min, max] = range.split("-");
         minScore = min ? parseInt(min) : undefined;
@@ -104,10 +94,20 @@ const CustomerManagementPage: React.FC = () => {
     fetchCustomers(currentPage);
   }, [currentPage]);
 
-  // Kích hoạt tìm kiếm
-  const handleSearch = () => {
+  const handleFilterChange = (key: string, value: any) => {
+    let newKeyword = keyword;
+    let newTier = tierFilter;
+    let newRange = scoreRange;
+
+    if (key === "keyword") newKeyword = value;
+    if (key === "tierFilter") newTier = value;
+    if (key === "scoreRange") newRange = value;
+
+    setKeyword(newKeyword);
+    setTierFilter(newTier);
+    setScoreRange(newRange);
     setCurrentPage(1);
-    fetchCustomers(1);
+    fetchCustomers(1, newKeyword, newTier, newRange);
   };
 
   const handleResetFilter = () => {
@@ -241,14 +241,12 @@ const CustomerManagementPage: React.FC = () => {
           <Button
             type="primary"
             icon={<EditOutlined />}
-            style={{ backgroundColor: "#ff6b00" }}
             onClick={() => openScoreDrawer(record)}
           >
             Chấm điểm
           </Button>
           <Button
             icon={<HistoryOutlined />}
-            style={{ color: "#800080", borderColor: "#800080" }}
             onClick={() => openHistoryDrawer(record)}
           >
             Lịch sử
@@ -259,133 +257,58 @@ const CustomerManagementPage: React.FC = () => {
   ];
 
   return (
-    <div
-      style={{
-        padding: "24px",
-        backgroundColor: "#f5f5f5",
-        minHeight: "100vh",
-      }}
-    >
-      <div
-        style={{
-          marginBottom: 20,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-        }}
-      >
-        <FilterOutlined style={{ fontSize: 24, color: "#ff6b00" }} />
-        <Title level={3} style={{ margin: 0, color: "#ff6b00" }}>
-          Quản lý Khách Hàng
-        </Title>
+    <div className="p-6 bg-white min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <Title level={3} className="!mb-0">
+            Quản lý Khách Hàng
+          </Title>
+          <Typography.Text type="secondary">
+            Theo dõi danh sách khách hàng và quản lý điểm uy tín
+          </Typography.Text>
+        </div>
       </div>
 
-      <Card
-        bordered={false}
-        style={{
-          borderRadius: 12,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-          marginBottom: 24,
-        }}
-      >
-        <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={8} md={7}>
-            <Input
-              placeholder="Tìm tên hoặc số điện thoại..."
-              value={keyword}
-              onChange={(e) => {
-                const val = e.target.value;
-                setKeyword(val);
-                setCurrentPage(1);
-                fetchCustomers(1, val, tierFilter, scoreRange);
-              }}
-              prefix={<SearchOutlined />}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={8} md={5}>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Hạng thành viên"
-              value={tierFilter}
-              onChange={(val) => {
-                setTierFilter(val);
-                setCurrentPage(1);
-                fetchCustomers(1, keyword, val, scoreRange);
-              }}
-              allowClear
-            >
-              <Option value="BRONZE">Đồng (BRONZE)</Option>
-              <Option value="SILVER">Bạc (SILVER)</Option>
-              <Option value="GOLD">Vàng (GOLD)</Option>
-              <Option value="DIAMOND">Kim Cương (DIAMOND)</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={8} md={5}>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Vùng điểm uy tín"
-              value={scoreRange}
-              onChange={(val) => {
-                setScoreRange(val);
-                setCurrentPage(1);
-                fetchCustomers(1, keyword, tierFilter, val);
-              }}
-              allowClear
-            >
-              <Option value="90-100">Rất tốt (90 - 100)</Option>
-              <Option value="70-89">Khá (70 - 89)</Option>
-              <Option value="50-69">Trung bình (50 - 69)</Option>
-              <Option value="30-49">Cảnh báo (30 - 49)</Option>
-              <Option value="0-29">Blacklist (Dưới 30)</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={24} md={5}>
-            <Space>
-              <Button
-                style={{ backgroundColor: "#ff6b00" }}
-                onClick={handleResetFilter}
-              >
-                Làm mới
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
+      {/* --- CHIA LAYOUT 2 CỘT Ở ĐÂY --- */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Cột trái: Sidebar Filter */}
+        <div className="w-full lg:w-1/4 xl:w-1/5">
+          <CustomerFilter
+            keyword={keyword}
+            tierFilter={tierFilter}
+            scoreRange={scoreRange}
+            onFilterChange={handleFilterChange}
+            onReset={handleResetFilter}
+          />
+        </div>
 
-      <Card
-        bordered={false}
-        style={{ borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
-        bodyStyle={{ padding: 0 }}
-      >
-        <Table
-          columns={columns}
-          dataSource={customers}
-          rowKey="userId"
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            total: total,
-            onChange: (page) => setCurrentPage(page),
-            showTotal: (total) => `Tổng số ${total} khách hàng`,
-          }}
-        />
-      </Card>
+        {/* Cột phải: Bảng dữ liệu */}
+        <div className="w-full lg:w-3/4 xl:w-4/5">
+          <Table
+            columns={columns}
+            dataSource={customers}
+            rowKey="userId"
+            loading={loading}
+            pagination={{
+              current: currentPage,
+              total: total,
+              onChange: (page) => setCurrentPage(page),
+              showTotal: (total) => `Tổng số ${total} khách hàng`,
+            }}
+            className="shadow-sm border rounded-lg"
+          />
+        </div>
+      </div>
 
-      {/* DRAWER 1: CHẤM ĐIỂM */}
       <Drawer
-        title={<span style={{ color: "#ff6b00" }}>Chấm điểm khách hàng</span>}
+        title="Chấm điểm khách hàng"
         width={450}
         onClose={() => setScoreDrawerVisible(false)}
         open={scoreDrawerVisible}
       >
         {selectedUser && (
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            <Card
-              size="small"
-              title="Thông tin tổng quan"
-              headStyle={{ color: "#ff6b00" }}
-            >
+            <Card size="small" title="Thông tin tổng quan">
               <Row gutter={[16, 16]}>
                 <Col span={12}>
                   <Text strong>Họ tên:</Text> {selectedUser.userName}
@@ -408,11 +331,7 @@ const CustomerManagementPage: React.FC = () => {
               </Row>
             </Card>
 
-            <Card
-              size="small"
-              title="Điều chỉnh độ uy tín"
-              headStyle={{ color: "#800080" }}
-            >
+            <Card size="small" title="Điều chỉnh độ uy tín">
               <Form
                 form={form}
                 layout="vertical"
@@ -438,12 +357,7 @@ const CustomerManagementPage: React.FC = () => {
                     placeholder="VD: Khách bùng sân không báo trước..."
                   />
                 </Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  style={{ backgroundColor: "#ff6b00", borderColor: "#ff6b00" }}
-                  block
-                >
+                <Button type="primary" htmlType="submit" block>
                   Cập nhật điểm
                 </Button>
               </Form>
@@ -452,11 +366,8 @@ const CustomerManagementPage: React.FC = () => {
         )}
       </Drawer>
 
-      {/* DRAWER 2: LỊCH SỬ */}
       <Drawer
-        title={
-          <span style={{ color: "#800080" }}>Lịch sử biến động uy tín</span>
-        }
+        title="Lịch sử biến động uy tín"
         width={450}
         onClose={() => setHistoryDrawerVisible(false)}
         open={historyDrawerVisible}
@@ -475,14 +386,14 @@ const CustomerManagementPage: React.FC = () => {
                   items={reputationLogs.map((log) => {
                     const isPositive = log.pointsChanged > 0;
                     return {
-                      color: isPositive ? "#800080" : "#ff6b00",
+                      color: isPositive ? "blue" : "red",
                       children: (
                         <>
                           <div style={{ marginBottom: 4 }}>
                             <Text
                               strong
                               style={{
-                                color: isPositive ? "#800080" : "#ff6b00",
+                                color: isPositive ? "#1677ff" : "#ff4d4f",
                               }}
                             >
                               {isPositive ? "+" : ""}

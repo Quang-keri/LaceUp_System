@@ -81,9 +81,7 @@ const BookingManagement: React.FC = () => {
       key: "customer",
       render: (_, record) => (
         <div>
-          {/* Sửa: dùng userName thay vì customerName */}
           <div>{record.userName || "Khách lẻ"}</div>
-          {/* Sửa: dùng phoneNumber thay vì customerPhone */}
           <small style={{ color: "#8c8c8c" }}>
             {record.phoneNumber || "N/A"}
           </small>
@@ -95,9 +93,7 @@ const BookingManagement: React.FC = () => {
       key: "area",
       render: (_, record) => (
         <div>
-          {/* Sửa: Truy cập vào object rentalArea */}
           <Tag color="blue">{record.rentalArea?.rentalAreaName || "N/A"}</Tag>
-          {/* Sửa: Lấy courtCode từ slot đầu tiên nếu có */}
           <div>{record.slots?.[0]?.courtCode || "N/A"}</div>
         </div>
       ),

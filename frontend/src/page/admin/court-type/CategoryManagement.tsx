@@ -219,10 +219,8 @@ const CategoryManagement: React.FC = () => {
     );
   };
 
-  // --- RENDER ---
   return (
     <div className="space-y-4 p-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quản lý loại sân</h1>
         <Space>
@@ -242,10 +240,8 @@ const CategoryManagement: React.FC = () => {
         </Space>
       </div>
 
-      {/* Filter Card */}
       <CategoryFilter onFilterChange={handleFilterChange} />
 
-      {/* Table Card */}
       <Card>
         <CategoryTable
           data={data}
@@ -258,7 +254,6 @@ const CategoryManagement: React.FC = () => {
         />
       </Card>
 
-      {/* Modals */}
       <CategoryAddModal
         open={isCreateModalOpen}
         loading={loading}

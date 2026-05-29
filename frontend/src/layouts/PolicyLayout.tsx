@@ -59,7 +59,6 @@ const PolicyLayout = () => {
               justifyContent: "space-between",
             }}
           >
-            {/* Logo */}
             <Link
               to="/home"
               style={{
@@ -99,7 +98,6 @@ const PolicyLayout = () => {
               </div>
             </Link>
 
-            {/* Menu */}
             <Menu
               mode="horizontal"
               selectedKeys={[location.pathname]}

@@ -29,18 +29,43 @@ const calculateTotalPrice = (
   let currentTime = startTime.clone();
   const chunks = duration * 2;
 
+  const dayOfWeek = startTime.day(); 
+  const currentDayType =
+    dayOfWeek === 0 || dayOfWeek === 6 ? "WEEKEND" : "WEEKDAY";
+  const bookingDate = startTime.startOf("day");
+
   for (let i = 0; i < chunks; i++) {
     const currentMinutes = currentTime.hour() * 60 + currentTime.minute();
 
     const applicableRules = rules.filter((rule: any) => {
       if (!rule.startTime || !rule.endTime) return false;
+
       const [startHour, startMin] = rule.startTime.split(":").map(Number);
       const [endHour, endMin] = rule.endTime.split(":").map(Number);
 
       const ruleStartMins = startHour * 60 + startMin;
       const ruleEndMins = endHour * 60 + endMin;
 
-      return currentMinutes >= ruleStartMins && currentMinutes < ruleEndMins;
+      const isTimeMatch =
+        currentMinutes >= ruleStartMins && currentMinutes < ruleEndMins;
+      if (!isTimeMatch) return false;
+
+      if (rule.dayType && rule.dayType !== currentDayType) return false;
+
+      let isDateMatch = true;
+      if (rule.specificDate) {
+        isDateMatch = bookingDate.isSame(
+          dayjs(rule.specificDate).startOf("day"),
+        );
+      } else if (rule.startDate && rule.endDate) {
+        const ruleStart = dayjs(rule.startDate).startOf("day");
+        const ruleEnd = dayjs(rule.endDate).startOf("day");
+        isDateMatch =
+          !bookingDate.isBefore(ruleStart) && !bookingDate.isAfter(ruleEnd);
+      }
+      if (!isDateMatch) return false;
+
+      return true;
     });
 
     applicableRules.sort(

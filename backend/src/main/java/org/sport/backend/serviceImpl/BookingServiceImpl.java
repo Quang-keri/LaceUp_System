@@ -1,5 +1,6 @@
 package org.sport.backend.serviceImpl;
 
+import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.*;
 import org.sport.backend.dto.request.booking.BookingRequest;
@@ -23,7 +24,6 @@ import org.sport.backend.service.BookingService;
 import org.sport.backend.service.CourtCopyService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.BookingSpecification;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,35 +39,25 @@ import java.time.*;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private BookingIntentRepository bookingIntentRepository;
-    @Autowired
-    private CourtRepository courtRepository;
-    @Autowired
-    private CourtCopyRepository courtCopyRepository;
-    @Autowired
-    private SlotRepository slotRepository;
-    @Autowired
-    private BookingRepository bookingRepository;
-    @Autowired
-    private UserService userService;
-    @Autowired
-    private CourtCopyService courtCopyService;
-    @Autowired
-    private CourtPriceRepository courtPriceRepository;
-    @Autowired
-    private PaymentRepository paymentRepository;
-    @Autowired
-    private AddressMapper addressMapper;
-    @Autowired
-    private BookingServiceItemRepository bookingServiceItemRepository;
-    @Autowired
-    private ServiceItemRepository serviceItemRepository;
-    @Autowired
-    private TransactionRepository transactionRepository;
+
+    private final UserRepository userRepository;
+    private final BookingIntentRepository bookingIntentRepository;
+    private final CourtRepository courtRepository;
+    private final CourtCopyRepository courtCopyRepository;
+    private final SlotRepository slotRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingServiceItemRepository bookingServiceItemRepository;
+    private final ServiceItemRepository serviceItemRepository;
+    private final TransactionRepository transactionRepository;
+    private final CourtPriceRepository courtPriceRepository;
+    private final PaymentRepository paymentRepository;
+
+    private final UserService userService;
+    private final CourtCopyService courtCopyService;
+
+    private final AddressMapper addressMapper;
 
     @Override
     public BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request) {
@@ -841,6 +831,7 @@ public class BookingServiceImpl implements BookingService {
                                 .rentalAreaId(booking.getRentalArea().getRentalAreaId())
                                 .rentalAreaName(booking.getRentalArea().getRentalAreaName())
                                 .address(addressMapper.toAddressResponse(booking.getRentalArea().getAddress()))
+                                .contactPhone(booking.getRentalArea().getContactPhone())
                                 .build()
                 )
                 .depositAmount(booking.getDepositAmount())
@@ -970,7 +961,7 @@ public class BookingServiceImpl implements BookingService {
         Optional<Payment> payment = paymentRepository
                 .findFirstByBookingOrderByTransactionDateDesc(booking);
 
-        String paymentMethod = null;
+        String paymentMethod;
         if (payment.isPresent()) {
             paymentMethod = payment.get().getPaymentMethod().toString();
         } else {
@@ -1125,7 +1116,7 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Không có sân trống trong khung giờ này");
         }
 
-        return availableCopies.get(0);
+        return availableCopies.getFirst();
     }
 
     private void updateSlotPrice(
@@ -1189,9 +1180,15 @@ public class BookingServiceImpl implements BookingService {
 
     private void recalculateBookingSummary(Booking booking) {
 
-        BigDecimal total = booking.getSlots().stream()
+        BigDecimal totalSlotPrice = booking.getSlots().stream()
                 .map(Slot::getPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalServicePrice = bookingServiceItemRepository.findByBooking(booking).stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal total = totalSlotPrice.add(totalServicePrice);
 
         LocalDateTime minStart = booking.getSlots().stream()
                 .map(Slot::getStartTime)
@@ -1219,11 +1216,9 @@ public class BookingServiceImpl implements BookingService {
                         : remaining
         );
 
-
         BigDecimal overpaid = deposit.subtract(total);
 
         if (overpaid.compareTo(BigDecimal.ZERO) > 0) {
-
             Transaction refundTransaction = Transaction.builder()
                     .type(TransactionType.EXPENSE)
                     .amount(overpaid)
@@ -1267,7 +1262,7 @@ public class BookingServiceImpl implements BookingService {
                     .max(LocalDateTime::compareTo)
                     .orElse(null);
 
-            RentalArea rentalArea = booking.getSlots().get(0).getCourtCopy().getCourt().getRentalArea();
+            RentalArea rentalArea = booking.getSlots().getFirst().getCourtCopy().getCourt().getRentalArea();
             if (rentalArea != null) {
                 rentalAreaResponse = RentalAreaResponse.builder()
                         .rentalAreaId(rentalArea.getRentalAreaId())

@@ -1,6 +1,5 @@
 package org.sport.backend.repository;
 
-
 import org.sport.backend.constant.SlotStatus;
 import org.sport.backend.entity.Match;
 import org.sport.backend.entity.Slot;
@@ -11,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -18,15 +19,15 @@ import java.util.UUID;
 @Repository
 public interface SlotRepository extends JpaRepository<Slot, UUID>, JpaSpecificationExecutor<Slot> {
     @Query("""
-    SELECT s
-    FROM Slot s
-    WHERE s.courtCopy.courtCopyId = :courtCopyId
-      AND s.slotStatus IN ('BOOKED', 'PENDING')
-      AND s.booking IS NOT NULL
-      AND s.booking.bookingStatus <> 'CANCELLED'
-      AND s.startTime < :endTime
-      AND s.endTime > :startTime
-""")
+                SELECT s
+                FROM Slot s
+                WHERE s.courtCopy.courtCopyId = :courtCopyId
+                  AND s.slotStatus IN ('BOOKED', 'PENDING')
+                  AND s.booking IS NOT NULL
+                  AND s.booking.bookingStatus <> 'CANCELLED'
+                  AND s.startTime < :endTime
+                  AND s.endTime > :startTime
+            """)
     List<Slot> findConflictSlot(
             @Param("courtCopyId") UUID courtCopyId,
             @Param("startTime") LocalDateTime startTime,
@@ -85,4 +86,28 @@ public interface SlotRepository extends JpaRepository<Slot, UUID>, JpaSpecificat
     );
 
     List<Slot> findByMatch(Match match);
+
+    @Query("""
+                SELECT COALESCE(SUM(s.price), 0)
+                FROM Slot s
+                JOIN s.booking b
+                WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+                AND DATE(b.startTime) = :settlementDate
+                AND EXISTS (
+                    SELECT 1 FROM Transaction t 
+                    WHERE t.booking = b 
+                    AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
+                    AND t.type = org.sport.backend.constant.TransactionType.INCOME
+                    AND t.category IN (
+                        org.sport.backend.constant.TransactionCategory.BOOKING_DEPOSIT,
+                        org.sport.backend.constant.TransactionCategory.BOOKING_FULL_PAYMENT,
+                        org.sport.backend.constant.TransactionCategory.BOOKING_REMAINING_PAYMENT
+                    )
+                )
+            """)
+    BigDecimal sumCommissionableSlotPrice(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("settlementDate") LocalDate settlementDate
+    );
+
 }

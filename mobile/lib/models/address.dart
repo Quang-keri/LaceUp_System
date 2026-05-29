@@ -13,9 +13,14 @@ class Address {
     );
   }
 
-  String get fullAddress => [
-    street,
-    ward,
-    cityName,
-  ].where((e) => e.isNotEmpty).join(', ');
+  Map<String, dynamic> toJson() {
+    return {
+      'street': street,
+      'ward': ward,
+      'city': {'cityName': cityName},
+    };
+  }
+
+  String get fullAddress =>
+      [street, ward, cityName].where((e) => e.isNotEmpty).join(', ');
 }

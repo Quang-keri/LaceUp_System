@@ -1,6 +1,5 @@
 package org.sport.backend.dto.request.booking;
 
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -16,6 +15,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BookingRequest {
+
     private UUID userId;
     @NotNull(message = "Tên người đặt không được bỏ trống")
     private String userName;
