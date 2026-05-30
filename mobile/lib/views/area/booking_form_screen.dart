@@ -6,13 +6,13 @@ import '../../models/court.dart';
 class BookingFormScreen extends StatefulWidget {
   final CourtResponse court;
   final DateTime selectedDate;
-  final String initialTime;
+  final List<String> selectedSlots;
 
   const BookingFormScreen({
     super.key,
     required this.court,
     required this.selectedDate,
-    required this.initialTime,
+    required this.selectedSlots,
   });
 
   @override
@@ -21,14 +21,55 @@ class BookingFormScreen extends StatefulWidget {
 
 class _BookingFormScreenState extends State<BookingFormScreen> {
   final Color primaryColor = const Color(0xFF9156F1);
-  double duration = 1.0;
-  int quantity = 1;
+  final Color confirmColor = const Color(0xFFEA580C); // Màu cam
+
+  // Controllers cho form nhập liệu
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+
+  late double duration;
+  late String timeRangeDisplay;
+  late double totalPrice;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateBookingInfo();
+  }
+
+  void _calculateBookingInfo() {
+    // Mỗi slot cách nhau 30 phút -> duration = số slot * 0.5 giờ
+    duration = widget.selectedSlots.length * 0.5;
+
+    // Tạo chuỗi thời gian hiển thị (VD: 17:00 - 18:00)
+    String startTime = widget.selectedSlots.first;
+    // Để tính giờ kết thúc, ta lấy giờ của slot cuối + 30 phút
+    // (Ở đây làm đơn giản hiển thị slot đầu - slot cuối, bạn có thể parse TimeOfDay để cộng thêm 30p)
+    String endTime = widget.selectedSlots.last;
+
+    timeRangeDisplay = '$startTime - $endTime';
+
+    final double pricePerHour = widget.court.pricePerHour > 0 ? widget.court.pricePerHour : 80000;
+    totalPrice = pricePerHour * duration;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
 
   void _goToPayment() {
-    final double pricePerHour = widget.court.pricePerHour > 0
-        ? widget.court.pricePerHour
-        : 80000;
-    final double totalPrice = pricePerHour * duration * quantity;
+    // Validate cơ bản
+    if (_nameController.text.isEmpty || _phoneController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập tên và số điện thoại')),
+      );
+      return;
+    }
 
     Navigator.push(
       context,
@@ -36,10 +77,11 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         builder: (context) => PaymentScreen(
           court: widget.court,
           selectedDate: widget.selectedDate,
-          timeStr: widget.initialTime,
+          timeStr: timeRangeDisplay,
           duration: duration,
-          quantity: quantity,
+          quantity: 1, // Mặc định 1 sân như trên web
           totalPrice: totalPrice,
+          // Bạn có thể truyền thêm name, phone, note qua PaymentScreen nếu cần
         ),
       ),
     );
@@ -48,215 +90,184 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('dd/MM/yyyy').format(widget.selectedDate);
-    final priceStr = NumberFormat.currency(
-      locale: 'vi_VN',
-      symbol: 'VNĐ',
-    ).format(widget.court.pricePerHour > 0 ? widget.court.pricePerHour : 80000);
+    final totalStr = NumberFormat.currency(locale: 'vi_VN', symbol: 'VNĐ').format(totalPrice);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade100, // Nền xám nhẹ để nổi bật form trắng
       appBar: AppBar(
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
         title: const Text(
-          'Thông tin đặt sân',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          'Xác nhận đặt sân',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF4338CA)), // Màu chữ title giống hình
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
-      bottomNavigationBar: Container(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade200)),
-        ),
-        child: ElevatedButton(
-          onPressed: _goToPayment,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor, // Nút màu tím
-            minimumSize: const Size(double.infinity, 54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            'Đặt sân ngay',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Box thông tin sân
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                const Text(
-                  'Sân áp dụng: ',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                Text(
-                  // Sửa lỗi truy xuất bằng dấu chấm
-                  widget.court.courtName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Hiển thị Giá
-          Row(
-            children: [
-              const Text('Giá từ ', style: TextStyle(fontSize: 16)),
-              Text(
-                priceStr,
-                // Giá trị tiền nổi bật với màu cam
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.orange,
-                ),
-              ),
-              const Text(' / giờ', style: TextStyle(color: Colors.grey)),
-            ],
-          ),
-          const Divider(height: 32),
-
-          // Form nhập liệu
-          Row(
-            children: [
-              Expanded(
-                child: _buildStaticField(
-                  'Giờ bắt đầu',
-                  '${widget.initialTime} - ${DateFormat('dd/MM').format(widget.selectedDate)}',
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildDropdownField(
-                  'Thời lượng chơi',
-                  duration,
-                  [1.0, 1.5, 2.0, 3.0],
-                  (val) {
-                    setState(() => duration = val as double);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdownField(
-                  'Số lượng sân',
-                  quantity,
-                  [1, 2, 3, 4],
-                  (val) {
-                    setState(() => quantity = val as int);
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStaticField(
-                  'Loại sân',
-                  widget.court.categoryName ?? 'Sân thể thao',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStaticField(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
           ),
-          child: Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    );
-  }
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Thông tin người đặt',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
+              ),
+              const SizedBox(height: 12),
 
-  Widget _buildDropdownField(
-    String label,
-    dynamic currentValue,
-    List<dynamic> options,
-    Function(dynamic) onChanged,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<dynamic>(
-              value: currentValue,
-              isExpanded: true,
-              items: options
-                  .map(
-                    (val) => DropdownMenuItem(
-                      value: val,
-                      child: Text(val is double ? '$val giờ' : '$val sân'),
+              // Input Tên
+              _buildTextField(
+                controller: _nameController,
+                hintText: 'Tên người đặt (VD: Renter main)',
+              ),
+              const SizedBox(height: 12),
+
+              // Input SĐT
+              _buildTextField(
+                controller: _phoneController,
+                hintText: 'Số điện thoại',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+
+              // Input Ghi chú
+              _buildTextField(
+                controller: _noteController,
+                hintText: 'Ghi chú thêm (nếu có)',
+                maxLines: 3,
+              ),
+
+              const SizedBox(height: 24),
+
+              // Box tóm tắt thông tin sân
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          widget.court.courtName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        Text(
+                          NumberFormat.currency(locale: 'vi_VN', symbol: 'VNĐ').format(widget.court.pricePerHour),
+                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                  )
-                  .toList(),
-              onChanged: onChanged,
-            ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$dateStr • $timeRangeDisplay (${duration} giờ)',
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Số lượng sân: 1',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Divider(),
+              ),
+
+              // Tổng chi phí
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Tổng chi phí dự kiến',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black54),
+                  ),
+                  Text(
+                    totalStr,
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: primaryColor),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Nút actions
+              Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        side: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      child: const Text('Hủy', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _goToPayment,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: confirmColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text(
+                        'Xác nhận và thanh toán',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: primaryColor),
+        ),
+      ),
     );
   }
 }
