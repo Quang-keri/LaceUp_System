@@ -62,6 +62,7 @@ export interface UserDashboardResponse {
   totalMatches: number;
   totalWins: number;
   winRate: number;
+  reputationScore: number;
 
   categoryRanks: CategoryRankResponse[];
 }

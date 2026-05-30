@@ -30,8 +30,7 @@ const EndOfDayReport: React.FC = () => {
     const fetchRentalAreas = async () => {
       try {
         const res = await rentalService.getMyRentalAreas(1, 50);
-        const areas =
-          res.result?.data;
+        const areas = res.result?.data;
         setRentalAreas(areas);
 
         if (areas.length > 0) {
@@ -81,26 +80,32 @@ const EndOfDayReport: React.FC = () => {
 
   const handleExport = async () => {
     if (!selectedAreaId) {
-        alert("Vui lòng chọn cơ sở trước khi xuất báo cáo!");
-        return;
+      alert("Vui lòng chọn cơ sở trước khi xuất báo cáo!");
+      return;
     }
     try {
-      const selectedArea = rentalAreas.find(a => a.rentalAreaId === selectedAreaId);
-      
-      const areaNameForFile = selectedArea 
-        ? selectedArea.rentalAreaName.replace(/\s+/g, '_') 
-        : 'Co_So';
+      const selectedArea = rentalAreas.find(
+        (a) => a.rentalAreaId === selectedAreaId,
+      );
 
-      const blob = await reportService.exportEndOfDayReport(startDate, endDate, selectedAreaId);
+      const areaNameForFile = selectedArea
+        ? selectedArea.rentalAreaName.replace(/\s+/g, "_")
+        : "Co_So";
+
+      const blob = await reportService.exportEndOfDayReport(
+        startDate,
+        endDate,
+        selectedAreaId,
+      );
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      
+
       link.setAttribute(
         "download",
         `Bao_Cao_Doanh_Thu_${areaNameForFile}_${startDate}_den_${endDate}.xlsx`,
       );
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -124,7 +129,7 @@ const EndOfDayReport: React.FC = () => {
     filteredBookings.forEach((booking) => {
       const courtName =
         booking.slots && booking.slots.length > 0
-          ? booking.slots[0].courtName
+          ? booking.slots[0].courtName || "Chưa phân sân"
           : "Chưa phân sân";
 
       if (!groups[courtName]) {

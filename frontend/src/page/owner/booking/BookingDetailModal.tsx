@@ -29,7 +29,7 @@ export default function BookingDetailModal({ open, booking, onClose }: Props) {
   const remaining = booking.remainingAmount ?? Math.max(total - deposit, 0);
   const paid = total - remaining;
 
-  const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+  // const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
 
   const columns = [
     { title: "Sân", dataIndex: "courtCode" },

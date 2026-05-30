@@ -118,20 +118,19 @@ const AppHeader = () => {
       }}
     >
       <ConfigProvider
-        theme={{
-          colorPrimary: "#9156F1",
-          components: {
-            Menu: {
-              activeBarColor: "#9156F1",
-              activeBarHeight: 3,
-              itemSelectedColor: "#9156F1",
-              itemHoverColor: "#9156F1",
-              horizontalItemSelectedColor: "#9156F1",
-              horizontalItemIndicatorColor: "#9156F1",
-            },
-          },
-        }}
-      >
+  theme={{
+    token: {
+      colorPrimary: "#9156F1",
+    },
+    components: {
+      Menu: {
+        itemSelectedColor: "#9156F1",
+        itemHoverColor: "#9156F1",
+        horizontalItemSelectedColor: "#9156F1",
+      },
+    },
+  }}
+>
         <Header
           style={{
             background: "#ffffff",

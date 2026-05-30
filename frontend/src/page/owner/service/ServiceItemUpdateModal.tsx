@@ -49,13 +49,13 @@ const ServiceItemUpdateModal: React.FC<Props> = ({
     const rentalRes = await rentalService.getMyRentalAreas(1, 100);
     setRentalAreas(rentalRes?.result?.data || []);
     const groupRes = await itemGroupService.getAll();
-    setItemGroups(groupRes?.result || groupRes || []);
+    setItemGroups(groupRes || []);
   };
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-    
+
       const files = (values.images || [])
         .map((f: any) => f.originFileObj || f)
         .filter((f: any) => f instanceof File);

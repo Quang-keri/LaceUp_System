@@ -1,4 +1,4 @@
-import { Table, Space, Button, Tag } from "antd";
+import { Table, Button, Tag } from "antd";
 import type { BookingResponse } from "../../../types/booking";
 import dayjs from "dayjs";
 import { Dropdown } from "antd";
@@ -49,7 +49,6 @@ export default function BookingTable({
   onUpdateStatus,
   onCollectPayment,
   onPrintInvoice,
-  onAddService, // Nhận prop mới
 }: Props) {
   const columns = [
     {
@@ -201,7 +200,7 @@ export default function BookingTable({
             onClick: () => onUpdateStatus(record),
           },
           {
-            type: "divider", 
+            type: "divider",
           },
           {
             key: "payment",

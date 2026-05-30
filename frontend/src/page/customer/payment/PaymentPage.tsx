@@ -17,8 +17,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
 
-  // Thêm state isDeposit
-  const [isDeposit, setIsDeposit] = useState(false); // Mặc định là trả full
+  const [isDeposit, setIsDeposit] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("PAY_OS");
   const [contact, setContact] = useState({
     userName: "",
@@ -32,13 +31,13 @@ export default function PaymentPage() {
       navigate("/");
       return;
     }
-    loadIntent();
+    loadIntent(bookingId);
   }, [bookingId]);
 
-  const loadIntent = async () => {
+  const loadIntent = async (id: string) => {
     try {
       setLoading(true);
-      const data = await bookingService.getBookingIntent(bookingId);
+      const data = await bookingService.getBookingIntent(id);
       setIntent(data);
 
       setContact({

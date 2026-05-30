@@ -1,22 +1,26 @@
-import React from "react";
-import {
-  Pencil,
-  Trash2,
-  Eye,
-  Globe,
-  Users,
-  Lock,
-} from "lucide-react"; // Import thêm icon
+import { Pencil, Trash2, Eye, Globe, Users, Lock } from "lucide-react";
+import type { NewsItem } from "../../../types/news";
 
-export default function NewsCard({ item, onView, onEdit, onDelete }) {
+interface NewsCardProps {
+  item: NewsItem;
+  onView?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+export default function NewsCard({
+  item,
+  onView,
+  onEdit,
+  onDelete,
+}: NewsCardProps) {
   const coverImage =
     item.imageUrl ||
     item.images?.find((img) => img.isCover)?.imageUrl ||
     item.images?.[0]?.imageUrl ||
     "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
- 
-  const getVisibilityConfig = (visibility) => {
+  const getVisibilityConfig = (visibility?: string) => {
     switch (visibility) {
       case "PRIVATE":
         return {
@@ -40,7 +44,7 @@ export default function NewsCard({ item, onView, onEdit, onDelete }) {
     }
   };
 
-  const visConfig = getVisibilityConfig(item.visibility);
+  const visConfig = getVisibilityConfig(item.visibility || "");
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
@@ -62,7 +66,6 @@ export default function NewsCard({ item, onView, onEdit, onDelete }) {
             {new Date(item.createdAt || Date.now()).toLocaleDateString("vi-VN")}
           </span>
           <div className="flex items-center gap-2 mt-1">
-            {/* Hiển thị badge quyền truy cập ở đây */}
             <span
               className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded font-medium ${visConfig.style}`}
             >

@@ -1,7 +1,25 @@
 import { Link } from "react-router-dom";
 import { Calendar, ArrowRight } from "lucide-react";
 
-export default function UserNewsCard({ item }) {
+interface NewsImage {
+  isCover?: boolean;
+  imageUrl?: string;
+}
+
+interface NewsItem {
+  id: string | number;
+  title: string;
+  content: string;
+  createdAt: string | Date | number;
+  imageUrl?: string;
+  images?: NewsImage[];
+}
+
+interface UserNewsCardProps {
+  item: NewsItem;
+}
+
+export default function UserNewsCard({ item }: UserNewsCardProps) {
   const coverImage =
     item.imageUrl ||
     item.images?.find((img) => img.isCover)?.imageUrl ||
@@ -13,7 +31,6 @@ export default function UserNewsCard({ item }) {
       to={`/news/${item.id}`}
       className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
     >
-      {/* Hình ảnh có hiệu ứng zoom nhẹ khi hover */}
       <div className="relative h-56 overflow-hidden bg-gray-100">
         <img
           src={coverImage}
@@ -23,7 +40,6 @@ export default function UserNewsCard({ item }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
 
-      {/* Nội dung */}
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
           <Calendar size={14} className="text-blue-500" />
@@ -38,7 +54,6 @@ export default function UserNewsCard({ item }) {
           {item.content}
         </p>
 
-        {/* Nút Xem chi tiết giả (Chỉ để trang trí vì cả card đã là Link) */}
         <div className="mt-auto flex items-center text-blue-600 font-semibold text-sm">
           Đọc tiếp
           <ArrowRight

@@ -86,7 +86,7 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
 
           if (res.code === 200) {
             message.success("Hủy đặt lịch thành công");
-            setBooking(res.result);
+            setBooking((prev) => prev ? { ...prev, bookingStatus: "CANCELLED" } : null);
             onClose();
           }
         } catch (error: any) {

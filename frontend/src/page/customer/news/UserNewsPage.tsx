@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import newsService from "../../../service/newsService";
-import UserNewsCard from "./UserNewsCard"; // Import file card dành riêng cho user
+import UserNewsCard from "./UserNewsCard";
+import type { NewsItem } from "../../../types/news";
 
 export default function UserNewsPage() {
-  const [news, setNews] = useState([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [keyword, setKeyword] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchNews = async () => {
     setIsLoading(true);
     try {
-  
       const res = await newsService.getAll(0, 10, keyword);
       const list = res.data || res.content || [];
       setNews(list);
@@ -33,7 +33,6 @@ export default function UserNewsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 md:px-8 font-sans">
       <div className="max-w-7xl mx-auto">
-  
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -58,7 +57,6 @@ export default function UserNewsPage() {
           </div>
         </div>
 
-   
         {isLoading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>

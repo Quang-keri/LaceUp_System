@@ -115,6 +115,10 @@ class RentalService {
     formData.append("cityId", request.cityId ? request.cityId.toString() : "");
     formData.append("status", request.status);
 
+    if (request.facebookLink) {
+      formData.append("facebookLink", request.facebookLink);
+    }
+
     if (images && images.length > 0) {
       images.forEach((image) => {
         formData.append("images", image);

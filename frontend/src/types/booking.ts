@@ -10,8 +10,18 @@ export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
 export interface BookingResponse {
   userName: string;
   phoneNumber: string;
-  rentalArea: any;
-  slots: any;
+  rentalArea: {
+    rentalAreaId: string;
+    rentalAreaName: string;
+  };
+  slots: {
+    slotId: string | number;
+    courtCode: string;
+    courtName?: string;
+    startTime: string;
+    endTime: string;
+    price: number;
+  }[];
   bookingId: string;
   rentalAreaId: string;
   rentalAreaName: string;
@@ -31,6 +41,7 @@ export interface BookingResponse {
   remainingAmount?: number;
   isFullyPaid?: boolean;
   extraServiceResponses?: BookingServiceResponse[];
+  paymentMethod?: string;
 }
 
 export interface BookingListResponse {

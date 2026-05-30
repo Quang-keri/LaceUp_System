@@ -1,5 +1,10 @@
-export type TransactionType = "INCOME" | "EXPENSE" | "PAYOUT";
-
+export type TransactionType =
+  | "INCOME"
+  | "EXPENSE"
+  | "PAYOUT"
+  | "COMMISSION"
+  | "REFUND";
+  
 export type PaymentMethod =
   | "BANK_TRANSFER"
   | "CASH"

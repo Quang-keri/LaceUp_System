@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Form, Input, Button, Upload, Card, Row, Col } from "antd";
 import {
   UploadOutlined,

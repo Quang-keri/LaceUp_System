@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import {
   Form,
   Input,
@@ -25,7 +25,6 @@ export default function Step4CourtCopy({ next, prev }: any) {
   const { formData, updateFormData } = useRentalForm();
   const [form] = Form.useForm();
 
-  // Đồng bộ dữ liệu khi render hoặc quay lại từ step 4
   useEffect(() => {
     form.setFieldsValue({ courts: formData.courts });
   }, [formData.courts, form]);

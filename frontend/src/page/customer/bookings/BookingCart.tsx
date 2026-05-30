@@ -21,7 +21,7 @@ export default function BookingCart({
         <p className="text-gray-500">Chưa có sân trong giỏ</p>
       )}
 
-      {cart.map((item, index) => (
+      {cart.map((item: any, index: number) => (
         <div key={index} className="border-b py-3">
           <p className="font-medium">{item.court.courtName}</p>
 

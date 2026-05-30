@@ -23,7 +23,7 @@ const BookingHistoryPage: React.FC = () => {
     null,
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<BookingStatus | undefined>();
+  const [statusFilter] = useState<BookingStatus | undefined>();
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -74,10 +74,10 @@ const BookingHistoryPage: React.FC = () => {
     setDrawerOpen(true);
   };
 
-  const handleStatusFilterChange = (status?: BookingStatus) => {
-    setStatusFilter(status);
-    fetchBookings(1, pagination.pageSize, status);
-  };
+  // const handleStatusFilterChange = (status?: BookingStatus) => {
+  //   setStatusFilter(status);
+  //   fetchBookings(1, pagination.pageSize, status);
+  // };
 
   const statusColorMap: Record<string, string> = {
     BOOKED: "blue",

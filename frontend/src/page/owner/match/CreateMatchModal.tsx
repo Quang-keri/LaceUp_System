@@ -124,7 +124,7 @@ const CreateMatchModal: React.FC<Props> = ({
     }
   }, [selectedCourtId, courts, form]);
 
-  const getDisabledTime = (date: Dayjs | null, type: "start" | "end") => {
+  const getDisabledTime = (_date: Dayjs | null, type: "start" | "end") => {
     if (!selectedCourtId) return {};
     const court = courts.find((c) => c.courtId === selectedCourtId);
     if (!court || !court.openTime || !court.closeTime) return {};

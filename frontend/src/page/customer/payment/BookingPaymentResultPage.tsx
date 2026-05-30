@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Spin, Result, Tag } from "antd";
+import { Button, Card, Spin, Result, Tag } from "antd";
 import {
   CheckCircleFilled,
   CloseCircleFilled,

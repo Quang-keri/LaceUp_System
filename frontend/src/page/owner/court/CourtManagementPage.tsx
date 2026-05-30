@@ -66,9 +66,7 @@ export default function CourtManagementPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCourt, setEditingCourt] = useState<CourtResponse | null>(null);
   const [priceModalOpen, setPriceModalOpen] = useState(false);
-  const [selectedCourt, setSelectedCourt] = useState<CourtResponse | null>(
-    null,
-  );
+  const [selectedCourt] = useState<CourtResponse | null>(null);
 
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [editingCopy, setEditingCopy] = useState<CourtCopyResponse | null>(
@@ -78,10 +76,8 @@ export default function CourtManagementPage() {
     useState<string>("");
 
   const [bookingDetailOpen, setBookingDetailOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<SlotResponse | undefined>();
-  const [selectedCopy, setSelectedCopy] = useState<
-    CourtCopyResponse | undefined
-  >();
+  const [selectedSlot] = useState<SlotResponse | undefined>();
+  const [selectedCopy] = useState<CourtCopyResponse | undefined>();
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedCourtForDetail, setSelectedCourtForDetail] =
@@ -143,27 +139,26 @@ export default function CourtManagementPage() {
     }
   };
 
-  const handleDeleteCourt = async (id: string) => {
-    try {
-      await courtService.deleteCourt(id);
-      message.success("Xóa sân thành công");
-      if (selectedBranchId) loadCourts(selectedBranchId);
-    } catch {
-      message.error("Xóa sân thất bại");
-    }
-  };
+  // const handleDeleteCourt = async (id: string) => {
+  //   try {
+  //     await courtService.deleteCourt(id);
+  //     message.success("Xóa sân thành công");
+  //     if (selectedBranchId) loadCourts(selectedBranchId);
+  //   } catch {
+  //     message.error("Xóa sân thất bại");
+  //   }
+  // };
 
-  const handleDeleteCopy = async (copyId: string) => {
-    try {
-      await courtService.deleteCourtCopy(copyId);
-      message.success("Xóa sân con thành công");
-      if (selectedBranchId) loadCourts(selectedBranchId);
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || "Xóa sân con thất bại");
-    }
-  };
+  // const handleDeleteCopy = async (copyId: string) => {
+  //   try {
+  //     await courtService.deleteCourtCopy(copyId);
+  //     message.success("Xóa sân con thành công");
+  //     if (selectedBranchId) loadCourts(selectedBranchId);
+  //   } catch (err: any) {
+  //     message.error(err?.response?.data?.message || "Xóa sân con thất bại");
+  //   }
+  // };
 
-  // Lọc sân
   const filteredCourts = useMemo(() => {
     return courts.filter((court) => {
       const matchSearch = court.courtName

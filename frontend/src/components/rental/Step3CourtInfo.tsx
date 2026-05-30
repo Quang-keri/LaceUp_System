@@ -3,7 +3,7 @@ import { Form, Input, Button, Card, Space, Select, Switch, Upload } from "antd";
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { CategoryContext } from "../../context/CategoryContext";
 import { useRentalForm } from "../../context/RentalFormContext";
-import amenityService from "../../service/amenityService";
+import amenityService, { type AmenityResponse } from "../../service/amenityService";
 
 export default function Step3CourtInfo({
   next,
@@ -18,7 +18,7 @@ export default function Step3CourtInfo({
     useContext(CategoryContext);
 
   const [form] = Form.useForm();
-  const [amenities, setAmenities] = useState([]);
+  const [amenities, setAmenities] = useState<AmenityResponse[]>([]);
 
   useEffect(() => {
     form.setFieldsValue({ courts: formData.courts });

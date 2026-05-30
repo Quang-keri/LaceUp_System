@@ -1,15 +1,4 @@
-export interface NewsImage {
-  imageUrl: string;
-  isCover?: boolean;
-}
-
-export interface NewsItem {
-  id: number | string;
-  title: string;
-  visibility?: string;
-  createdAt: string;
-  images?: NewsImage[];
-}
+import type { NewsItem } from "../../../types/news";
 
 interface NewsTableProps {
   data: NewsItem[];

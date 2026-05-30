@@ -4,29 +4,18 @@ import NewsCard from "./NewsCard";
 import NewsFilter from "./NewsFilter";
 import newsService from "../../../service/newsService";
 
-// Import đúng 2 file Modal riêng biệt
 import CreateNewsModal from "./CreateNewsModal";
 import UpdateNewsModal from "./UpdateNewsModal";
 
-export interface NewsImage {
-  imageUrl: string;
-}
+import type { NewsItem } from "../../../types/news";
 
-export interface NewsItem {
-  id: number | string;
-  title: string;
-  content: string;
-  createdAt: string;
-  images?: NewsImage[];
-}
 
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [keyword, setKeyword] = useState("");
   const [pagination, setPagination] = useState({ page: 0, size: 10, total: 0 });
 
-  // Quản lý trạng thái các Modal
-  const [viewingNews, setViewingNews] = useState<NewsItem | null>(null); // Dành cho Xem chi tiết
+  const [viewingNews, setViewingNews] = useState<NewsItem | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
@@ -62,7 +51,6 @@ export default function NewsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 font-sans">
-      {/* Header */}
       <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Quản lý tin tức</h1>
@@ -72,7 +60,7 @@ export default function NewsPage() {
         </div>
 
         <button
-          onClick={() => setIsCreateOpen(true)} // Mở Modal Create
+          onClick={() => setIsCreateOpen(true)} 
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-sm transition-colors font-medium text-sm"
         >
           <Plus size={18} />
@@ -80,10 +68,8 @@ export default function NewsPage() {
         </button>
       </div>
 
-      {/* Filter */}
       <NewsFilter onSearch={(kw) => setKeyword(kw)} />
 
-      {/* Grid Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
         {news.length === 0 ? (
           <div className="col-span-full py-10 text-center text-gray-500 text-base">
@@ -96,7 +82,6 @@ export default function NewsPage() {
               item={item}
               onView={() => setViewingNews(item)}
               onEdit={async () => {
-                // Lấy chi tiết từ BE để đảm bảo có đầy đủ trường images
                 try {
                   const detail = await newsService.getById(item.id);
                   setSelectedNews(detail);
@@ -112,14 +97,12 @@ export default function NewsPage() {
         )}
       </div>
 
-      {/* Modal Thêm Mới */}
       <CreateNewsModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={fetchNews}
       />
 
-      {/* Modal Cập Nhật */}
       <UpdateNewsModal
         isOpen={isUpdateOpen}
         initialData={selectedNews}
@@ -148,7 +131,6 @@ export default function NewsPage() {
                 {new Date(viewingNews.createdAt).toLocaleDateString("vi-VN")}
               </p>
 
-              {/* Hiển thị ảnh nếu có */}
               {viewingNews.images && viewingNews.images.length > 0 && (
                 <div className="mb-6 flex gap-2 overflow-x-auto">
                   {viewingNews.images.map((img, idx) => (

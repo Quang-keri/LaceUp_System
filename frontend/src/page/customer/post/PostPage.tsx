@@ -34,7 +34,7 @@ export default function PostPage() {
 
   const { filters, setFilters } = useUrlFilters({ page: 1, size: 10 });
 
-  const [titleDraft, setTitleDraft] = useState(filters.title || "");
+  const [titleDraft] = useState(filters.title || "");
   const debouncedTitle = useDebounce(titleDraft, 500);
 
   const fetchPosts = async (currentFilters: FilterState) => {

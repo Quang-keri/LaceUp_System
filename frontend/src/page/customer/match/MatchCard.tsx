@@ -1,23 +1,6 @@
 import React from "react";
-import {
-  Card,
-  Tag,
-  Typography,
-  Tooltip,
-  Button,
-  Space,
-  Progress,
-  message,
-} from "antd";
-import {
-  Calendar,
-  Clock,
-  Users,
-  Trophy,
-  Flame,
-  Smile,
-  MessageCircle,
-} from "lucide-react";
+import { Card, Tag, Typography, Button, Space, Progress, message } from "antd";
+import { Calendar, Clock, Users, Trophy, Flame, Smile } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { MatchResponse } from "../../../types/match.ts";
 import matchService from "../../../service/match/matchService.ts";
@@ -60,27 +43,27 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const isValidPrice = (price: any) =>
     price != null && price !== "" && !isNaN(Number(price));
 
-  const handleChatClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const hostUser = match.participants?.find(
-      (p: any) => p.userName === match.hostName,
-    );
-    const hostId = (match as any).hostId || hostUser?.userId;
+  // const handleChatClick = (e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   const hostUser = match.participants?.find(
+  //     (p: any) => p.userName === match.hostName,
+  //   );
+  //   const hostId = (match as any).hostId || hostUser?.userId;
 
-    if (!hostId) {
-      message.error("Không tìm thấy thông tin chủ phòng để chat");
-      return;
-    }
-    if (hostId === user?.userId) {
-      message.info("Bạn đang là chủ phòng của trận đấu này.");
-      return;
-    }
-    window.dispatchEvent(
-      new CustomEvent("OPEN_CHAT_WITH_USER", {
-        detail: { userId: hostId, userName: match.hostName || "Chủ phòng" },
-      }),
-    );
-  };
+  //   if (!hostId) {
+  //     message.error("Không tìm thấy thông tin chủ phòng để chat");
+  //     return;
+  //   }
+  //   if (hostId === user?.userId) {
+  //     message.info("Bạn đang là chủ phòng của trận đấu này.");
+  //     return;
+  //   }
+  //   window.dispatchEvent(
+  //     new CustomEvent("OPEN_CHAT_WITH_USER", {
+  //       detail: { userId: hostId, userName: match.hostName || "Chủ phòng" },
+  //     }),
+  //   );
+  // };
 
   const handleJoinMatch = async (e: React.MouseEvent, matchId: string) => {
     e.stopPropagation();

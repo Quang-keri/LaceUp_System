@@ -54,7 +54,7 @@ export default function BuildingEditModal({
   }, [open, buildingId, user]);
 
   const getOwnerName = () => {
-    return user?.userName || user?.fullName || "";
+    return user?.userName || "";
   };
 
   const getOwnerPhone = () => {
@@ -92,8 +92,8 @@ export default function BuildingEditModal({
 
       if (!data) return;
 
-      const apiCityId = data.address?.city?.cityId || data.city?.cityId;
-      const apiCityName = data.address?.city?.cityName || data.city?.cityName;
+      const apiCityId = data.address?.city?.cityId;
+      const apiCityName = data.address?.city?.cityName;
 
       let correctCityCode = apiCityId;
       if (apiCityName && loadedProvinces.length > 0) {
@@ -110,8 +110,8 @@ export default function BuildingEditModal({
       form.setFieldsValue({
         rentalAreaName: data.rentalAreaName,
         cityId: correctCityCode,
-        street: data.address?.street || data.street,
-        ward: data.address?.ward || data.ward,
+        street: data.address?.street,
+        ward: data.address?.ward,
         contactName: getOwnerName() || data.contactName,
         contactPhone: getOwnerPhone() || data.contactPhone,
         gmailLink: getOwnerEmail() || data.gmailLink,
@@ -160,6 +160,10 @@ export default function BuildingEditModal({
       const updateData: UpdateRentalAreaRequest = {
         rentalAreaName: values.rentalAreaName,
         address: {
+          city: {
+            cityId: values.cityId,
+            cityName: provinces.find((p) => p.code === values.cityId)?.name || "",
+          },
           street: values.street,
           ward: values.ward,
         },

@@ -3,14 +3,7 @@ import { Form, Input, Upload, Modal, Button, message, Select } from "antd";
 import type { UploadFile } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import newsService from "../../../service/newsService";
-
-export interface NewsItem {
-  id: number | string;
-  title: string;
-  content: string;
-  visibility?: string;
-  images?: Array<{ id?: number; imageId?: number; imageUrl: string }>;
-}
+import type { NewsItem } from "../../../types/news";
 
 interface UpdateNewsModalProps {
   isOpen: boolean;
@@ -39,15 +32,14 @@ export default function UpdateNewsModal({
 
       if (initialData.images && initialData.images.length > 0) {
         const existingImages = initialData.images.map((img) => {
-          // Lấy đúng ID (đề phòng API trả về 'imageId' thay vì 'id')
           const imageId = img.id || img.imageId;
 
           return {
-            uid: String(imageId), // BẮT BUỘC ép kiểu về String
+            uid: String(imageId),
             name: `image-${imageId}.png`,
-            status: "done" as const, // BẮT BUỘC là 'done' thì AntD mới hiện ảnh
+            status: "done" as const, 
             url: img.imageUrl,
-            thumbUrl: img.imageUrl, // THÊM thumbUrl để hỗ trợ preview cho picture-card
+            thumbUrl: img.imageUrl,
           };
         });
         setFileList(existingImages);

@@ -42,7 +42,6 @@ const ServiceItemViewModal: React.FC<ServiceItemViewModalProps> = ({
           {record.quantity}
         </Descriptions.Item>
         <Descriptions.Item label="Tòa nhà">
-        
           <Text copyable>{record.rentalAreaId}</Text>
         </Descriptions.Item>
         <Descriptions.Item label="Giá bán">
@@ -55,15 +54,17 @@ const ServiceItemViewModal: React.FC<ServiceItemViewModalProps> = ({
             {record.priceOriginal?.toLocaleString()} VND
           </Text>
         </Descriptions.Item>
-          <Descriptions.Item label="Nhà cung cấp" span={2}>
-          {record.manufacturer || <Text type="secondary">Không có thông tin</Text>}
+        <Descriptions.Item label="Nhà cung cấp" span={2}>
+          {record.manufacturer || (
+            <Text type="secondary">Không có thông tin</Text>
+          )}
         </Descriptions.Item>
         <Descriptions.Item label="Ghi chú" span={2}>
           {record.serviceNote || <Text type="secondary">Không có ghi chú</Text>}
         </Descriptions.Item>
       </Descriptions>
 
-      <Divider orientation="left">Hình ảnh Dịch vụ</Divider>
+      <Divider orientation={"left" as any}>Hình ảnh Dịch vụ</Divider>
       {record.images && record.images.length > 0 ? (
         <Image.PreviewGroup>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>

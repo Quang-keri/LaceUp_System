@@ -123,8 +123,8 @@ export default function AdminRentalAreaEditModal({
         rentalAreaName: data.rentalAreaName,
 
         cityId: correctProvinceCode,
-        ward: data.address?.ward || data.ward,
-        street: data.address?.street || data.street,
+        ward: data.address?.ward,
+        street: data.address?.street,
         status: data.status,
         contactName: data.contactName,
         contactPhone: data.contactPhone,
@@ -179,6 +179,10 @@ export default function AdminRentalAreaEditModal({
           rentalAreaName: values.rentalAreaName,
           cityId: values.cityId,
           address: {
+            city: {
+              cityId: values.cityId,
+              cityName: provinces.find((p) => p.code === values.cityId)?.name || "",
+            },
             street: values.street,
             ward: values.ward,
           },

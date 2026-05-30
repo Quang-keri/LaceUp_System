@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import gsap from "gsap";
 import SportsBookingLanding from "./SportsBookingLanding"; // File landing page cũ
 
@@ -9,14 +9,13 @@ export default function LandingPage() {
 
   const handleStart = () => {
     const tl = gsap.timeline({
-      onComplete: () => setIsStarted(true), // Sau khi biến mất thì xóa hẳn Welcome Page
+      onComplete: () => setIsStarted(true),
     });
 
-    // Hiệu ứng chuyển cảnh "ngầu"
     tl.to(".welcome-text", { y: -50, opacity: 0, duration: 0.5 })
       .to(".start-btn", { scale: 0, opacity: 0, duration: 0.3 }, "-=0.3")
       .to(welcomeRef.current, {
-        clipPath: "circle(0% at 50% 50%)", // Hiệu ứng thu nhỏ vòng tròn
+        clipPath: "circle(0% at 50% 50%)",
         duration: 1,
         ease: "expo.inOut",
       });
@@ -24,7 +23,6 @@ export default function LandingPage() {
 
   return (
     <div className="relative overflow-hidden">
-      
       {!isStarted && (
         <div
           ref={welcomeRef}

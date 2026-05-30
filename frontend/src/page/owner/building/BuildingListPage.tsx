@@ -114,8 +114,8 @@ export default function BuildingListPage() {
         building.contactName?.toLowerCase().includes(keyword) ||
         building.contactPhone?.toLowerCase().includes(keyword);
 
-      const matchStatus =
-        filterStatus === "ALL" ? true : building.status === filterStatus;
+      // const matchStatus =
+      //   filterStatus === "ALL" ? true : building.status === filterStatus;
 
       return matchSearch;
     });

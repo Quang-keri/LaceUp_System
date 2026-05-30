@@ -1,23 +1,20 @@
+import type { AddressResponse } from "./address";
 import type { CourtResponse } from "./court";
 
 export const RentalAreaStatus = {
   ACTIVE: "ACTIVE",
   INACTIVE: "INACTIVE",
   REJECTED: "REJECTED",
+  SUSPENDED: "SUSPENDED",
 } as const;
 
 export type RentalAreaStatus =
   (typeof RentalAreaStatus)[keyof typeof RentalAreaStatus];
 
-export interface Address {
-  street: string;
-  ward: string;
-}
-
 export interface RentalAreaResponse {
   rentalAreaId: string;
   rentalAreaName: string;
-  address: Address;
+  address: AddressResponse;
   contactName: string;
   contactPhone: string;
   status: RentalAreaStatus;
@@ -32,12 +29,16 @@ export interface RentalAreaResponse {
   isActive?: boolean;
   latitude?: number;
   longitude?: number;
+  gmailLink?: string;
+  gmail?: string;
+  facebookLink?: string;
+  images?: ImageResponse[];
 }
 
 export interface CreateRentalAreaRequest {
   userId?: string;
   rentalAreaName: string;
-  address: Address;
+  address: AddressResponse;
   cityId: number;
   contactName: string;
   contactPhone: string;
@@ -48,7 +49,7 @@ export interface CreateRentalAreaRequest {
 
 export interface UpdateRentalAreaRequest {
   rentalAreaName?: string;
-  address?: Address;
+  address?: AddressResponse;
   contactName?: string;
   contactPhone?: string;
   cityId?: number;
@@ -56,6 +57,7 @@ export interface UpdateRentalAreaRequest {
   closeTime?: string;
   isActive?: boolean;
   status: RentalAreaStatus;
+  facebookLink?: string;
 }
 
 export interface RentalAreaListResponse {
@@ -64,4 +66,9 @@ export interface RentalAreaListResponse {
   size: number;
   totalElements: number;
   totalPages: number;
+}
+
+export interface ImageResponse {
+  imageUrl: string;
+  isCover?: boolean;
 }

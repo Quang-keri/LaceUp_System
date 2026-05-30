@@ -40,9 +40,9 @@ const AreaMapGoong = () => {
   const markersRef = useRef<any[]>([]);
   const navigate = useNavigate();
 
-  const [lng, setLng] = useState(106.65421);
-  const [lat, setLat] = useState(10.80155);
-  const [zoom, setZoom] = useState(13);
+  const [lng] = useState(106.65421);
+  const [lat] = useState(10.80155);
+  const [zoom] = useState(13);
 
   const [activeFilter, setActiveFilter] = useState("Tất cả");
   const [allAreas, setAllAreas] = useState<RentalAreaMap[]>([]);
@@ -214,7 +214,7 @@ const AreaMapGoong = () => {
     }
   };
 
-  const handleSelectLocation = async (value: string, option: any) => {
+  const handleSelectLocation = async (_value: string, option: any) => {
     try {
       const res = await fetch(
         `https://rsapi.goong.io/Place/Detail?api_key=${GOONG_API_KEY}&place_id=${option.place_id}`,

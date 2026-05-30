@@ -71,7 +71,7 @@ const TransactionManager: React.FC = () => {
       const res = await rentalService.getMyRentalAreas(1, 100);
 
       const rentals =
-        res.result?.data || res.result?.content || res.result || [];
+        res.result?.data|| res.result || [];
 
       setRentalAreas(rentals);
 

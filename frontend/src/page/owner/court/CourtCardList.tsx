@@ -12,7 +12,6 @@ import {
 import {
   EditOutlined,
   SettingOutlined,
-  EyeOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { CourtResponse } from "../../../types/court";
@@ -32,9 +31,7 @@ export default function CourtCardList({
   loading,
   onEdit,
   onManage,
-  onView,
   onDelete,
-  onUpdatePrice,
 }: Props) {
   const navigate = useNavigate();
 
@@ -124,7 +121,7 @@ export default function CourtCardList({
               </Button>
               <div style={{ display: "flex", gap: 8 }}>
                 <Button
-                  flex={1}
+                  style={{ flex: 1 }}
                   icon={<EditOutlined />}
                   type="primary"
                   onClick={() => onEdit(court)}
