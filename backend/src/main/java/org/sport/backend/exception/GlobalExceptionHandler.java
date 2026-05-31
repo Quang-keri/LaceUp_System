@@ -18,7 +18,6 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 1. Xử lý lỗi nghiệp vụ định nghĩa trước (AppException)
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ApiResponse<?>> handleAppException(AppException e) {
         ErrorCode errorCode = e.getErrorCode();
