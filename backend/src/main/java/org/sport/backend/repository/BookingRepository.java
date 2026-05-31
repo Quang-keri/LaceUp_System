@@ -11,6 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -67,5 +69,43 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay,
             @Param("rentalAreaId") UUID rentalAreaId
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(b.totalPrice), 0)
+        FROM Booking b
+        WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+          AND DATE(b.startTime) = :settlementDate
+          AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+    """)
+    BigDecimal sumTotalAmountOfCompletedBookings(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("settlementDate") LocalDate settlementDate
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(b.totalPrice), 0)
+        FROM Booking b
+        WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+          AND b.startTime >= :startDate AND b.startTime < :endDate
+          AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+    """)
+    BigDecimal sumTotalAmountOfCompletedBookingsMonthly(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT COUNT(b)
+        FROM Booking b
+        WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+          AND b.startTime >= :startDate AND b.startTime < :endDate
+          AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+    """)
+    Long countCompletedBookingsMonthly(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
     );
 }

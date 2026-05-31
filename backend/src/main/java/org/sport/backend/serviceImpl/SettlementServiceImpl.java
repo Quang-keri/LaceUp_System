@@ -32,6 +32,7 @@ public class SettlementServiceImpl implements SettlementService {
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final SlotRepository slotRepository;
+    private final BookingRepository bookingRepository;
 
     private final CommissionConfigService commissionService;
 
@@ -40,15 +41,15 @@ public class SettlementServiceImpl implements SettlementService {
         LocalDateTime startDate = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime endDate = startDate.plusMonths(1);
 
-        List<UUID> activeRentalAreaIds =
-                paymentRepository.findRentalAreasWithSuccessfulPayments(startDate, endDate);
+        List<UUID> activeRentalAreaIds = rentalAreaRepository.findAll().stream()
+                .map(RentalArea::getRentalAreaId)
+                .filter(id -> bookingRepository.sumTotalAmountOfCompletedBookingsMonthly(id, startDate, endDate).compareTo(BigDecimal.ZERO) > 0)
+                .toList();
 
         List<MonthlySettlementDTO> result = new ArrayList<>();
-
         for (UUID rentalAreaId : activeRentalAreaIds) {
             result.add(calculateSettlementForRentalArea(rentalAreaId, month, year));
         }
-
         return result;
     }
 
@@ -57,22 +58,20 @@ public class SettlementServiceImpl implements SettlementService {
         LocalDateTime startDate = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime endDate = startDate.plusMonths(1);
 
-        BigDecimal totalRevenue = paymentRepository.sumRevenueByRentalAreaAndDate(
-                rentalAreaId,
-                startDate,
-                endDate
-        );
-
-        if (totalRevenue == null) {
-            totalRevenue = BigDecimal.ZERO;
+        // 1. Tính tổng giá trị 100% của toàn bộ đơn hoàn thành trong tháng để làm căn cứ tính hoa hồng
+        BigDecimal totalBookingAmount = bookingRepository.sumTotalAmountOfCompletedBookingsMonthly(rentalAreaId, startDate, endDate);
+        if (totalBookingAmount == null) {
+            totalBookingAmount = BigDecimal.ZERO;
         }
 
-        Long totalBookings = paymentRepository.countBookingsByRentalAreaAndDate(
-                rentalAreaId,
-                startDate,
-                endDate
-        );
+        // 2. Tính tổng số tiền online thực tế hệ thống Admin đang cầm giữ trong tháng
+        BigDecimal adminCollectedAmount = transactionRepository.sumAdminCollectedForCompletedBookingsMonthly(rentalAreaId, startDate, endDate);
+        if (adminCollectedAmount == null) {
+            adminCollectedAmount = BigDecimal.ZERO;
+        }
 
+        // 3. Đếm số lượng đơn hoàn thành để tính bậc thang rate hoa hồng
+        Long totalBookings = bookingRepository.countCompletedBookingsMonthly(rentalAreaId, startDate, endDate);
         if (totalBookings == null) {
             totalBookings = 0L;
         }
@@ -82,11 +81,13 @@ public class SettlementServiceImpl implements SettlementService {
                 totalBookings.intValue()
         );
 
-        BigDecimal commissionAmount = totalRevenue
+        // Hoa hồng tính trên 100% giá trị đơn gốc
+        BigDecimal commissionAmount = totalBookingAmount
                 .multiply(rate)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal payoutAmount = totalRevenue
+        // Tiền thanh toán cuối cùng chuyển cho Owner từ ví Admin
+        BigDecimal payoutAmount = adminCollectedAmount
                 .subtract(commissionAmount)
                 .setScale(2, RoundingMode.HALF_UP);
 
@@ -99,7 +100,7 @@ public class SettlementServiceImpl implements SettlementService {
                 .month(month)
                 .year(year)
                 .totalBookingsPaid(totalBookings)
-                .totalRevenue(totalRevenue)
+                .totalRevenue(adminCollectedAmount)
                 .commissionRate(rate)
                 .commissionAmount(commissionAmount)
                 .payoutToOwner(payoutAmount)
@@ -114,29 +115,28 @@ public class SettlementServiceImpl implements SettlementService {
         for (RentalArea rentalArea : rentalAreas) {
             UUID rentalAreaId = rentalArea.getRentalAreaId();
 
-            BigDecimal bookingAmount = slotRepository.sumCommissionableSlotPrice(
-                    rentalAreaId,
-                    date
-            );
+            // 1. Lấy 100% giá trị gốc của toàn bộ Booking đã hoàn thành (Ví dụ: Đơn 100k)
+            BigDecimal totalBookingAmount = bookingRepository.sumTotalAmountOfCompletedBookings(rentalAreaId, date);
 
-            BigDecimal adminCollectedAmount = transactionRepository.sumAdminCollectedBookingIncome(
-                    rentalAreaId,
-                    date
-            );
+            // 2. Lấy số tiền cọc/thanh toán online mà Admin thực giữ của các đơn hoàn thành đó (Ví dụ: 50k cọc)
+            BigDecimal adminCollectedAmount = transactionRepository.sumAdminCollectedForCompletedBookings(rentalAreaId, date);
 
-            if (bookingAmount == null) bookingAmount = BigDecimal.ZERO;
-            if (adminCollectedAmount == null) adminCollectedAmount = BigDecimal.ZERO;
+            totalBookingAmount = (totalBookingAmount == null) ? BigDecimal.ZERO : totalBookingAmount;
+            adminCollectedAmount = (adminCollectedAmount == null) ? BigDecimal.ZERO : adminCollectedAmount;
 
-            if (adminCollectedAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            // Nếu ngày hôm đó không có đơn nào hoàn thành và không phát sinh dòng tiền online thì bỏ qua
+            if (totalBookingAmount.compareTo(BigDecimal.ZERO) <= 0 && adminCollectedAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
 
             BigDecimal commissionRate = commissionService.getApplicableRate(rentalAreaId);
 
-            BigDecimal commissionAmount = bookingAmount
+            // 3. Tính hoa hồng dựa trên 100% giá trị đơn gốc: 100k * 10% = 10k
+            BigDecimal commissionAmount = totalBookingAmount
                     .multiply(commissionRate)
                     .setScale(2, RoundingMode.HALF_UP);
 
+            // 4. Tiền trả Owner = Tiền Admin giữ - Hoa hồng hệ thống: 50k - 10k = 40k
             BigDecimal ownerAmount = adminCollectedAmount
                     .subtract(commissionAmount)
                     .setScale(2, RoundingMode.HALF_UP);
@@ -156,6 +156,7 @@ public class SettlementServiceImpl implements SettlementService {
                     continue;
                 }
 
+                // Gán grossAmount bằng adminCollectedAmount để khớp với số hiển thị "Tổng doanh thu" (tiền thực xử lý qua ví Admin) trên UI đối soát
                 settlement.setGrossAmount(adminCollectedAmount);
                 settlement.setCommissionRate(commissionRate);
                 settlement.setCommissionAmount(commissionAmount);

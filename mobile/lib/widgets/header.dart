@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/views/profile/profile_screen.dart';
 
-
 class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   const CustomHeader({super.key});
 

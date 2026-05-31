@@ -40,18 +40,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     );
 
     @Query("""
-    SELECT COALESCE(SUM(t.amount), 0)
-    FROM Transaction t
-    WHERE t.rentalArea.rentalAreaId = :rentalAreaId
-    AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
-    AND t.type = org.sport.backend.constant.TransactionType.INCOME
-    AND t.category IN (
-        org.sport.backend.constant.TransactionCategory.BOOKING_DEPOSIT,
-        org.sport.backend.constant.TransactionCategory.BOOKING_FULL_PAYMENT,
-        org.sport.backend.constant.TransactionCategory.BOOKING_REMAINING_PAYMENT
-    )
-    AND DATE(t.booking.startTime) = :settlementDate
-""")
+                SELECT COALESCE(SUM(b.totalPrice), 0)
+                FROM Booking b
+                WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+                AND DATE(b.startTime) = :settlementDate
+                AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED 
+            """)
     BigDecimal sumCommissionableBookingIncome(
             @Param("rentalAreaId") UUID rentalAreaId,
             @Param("settlementDate") LocalDate settlementDate
@@ -61,18 +55,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                 SELECT COALESCE(SUM(t.amount), 0)
                 FROM Transaction t
                 WHERE t.rentalArea.rentalAreaId = :rentalAreaId
+                AND DATE(t.booking.startTime) = :settlementDate
+                AND t.booking.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
                 AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
                 AND t.type = org.sport.backend.constant.TransactionType.INCOME
                 AND t.paymentMethod IN (
-                            org.sport.backend.constant.PaymentMethod.VN_PAY,
-                            org.sport.backend.constant.PaymentMethod.PAY_OS
-                        )
-                AND t.category IN (
-                    org.sport.backend.constant.TransactionCategory.BOOKING_DEPOSIT,
-                    org.sport.backend.constant.TransactionCategory.BOOKING_FULL_PAYMENT,
-                    org.sport.backend.constant.TransactionCategory.BOOKING_REMAINING_PAYMENT
+                    org.sport.backend.constant.PaymentMethod.VN_PAY,
+                    org.sport.backend.constant.PaymentMethod.PAY_OS
                 )
-                AND DATE(t.booking.startTime) = :settlementDate
             """)
     BigDecimal sumAdminCollectedBookingIncome(
             @Param("rentalAreaId") UUID rentalAreaId,
@@ -80,20 +70,57 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     );
 
     @Query("""
-    SELECT COALESCE(SUM(t.amount), 0)
-    FROM Transaction t
-    WHERE t.status = 'SUCCESS'
-      AND t.type = 'INCOME'
-      AND t.transactionDate BETWEEN :startDate AND :endDate
-      AND (
-            :ownerId IS NULL
-            OR t.owner.userId = :ownerId
-      )
-""")
+                SELECT COALESCE(SUM(t.amount), 0)
+                FROM Transaction t
+                WHERE t.status = 'SUCCESS'
+                  AND t.type = 'INCOME'
+                  AND t.transactionDate BETWEEN :startDate AND :endDate
+                  AND (
+                        :ownerId IS NULL
+                        OR t.owner.userId = :ownerId
+                  )
+            """)
     BigDecimal getTotalIncomeRevenue(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("ownerId") UUID ownerId
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0)
+        FROM Transaction t
+        WHERE t.rentalArea.rentalAreaId = :rentalAreaId
+          AND DATE(t.booking.startTime) = :settlementDate
+          AND t.booking.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+          AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
+          AND t.type = org.sport.backend.constant.TransactionType.INCOME
+          AND t.paymentMethod IN (
+              org.sport.backend.constant.PaymentMethod.VN_PAY,
+              org.sport.backend.constant.PaymentMethod.PAY_OS
+          )
+    """)
+    BigDecimal sumAdminCollectedForCompletedBookings(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("settlementDate") LocalDate settlementDate
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0)
+        FROM Transaction t
+        WHERE t.rentalArea.rentalAreaId = :rentalAreaId
+          AND t.booking.startTime >= :startDate AND t.booking.startTime < :endDate
+          AND t.booking.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+          AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
+          AND t.type = org.sport.backend.constant.TransactionType.INCOME
+          AND t.paymentMethod IN (
+              org.sport.backend.constant.PaymentMethod.VN_PAY,
+              org.sport.backend.constant.PaymentMethod.PAY_OS
+          )
+    """)
+    BigDecimal sumAdminCollectedForCompletedBookingsMonthly(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
     );
 
 }

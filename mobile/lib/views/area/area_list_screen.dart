@@ -22,7 +22,6 @@ class AreaListScreen extends StatefulWidget {
 class _AreaListScreenState extends State<AreaListScreen> {
   final TextEditingController searchController = TextEditingController();
 
-
   List<PostResponse> posts = [];
   bool loading = true;
   String? error;
