@@ -43,7 +43,7 @@ const SettlementManagement: React.FC = () => {
       ]);
 
       setData(settlements || []);
-      setSummary(summaryData);
+      setSummary(summaryData || {});
     } catch (error: any) {
       message.error(error.response?.data?.message || "Lỗi khi tải đối soát");
     } finally {
@@ -100,6 +100,7 @@ const SettlementManagement: React.FC = () => {
       title: "Tòa nhà",
       dataIndex: "rentalAreaName",
       key: "rentalAreaName",
+      fixed: "left" as const,
       render: (text: string, record: any) => (
         <div>
           <strong>{text}</strong>
@@ -116,10 +117,24 @@ const SettlementManagement: React.FC = () => {
       render: (val: string) => dayjs(val).format("DD/MM/YYYY"),
     },
     {
-      title: "Tổng thu",
-      dataIndex: "grossAmount",
-      key: "grossAmount",
+      title: "Doanh thu booking",
+      dataIndex: "bookingRevenue",
+      key: "bookingRevenue",
+      render: (val: number) => <strong>{formatMoney(val)}</strong>,
+    },
+    {
+      title: "User trả lần đầu",
+      dataIndex: "initialPaidAmount",
+      key: "initialPaidAmount",
       render: formatMoney,
+    },
+    {
+      title: "Dịch vụ tại sân",
+      dataIndex: "extraServiceAmount",
+      key: "extraServiceAmount",
+      render: (val: number) => (
+        <span style={{ color: "#8c8c8c" }}>{formatMoney(val)}</span>
+      ),
     },
     {
       title: "Hoa hồng admin",
@@ -159,6 +174,7 @@ const SettlementManagement: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
+      fixed: "right" as const,
       render: (_: any, record: any) => (
         <Button
           type="primary"
@@ -197,16 +213,35 @@ const SettlementManagement: React.FC = () => {
         </div>
       </div>
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} md={8} xl={4}>
           <Card>
             <Statistic
-              title="Tổng doanh thu"
-              value={formatMoney(summary?.totalGrossAmount)}
+              title="Doanh thu booking"
+              value={formatMoney(summary?.totalBookingRevenue)}
             />
           </Card>
         </Col>
-        <Col span={6}>
+
+        <Col xs={24} md={8} xl={4}>
+          <Card>
+            <Statistic
+              title="User trả lần đầu"
+              value={formatMoney(summary?.totalInitialPaidAmount)}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} md={8} xl={4}>
+          <Card>
+            <Statistic
+              title="Dịch vụ tại sân"
+              value={formatMoney(summary?.totalExtraServiceAmount)}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} md={8} xl={4}>
           <Card>
             <Statistic
               title="Hoa hồng admin"
@@ -214,15 +249,17 @@ const SettlementManagement: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={6}>
+
+        <Col xs={24} md={8} xl={4}>
           <Card>
             <Statistic
-              title="Tổng cần trả owner"
+              title="Cần trả owner"
               value={formatMoney(summary?.totalOwnerAmount)}
             />
           </Card>
         </Col>
-        <Col span={6}>
+
+        <Col xs={24} md={8} xl={4}>
           <Card>
             <Statistic
               title="Còn pending"
@@ -238,6 +275,7 @@ const SettlementManagement: React.FC = () => {
         rowKey="settlementId"
         loading={loading}
         pagination={{ pageSize: 10 }}
+        scroll={{ x: 1500 }}
       />
 
       <Modal

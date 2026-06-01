@@ -58,19 +58,16 @@ public class SettlementServiceImpl implements SettlementService {
         LocalDateTime startDate = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime endDate = startDate.plusMonths(1);
 
-        // 1. Tính tổng giá trị 100% của toàn bộ đơn hoàn thành trong tháng để làm căn cứ tính hoa hồng
         BigDecimal totalBookingAmount = bookingRepository.sumTotalAmountOfCompletedBookingsMonthly(rentalAreaId, startDate, endDate);
         if (totalBookingAmount == null) {
             totalBookingAmount = BigDecimal.ZERO;
         }
 
-        // 2. Tính tổng số tiền online thực tế hệ thống Admin đang cầm giữ trong tháng
         BigDecimal adminCollectedAmount = transactionRepository.sumAdminCollectedForCompletedBookingsMonthly(rentalAreaId, startDate, endDate);
         if (adminCollectedAmount == null) {
             adminCollectedAmount = BigDecimal.ZERO;
         }
 
-        // 3. Đếm số lượng đơn hoàn thành để tính bậc thang rate hoa hồng
         Long totalBookings = bookingRepository.countCompletedBookingsMonthly(rentalAreaId, startDate, endDate);
         if (totalBookings == null) {
             totalBookings = 0L;
@@ -81,12 +78,10 @@ public class SettlementServiceImpl implements SettlementService {
                 totalBookings.intValue()
         );
 
-        // Hoa hồng tính trên 100% giá trị đơn gốc
         BigDecimal commissionAmount = totalBookingAmount
                 .multiply(rate)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // Tiền thanh toán cuối cùng chuyển cho Owner từ ví Admin
         BigDecimal payoutAmount = adminCollectedAmount
                 .subtract(commissionAmount)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -115,29 +110,38 @@ public class SettlementServiceImpl implements SettlementService {
         for (RentalArea rentalArea : rentalAreas) {
             UUID rentalAreaId = rentalArea.getRentalAreaId();
 
-            // 1. Lấy 100% giá trị gốc của toàn bộ Booking đã hoàn thành (Ví dụ: Đơn 100k)
-            BigDecimal totalBookingAmount = bookingRepository.sumTotalAmountOfCompletedBookings(rentalAreaId, date);
 
-            // 2. Lấy số tiền cọc/thanh toán online mà Admin thực giữ của các đơn hoàn thành đó (Ví dụ: 50k cọc)
-            BigDecimal adminCollectedAmount = transactionRepository.sumAdminCollectedForCompletedBookings(rentalAreaId, date);
+            BigDecimal bookingRevenue =
+                    bookingRepository.sumSlotRevenueOfCompletedBookings(rentalAreaId, date);
 
-            totalBookingAmount = (totalBookingAmount == null) ? BigDecimal.ZERO : totalBookingAmount;
-            adminCollectedAmount = (adminCollectedAmount == null) ? BigDecimal.ZERO : adminCollectedAmount;
+            BigDecimal initialPaidAmount =
+                    bookingRepository.sumInitialPaidAmountOfCompletedBookings(rentalAreaId, date);
 
-            // Nếu ngày hôm đó không có đơn nào hoàn thành và không phát sinh dòng tiền online thì bỏ qua
-            if (totalBookingAmount.compareTo(BigDecimal.ZERO) <= 0 && adminCollectedAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            BigDecimal totalBookingPrice =
+                    bookingRepository.sumTotalPriceOfCompletedBookings(rentalAreaId, date);
+
+            bookingRevenue = bookingRevenue == null ? BigDecimal.ZERO : bookingRevenue;
+            initialPaidAmount = initialPaidAmount == null ? BigDecimal.ZERO : initialPaidAmount;
+            totalBookingPrice = totalBookingPrice == null ? BigDecimal.ZERO : totalBookingPrice;
+
+            BigDecimal extraServiceAmount = totalBookingPrice
+                    .subtract(bookingRevenue)
+                    .max(BigDecimal.ZERO);
+
+            if (bookingRevenue.compareTo(BigDecimal.ZERO) <= 0
+                    && initialPaidAmount.compareTo(BigDecimal.ZERO) <= 0
+                    && extraServiceAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
 
             BigDecimal commissionRate = commissionService.getApplicableRate(rentalAreaId);
 
-            // 3. Tính hoa hồng dựa trên 100% giá trị đơn gốc: 100k * 10% = 10k
-            BigDecimal commissionAmount = totalBookingAmount
+            BigDecimal commissionAmount = bookingRevenue
                     .multiply(commissionRate)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            // 4. Tiền trả Owner = Tiền Admin giữ - Hoa hồng hệ thống: 50k - 10k = 40k
-            BigDecimal ownerAmount = adminCollectedAmount
+
+            BigDecimal ownerAmount = bookingRevenue
                     .subtract(commissionAmount)
                     .setScale(2, RoundingMode.HALF_UP);
 
@@ -156,17 +160,29 @@ public class SettlementServiceImpl implements SettlementService {
                     continue;
                 }
 
-                // Gán grossAmount bằng adminCollectedAmount để khớp với số hiển thị "Tổng doanh thu" (tiền thực xử lý qua ví Admin) trên UI đối soát
-                settlement.setGrossAmount(adminCollectedAmount);
+                settlement.setBookingRevenue(bookingRevenue);
+                settlement.setInitialPaidAmount(initialPaidAmount);
+                settlement.setExtraServiceAmount(extraServiceAmount);
+
+
+                settlement.setGrossAmount(initialPaidAmount);
+
                 settlement.setCommissionRate(commissionRate);
                 settlement.setCommissionAmount(commissionAmount);
                 settlement.setOwnerAmount(ownerAmount);
                 settlement.setStatus(SettlementStatus.PENDING);
+
             } else {
                 settlement = Settlement.builder()
                         .rentalArea(rentalArea)
                         .settlementDate(date)
-                        .grossAmount(adminCollectedAmount)
+
+                        .bookingRevenue(bookingRevenue)
+                        .initialPaidAmount(initialPaidAmount)
+                        .extraServiceAmount(extraServiceAmount)
+
+                        .grossAmount(initialPaidAmount)
+
                         .commissionRate(commissionRate)
                         .commissionAmount(commissionAmount)
                         .ownerAmount(ownerAmount)
@@ -190,31 +206,41 @@ public class SettlementServiceImpl implements SettlementService {
     public AdminSettlementSummaryResponse getSummaryByDate(LocalDate date) {
         List<Settlement> settlements = settlementRepository.findBySettlementDate(date);
 
-        BigDecimal totalGrossAmount = settlements.stream()
-                .map(Settlement::getGrossAmount)
+        BigDecimal totalBookingRevenue = settlements.stream()
+                .map(s -> s.getBookingRevenue() == null ? BigDecimal.ZERO : s.getBookingRevenue())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalInitialPaidAmount = settlements.stream()
+                .map(s -> s.getInitialPaidAmount() == null ? BigDecimal.ZERO : s.getInitialPaidAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalExtraServiceAmount = settlements.stream()
+                .map(s -> s.getExtraServiceAmount() == null ? BigDecimal.ZERO : s.getExtraServiceAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalCommissionAmount = settlements.stream()
-                .map(Settlement::getCommissionAmount)
+                .map(s -> s.getCommissionAmount() == null ? BigDecimal.ZERO : s.getCommissionAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalOwnerAmount = settlements.stream()
-                .map(Settlement::getOwnerAmount)
+                .map(s -> s.getOwnerAmount() == null ? BigDecimal.ZERO : s.getOwnerAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalPaidAmount = settlements.stream()
                 .filter(s -> s.getStatus() == SettlementStatus.PAID)
-                .map(Settlement::getOwnerAmount)
+                .map(s -> s.getOwnerAmount() == null ? BigDecimal.ZERO : s.getOwnerAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalPendingAmount = settlements.stream()
                 .filter(s -> s.getStatus() == SettlementStatus.PENDING)
-                .map(Settlement::getOwnerAmount)
+                .map(s -> s.getOwnerAmount() == null ? BigDecimal.ZERO : s.getOwnerAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return AdminSettlementSummaryResponse.builder()
                 .date(date)
-                .totalGrossAmount(totalGrossAmount)
+                .totalBookingRevenue(totalBookingRevenue)
+                .totalInitialPaidAmount(totalInitialPaidAmount)
+                .totalExtraServiceAmount(totalExtraServiceAmount)
                 .totalCommissionAmount(totalCommissionAmount)
                 .totalOwnerAmount(totalOwnerAmount)
                 .totalPaidAmount(totalPaidAmount)

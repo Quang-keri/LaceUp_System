@@ -159,6 +159,12 @@ class RentalService {
     );
     return response.data;
   }
+  async getRentalAreaSchedule(rentalAreaId: string, date: string) {
+    const res = await api.get(`/rental-areas/${rentalAreaId}/schedule`, {
+      params: { date },
+    });
+    return res.data;
+  }
 }
 
 export default new RentalService();

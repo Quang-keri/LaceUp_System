@@ -11,15 +11,18 @@ import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.rental.RentalAreaOptionResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.rental.RentalAreaScheduleResponse;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.service.RentalAreaService;
 import org.sport.backend.service.ServiceItemService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -181,5 +184,15 @@ public class RentalAreaController {
             return ApiResponse.success(500, "Delete rental failed", e.getMessage());
         }
     }
-
+    @GetMapping("/{id}/schedule")
+    public ApiResponse<RentalAreaScheduleResponse> getRentalAreaSchedule(
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        return ApiResponse.<RentalAreaScheduleResponse>builder()
+                .code(200)
+                .message("Get rental area schedule successfully")
+                .result(rentalAreaService.getRentalAreaSchedule(id, date))
+                .build();
+    }
 }

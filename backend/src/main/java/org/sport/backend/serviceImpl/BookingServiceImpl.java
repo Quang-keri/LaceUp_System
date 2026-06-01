@@ -455,8 +455,28 @@ public class BookingServiceImpl implements BookingService {
                 CourtCopy copy = courtCopyRepository.findById(slotReq.getCourtCopyId())
                         .orElseThrow(() -> new RuntimeException("Không tìm thấy sân"));
 
-                selectedCopies.add(copy);
+                if (copy.getCourtCopyStatus() != CourtCopyStatus.ACTIVE) {
+                    throw new RuntimeException("Sân con này hiện đang ngừng kinh doanh");
+                }
 
+                if (copy.getCourt().getCourtStatus() != CourtStatus.ACTIVE) {
+                    throw new RuntimeException("Sân này hiện đang ngừng kinh doanh");
+                }
+                if(copy.getCourt().getRentalArea().getStatus() != RentalAreaStatus.ACTIVE){
+                    throw new RuntimeException("Tòa nhà này hiện đang ngừng kinh doanh");
+                }
+
+                List<Slot> conflicts = slotRepository.findConflictSlot(
+                        copy.getCourtCopyId(),
+                        slotReq.getStartTime(),
+                        slotReq.getEndTime()
+                );
+
+                if (!conflicts.isEmpty()) {
+                    throw new RuntimeException("Sân đã có lịch trong khung giờ này");
+                }
+
+                selectedCopies.add(copy);
             } else if (slotReq.getCourtId() != null) {
 
                 int quantity = slotReq.getQuantity() == null ? 1 : slotReq.getQuantity();

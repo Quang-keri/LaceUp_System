@@ -1,6 +1,6 @@
 package org.sport.backend.serviceImpl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -9,8 +9,7 @@ import org.sport.backend.constant.BookingIntentStatus;
 import org.sport.backend.constant.PaymentMethod;
 import org.sport.backend.constant.PaymentStatus;
 import org.sport.backend.constant.PaymentType;
-// import org.sport.backend.constant.WalletStatus; // Tạm comment
-// import org.sport.backend.entity.Wallet; // Tạm comment
+
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
@@ -25,7 +24,7 @@ import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.BookingIntentRepository;
 import org.sport.backend.repository.BookingRepository;
 import org.sport.backend.repository.PaymentRepository;
-// import org.sport.backend.repository.WalletRepository; // Tạm comment
+
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.PaymentService;
 import org.sport.backend.service.UserService;
@@ -40,14 +39,12 @@ import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
 import vn.payos.model.v2.paymentRequests.PaymentLinkItem;
 import vn.payos.model.webhooks.WebhookData;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Slf4j

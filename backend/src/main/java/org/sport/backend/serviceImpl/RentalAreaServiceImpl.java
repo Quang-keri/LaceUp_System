@@ -14,14 +14,13 @@ import org.sport.backend.dto.response.court.CourtImageResponse;
 import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.court.CourtSummaryResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;
+import org.sport.backend.dto.response.courtCopy.CourtCopyScheduleResponse;
 import org.sport.backend.dto.response.court_price.CourtPriceResponse;
 import org.sport.backend.dto.response.legal.LegalImageResponse;
 import org.sport.backend.dto.response.legal.LegalProfileResponse;
-import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
-import org.sport.backend.dto.response.rental.RentalAreaImageResponse;
-import org.sport.backend.dto.response.rental.RentalAreaOptionResponse;
-import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.rental.*;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
+import org.sport.backend.dto.response.slot.SlotScheduleResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
@@ -46,6 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -67,7 +67,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     private final ServiceItemRepository serviceItemRepository;
     private final LegalProfileRepository legalProfileRepository;
     private final BankAccountRepository bankAccountRepository;
-
+   private final SlotRepository slotRepository;
     private final UserService userService;
     private final GoongGeocodingService goongGeocodingService;
 
@@ -728,5 +728,60 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         rentalAreaRepository.save(rentalArea);
 
         // Gửi Email thông báo lý do từ chối cho chủ sân Phát triển sau
+    }
+
+    @Override
+    public RentalAreaScheduleResponse getRentalAreaSchedule(UUID rentalAreaId, LocalDate date) {
+        RentalArea rentalArea = rentalAreaRepository.findById(rentalAreaId)
+                .orElseThrow(() -> new AppException(ErrorCode.RENTAL_AREA_NOT_FOUND));
+
+        List<Court> courts = courtRepository.findByRentalArea(rentalArea);
+
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
+
+        List<Slot> slots = slotRepository.findScheduleByRentalAreaAndDate(
+                rentalAreaId,
+                startOfDay,
+                endOfDay
+        );
+
+        Map<UUID, List<Slot>> slotMap = slots.stream()
+                .filter(slot -> slot.getCourtCopy() != null)
+                .collect(Collectors.groupingBy(slot -> slot.getCourtCopy().getCourtCopyId()));
+
+        List<CourtCopyScheduleResponse> copyResponses = courts.stream()
+                .flatMap(court -> court.getCourtCopies().stream()
+                        .map(copy -> CourtCopyScheduleResponse.builder()
+                                .courtId(court.getCourtId())
+                                .courtName(court.getCourtName())
+                                .courtCopyId(copy.getCourtCopyId())
+                                .courtCode(copy.getCourtCode())
+                                .status(copy.getCourtCopyStatus())
+                                .slots(
+                                        slotMap.getOrDefault(copy.getCourtCopyId(), List.of())
+                                                .stream()
+                                                .map(slot -> SlotScheduleResponse.builder()
+                                                        .slotId(slot.getSlotId())
+                                                        .courtCopyId(copy.getCourtCopyId())
+                                                        .courtCode(copy.getCourtCode())
+                                                        .startTime(slot.getStartTime())
+                                                        .endTime(slot.getEndTime())
+                                                        .price(slot.getPrice())
+                                                        .slotStatus(slot.getSlotStatus())
+                                                        .build()
+                                                )
+                                                .toList()
+                                )
+                                .build()
+                        )
+                )
+                .toList();
+
+        return RentalAreaScheduleResponse.builder()
+                .rentalAreaId(rentalAreaId)
+                .date(date)
+                .courtCopies(copyResponses)
+                .build();
     }
 }

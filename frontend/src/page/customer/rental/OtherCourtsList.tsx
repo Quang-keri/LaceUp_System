@@ -57,7 +57,9 @@ export default function OtherCourtsList({
                 {court.courtName}
               </h4>
               <span className="text-xs text-gray-500 bg-gray-100 w-fit px-2 py-1 rounded-md mt-1 mb-2">
-                {court.categoryName || "Sân thể thao"}
+                {court.category?.categoryName ||
+                  court.categoryName ||
+                  "Sân thể thao"}
               </span>
               <p className="text-[#3B82F6] font-semibold text-sm">
                 {(court.minPrice || court.price || 0).toLocaleString()} đ{" "}

@@ -11,6 +11,8 @@ export default function BookingMatchTabs({
   selectedDate,
   selectedTime,
   selectedDuration,
+  selectedSlots = [],
+  priceRules = [], // 1. Nhận thêm priceRules từ props
 }: {
   court: any;
   data: any;
@@ -18,6 +20,8 @@ export default function BookingMatchTabs({
   selectedDate?: dayjs.Dayjs;
   selectedTime?: string | null;
   selectedDuration?: number;
+  selectedSlots?: any[];
+  priceRules?: any[]; // 2. Định nghĩa kiểu dữ liệu cho priceRules
 }) {
   const [activeTab, setActiveTab] = useState("booking");
 
@@ -42,11 +46,9 @@ export default function BookingMatchTabs({
               children: (
                 <div className="px-6 pb-6">
                   <CourtBookingPanel
-                    court={court}
+                    selectedSlots={selectedSlots}
+                    priceRules={priceRules}
                     onBook={onBook}
-                    selectedDate={selectedDate}
-                    selectedTime={selectedTime}
-                    selectedDuration={selectedDuration}
                   />
                 </div>
               ),
@@ -68,6 +70,7 @@ export default function BookingMatchTabs({
                       address={data?.address}
                       selectedDate={selectedDate}
                       selectedTime={selectedTime}
+                      selectedDuration={selectedDuration}
                     />
                   </ConfigProvider>
                 </div>

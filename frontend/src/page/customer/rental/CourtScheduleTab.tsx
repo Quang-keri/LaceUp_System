@@ -6,7 +6,24 @@ export default function CourtScheduleTab({
   setActiveCourt,
   setSelectedTime,
   setSelectedDuration,
+  selectedSlots,
+  setSelectedSlots,
 }: any) {
+  const courtCopyRows = (data.courts || []).flatMap((court: any) =>
+  (court.courtCopies || []).map((copy: any) => ({
+    ...copy,
+    courtId: court.courtId,
+    courtName: court.courtName,
+    categoryName: court.category?.categoryName || court.categoryName,
+    minPrice: court.minPrice,
+    maxPrice: court.maxPrice,
+    priceRules: court.priceRules || [],
+    coverImage: court.coverImage,
+    images: court.images || [],
+    slots: copy.slots || [],
+  }))
+);
+
   return (
     <div className="animate-in fade-in duration-300">
       <div className="bg-white p-3.5 border-b border-purple-100 flex flex-col gap-3">
@@ -34,21 +51,22 @@ export default function CourtScheduleTab({
         </div>
 
         <div className="bg-orange-50 text-[#ea580c] px-3 py-2.5 rounded-lg text-xs italic border border-orange-100">
-          <span className="font-semibold">* Lưu ý:</span> Nếu bạn cần đặt lịch
-          cố định, vui lòng nhắn tin trực tiếp cho chủ sân.
+          <span className="font-semibold">* Lưu ý:</span>Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây. <br />
           <br />
-          Hệ thống chúng tôi không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.
+          Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.
         </div>
       </div>
 
       <div className="bg-white w-full">
         <CourtScheduleTimeline
-          courts={data.courts}
+          courts={courtCopyRows}
           selectedDate={selectedDate}
           openTime={data.openTime}
           closeTime={data.closeTime}
-          onSelectSlot={(court: any, time: string, duration: number) => {
-            setActiveCourt(court);
+          selectedSlots={selectedSlots}
+          setSelectedSlots={setSelectedSlots}
+          onSelectSlot={(courtCopy: any, time: string, duration: number) => {
+            setActiveCourt(courtCopy);
             setSelectedTime(time);
             if (setSelectedDuration) setSelectedDuration(duration);
           }}
