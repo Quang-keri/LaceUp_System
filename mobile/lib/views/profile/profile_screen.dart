@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import 'package:mobile/providers/auth_provider.dart';
-import 'package:mobile/views/login/register_screen.dart';
-import 'package:mobile/views/profile/profile_edit_screen.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 
-import '../login/login_screen.dart';
+import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/views/main_screen.dart';
+import 'package:mobile/views/login/register_screen.dart';
+import 'package:mobile/views/login/login_screen.dart';
+import 'package:mobile/views/profile/profile_edit_screen.dart';
+import 'package:mobile/views/profile/achievement/achievement_screen.dart';
+import 'package:mobile/views/profile/achievement/achievement_showcase_screen.dart';
+import '../../widgets/main_navigation.dart';
 import '../match/in_profile_page/my_match_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -23,73 +26,86 @@ class ProfileScreen extends StatelessWidget {
     final isLoggedIn = authProvider.isLoggedIn;
     final currentUser = authProvider.user;
 
-    final activityItems = isLoggedIn
-        ? [
-            ProfileMenuItemData(
-              title: 'Trận đấu của tôi',
-              icon: Icons.groups_outlined,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MyMatchScreen()),
-                );
-              },
+    final activityItems = [
+      ProfileMenuItemData(
+        title: 'Trận đấu của tôi',
+        icon: Icons.groups_outlined,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MyMatchScreen()),
+          );
+        },
+      ),
+      ProfileMenuItemData(
+        title: 'Lịch sử đặt lịch',
+        icon: Icons.history,
+        onTap: () {},
+      ),
+      ProfileMenuItemData(
+        title: 'Xếp hạng của tôi',
+        icon: Icons.workspace_premium_outlined,
+        onTap: () {},
+      ),
+      ProfileMenuItemData(
+        title: 'Tủ kính thành tựu',
+        icon: Icons.emoji_events,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AchievementShowcaseScreen(),
             ),
-            ProfileMenuItemData(
-              title: 'Lịch sử đặt lịch',
-              icon: Icons.history,
-              onTap: () {},
-            ),
-            ProfileMenuItemData(
-              title: 'Xếp hạng của tôi',
-              icon: Icons.workspace_premium_outlined,
-              onTap: () {},
-            ),
-            ProfileMenuItemData(
-              title: 'Gói hội viên',
-              icon: Icons.card_membership,
-              onTap: () {},
-            ),
-          ]
-        : <ProfileMenuItemData>[];
+          );
+        },
+      ),
+      ProfileMenuItemData(
+        title: 'Gói hội viên',
+        icon: Icons.card_membership,
+        onTap: () {},
+      ),
+    ];
 
-    final systemItems = isLoggedIn
-        ? [
-            ProfileMenuItemData(
-              title: 'Cài đặt',
-              icon: Icons.settings_outlined,
-              onTap: () {},
-            ),
-            ProfileMenuItemData(
-              title: 'Thông tin cá nhân',
-              icon: Icons.info_outline,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileEditPage()),
-                );
-              },
-            ),
-            ProfileMenuItemData(
-              title: 'Điều khoản và chính sách',
-              icon: Icons.verified_user_outlined,
-              onTap: () {},
-            ),
-            ProfileMenuItemData(
-              title: 'Đăng xuất',
-              icon: Icons.logout,
-              onTap: () async {
-                await authProvider.logout();
+    final systemItems = [
+      ProfileMenuItemData(
+        title: 'Cài đặt',
+        icon: Icons.settings_outlined,
+        onTap: () {},
+      ),
+      ProfileMenuItemData(
+        title: 'Thông tin cá nhân',
+        icon: Icons.info_outline,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfileEditPage()),
+          );
+        },
+      ),
+      ProfileMenuItemData(
+        title: 'Điều khoản và chính sách',
+        icon: Icons.verified_user_outlined,
+        onTap: () {},
+      ),
+      ProfileMenuItemData(
+        title: 'Đăng xuất',
+        icon: Icons.logout,
+        onTap: () async {
+          await authProvider.logout();
 
-                if (!context.mounted) return;
-                showTopSnackBar(
-                  Overlay.of(context),
-                  const CustomSnackBar.success(message: "Đăng xuất thành công"),
-                );
-              },
-            ),
-          ]
-        : <ProfileMenuItemData>[];
+          if (!context.mounted) return;
+          showTopSnackBar(
+            Overlay.of(context),
+            const CustomSnackBar.success(message: "Đăng xuất thành công"),
+          );
+
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const MainNavigation()),
+            (route) => false,
+          );
+        },
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: ProfileScreen.bgColor,

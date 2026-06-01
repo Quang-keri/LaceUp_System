@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/court.dart';
+import '../../../models/court.dart';
 
 class PaymentScreen extends StatefulWidget {
   final CourtResponse court;

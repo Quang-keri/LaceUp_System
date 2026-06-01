@@ -98,7 +98,6 @@ class _MapScreenState extends State<MapScreen> {
 
     _mapController!.clearCircles();
 
-    // Dùng rentalAreaName để filter thay cho categoryName (vì Model không chứa trực tiếp categoryName)
     List<RentalAreaResponse> filteredAreas = _activeFilter == 'Tất cả'
         ? _allAreas
         : _allAreas

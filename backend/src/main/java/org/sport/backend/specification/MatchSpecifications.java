@@ -39,9 +39,10 @@ public class MatchSpecifications {
             String likeKeyword = "%" + keyword.toLowerCase() + "%";
 
             Join<Object, Object> courtJoin = root.join("court", JoinType.LEFT);
-            Predicate matchCourtName = cb.like(cb.lower(courtJoin.get("courtName")), likeKeyword);
+            Join<Object, Object> rentalAreaJoin = courtJoin.join("rentalArea", JoinType.LEFT);
 
-            Predicate matchStreet = cb.like(cb.lower(root.get("address").get("street")), likeKeyword);
+            Predicate matchCourtName = cb.like(cb.lower(courtJoin.get("courtName")), likeKeyword);
+            Predicate matchStreet = cb.like(cb.lower(rentalAreaJoin.get("address").get("street")), likeKeyword);
 
             return cb.or(matchCourtName, matchStreet);
         };
@@ -50,14 +51,28 @@ public class MatchSpecifications {
     public static Specification<Match> hasCity(String city) {
         return (root, query, cb) -> {
             if (city == null || city.trim().isEmpty()) return null;
-            return cb.like(cb.lower(root.get("address").get("city").get("cityName")), "%" + city.toLowerCase() + "%");
+
+            Join<Object, Object> rentalAreaJoin = root.join("court", JoinType.LEFT)
+                    .join("rentalArea", JoinType.LEFT);
+
+            return cb.like(
+                    cb.lower(rentalAreaJoin.get("address").get("city").get("cityName")),
+                    "%" + city.toLowerCase() + "%"
+            );
         };
     }
 
     public static Specification<Match> hasWard(String ward) {
         return (root, query, cb) -> {
             if (ward == null || ward.trim().isEmpty()) return null;
-            return cb.like(cb.lower(root.get("address").get("ward")), "%" + ward.toLowerCase() + "%");
+
+            Join<Object, Object> rentalAreaJoin = root.join("court", JoinType.LEFT)
+                    .join("rentalArea", JoinType.LEFT);
+
+            return cb.like(
+                    cb.lower(rentalAreaJoin.get("address").get("ward")),
+                    "%" + ward.toLowerCase() + "%"
+            );
         };
     }
 
@@ -65,10 +80,11 @@ public class MatchSpecifications {
         return (root, query, cb) -> {
             assert query != null;
             if (Long.class != query.getResultType()) {
-                root.fetch("court", JoinType.LEFT);
                 root.fetch("category", JoinType.LEFT);
                 root.fetch("host", JoinType.LEFT);
 
+                jakarta.persistence.criteria.Fetch<Object, Object> courtFetch = root.fetch("court", JoinType.LEFT);
+                courtFetch.fetch("rentalArea", JoinType.LEFT);
             }
             return null;
         };
