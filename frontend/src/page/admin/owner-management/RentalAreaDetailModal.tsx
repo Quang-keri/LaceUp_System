@@ -294,7 +294,9 @@ const RentalAreaDetailModal: React.FC<Props> = ({
             >
               {selectedArea.addressString || "Chưa cập nhật"}
             </Descriptions.Item>
-
+            <Descriptions.Item label="Gmail" span={2}>
+              {selectedArea.gmailLink || "Chưa cập nhật"}
+            </Descriptions.Item>
             <Descriptions.Item label="Dịch vụ tại cơ sở" span={2}>
               {selectedArea.serviceItems?.length > 0 ? (
                 <Space wrap size={[0, 8]}>

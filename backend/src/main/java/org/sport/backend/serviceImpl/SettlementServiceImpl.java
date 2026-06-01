@@ -33,7 +33,7 @@ public class SettlementServiceImpl implements SettlementService {
     private final UserRepository userRepository;
     private final SlotRepository slotRepository;
     private final BookingRepository bookingRepository;
-
+    private final BookingServiceItemRepository bookingServiceItemRepository;
     private final CommissionConfigService commissionService;
 
     @Override
@@ -117,16 +117,22 @@ public class SettlementServiceImpl implements SettlementService {
             BigDecimal initialPaidAmount =
                     bookingRepository.sumInitialPaidAmountOfCompletedBookings(rentalAreaId, date);
 
-            BigDecimal totalBookingPrice =
-                    bookingRepository.sumTotalPriceOfCompletedBookings(rentalAreaId, date);
+//            BigDecimal totalBookingPrice =
+//                    bookingRepository.sumTotalPriceOfCompletedBookings(rentalAreaId, date);
 
             bookingRevenue = bookingRevenue == null ? BigDecimal.ZERO : bookingRevenue;
             initialPaidAmount = initialPaidAmount == null ? BigDecimal.ZERO : initialPaidAmount;
-            totalBookingPrice = totalBookingPrice == null ? BigDecimal.ZERO : totalBookingPrice;
+//            totalBookingPrice = totalBookingPrice == null ? BigDecimal.ZERO : totalBookingPrice;
 
-            BigDecimal extraServiceAmount = totalBookingPrice
-                    .subtract(bookingRevenue)
-                    .max(BigDecimal.ZERO);
+            BigDecimal extraServiceAmount =
+                    bookingServiceItemRepository.sumExtraServiceAmountOfCompletedBookings(
+                            rentalAreaId,
+                            date
+                    );
+
+            extraServiceAmount = extraServiceAmount == null
+                    ? BigDecimal.ZERO
+                    : extraServiceAmount;
 
             if (bookingRevenue.compareTo(BigDecimal.ZERO) <= 0
                     && initialPaidAmount.compareTo(BigDecimal.ZERO) <= 0
@@ -141,9 +147,13 @@ public class SettlementServiceImpl implements SettlementService {
                     .setScale(2, RoundingMode.HALF_UP);
 
 
-            BigDecimal ownerAmount = bookingRevenue
+            BigDecimal ownerAmount = initialPaidAmount
                     .subtract(commissionAmount)
                     .setScale(2, RoundingMode.HALF_UP);
+
+            if (ownerAmount.compareTo(BigDecimal.ZERO) < 0) {
+                ownerAmount = BigDecimal.ZERO;
+            }
 
             Optional<Settlement> existingOpt =
                     settlementRepository.findByRentalArea_RentalAreaIdAndSettlementDate(
@@ -296,6 +306,11 @@ public class SettlementServiceImpl implements SettlementService {
                 .rentalAreaId(settlement.getRentalArea().getRentalAreaId())
                 .rentalAreaName(settlement.getRentalArea().getRentalAreaName())
                 .settlementDate(settlement.getSettlementDate())
+
+                .bookingRevenue(settlement.getBookingRevenue())
+                .initialPaidAmount(settlement.getInitialPaidAmount())
+                .extraServiceAmount(settlement.getExtraServiceAmount())
+
                 .grossAmount(settlement.getGrossAmount())
                 .commissionRate(settlement.getCommissionRate())
                 .commissionAmount(settlement.getCommissionAmount())

@@ -12,6 +12,10 @@ export default function CourtBookingPanel({
   priceRules = [],
   onBook,
 }: CourtBookingPanelProps) {
+
+
+   
+
   const timeToMinutes = (timeStr: string) => {
     if (!timeStr) return 0;
 

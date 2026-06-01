@@ -121,13 +121,38 @@ export default function RentalAreaDetailPage() {
       return;
     }
 
+    // Chưa đăng nhập
+    if (!user) {
+      message.warning(
+        "Đăng nhập để có trải nghiệm tốt nhất khi đặt lịch sân",
+        2,
+        () => {
+          navigate("/login");
+        },
+      );
+      return;
+    }
+
+    if (!user.phone || user.phone.trim() === "") {
+      message.warning(
+        "Vui lòng cập nhật số điện thoại trước khi đặt sân",
+        2,
+        () => {
+          navigate("/profile");
+        },
+      );
+      return;
+    }
+
     setCartToSubmit(selectedSlots);
     setOpenModal(true);
   };
 
   const submitBooking = async () => {
     if (!userInfo.userName.trim() || !userInfo.userPhone.trim()) {
-      message.info("Vui lòng nhập tên và số điện thoại liên hệ");
+      message.info(
+        "Vui lòng nhập tên và số điện thoại ,nếu đã đăng nhập thì vui long cập nhật thông tin cá nhân đầy đủ để đặt sân",
+      );
       return;
     }
 

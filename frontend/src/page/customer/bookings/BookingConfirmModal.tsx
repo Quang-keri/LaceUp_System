@@ -4,7 +4,7 @@ import { Modal, Input } from "antd";
 export default function BookingConfirmModal({
   open,
   onClose,
-  cart = [], // Đây là mảng selectedSlots
+  cart = [], 
   userInfo,
   setUserInfo,
   onConfirm,

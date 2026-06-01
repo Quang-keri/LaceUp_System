@@ -1,6 +1,7 @@
 package org.sport.backend.serviceImpl;
 
 import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.PostStatus;
 import org.sport.backend.constant.VerificationStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.RentalAreaStatus;
@@ -75,7 +76,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     private final CategoryMapper categoryMapper;
     private final BankAccountMapper bankAccountMapper;
     private final CourtPriceMapper courtPriceMapper;
-
+   private  final PostRepository postRepository;
     @Override
     public List<RentalAreaOptionResponse> getRentalAreaOptions() {
         return rentalAreaRepository.findAll(
@@ -159,7 +160,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .latitude(lat)
                 .longitude(lng)
                 .facebookLink(request.getFacebookLink())
-                .gmail(request.getGmailLink())
+                .gmail(request.getGmail())
                 .owner(owner)
                 .verificationStatus(VerificationStatus.PENDING)
                 .build();
@@ -713,8 +714,28 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy cơ sở cho thuê"));
 
         rentalArea.setVerificationStatus(VerificationStatus.VERIFIED);
+        rentalArea.setStatus(RentalAreaStatus.ACTIVE);
+        rentalArea.setIsActive(true);
         rentalAreaRepository.save(rentalArea);
 
+        List<Court> courts = courtRepository.findByRentalArea(rentalArea);
+
+        for (Court court : courts) {
+            boolean existed = postRepository.existsByCourt_CourtId(court.getCourtId());
+
+            if (!existed) {
+                Post post = Post.builder()
+                        .title(rentalArea.getRentalAreaName() + " - " + court.getCourtName())
+                        .description("Sân đã được xác thực và sẵn sàng đặt lịch.")
+                        .postStatus(PostStatus.PUBLISHED)
+                        .user(rentalArea.getOwner())
+                        .court(court)
+                        .rentalArea(rentalArea)
+                        .build();
+
+                postRepository.save(post);
+            }
+        }
     }
 
     @Override

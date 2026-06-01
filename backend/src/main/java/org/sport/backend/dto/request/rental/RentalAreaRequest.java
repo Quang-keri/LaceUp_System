@@ -36,6 +36,7 @@ public class RentalAreaRequest {
     private LocalTime openTime;
     private LocalTime closeTime;
     private String facebookLink;
-    private String gmailLink;
+    @NotNull(message = "gmail không bỏ trống")
+    private String gmail;
     private List<MultipartFile> images;
 }
