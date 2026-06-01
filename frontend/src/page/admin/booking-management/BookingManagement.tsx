@@ -115,7 +115,7 @@ const BookingManagement: React.FC = () => {
       dataIndex: "bookingStatus",
       key: "bookingStatus",
       render: (status: BookingStatus) => {
-        const statusConfig = {
+        const statusConfig: Record<string, { color: string; text: string }> = {
           [BookingStatus.BOOKED]: { color: "blue", text: "Đã đặt" },
           [BookingStatus.COMPLETED]: { color: "green", text: "Hoàn thành" },
           [BookingStatus.CANCELLED]: { color: "red", text: "Đã hủy" },

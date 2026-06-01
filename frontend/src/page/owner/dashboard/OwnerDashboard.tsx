@@ -8,10 +8,7 @@ import {
   Select,
   Space,
   Typography,
-  Table,
   Tag,
-  List,
-  Avatar,
   Empty,
 } from "antd";
 import {
@@ -30,13 +27,7 @@ import {
   ComposedChart,
   Line,
 } from "recharts";
-import {
-  TrendingUp,
-  Trophy,
-  Clock,
-  ArrowDownRight,
-  ArrowUpRight,
-} from "lucide-react";
+import { TrendingUp, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import reportService from "../../../service/reportService.ts";
 import type { DashboardData } from "../../../types/dashboard.ts";
 import { useOutletContext } from "react-router-dom";
@@ -50,7 +41,9 @@ const OwnerDashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardData | null>(null);
 
   // State riêng cho Pie Chart
-  const [pieChartType, setPieChartType] = useState<"booking" | "payment">("booking");
+  const [pieChartType, setPieChartType] = useState<"booking" | "payment">(
+    "booking",
+  );
   const [pieRange, setPieRange] = useState("this_month");
   const [pieStats, setPieStats] = useState<DashboardData | null>(null);
 
@@ -65,7 +58,7 @@ const OwnerDashboard: React.FC = () => {
   };
 
   const currentYear = new Date().getFullYear();
-  
+
   const [overviewYear, setOverviewYear] = useState<number>(currentYear);
   const [overviewMonth, setOverviewMonth] = useState<number | null>(null); // null = Cả năm
   const [overviewChartData, setOverviewChartData] = useState<any[]>([]);
@@ -74,7 +67,10 @@ const OwnerDashboard: React.FC = () => {
   useEffect(() => {
     const loadOverviewChart = async () => {
       try {
-        const response = await reportService.getOverviewChartOwner(overviewYear, overviewMonth);
+        const response = await reportService.getOverviewChartOwner(
+          overviewYear,
+          overviewMonth,
+        );
         setOverviewChartData(response.result);
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu biểu đồ tổng quan:", error);
@@ -128,7 +124,7 @@ const OwnerDashboard: React.FC = () => {
 
   const STATUS_COLORS: Record<string, string> = {
     BOOKED: "#18cdff",
-    USING :"blue",
+    USING: "blue",
     COMPLETED: "#722ed1",
     CANCELLED: "#fa8c16",
     PENDING: "#fadb14",
@@ -140,7 +136,7 @@ const OwnerDashboard: React.FC = () => {
     const map: Record<string, string> = {
       BOOKED: "Đã đặt",
       COMPLETED: "Hoàn thành",
-      USING:"Đang dùng",
+      USING: "Đang dùng",
       CANCELLED: "Đã hủy",
       PENDING: "Đang chờ",
       SUCCESS: "Thành công",
@@ -167,67 +163,41 @@ const OwnerDashboard: React.FC = () => {
     value: value as number,
   }));
 
-  const activePieData = pieChartType === "booking" ? bookingChartData : paymentChartData;
-  const totalPieValue = activePieData.reduce((sum, item) => sum + item.value, 0);
+  const activePieData =
+    pieChartType === "booking" ? bookingChartData : paymentChartData;
+  const totalPieValue = activePieData.reduce(
+    (sum, item) => sum + item.value,
+    0,
+  );
 
-  const recentBookingsMock = [
-    {
-      key: "1",
-      id: "#BK001",
-      customer: "Nguyễn Văn A",
-      room: "Sân bóng số 1",
-      status: "COMPLETED",
-      amount: 300000,
-      date: "10 phút trước",
-    },
-    {
-      key: "3",
-      id: "#BK003",
-      customer: "Lê Văn C",
-      room: "Sân bóng số 1",
-      status: "CANCELLED",
-      amount: 300000,
-      date: "3 giờ trước",
-    },
-    {
-      key: "4",
-      id: "#BK004",
-      customer: "Phạm D",
-      room: "Sân bóng số 2",
-      status: "COMPLETED",
-      amount: 500000,
-      date: "Hôm qua",
-    },
-  ];
-
-  const tableColumns = [
-    {
-      title: "Mã Đơn",
-      dataIndex: "id",
-      key: "id",
-      render: (text: string) => <a>{text}</a>,
-    },
-    { title: "Khách hàng", dataIndex: "customer", key: "customer" },
-    { title: "Cơ sở / Sân", dataIndex: "room", key: "room" },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status: string) => (
-        <Tag color={STATUS_COLORS[status] || "default"}>
-          {translate(status).toUpperCase()}
-        </Tag>
-      ),
-    },
-    {
-      title: "Tổng tiền",
-      dataIndex: "amount",
-      key: "amount",
-      render: (amount: number) => (
-        <Text strong>{new Intl.NumberFormat("vi-VN").format(amount)} ₫</Text>
-      ),
-    },
-  ];
+  // const tableColumns = [
+  //   {
+  //     title: "Mã Đơn",
+  //     dataIndex: "id",
+  //     key: "id",
+  //     render: (text: string) => <a>{text}</a>,
+  //   },
+  //   { title: "Khách hàng", dataIndex: "customer", key: "customer" },
+  //   { title: "Cơ sở / Sân", dataIndex: "room", key: "room" },
+  //   {
+  //     title: "Trạng thái",
+  //     dataIndex: "status",
+  //     key: "status",
+  //     render: (status: string) => (
+  //       <Tag color={STATUS_COLORS[status] || "default"}>
+  //         {translate(status).toUpperCase()}
+  //       </Tag>
+  //     ),
+  //   },
+  //   {
+  //     title: "Tổng tiền",
+  //     dataIndex: "amount",
+  //     key: "amount",
+  //     render: (amount: number) => (
+  //       <Text strong>{new Intl.NumberFormat("vi-VN").format(amount)} ₫</Text>
+  //     ),
+  //   },
+  // ];
 
   const customTooltipFormatter = (val: number, name: string) => {
     if (name === "revenue")
@@ -255,7 +225,6 @@ const OwnerDashboard: React.FC = () => {
       </div>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {/* CARD 1: DOANH THU */}
         <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
           <Card bordered={false} style={{ height: "100%" }}>
             <Statistic
@@ -272,14 +241,14 @@ const OwnerDashboard: React.FC = () => {
                 </Tag>
               ) : (
                 <Tag color="error" icon={<ArrowDownRight size={14} />}>
-                  {Math.abs(stats.revenueGrowth || 0).toFixed(1)}% so với tháng trước
+                  {Math.abs(stats.revenueGrowth || 0).toFixed(1)}% so với tháng
+                  trước
                 </Tag>
               )}
             </div>
           </Card>
         </Col>
 
-        {/* CARD 3: TỶ LỆ HỦY */}
         <Col xs={24} sm={12} lg={4} style={{ flex: "1 1 20%" }}>
           <Card bordered={false} style={{ height: "100%" }}>
             <Statistic
@@ -301,11 +270,13 @@ const OwnerDashboard: React.FC = () => {
             <div style={{ marginTop: 8 }}>
               {(stats.cancellationRateGrowth || 0) <= 0 ? (
                 <Tag color="success" icon={<ArrowDownRight size={14} />}>
-                  {Math.abs(stats.cancellationRateGrowth || 0).toFixed(1)}% so với tháng trước
+                  {Math.abs(stats.cancellationRateGrowth || 0).toFixed(1)}% so
+                  với tháng trước
                 </Tag>
               ) : (
                 <Tag color="error" icon={<ArrowUpRight size={14} />}>
-                  {(stats.cancellationRateGrowth || 0).toFixed(1)}% so với tháng trước
+                  {(stats.cancellationRateGrowth || 0).toFixed(1)}% so với tháng
+                  trước
                 </Tag>
               )}
             </div>
@@ -348,9 +319,9 @@ const OwnerDashboard: React.FC = () => {
                   />
 
                   <Tooltip
-  contentStyle={commonTooltipStyle}
-  formatter={customTooltipFormatter as any} 
-/>
+                    contentStyle={commonTooltipStyle}
+                    formatter={customTooltipFormatter as any}
+                  />
                   <Legend
                     verticalAlign="top"
                     height={36}
@@ -418,7 +389,14 @@ const OwnerDashboard: React.FC = () => {
           >
             <div style={{ width: "100%", height: 350 }}>
               {totalPieValue === 0 ? (
-                <div style={{ height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <div
+                  style={{
+                    height: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
                   <Empty description="Thời gian này không có dữ liệu" />
                 </div>
               ) : (
@@ -462,12 +440,15 @@ const OwnerDashboard: React.FC = () => {
 
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={24}>
-          <Card 
-            title={`Phân tích tổng quan ${overviewMonth ? `Tháng ${overviewMonth}/${overviewYear}` : `Năm ${overviewYear}`}`}
+          <Card
+            title={`Phân tích tổng quan ${
+              overviewMonth
+                ? `Tháng ${overviewMonth}/${overviewYear}`
+                : `Năm ${overviewYear}`
+            }`}
             bordered={false}
             extra={
               <Space>
-                
                 <Select
                   value={overviewMonth}
                   style={{ width: 120 }}
@@ -483,11 +464,20 @@ const OwnerDashboard: React.FC = () => {
                 <Select
                   value={overviewYear}
                   style={{ width: 100 }}
-                  onChange={(value) => { setOverviewMonth(null); setOverviewYear(value); }}
+                  onChange={(value) => {
+                    setOverviewMonth(null);
+                    setOverviewYear(value);
+                  }}
                   options={[
                     { label: currentYear.toString(), value: currentYear },
-                    { label: (currentYear - 1).toString(), value: currentYear - 1 },
-                    { label: (currentYear - 2).toString(), value: currentYear - 2 },
+                    {
+                      label: (currentYear - 1).toString(),
+                      value: currentYear - 1,
+                    },
+                    {
+                      label: (currentYear - 2).toString(),
+                      value: currentYear - 2,
+                    },
                   ]}
                 />
               </Space>
@@ -495,7 +485,7 @@ const OwnerDashboard: React.FC = () => {
           >
             <div style={{ width: "100%", height: 350 }}>
               <ResponsiveContainer>
-                <ComposedChart data={overviewChartData}> 
+                <ComposedChart data={overviewChartData}>
                   <defs>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#722ed1" stopOpacity={0.1} />
@@ -507,7 +497,7 @@ const OwnerDashboard: React.FC = () => {
                     vertical={false}
                     stroke={chartGridColor}
                   />
-                  
+
                   <XAxis
                     dataKey="time"
                     axisLine={false}
@@ -567,8 +557,6 @@ const OwnerDashboard: React.FC = () => {
           </Card>
         </Col>
       </Row>
-
-   
     </div>
   );
 };

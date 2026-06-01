@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../config/api_client.dart';
 import '../models/match.dart';
-import '../models/page_response.dart'; // Đảm bảo bạn đã có file PageResponse
+import '../models/page_response.dart';
 
 class MatchService {
   final String _baseUrl = '/matches';
@@ -23,11 +23,15 @@ class MatchService {
     }
   }
 
-  Future<void> divideTeams(String matchId, List<String> team1UserIds, List<String> team2UserIds) async {
-    await apiClient.post('$_baseUrl/$matchId/divide-teams', data: {
-      'team1UserIds': team1UserIds,
-      'team2UserIds': team2UserIds,
-    });
+  Future<void> divideTeams(
+    String matchId,
+    List<String> team1UserIds,
+    List<String> team2UserIds,
+  ) async {
+    await apiClient.post(
+      '$_baseUrl/$matchId/divide-teams',
+      data: {'team1UserIds': team1UserIds, 'team2UserIds': team2UserIds},
+    );
   }
 
   Future<PageResponse<MatchResponse>> getOpenMatches({
@@ -58,7 +62,7 @@ class MatchService {
     final res = await apiClient.get('$_baseUrl/open', queryParameters: params);
     return PageResponse<MatchResponse>.fromJson(
       res.data['result'],
-          (json) => MatchResponse.fromJson(json),
+      (json) => MatchResponse.fromJson(json),
     );
   }
 
@@ -85,7 +89,7 @@ class MatchService {
     final res = await apiClient.get(_baseUrl, queryParameters: params);
     return PageResponse<MatchResponse>.fromJson(
       res.data['result'],
-          (json) => MatchResponse.fromJson(json),
+      (json) => MatchResponse.fromJson(json),
     );
   }
 
@@ -111,34 +115,41 @@ class MatchService {
     final res = await apiClient.get('$_baseUrl/owner', queryParameters: params);
     return PageResponse<MatchResponse>.fromJson(
       res.data['result'],
-          (json) => MatchResponse.fromJson(json),
+      (json) => MatchResponse.fromJson(json),
     );
   }
 
   Future<PageResponse<MatchResponse>> getMyMatches(int page, int size) async {
-    final res = await apiClient.get('$_baseUrl/my-matches', queryParameters: {
-      'page': page,
-      'size': size,
-    });
+    final res = await apiClient.get(
+      '$_baseUrl/my-matches',
+      queryParameters: {'page': page, 'size': size},
+    );
     return PageResponse<MatchResponse>.fromJson(
       res.data['result'],
-          (json) => MatchResponse.fromJson(json),
+      (json) => MatchResponse.fromJson(json),
     );
   }
 
-  Future<PageResponse<MatchResponse>> getUserMatchHistory(String userId, int page, int size) async {
-    final res = await apiClient.get('$_baseUrl/user/$userId/history', queryParameters: {
-      'page': page,
-      'size': size,
-    });
+  Future<PageResponse<MatchResponse>> getUserMatchHistory(
+    String userId,
+    int page,
+    int size,
+  ) async {
+    final res = await apiClient.get(
+      '$_baseUrl/user/$userId/history',
+      queryParameters: {'page': page, 'size': size},
+    );
     return PageResponse<MatchResponse>.fromJson(
       res.data['result'],
-          (json) => MatchResponse.fromJson(json),
+      (json) => MatchResponse.fromJson(json),
     );
   }
 
   Future<void> joinMatchByCode(String roomCode) async {
-    await apiClient.post('$_baseUrl/join/code', queryParameters: {'roomCode': roomCode});
+    await apiClient.post(
+      '$_baseUrl/join/code',
+      queryParameters: {'roomCode': roomCode},
+    );
   }
 
   Future<MatchResponse> autoMatch({
@@ -163,11 +174,14 @@ class MatchService {
     required int winningTeamNumber,
     required List<String> absentUserIds,
   }) async {
-    final res = await apiClient.post('/match-results/submit', data: {
-      'matchId': matchId,
-      'winningTeamNumber': winningTeamNumber,
-      'absentUserIds': absentUserIds,
-    });
+    final res = await apiClient.post(
+      '/match-results/submit',
+      data: {
+        'matchId': matchId,
+        'winningTeamNumber': winningTeamNumber,
+        'absentUserIds': absentUserIds,
+      },
+    );
     return res.data['result'] ?? res.data;
   }
 

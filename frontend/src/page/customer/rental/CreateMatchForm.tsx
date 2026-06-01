@@ -14,6 +14,7 @@ import matchService from "../../../service/match/matchService";
 import { useAuth } from "../../../context/AuthContext";
 import type { MatchRequest } from "../../../types/match";
 import { Info } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const calculateTotalPrice = (
   court: any,
@@ -80,6 +81,8 @@ export default function CreateMatchForm({
 
   const watchStartTime = Form.useWatch("startTime", form);
   const watchDuration = Form.useWatch("duration", form);
+
+  const navigate = useNavigate();
 
   const categoryName = (
     court?.categoryName ||
@@ -192,6 +195,7 @@ export default function CreateMatchForm({
       await matchService.createMatch(payload);
       message.success("Tạo trận đấu thành công!");
       form.resetFields();
+      navigate("/my-matches");
     } catch (error: any) {
       console.error("Lỗi Backend trả về:", error.response?.data);
       message.error(error.response?.data?.message || "Không thể tạo trận đấu.");

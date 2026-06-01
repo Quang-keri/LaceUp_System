@@ -39,18 +39,18 @@ const UserAddModal: React.FC<Props> = ({
     });
   };
 
-  const formatDateInput = (value: string) => {
-    const cleaned = value.replace(/\D/g, ""); // bỏ ký tự không phải số
-    const match = cleaned.match(/^(\d{0,2})(\d{0,2})(\d{0,4})$/);
+  // const formatDateInput = (value: string) => {
+  //   const cleaned = value.replace(/\D/g, ""); // bỏ ký tự không phải số
+  //   const match = cleaned.match(/^(\d{0,2})(\d{0,2})(\d{0,4})$/);
 
-    if (!match) return value;
+  //   if (!match) return value;
 
-    let result = match[1];
-    if (match[2]) result += "/" + match[2];
-    if (match[3]) result += "/" + match[3];
+  //   let result = match[1];
+  //   if (match[2]) result += "/" + match[2];
+  //   if (match[3]) result += "/" + match[3];
 
-    return result;
-  };
+  //   return result;
+  // };
 
   return (
     <Modal

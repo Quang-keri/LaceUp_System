@@ -175,16 +175,15 @@ const AdminTransactionManager: React.FC = () => {
     setSelectedTransaction(tx);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: TransactionRequest) => {
 
     try {
       setIsSubmitting(true);
 
       if (editingId) {
-        await updateTransaction(editingId, formData);
+        await updateTransaction(editingId, values); 
       } else {
-        await createTransaction(formData);
+        await createTransaction(values); 
       }
 
       setIsFormModalOpen(false);
@@ -282,7 +281,7 @@ const AdminTransactionManager: React.FC = () => {
           open={isFormModalOpen}
           editingId={editingId}
           formData={formData}
-          setFormData={setFormData}
+          // setFormData={setFormData}
           isSubmitting={isSubmitting}
           onClose={() => setIsFormModalOpen(false)}
           onSubmit={handleSubmit}

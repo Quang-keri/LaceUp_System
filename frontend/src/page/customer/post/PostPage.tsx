@@ -3,11 +3,11 @@ import PostService from "../../../service/post/postService";
 import type { PostResponse, PageResponse } from "../../../types/post";
 import { useNavigate } from "react-router-dom";
 import CourtCard from "./CourtCard";
-import { Row, Col, Spin, Pagination, Button, Space } from "antd";
+import { Row, Col, Spin, Pagination, Button, Space, Input } from "antd";
 import FilterSidebar from "./FilterSidebar";
 import useUrlFilters from "../../../hooks/useUrlFilters";
 import useDebounce from "../../../hooks/useDebounce";
-import { History as HistoryIcon } from "lucide-react";
+import { History as HistoryIcon, Search as SearchIcon } from "lucide-react";
 
 export interface FilterState {
   title?: string;
@@ -34,6 +34,7 @@ export default function PostPage() {
 
   const { filters, setFilters } = useUrlFilters({ page: 1, size: 10 });
 
+  // Thêm lại state cho ô tìm kiếm tên và dùng debounce
   const [titleDraft, setTitleDraft] = useState(filters.title || "");
   const debouncedTitle = useDebounce(titleDraft, 500);
 
@@ -58,9 +59,10 @@ export default function PostPage() {
     fetchPosts(filters);
   }, [filters]);
 
+  // Cập nhật filters khi người dùng ngừng gõ sau 500ms
   useEffect(() => {
     if (debouncedTitle !== (filters.title || "")) {
-      setFilters({ title: debouncedTitle });
+      setFilters({ title: debouncedTitle, page: 1 }); // Reset về trang 1 khi tìm kiếm
     }
   }, [debouncedTitle]);
 
@@ -79,6 +81,8 @@ export default function PostPage() {
 
       <div className="relative z-10 py-8">
         <div className="w-[90%] mx-auto md:px-4 lg:px-6 xl:px-8">
+          
+          {/* Header & Search/Actions */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 lg:px-6 xl:px-8">
             <div className="flex-1">
               <h1 className="text-3xl font-extrabold text-slate-800 m-0">
@@ -92,7 +96,22 @@ export default function PostPage() {
               </p>
             </div>
 
-            <Space className="w-full md:w-auto mt-4 md:mt-0 justify-end">
+            <Space className="w-full md:w-auto mt-4 md:mt-0 justify-end flex-wrap gap-4">
+              {/* Ô Input tìm kiếm theo tên */}
+              <Input
+                size="large"
+                placeholder="Tìm tên sân..."
+                prefix={<SearchIcon size={18} className="text-gray-400 mr-1" />}
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                allowClear
+                style={{
+                  borderRadius: "12px",
+                  width: "260px",
+                }}
+                className="shadow-sm hover:shadow-md focus-within:shadow-md transition-shadow"
+              />
+
               <Button
                 size="large"
                 icon={<HistoryIcon size={18} />}

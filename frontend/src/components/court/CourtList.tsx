@@ -209,17 +209,20 @@ export default function CourtList({ courts, onAddCourt }: any) {
                   setSelectedCourt(court);
                   form.resetFields();
 
-                  // Lấy rank hiện tại của user, mặc định 0 nếu undefined
-                  const currentRank = user?.rankPoint || 0;
+                  const courtCategoryId =
+                    selectedCourt?.categoryId ||
+                    selectedCourt?.category?.categoryId;
+                  const currentRank =
+                    user?.categoryRanks?.find(
+                      (c) => c.categoryId === courtCategoryId,
+                    )?.rankPoint || 0;
 
-                  // Set giá trị mặc định cho form ngay khi mở Modal
                   form.setFieldsValue({
                     maxPlayers: 4,
                     minPlayersToStart: 2,
                     duration: 1,
                     matchType: "NORMAL",
-                    winnerPercent: 50, // Mặc định chia kèo 50-50
-                    minRank: Math.max(0, currentRank - 1000), // Không để rank âm
+                    minRank: Math.max(0, currentRank - 1000),
                     maxRank: currentRank + 1000,
                   });
 
@@ -246,7 +249,7 @@ export default function CourtList({ courts, onAddCourt }: any) {
       <Modal
         title={
           <div className="text-lg font-bold text-gray-800">
-             Thiết lập kèo ghép khách
+            Thiết lập kèo ghép khách
           </div>
         }
         open={openMatchModal}
@@ -280,13 +283,13 @@ export default function CourtList({ courts, onAddCourt }: any) {
               className="flex w-full"
             >
               <Radio.Button value="NORMAL" className="w-1/3 text-center">
-                 Giao lưu
+                Giao lưu
               </Radio.Button>
               <Radio.Button value="BET" className="w-1/3 text-center">
-                 Chia Kèo
+                Chia Kèo
               </Radio.Button>
               <Radio.Button value="RANKED" className="w-1/3 text-center">
-                 Đánh Rank
+                Đánh Rank
               </Radio.Button>
             </Radio.Group>
           </Form.Item>
@@ -318,12 +321,12 @@ export default function CourtList({ courts, onAddCourt }: any) {
                     >
                       <div className="flex items-center gap-4">
                         <Form.Item name="winnerPercent" noStyle>
-                          <InputNumber
+                          <InputNumber<number>
                             min={0}
-                            max={50} // Nếu muốn cho phép phe thắng trả nhiều hơn 50% thì bạn đổi max={100}
+                            max={50}
                             step={10}
                             formatter={(value) => `${value}%`}
-                            parser={(value) => value!.replace("%", "")}
+                            parser={(value) => Number(value?.replace("%", "")) || 0}
                             className="w-24 font-bold text-yellow-700 text-lg"
                           />
                         </Form.Item>

@@ -1,11 +1,29 @@
 import { useState } from "react";
-import { Form, Input, Upload, Modal, Button, message, Select } from "antd"; // Thêm Select
+import {
+  Form,
+  Input,
+  Upload,
+  Modal,
+  Button,
+  message,
+  Select,
+  type UploadFile,
+} from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import newsService from "../../../service/newsService";
 
-export default function CreateNewsModal({ isOpen, onClose, onSuccess }) {
+interface CreateNewsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+export default function CreateNewsModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: CreateNewsModalProps) {
   const [form] = Form.useForm();
-  const [fileList, setFileList] = useState([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleCancel = () => {
@@ -14,13 +32,13 @@ export default function CreateNewsModal({ isOpen, onClose, onSuccess }) {
     onClose();
   };
 
-  const handleFinish = async (values) => {
+  const handleFinish = async (values: any) => {
     try {
       setLoading(true);
       const formData = new FormData();
       formData.append("title", values.title);
       formData.append("content", values.content);
-      formData.append("visibility", values.visibility); // Thêm visibility vào form data
+      formData.append("visibility", values.visibility);
 
       fileList.forEach((file) => {
         if (file.originFileObj) {

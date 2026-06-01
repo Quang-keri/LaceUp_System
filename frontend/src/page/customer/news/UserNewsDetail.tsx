@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -7,25 +7,26 @@ import {
   ExternalLink,
 } from "lucide-react";
 import newsService from "../../../service/newsService";
+import type { NewsItem } from "../../../types/news";
 
 export default function UserNewsDetail() {
-  const { id } = useParams(); // Lấy ID từ URL
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [newsItem, setNewsItem] = useState(null);
+  const [newsItem, setNewsItem] = useState<NewsItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDetail = async () => {
+    const fetchDetail = async (newsId: string) => {
       try {
-        const res = await newsService.getById(id);
-        setNewsItem(res); // Giả sử Backend trả về đúng object news
+        const res = await newsService.getById(newsId);
+        setNewsItem(res);
       } catch (error) {
         console.error("Lỗi tải tin tức", error);
       } finally {
         setIsLoading(false);
       }
     };
-    if (id) fetchDetail();
+    if (id) fetchDetail(id);
   }, [id]);
 
   if (isLoading) {
@@ -52,7 +53,6 @@ export default function UserNewsDetail() {
     );
   }
 
-  // Cover image ưu tiên
   const coverImage =
     newsItem.images?.find((img) => img.isCover)?.imageUrl ||
     newsItem.images?.[0]?.imageUrl ||
@@ -61,7 +61,6 @@ export default function UserNewsDetail() {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 md:px-8 font-sans">
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Nút quay lại */}
         <div className="p-6 border-b border-gray-100">
           <button
             onClick={() => navigate(-1)}
@@ -71,7 +70,6 @@ export default function UserNewsDetail() {
           </button>
         </div>
 
-        {/* Tiêu đề & Thông tin (Meta) */}
         <div className="px-8 pt-8 pb-6">
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight mb-6">
             {newsItem.title}
@@ -104,7 +102,6 @@ export default function UserNewsDetail() {
           </div>
         </div>
 
-        {/* Ảnh Cover lớn */}
         {coverImage && (
           <div className="px-8 mb-8">
             <img
@@ -115,14 +112,12 @@ export default function UserNewsDetail() {
           </div>
         )}
 
-        {/* Nội dung bài viết */}
         <div className="px-8 pb-10">
           <div className="prose max-w-none text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">
             {newsItem.content}
           </div>
         </div>
 
-        {/* Bộ sưu tập ảnh (Nếu có nhiều hơn 1 ảnh) */}
         {newsItem.images && newsItem.images.length > 1 && (
           <div className="px-8 pb-10 bg-gray-50 pt-8 mt-8 border-t border-gray-100">
             <h3 className="text-xl font-bold text-gray-800 mb-4">

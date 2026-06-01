@@ -1,11 +1,13 @@
 import { Slider, Checkbox, Radio, Select, ConfigProvider, Rate } from "antd";
-import type { CheckboxValueType } from "antd/es/checkbox";
+import type { GetProp } from "antd";
 import type { FilterState } from "./PostPage";
 import { useEffect, useState, useContext } from "react";
 
 import { locationService } from "../../../service/locationService";
 import amenityService from "../../../service/amenityService";
 import { CategoryContext } from "../../../context/CategoryContext";
+
+type CheckboxValueType = GetProp<typeof Checkbox.Group, "value">[number];
 
 interface FilterSidebarProps {
   filters: FilterState;

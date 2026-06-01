@@ -1,6 +1,17 @@
 import { toast } from "react-toastify";
 
-export default function BookingSearchBar({ filter, setFilter }) {
+interface FilterState {
+  date: string;
+  start: string;
+  end: string;
+}
+
+interface BookingSearchBarProps {
+  filter: FilterState;
+  setFilter: React.Dispatch<React.SetStateAction<FilterState>>;
+}
+
+export default function BookingSearchBar({ filter, setFilter }: BookingSearchBarProps) {
   const handleAddTime = () => {
     if (!filter.date || !filter.start || !filter.end) {
       toast.error("Vui lòng chọn đầy đủ ngày và thời gian");
@@ -24,7 +35,6 @@ export default function BookingSearchBar({ filter, setFilter }) {
         flex-wrap
       ">
 
-        {/* DATE */}
         <div className="flex flex-col w-full sm:w-auto">
           <label className="text-xs text-gray-500 mb-1">
             Ngày
@@ -42,7 +52,6 @@ export default function BookingSearchBar({ filter, setFilter }) {
           />
         </div>
 
-        {/* START TIME */}
         <div className="flex flex-col w-full sm:w-auto">
           <label className="text-xs text-gray-500 mb-1">
             Bắt đầu
@@ -60,7 +69,6 @@ export default function BookingSearchBar({ filter, setFilter }) {
           />
         </div>
 
-        {/* END TIME */}
         <div className="flex flex-col w-full sm:w-auto">
           <label className="text-xs text-gray-500 mb-1">
             Kết thúc
@@ -78,7 +86,6 @@ export default function BookingSearchBar({ filter, setFilter }) {
           />
         </div>
 
-        {/* BUTTON */}
         <button
           onClick={handleAddTime}
           className="

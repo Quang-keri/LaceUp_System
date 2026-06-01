@@ -37,7 +37,7 @@ const ServiceItemCreateModal: React.FC<Props> = ({
       const rentalRes = await rentalService.getMyRentalAreas(1, 100);
       setRentalAreas(rentalRes?.result?.data || []);
       const groupRes = await itemGroupService.getAll();
-      setItemGroups(groupRes?.result || groupRes || []);
+      setItemGroups(groupRes || []);
     } catch (e) {
       message.error("Lỗi tải dropdown");
     }

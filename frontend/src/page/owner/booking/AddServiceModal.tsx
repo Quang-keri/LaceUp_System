@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Modal,
   Row,
@@ -25,7 +25,7 @@ const { Text, Title } = Typography;
 interface Props {
   open: boolean;
   booking: any;
-  rentalAreaId: string | null; 
+  rentalAreaId: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -42,22 +42,19 @@ export default function AddServiceModal({
   const [cart, setCart] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
- 
   useEffect(() => {
     if (open && rentalAreaId) {
       fetchServices(rentalAreaId);
-      setCart([]); 
+      setCart([]);
       setKeyword("");
     }
   }, [open, rentalAreaId]);
 
-  const fetchServices = async (areaId: string) => {
+  const fetchServices = async (_areaId: string) => {
     try {
-    
       // const res = await rentalService.getServicesByRentalArea(areaId);
       // setAvailableServices(res.result || []);
 
-      
       setAvailableServices([
         { id: "s1", name: "Nước suối Aquafina", price: 10000, unit: "Chai" },
         { id: "s2", name: "Thuê vợt cầu lông", price: 50000, unit: "Cái" },
@@ -69,7 +66,6 @@ export default function AddServiceModal({
     }
   };
 
- 
   const filteredServices = useMemo(() => {
     if (!keyword) return availableServices;
     return availableServices.filter((s) =>
@@ -101,12 +97,10 @@ export default function AddServiceModal({
     });
   };
 
-
   const handleRemoveItem = (serviceId: string) => {
     setCart((prev) => prev.filter((item) => item.serviceId !== serviceId));
   };
 
-  
   const handleUpdateQuantity = (serviceId: string, quantity: number | null) => {
     if (!quantity || quantity < 1) return;
     setCart((prev) =>
@@ -123,12 +117,10 @@ export default function AddServiceModal({
     );
   };
 
-
   const totalPrice = cart.reduce(
     (total, item) => total + item.price * item.quantity,
     0,
   );
-
 
   const handleSubmit = async () => {
     if (cart.length === 0) {

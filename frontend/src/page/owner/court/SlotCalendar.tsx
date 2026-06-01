@@ -42,7 +42,7 @@ export default function SlotCalendar({
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: "Phieu_Dat_San",
   });
 
@@ -144,6 +144,7 @@ export default function SlotCalendar({
         customerName: formState.customerName,
         phone: formState.phone,
         note: formState.note,
+        totalPrice: formState.totalPrice,
         paidAmount: Number(formState.paidAmount || 0),
         paymentMethod: formState.paymentMethod,
         slots: buildSlotPayload(),

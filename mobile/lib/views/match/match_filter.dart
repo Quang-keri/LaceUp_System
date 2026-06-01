@@ -59,152 +59,157 @@ class MatchFilter extends StatelessWidget {
           BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Bộ lọc',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1E293B),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Bộ lọc',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E293B),
+                  ),
                 ),
-              ),
-              TextButton(
-                onPressed: resetFilters,
-                style: TextButton.styleFrom(
-                  foregroundColor: primaryColor,
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(50, 30),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                TextButton(
+                  onPressed: resetFilters,
+                  style: TextButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Làm mới',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
-                child: const Text(
-                  'Làm mới',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 30, thickness: 1, color: Color(0xFFF1F5F9)),
-
-          _buildSectionTitle('Sắp xếp'),
-          _buildRadioOption('Mới nhất', 'NEWEST', sortOrder, setSortOrder),
-          _buildRadioOption(
-            'Giá thấp → cao',
-            'PRICE_ASC',
-            sortOrder,
-            setSortOrder,
-          ),
-          _buildRadioOption(
-            'Giá cao → thấp',
-            'PRICE_DESC',
-            sortOrder,
-            setSortOrder,
-          ),
-          const SizedBox(height: 24),
-
-          _buildSectionTitle('Loại sân'),
-          DropdownButtonFormField<String>(
-            value: selectedCategory.isEmpty ? null : selectedCategory,
-            decoration: _dropdownDecoration('Tất cả loại sân'),
-            isExpanded: true,
-            icon: isFetchingCategories
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.arrow_drop_down),
-            items: categories.map((cat) {
-              return DropdownMenuItem(
-                value: cat.categoryName,
-                child: Text(cat.categoryName),
-              );
-            }).toList(),
-            onChanged: (val) => setSelectedCategory(val ?? ''),
-          ),
-          const SizedBox(height: 24),
-
-          _buildSectionTitle('Thể thức'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildFilterChip('Tất cả', 'ALL', typeFilter, setTypeFilter),
-              _buildFilterChip(
-                'Đánh thường',
-                'NORMAL',
-                typeFilter,
-                setTypeFilter,
-              ),
-              _buildFilterChip('Đánh kèo', 'BET', typeFilter, setTypeFilter),
-              _buildFilterChip(
-                'Đánh Rank',
-                'RANKED',
-                typeFilter,
-                setTypeFilter,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          _buildSectionTitle('Tỉnh / Thành phố'),
-          DropdownButtonFormField<String>(
-            value: selectedLocation.isEmpty ? null : selectedLocation,
-            decoration: _dropdownDecoration('Tất cả Tỉnh/Thành'),
-            isExpanded: true,
-            items: provinces.map((city) {
-              return DropdownMenuItem<String>(
-                value: city.name,
-                child: Text(city.name),
-              );
-            }).toList(),
-            onChanged: (val) {
-              if (val == null) {
-                setSelectedLocation('');
-                setSelectedWard('');
-                setWards([]);
-                return;
-              }
-              setSelectedLocation(val);
-
-              final selectedProv = provinces.firstWhere(
-                (p) => p.name == val,
-                orElse: () => ProvinceResponse(code: 0, name: ''),
-              );
-              onLocationChanged(
-                val,
-                selectedProv.code != 0 ? selectedProv : null,
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-
-          _buildSectionTitle('Phường / Xã'),
-          DropdownButtonFormField<String>(
-            value: selectedWard.isEmpty ? null : selectedWard,
-            decoration: _dropdownDecoration(
-              selectedLocation.isEmpty
-                  ? 'Chọn Tỉnh/Thành trước'
-                  : 'Tất cả Phường/Xã',
+              ],
             ),
-            isExpanded: true,
-            items: (selectedLocation.isEmpty || wards.isEmpty)
-                ? null
-                : wards.map((ward) {
-                    return DropdownMenuItem<String>(
-                      value: ward.name,
-                      child: Text(ward.name),
-                    );
-                  }).toList(),
-            onChanged: (selectedLocation.isEmpty || wards.isEmpty)
-                ? null
-                : (val) => setSelectedWard(val ?? ''),
-          ),
-        ],
+
+            const Divider(height: 30, thickness: 1, color: Color(0xFFF1F5F9)),
+            _buildSectionTitle('Sắp xếp'),
+
+            _buildSectionTitle('Sắp xếp'),
+            _buildRadioOption('Mới nhất', 'NEWEST', sortOrder, setSortOrder),
+            _buildRadioOption(
+              'Giá thấp → cao',
+              'PRICE_ASC',
+              sortOrder,
+              setSortOrder,
+            ),
+            _buildRadioOption(
+              'Giá cao → thấp',
+              'PRICE_DESC',
+              sortOrder,
+              setSortOrder,
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionTitle('Loại sân'),
+            DropdownButtonFormField<String>(
+              value: selectedCategory.isEmpty ? null : selectedCategory,
+              decoration: _dropdownDecoration('Tất cả loại sân'),
+              isExpanded: true,
+              icon: isFetchingCategories
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_drop_down),
+              items: categories.map((cat) {
+                return DropdownMenuItem(
+                  value: cat.categoryName,
+                  child: Text(cat.categoryName),
+                );
+              }).toList(),
+              onChanged: (val) => setSelectedCategory(val ?? ''),
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionTitle('Thể thức'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildFilterChip('Tất cả', 'ALL', typeFilter, setTypeFilter),
+                _buildFilterChip(
+                  'Đánh thường',
+                  'NORMAL',
+                  typeFilter,
+                  setTypeFilter,
+                ),
+                _buildFilterChip('Đánh kèo', 'BET', typeFilter, setTypeFilter),
+                _buildFilterChip(
+                  'Đánh Rank',
+                  'RANKED',
+                  typeFilter,
+                  setTypeFilter,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionTitle('Tỉnh / Thành phố'),
+            DropdownButtonFormField<String>(
+              value: selectedLocation.isEmpty ? null : selectedLocation,
+              decoration: _dropdownDecoration('Tất cả Tỉnh/Thành'),
+              isExpanded: true,
+              items: provinces.map((city) {
+                return DropdownMenuItem<String>(
+                  value: city.name,
+                  child: Text(city.name),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val == null) {
+                  setSelectedLocation('');
+                  setSelectedWard('');
+                  setWards([]);
+                  return;
+                }
+                setSelectedLocation(val);
+
+                final selectedProv = provinces.firstWhere(
+                  (p) => p.name == val,
+                  orElse: () => ProvinceResponse(code: 0, name: ''),
+                );
+                onLocationChanged(
+                  val,
+                  selectedProv.code != 0 ? selectedProv : null,
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionTitle('Phường / Xã'),
+            DropdownButtonFormField<String>(
+              value: selectedWard.isEmpty ? null : selectedWard,
+              decoration: _dropdownDecoration(
+                selectedLocation.isEmpty
+                    ? 'Chọn Tỉnh/Thành trước'
+                    : 'Tất cả Phường/Xã',
+              ),
+              isExpanded: true,
+              items: (selectedLocation.isEmpty || wards.isEmpty)
+                  ? null
+                  : wards.map((ward) {
+                      return DropdownMenuItem<String>(
+                        value: ward.name,
+                        child: Text(ward.name),
+                      );
+                    }).toList(),
+              onChanged: (selectedLocation.isEmpty || wards.isEmpty)
+                  ? null
+                  : (val) => setSelectedWard(val ?? ''),
+            ),
+          ],
+        ),
       ),
     );
   }

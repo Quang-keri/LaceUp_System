@@ -119,7 +119,7 @@ const TransactionFormModal: React.FC<Props> = ({
           label="Số tiền"
           rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
         >
-          <InputNumber
+          <InputNumber<number>
             min={0}
             step={1000}
             style={{ width: "100%" }}

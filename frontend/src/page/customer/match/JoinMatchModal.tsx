@@ -31,12 +31,10 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
   const [loadingAction, setLoadingAction] = useState(false);
   const [loadingDivide, setLoadingDivide] = useState(false);
 
-  // State lưu trữ việc chia đội: { "userId_1": 1, "userId_2": 2 }
   const [teamAssignments, setTeamAssignments] = useState<
     Record<string, number>
   >({});
 
-  // Cập nhật state teamAssignments mỗi khi mở Modal hoặc match thay đổi
   useEffect(() => {
     if (match && match.participants) {
       const initialAssignments: Record<string, number> = {};
@@ -58,7 +56,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
     (p: any) => p.userId === user?.userId,
   );
 
-  // Kiểm tra xem user hiện tại có phải là Host không
   const isHost = match.hostName === user?.userName;
 
   const handleJoin = async () => {
@@ -77,7 +74,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
     }
   };
 
-  // Hàm xử lý chọn đội cho từng user
   const handleTeamChange = (userId: string, teamNumber: number) => {
     setTeamAssignments((prev) => ({
       ...prev,
@@ -85,7 +81,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
     }));
   };
 
-  // Hàm gửi API lưu đội hình
   const handleSaveTeams = async () => {
     const team1UserIds = Object.keys(teamAssignments).filter(
       (id) => teamAssignments[id] === 1,
@@ -112,7 +107,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
   const renderFooterActions = () => {
     const actions = [];
 
-    // Nút LƯU ĐỘI HÌNH (Chỉ Host mới thấy)
     if (
       isHost &&
       (match.status === "FULL" ||
@@ -170,7 +164,7 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
             disabled
             className="bg-green-50 text-green-600 font-semibold border-green-200 rounded-lg px-6 h-10"
           >
-            <CheckCircle2 size={18} className="mr-2 inline" /> Đã xác nhận cọc
+            <CheckCircle2 size={18} className="mr-2 inline" />
           </Button>,
         );
       } else {
@@ -185,7 +179,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
         );
       }
     }
-    // 3. Đã đủ người & chốt xong
     else if (match.status === "FULL" || match.status === "CONFIRMED") {
       actions.push(
         <Button
@@ -200,7 +193,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
       );
     }
 
-    // Nút Đóng mặc định
     actions.push(
       <Button key="close" onClick={onClose} className="rounded-lg h-10">
         Đóng
@@ -228,7 +220,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
       centered
     >
       <div className="mt-4">
-        {/* THÔNG TIN TRẬN ĐẤU */}
         <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
           <Title level={5} className="mb-3 text-blue-900 line-clamp-2">
             {match.title || `Giao lưu ${match.categoryName}`}
@@ -289,7 +280,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
           </div>
         </div>
 
-        {/* DANH SÁCH NGƯỜI CHƠI & CHIA ĐỘI */}
         <div>
           <div className="flex justify-between items-center mb-3">
             <Text strong className="text-gray-800 text-base">
@@ -355,7 +345,6 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
                       }
                     />
 
-                    {/* UI HIỂN THỊ ĐỘI HOẶC CHỌN ĐỘI */}
                     <div className="ml-2 shrink-0">
                       {isHost ? (
                         <Radio.Group

@@ -1,11 +1,10 @@
 import 'package:mobile/models/post.dart';
 
-import 'address.dart'; // Đảm bảo bạn đã có file này
-import 'user.dart';    // Đảm bảo bạn đã có file này
+import 'user.dart';
 
 class MatchRequest {
   final String? courtId;
-  final int categoryId;
+  final String? categoryId;
   final String street;
   final String ward;
   final int cityId;
@@ -164,13 +163,17 @@ class MatchResponse {
       description: json['description']?.toString() ?? '',
       courtName: json['courtName']?.toString() ?? '',
       courtPrice: double.tryParse(json['courtPrice']?.toString() ?? '0') ?? 0.0,
-      address: json['address'] != null ? AddressResponse.fromJson(json['address']) : null,
+      address: json['address'] != null
+          ? AddressResponse.fromJson(json['address'])
+          : null,
       categoryName: json['categoryName']?.toString() ?? '',
       startTime: json['startTime']?.toString() ?? '',
       endTime: json['endTime']?.toString() ?? '',
       maxPlayers: int.tryParse(json['maxPlayers']?.toString() ?? '0') ?? 0,
-      currentPlayers: int.tryParse(json['currentPlayers']?.toString() ?? '0') ?? 0,
-      remainingSlots: int.tryParse(json['remainingSlots']?.toString() ?? '0') ?? 0,
+      currentPlayers:
+          int.tryParse(json['currentPlayers']?.toString() ?? '0') ?? 0,
+      remainingSlots:
+          int.tryParse(json['remainingSlots']?.toString() ?? '0') ?? 0,
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
       status: json['status']?.toString() ?? '',
       hostName: json['hostName']?.toString() ?? '',
@@ -178,7 +181,9 @@ class MatchResponse {
       level: json['level']?.toString() ?? '',
       hasCourt: json['hasCourt'] as bool? ?? false,
       participants: json['participants'] != null
-          ? (json['participants'] as List).map((i) => UserResponse.fromJson(i)).toList()
+          ? (json['participants'] as List)
+                .map((i) => UserResponse.fromJson(i))
+                .toList()
           : [],
       isRecurring: json['isRecurring'] as bool? ?? false,
       recurringType: json['recurringType']?.toString() ?? '',
@@ -190,7 +195,9 @@ class MatchResponse {
       maxRank: int.tryParse(json['maxRank']?.toString() ?? ''),
       isFull: json['isFull'] as bool? ?? false,
       reports: json['reports'] != null
-          ? (json['reports'] as List).map((i) => MatchReportResponse.fromJson(i)).toList()
+          ? (json['reports'] as List)
+                .map((i) => MatchReportResponse.fromJson(i))
+                .toList()
           : null,
     );
   }

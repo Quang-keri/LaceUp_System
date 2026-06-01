@@ -1,15 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Card,
-  Button,
-  Space,
-  Skeleton,
-  message,
-  Tabs,
-  Select,
-  Table,
-  Tag,
-} from "antd";
+import { Card, Button, Space, Skeleton, message, Tabs, Table, Tag } from "antd";
 import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -31,10 +21,8 @@ export default function CourtCopyPage() {
   const [court, setCourt] = useState<CourtResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [courtsInBuilding, setCourtsInBuilding] = useState<CourtResponse[]>([]);
-  const [selectedCourtForCalendar, setSelectedCourtForCalendar] = useState<
-    string | null
-  >(null);
+  const [, setCourtsInBuilding] = useState<CourtResponse[]>([]);
+  const [, setSelectedCourtForCalendar] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCopy, setEditingCopy] = useState<CourtCopyResponse | null>(
@@ -57,7 +45,6 @@ export default function CourtCopyPage() {
       setLoading(true);
       const res = await CourtService.getCourtById(courtId!);
       setCourt(res.result);
-      // load courts in same rental area for select/calendar
       if (res.result?.rentalAreaId) {
         loadCourtsInBuilding(res.result.rentalAreaId);
       }
@@ -190,66 +177,66 @@ export default function CourtCopyPage() {
         <Table
           columns={columns}
           dataSource={dataSource}
-            expandable={{
-              expandedRowRender: (record: any) => {
-                const slots = record.raw.slots || [];
-                return (
-                  <Table
-                    size="small"
-                    pagination={false}
-                    columns={[
-                      {
-                        title: "Bắt đầu",
-                        dataIndex: "startTime",
-                        key: "startTime",
-                        render: (t: string) =>
-                          t ? new Date(t).toLocaleString() : "",
-                      },
-                      {
-                        title: "Kết thúc",
-                        dataIndex: "endTime",
-                        key: "endTime",
-                        render: (t: string) =>
-                          t ? new Date(t).toLocaleString() : "",
-                      },
-                      {
-                        title: "Trạng thái",
-                        dataIndex: "slotStatus",
-                        key: "slotStatus",
-                        render: (s: string) => (
-                          <Tag color={s === "BOOKED" ? "error" : "success"}>
-                            {s === "BOOKED" ? "Đã đặt" : "Có sẵn"}
-                          </Tag>
-                        ),
-                      },
-                      {
-                        title: "Người đặt",
-                        dataIndex: ["bookingShortResponse", "userName"],
-                        key: "userName",
-                      },
-                      {
-                        title: "SĐT",
-                        dataIndex: ["bookingShortResponse", "userPhone"],
-                        key: "userPhone",
-                      },
-                      {
-                        title: "Hành động",
-                        key: "act",
-                        render: (_: any, slot: any) => (
-                          <Button
-                            size="small"
-                            onClick={() => handleViewBooking(slot, record.raw)}
-                          >
-                            Xem
-                          </Button>
-                        ),
-                      },
-                    ]}
-                    dataSource={slots.map((s: any) => ({ key: s.slotId, ...s }))}
-                  />
-                );
-              },
-            }}
+          expandable={{
+            expandedRowRender: (record: any) => {
+              const slots = record.raw.slots || [];
+              return (
+                <Table
+                  size="small"
+                  pagination={false}
+                  columns={[
+                    {
+                      title: "Bắt đầu",
+                      dataIndex: "startTime",
+                      key: "startTime",
+                      render: (t: string) =>
+                        t ? new Date(t).toLocaleString() : "",
+                    },
+                    {
+                      title: "Kết thúc",
+                      dataIndex: "endTime",
+                      key: "endTime",
+                      render: (t: string) =>
+                        t ? new Date(t).toLocaleString() : "",
+                    },
+                    {
+                      title: "Trạng thái",
+                      dataIndex: "slotStatus",
+                      key: "slotStatus",
+                      render: (s: string) => (
+                        <Tag color={s === "BOOKED" ? "error" : "success"}>
+                          {s === "BOOKED" ? "Đã đặt" : "Có sẵn"}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: "Người đặt",
+                      dataIndex: ["bookingShortResponse", "userName"],
+                      key: "userName",
+                    },
+                    {
+                      title: "SĐT",
+                      dataIndex: ["bookingShortResponse", "userPhone"],
+                      key: "userPhone",
+                    },
+                    {
+                      title: "Hành động",
+                      key: "act",
+                      render: (_: any, slot: any) => (
+                        <Button
+                          size="small"
+                          onClick={() => handleViewBooking(slot, record.raw)}
+                        >
+                          Xem
+                        </Button>
+                      ),
+                    },
+                  ]}
+                  dataSource={slots.map((s: any) => ({ key: s.slotId, ...s }))}
+                />
+              );
+            },
+          }}
         />
       ),
     },

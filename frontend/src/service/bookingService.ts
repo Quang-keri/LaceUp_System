@@ -19,6 +19,7 @@ class BookingService {
     note: string;
     totalPrice: number;
     paidAmount: number;
+    paymentMethod: string;
     slots: { courtCopyId: string; startTime: string; endTime: string }[];
   }) {
     const response = await api.post<ApiResponse<BookingResponse>>(

@@ -1,6 +1,5 @@
-import React, { forwardRef } from "react";
-import dayjs from "dayjs";
-import { useAuth } from "../../../context/AuthContext"; // Điều chỉnh path cho đúng
+import { forwardRef } from "react";
+import { useAuth } from "../../../context/AuthContext";
 
 interface ReceiptContentProps {
   receiptData: any;
@@ -68,53 +67,107 @@ export const ReceiptContent = forwardRef<HTMLDivElement, ReceiptContentProps>(
             </p>
           </div>
 
-          <table style={{ width: "100%", fontSize: "13px", borderCollapse: "collapse", marginBottom: "15px" }}>
+          <table
+            style={{
+              width: "100%",
+              fontSize: "13px",
+              borderCollapse: "collapse",
+              marginBottom: "15px",
+            }}
+          >
             <thead>
-              <tr style={{ borderTop: "1px dashed #000", borderBottom: "1px dashed #000" }}>
-                <th style={{ textAlign: "left", padding: "8px 0" }}>Nội dung</th>
+              <tr
+                style={{
+                  borderTop: "1px dashed #000",
+                  borderBottom: "1px dashed #000",
+                }}
+              >
+                <th style={{ textAlign: "left", padding: "8px 0" }}>
+                  Nội dung
+                </th>
                 <th style={{ textAlign: "center", padding: "8px 0" }}>SL</th>
-                <th style={{ textAlign: "right", padding: "8px 0" }}>Thành tiền</th>
+                <th style={{ textAlign: "right", padding: "8px 0" }}>
+                  Thành tiền
+                </th>
               </tr>
             </thead>
             <tbody>
               {receiptData.slots.map((slot: any, idx: number) => (
                 <tr key={idx}>
-                  <td style={{ padding: "8px 0", borderBottom: "1px dashed #ccc" }}>
+                  <td
+                    style={{
+                      padding: "8px 0",
+                      borderBottom: "1px dashed #ccc",
+                    }}
+                  >
                     <b>{slot.courtCode}</b>
-                    <div style={{ fontSize: "12px" }}>{slot.startDisplay} - {slot.endDisplay}</div>
+                    <div style={{ fontSize: "12px" }}>
+                      {slot.startDisplay} - {slot.endDisplay}
+                    </div>
                   </td>
-                  <td style={{ textAlign: "center", borderBottom: "1px dashed #ccc" }}>1</td>
-                  <td style={{ textAlign: "right", borderBottom: "1px dashed #ccc" }}>-</td>
+                  <td
+                    style={{
+                      textAlign: "center",
+                      borderBottom: "1px dashed #ccc",
+                    }}
+                  >
+                    1
+                  </td>
+                  <td
+                    style={{
+                      textAlign: "right",
+                      borderBottom: "1px dashed #ccc",
+                    }}
+                  >
+                    -
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", fontSize: "13px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              fontSize: "13px",
+            }}
+          >
             <table style={{ width: "250px" }}>
               <tbody>
                 <tr>
                   <td>Tổng cộng:</td>
-                  <td style={{ textAlign: "right", fontWeight: "bold" }}>{formatCurrency(receiptData.totalPrice)}</td>
+                  <td style={{ textAlign: "right", fontWeight: "bold" }}>
+                    {formatCurrency(receiptData.totalPrice)}
+                  </td>
                 </tr>
                 <tr>
                   <td>Đã trả:</td>
-                  <td style={{ textAlign: "right" }}>{formatCurrency(receiptData.paidAmount)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    {formatCurrency(receiptData.paidAmount)}
+                  </td>
                 </tr>
                 <tr style={{ borderTop: "1px dashed #000" }}>
-                  <td><b>Còn lại:</b></td>
+                  <td>
+                    <b>Còn lại:</b>
+                  </td>
                   <td style={{ textAlign: "right", fontWeight: "bold" }}>
-                    {formatCurrency(receiptData.totalPrice - receiptData.paidAmount)}
+                    {formatCurrency(
+                      receiptData.totalPrice - receiptData.paidAmount,
+                    )}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <div className="text-center mt-10" style={{ fontSize: "12px", fontStyle: "italic" }}>
-             Cảm ơn bạn đã sử dụng dịch vụ của Lace Up!
+          <div
+            className="text-center mt-10"
+            style={{ fontSize: "12px", fontStyle: "italic" }}
+          >
+            Cảm ơn bạn đã sử dụng dịch vụ của Lace Up!
           </div>
         </div>
       </div>
     );
-  }
+  },
 );

@@ -5,7 +5,6 @@ import {
   Send,
   Bot,
   X,
-  Zap,
   ExternalLink,
   Banknote,
   MapPin,
@@ -105,10 +104,9 @@ const ChatboxBubble: React.FC = () => {
             </p>
           )}
 
-          {/* Thay đổi gap-2 thành gap-2.5 để các card có không gian thở */}
           <div className="flex flex-col gap-2.5 mt-1 w-full">
             {matches.map((match, idx) => {
-              const [_, name, address, price, rating, url] = match;
+              const [_, name, address, price, url] = match;
 
               return (
                 <a
@@ -116,13 +114,10 @@ const ChatboxBubble: React.FC = () => {
                   href={url.trim()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  // THIẾT KẾ LẠI CARD TẠI ĐÂY
                   className="flex flex-col p-3.5 bg-white rounded-xl shadow-sm border border-purple-100 hover:border-orange-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group w-full relative overflow-hidden"
                 >
-                  {/* Hiệu ứng nền siêu mờ khi hover */}
                   <div className="absolute inset-0 bg-gradient-to-br from-orange-50/0 to-orange-50/0 group-hover:from-orange-50/50 group-hover:to-transparent transition-colors duration-300 pointer-events-none"></div>
 
-                  {/* Header: Tên sân & Nút Link tối giản */}
                   <div className="flex justify-between items-start gap-3 relative z-10 mb-2">
                     <span className="font-bold text-purple-900 line-clamp-2 flex-1 leading-snug text-[14px]">
                       {name.trim()}
@@ -145,9 +140,7 @@ const ChatboxBubble: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Hàng 2: Giá và Đánh giá (Có đường kẻ mỏng phân cách ở trên) */}
                     <div className="flex items-center justify-between gap-2 mt-1 pt-2 border-t border-slate-100">
-                      {/* Cột Giá */}
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <Banknote
                           size={14}
@@ -158,7 +151,6 @@ const ChatboxBubble: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Cột Đánh Giá: Gọn và hài hòa hơn */}
                       <div className="flex items-center gap-1 flex-shrink-0 bg-orange-50/80 px-2 py-1 rounded border border-orange-100/50">
                         <span className="text-orange-600 font-bold leading-none mt-[1px] text-[11px]">
                           5/5

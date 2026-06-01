@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { MapPin, Phone } from "lucide-react";
 import { FaCheckCircle } from "react-icons/fa";
 import OtherCourtsList from "./OtherCourtsList";
 
@@ -32,9 +32,16 @@ export default function CourtInfoTab({
           </h3>
         </div>
 
-        <div className="flex items-center gap-2 text-gray-500 mb-4 text-sm bg-gray-50 w-fit px-3 py-1.5 rounded-lg border border-gray-100">
-          <MapPin size={16} className="text-[#9156F1]" />
-          <span>{`${data.address.street}, ${data.address.ward}, ${data.address.city?.cityName}`}</span>
+        <div className="flex flex-wrap items-center gap-4 mb-4">
+          <div className="flex items-center gap-2 text-gray-500 text-sm bg-gray-50 w-fit px-3 py-1.5 rounded-lg border border-gray-100">
+            <MapPin size={16} className="text-[#9156F1]" />
+            <span>{`${data.address.street}, ${data.address.ward}, ${data.address.city?.cityName}`}</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-gray-500 text-sm bg-gray-50 w-fit px-3 py-1.5 rounded-lg border border-gray-100">
+            <Phone size={16} className="text-[#9156F1]" />
+            <span>{`${data.contactPhone}`}</span>
+          </div>
         </div>
 
         <p className="text-gray-600 leading-relaxed mb-6">

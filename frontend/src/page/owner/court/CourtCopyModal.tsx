@@ -1,7 +1,7 @@
 import { Modal, Form, Input, Select, message } from "antd";
 import { useEffect, useState } from "react";
 import CourtService from "../../../service/courtService";
-import type { CourtCopyResponse, CourtCopyStatus } from "../../../types/court";
+import type { CourtCopyResponse } from "../../../types/court";
 
 interface Props {
   open: boolean;

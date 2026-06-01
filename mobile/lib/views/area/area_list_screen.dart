@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/views/area/rental_area_detail_screen.dart';
+import 'package:mobile/views/area/area_detail/rental_area_detail_screen.dart';
 
 import '../../models/post.dart';
 import '../../services/post_service.dart';
@@ -21,7 +21,6 @@ class AreaListScreen extends StatefulWidget {
 
 class _AreaListScreenState extends State<AreaListScreen> {
   final TextEditingController searchController = TextEditingController();
-
 
   List<PostResponse> posts = [];
   bool loading = true;

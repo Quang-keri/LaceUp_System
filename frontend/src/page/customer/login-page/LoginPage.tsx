@@ -11,7 +11,7 @@ import {
 import { useGoogleLogin } from "@react-oauth/google";
 
 const BACKEND_ERRORS: Record<string, string> = {
-  PASSWORD_TOO_SHORT: "Mật khẩu quá ngắn (cần ít nhất 6-8 ký tự).",
+  PASSWORD_TOO_SHORT: "Email hoặc mật khẩu không chính xác.",
   WRONG_PASSWORD: "Mật khẩu không chính xác.",
   USER_NOT_FOUND: "Tài khoản không tồn tại.",
   EMAIL_ALREADY_EXISTS: "Email này đã được sử dụng.",

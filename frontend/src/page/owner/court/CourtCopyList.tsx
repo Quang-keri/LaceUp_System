@@ -73,7 +73,7 @@ export default function CourtCopyList({
               </Button>
               <div style={{ display: "flex", gap: 8 }}>
                 <Button
-                  flex={1}
+                  style={{ flex: 1 }}
                   icon={<EditOutlined />}
                   type="primary"
                   onClick={() => onEdit?.(copy)}

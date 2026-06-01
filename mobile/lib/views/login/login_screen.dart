@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
 import 'package:mobile/providers/auth_provider.dart';
-
 import 'package:mobile/widgets/main_navigation.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
@@ -9,7 +7,9 @@ import '../../services/user_service.dart';
 import './register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onLoginSuccess;
+
+  const LoginScreen({super.key, this.onLoginSuccess});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -41,16 +41,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await context.read<AuthProvider>().setUser(userInfo);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const MainNavigation(),
-        ),
-      );
+      if (widget.onLoginSuccess != null) {
+        Navigator.pop(context);
+        widget.onLoginSuccess!();
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainNavigation()),
+        );
+      }
     } catch (e) {
-      _showErrorSnackBar(
-        e.toString().replaceAll('Exception: ', ''),
-      );
+      _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -61,9 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _goRegister() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const RegisterScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
     );
   }
 
@@ -163,15 +162,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFCDD6E5),
-                        ),
+                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFCDD6E5),
-                        ),
+                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
                       ),
                     ),
                   ),
@@ -204,15 +199,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFCDD6E5),
-                        ),
+                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFCDD6E5),
-                        ),
+                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
                       ),
                     ),
                   ),
@@ -234,20 +225,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
                           : const Text(
-                        'Đăng nhập',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                              'Đăng nhập',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -281,10 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,
-                        side: const BorderSide(
-                          color: primaryColor,
-                          width: 1.2,
-                        ),
+                        side: const BorderSide(color: primaryColor, width: 1.2),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -303,9 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: primaryColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
-                          side: const BorderSide(
-                            color: Color(0xFFE7D8FF),
-                          ),
+                          side: const BorderSide(color: Color(0xFFE7D8FF)),
                         ),
                       ),
                       child: const Text(

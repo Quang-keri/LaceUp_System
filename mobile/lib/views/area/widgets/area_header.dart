@@ -36,7 +36,9 @@ class AreaHeader extends StatelessWidget {
 
           Expanded(
             child: Text(
-              auth.isLoggedIn ? (auth.userName ?? 'Người dùng') : 'LACE UP',
+              auth.isLoggedIn
+                  ? "Xin chào ${auth.userName ?? 'Người dùng'}"
+                  : 'LACE UP',
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Color(0xFF1F2937),
@@ -69,7 +71,9 @@ class AreaHeader extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(),
+                      ),
                     );
                   },
                   child: const Text('Đăng nhập'),
@@ -77,7 +81,9 @@ class AreaHeader extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const RegisterScreen(),
+                      ),
                     );
                   },
                   child: const Text('Đăng ký'),

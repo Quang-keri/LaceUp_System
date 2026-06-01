@@ -21,7 +21,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ onFilterChange }) => {
     }));
   };
 
-  const handleDateChange = (dates: any, dateStrings: [string, string]) => {
+  const handleDateChange = (dates: any) => {
     if (!dates || !dates[0] || !dates[1]) {
       setFilters((prev) => ({
         ...prev,

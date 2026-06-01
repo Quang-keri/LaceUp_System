@@ -29,7 +29,7 @@ class _MatchPageState extends State<MatchPage> {
   List<RentalAreaResponse> _rentalAreas = [];
   Map<String, Map<String, dynamic>> _groupedMatches = {};
 
-  int _currentPage = 1;
+  final int _currentPage = 1;
   final int _pageSize = 12;
 
   String _sortOrder = 'NEWEST';
@@ -126,18 +126,31 @@ class _MatchPageState extends State<MatchPage> {
         ward: _selectedWard.isEmpty ? null : _selectedWard,
       );
 
-      List<MatchResponse> fetchedMatches = response.data;
+      List<MatchResponse> fetchedMatches = [];
+
+      if (response.data.isNotEmpty) {
+        fetchedMatches = List<MatchResponse>.from(response.data);
+      } else {
+        fetchedMatches = (response.data as List)
+            .map((json) => MatchResponse.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
 
       if (_sortOrder == 'PRICE_ASC') {
         fetchedMatches.sort((a, b) => a.courtPrice.compareTo(b.courtPrice));
       } else if (_sortOrder == 'PRICE_DESC') {
         fetchedMatches.sort((a, b) => b.courtPrice.compareTo(a.courtPrice));
       } else {
-        fetchedMatches.sort(
-          (a, b) => DateTime.parse(
-            a.startTime,
-          ).compareTo(DateTime.parse(b.startTime)),
-        );
+        fetchedMatches.sort((a, b) {
+          try {
+            return DateTime.parse(
+              a.startTime,
+            ).compareTo(DateTime.parse(b.startTime));
+          } catch (e) {
+            debugPrint('Lỗi parse ngày tháng: $e');
+            return 0;
+          }
+        });
       }
 
       setState(() {
@@ -148,7 +161,7 @@ class _MatchPageState extends State<MatchPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi tải dữ liệu: $e')));
+        ).showSnackBar(SnackBar(content: Text('Lỗi tải dữ liệu trận đấu: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

@@ -132,4 +132,10 @@ export const financeService = {
 
     return res.data.result;
   },
+
+  getPayoutHistory: async (id: string) => {
+    const res = await api.get(`/payouts/history/${id}`);
+    
+    return res.data.result;
+  },
 };

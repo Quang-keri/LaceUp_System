@@ -56,7 +56,7 @@ export default function BuildingCreateModal({
 
       if (isAuthenticated && user) {
         form.setFieldsValue({
-          contactName: user.userName || user.fullName || "",
+          contactName: user.userName,
           contactPhone: user.phone || "",
           gmailLink: user.email || "",
         });
@@ -120,7 +120,10 @@ export default function BuildingCreateModal({
 
       setLoading(true);
 
-      await RentalService.createRentalArea(createData, imageFiles);
+      await RentalService.createRentalArea({
+        ...createData,
+        images: imageFiles,
+      });
 
       message.success("Tạo tòa nhà thành công!");
       onSuccess();

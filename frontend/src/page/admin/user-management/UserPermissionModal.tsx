@@ -172,7 +172,7 @@ const UserPermissionModal: React.FC<Props> = ({
         >
           <Collapse
             defaultActiveKey={["NGƯỜI DÙNG"]}
-            expandIconPosition="left"
+            expandIconPosition="start"
             className="perm-collapse-wrapper"
           >
             {Object.entries(groupedPermissions).map(([group, list]) => {

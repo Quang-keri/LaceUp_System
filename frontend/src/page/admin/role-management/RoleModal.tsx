@@ -173,7 +173,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ marginTop: 0 }}>
+        <Divider orientation={"left" as any} style={{ marginTop: 0 }}>
           <Space>
             <Tag color="blue">Phân quyền chi tiết</Tag>
             <small style={{ color: "#8c8c8c", fontWeight: "normal" }}>
@@ -186,7 +186,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
           <Checkbox.Group style={{ width: "100%" }}>
             <Collapse
               defaultActiveKey={["NGƯỜI DÙNG"]}
-              expandIconPosition="left"
+              expandIconPosition="start"
               style={{
                 background: "transparent",
                 border: "none",

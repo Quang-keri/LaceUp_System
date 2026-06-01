@@ -28,12 +28,12 @@ const NotificationPage = () => {
       );
 
       if (response.code === 200) {
-        const { content, last } = response.result;
+        const { data, last } = response.result;
 
         if (isLoadMore) {
-          setAllNotis((prev) => [...prev, ...content]);
+          setAllNotis((prev) => [...prev, ...data]);
         } else {
-          setAllNotis(content || []);
+          setAllNotis(data || []);
         }
 
         setHasMore(!last);

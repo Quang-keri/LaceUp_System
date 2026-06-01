@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/views/main_screen.dart';
-import 'package:mobile/views/profile/achievement/achievement_screen.dart';
-import 'package:mobile/views/profile/achievement/achievement_showcase_screen.dart';
 import 'package:provider/provider.dart';
-
-import 'package:mobile/providers/auth_provider.dart';
-import 'package:mobile/views/login/login_screen.dart';
-import 'package:mobile/views/profile/profile_edit_screen.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
+
+import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/views/main_screen.dart';
+import 'package:mobile/views/login/register_screen.dart';
+import 'package:mobile/views/login/login_screen.dart';
+import 'package:mobile/views/profile/profile_edit_screen.dart';
+import 'package:mobile/views/profile/achievement/achievement_screen.dart';
+import 'package:mobile/views/profile/achievement/achievement_showcase_screen.dart';
+import '../../widgets/main_navigation.dart';
+import '../match/in_profile_page/my_match_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -28,31 +31,9 @@ class ProfileScreen extends StatelessWidget {
         title: 'Trận đấu của tôi',
         icon: Icons.groups_outlined,
         onTap: () {
-          if (!authProvider.isLoggedIn) {
-            showTopSnackBar(
-              Overlay.of(context),
-              const CustomSnackBar.info(
-                message: "Vui lòng đăng nhập để xem thêm",
-              ),
-            );
-            return;
-          }
-
-          final userId = authProvider.userId;
-
-          if (userId == null || userId.isEmpty) {
-            showTopSnackBar(
-              Overlay.of(context),
-              const CustomSnackBar.error(message: "Không tìm thấy userId"),
-            );
-            return;
-          }
-
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => AchievementScreen(userId: userId),
-            ),
+            MaterialPageRoute(builder: (_) => const MyMatchScreen()),
           );
         },
       ),
@@ -70,15 +51,6 @@ class ProfileScreen extends StatelessWidget {
         title: 'Tủ kính thành tựu',
         icon: Icons.emoji_events,
         onTap: () {
-          if (!authProvider.isLoggedIn) {
-            showTopSnackBar(
-              Overlay.of(context),
-              const CustomSnackBar.info(
-                message: "Vui lòng đăng nhập để xem thêm",
-              ),
-            );
-            return;
-          }
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -115,34 +87,24 @@ class ProfileScreen extends StatelessWidget {
         icon: Icons.verified_user_outlined,
         onTap: () {},
       ),
-      if (isLoggedIn)
-        ProfileMenuItemData(
-          title: 'Đăng xuất',
-          icon: Icons.logout,
-          onTap: () async {
-            await authProvider.logout();
+      ProfileMenuItemData(
+        title: 'Đăng xuất',
+        icon: Icons.logout,
+        onTap: () async {
+          await authProvider.logout();
 
-            if (!context.mounted) return;
-            showTopSnackBar(
-              Overlay.of(context),
-              const CustomSnackBar.success(message: "Đăng xuất thành công"),
-            );
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const MyApp()),
-              (route) => false,
-            );
-          },
-        )
-      else
-        ProfileMenuItemData(
-          title: 'Đăng nhập',
-          icon: Icons.login,
-          onTap: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
-          },
-        ),
+          if (!context.mounted) return;
+          showTopSnackBar(
+            Overlay.of(context),
+            const CustomSnackBar.success(message: "Đăng xuất thành công"),
+          );
+
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const MainNavigation()),
+            (route) => false,
+          );
+        },
+      ),
     ];
 
     return Scaffold(
@@ -157,7 +119,7 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isLoggedIn)
+                    if (isLoggedIn) ...[
                       Container(
                         width: double.infinity,
                         margin: const EdgeInsets.only(bottom: 28),
@@ -204,9 +166,123 @@ class ProfileScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ProfileSection(title: 'Hoạt động', items: activityItems),
-                    const SizedBox(height: 34),
-                    ProfileSection(title: 'Hệ thống', items: systemItems),
+                      ProfileSection(title: 'Hoạt động', items: activityItems),
+                      const SizedBox(height: 34),
+                      ProfileSection(title: 'Hệ thống', items: systemItems),
+                    ] else ...[
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 32),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF9156F1).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: const Color(0xFF9156F1).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: const Color(
+                                0xFF9156F1,
+                              ).withOpacity(0.2),
+                              child: const Icon(
+                                Icons.person_off,
+                                color: Color(0xFF9156F1),
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Chưa đăng nhập',
+                                    style: TextStyle(
+                                      color: Color(0xFF9156F1),
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Đăng nhập để xem thông tin của bạn',
+                                    style: TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryGreen,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            'Đăng nhập',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryGreen,
+                            side: const BorderSide(
+                              color: primaryGreen,
+                              width: 2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            'Đăng ký tài khoản',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
