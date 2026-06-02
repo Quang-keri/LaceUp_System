@@ -89,4 +89,13 @@ public class Booking extends BaseEntity {
     @OneToMany(mappedBy = "booking")
     private List<Transaction> transactions;
 
+    @Column(name = "payment_proof_url", length = 1000)
+    private String paymentProofUrl;
+
+    @Column(name = "payment_proof_public_id", length = 500)
+    private String paymentProofPublicId;
+
+    @Column(name = "payment_proof_uploaded_at")
+    private LocalDateTime paymentProofUploadedAt;
+
 }

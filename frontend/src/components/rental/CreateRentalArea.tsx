@@ -93,10 +93,10 @@ const FormContainer: React.FC = () => {
           accountNumber: bankData.accountNumber,
           accountHolderName: bankData.accountHolderName,
           branchName: bankData.branchName || "",
+           bankBin: bankData.bankBin,
           qrCode: bankData.qrCodeFile?.[0]?.url || "",
         };
 
-        // Gọi service với 2 tham số: (JSON data, File)
         await bankAccountService.createBankAccount(requestJson, qrFile);
       }
       for (const courtType of completeData.courts) {

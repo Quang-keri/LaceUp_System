@@ -62,4 +62,13 @@ public class BookingIntent {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rental_area_id")
     private RentalArea rentalArea;
+
+    @Column(name = "payment_proof_url", length = 1000)
+    private String paymentProofUrl;
+
+    @Column(name = "payment_proof_public_id", length = 500)
+    private String paymentProofPublicId;
+
+    @Column(name = "payment_proof_uploaded_at")
+    private LocalDateTime paymentProofUploadedAt;
 }

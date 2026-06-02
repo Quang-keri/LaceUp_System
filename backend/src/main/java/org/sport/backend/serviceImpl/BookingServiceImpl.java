@@ -3,6 +3,7 @@ package org.sport.backend.serviceImpl;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.*;
+import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.OwnerBookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
@@ -20,9 +21,7 @@ import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.repository.*;
-import org.sport.backend.service.BookingService;
-import org.sport.backend.service.CourtCopyService;
-import org.sport.backend.service.UserService;
+import org.sport.backend.service.*;
 import org.sport.backend.specification.BookingSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,10 +30,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import java.time.*;
 import java.util.*;
 
@@ -56,9 +60,66 @@ public class BookingServiceImpl implements BookingService {
 
     private final UserService userService;
     private final CourtCopyService courtCopyService;
-
+    private final CloudinaryService cloudinaryService;
     private final AddressMapper addressMapper;
+    private final BankAccountRepository bankAccountRepository;
 
+
+    @Override
+    @Transactional
+    public BookingResponse ownerConfirmManualBooking(UUID intentId) {
+        BookingIntent intent = bookingIntentRepository.findById(intentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đặt sân"));
+
+        if (intent.getStatus() != BookingIntentStatus.PENDING_OWNER_CONFIRM) {
+            throw new RuntimeException("Yêu cầu này chưa ở trạng thái chờ owner xác nhận");
+        }
+
+        if (intent.getPaymentProofUrl() == null || intent.getPaymentProofUrl().isBlank()) {
+            throw new RuntimeException("Chưa có ảnh chuyển khoản");
+        }
+
+        Payment payment = Payment.builder()
+                .amount(intent.getPreviewPrice())
+                .paymentMethod(PaymentMethod.BANK_TRANSFER)
+                .paymentStatus(PaymentStatus.SUCCESS)
+                .transactionDate(LocalDateTime.now())
+                .build();
+
+        return confirmBooking(intentId, payment);
+    }
+    @Override
+    @Transactional
+    public String uploadIntentPaymentProof(UUID intentId, MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new RuntimeException("Vui lòng chọn ảnh chuyển khoản");
+        }
+
+        BookingIntent intent = bookingIntentRepository.findById(intentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đặt sân"));
+
+        if (intent.getStatus() != BookingIntentStatus.ACTIVE
+                && intent.getStatus() != BookingIntentStatus.PENDING_OWNER_CONFIRM) {
+            throw new RuntimeException("Yêu cầu đặt sân không còn hiệu lực");
+        }
+
+        CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(
+                image,
+                "payment-proofs/"
+                        + intent.getRentalArea().getRentalAreaId()
+                        + "/"
+                        + intent.getBookingIntentId()
+        );
+
+        intent.setPaymentProofUrl(uploadResult.getUrl());
+        intent.setPaymentProofPublicId(uploadResult.getPublicId());
+        intent.setPaymentProofUploadedAt(LocalDateTime.now());
+        intent.setStatus(BookingIntentStatus.PENDING_OWNER_CONFIRM);
+
+        bookingIntentRepository.save(intent);
+
+        return uploadResult.getUrl();
+    }
     @Override
     public BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request) {
         if (request.getSlots() == null || request.getSlots().isEmpty()) {
@@ -415,7 +476,25 @@ public class BookingServiceImpl implements BookingService {
 
         return new CheckAvailabilityResponse(true, "Sân khả dụng", availableCount);
     }
+    private String buildVietQrUrl(
+            String bankBin,
+            String accountNumber,
+            BigDecimal amount,
+            String addInfo,
+            String accountName
+    ) {
+        String encodedAddInfo = URLEncoder.encode(addInfo, StandardCharsets.UTF_8);
+        String encodedAccountName = URLEncoder.encode(accountName, StandardCharsets.UTF_8);
 
+        return "https://img.vietqr.io/image/"
+                + bankBin
+                + "-"
+                + accountNumber
+                + "-compact2.png"
+                + "?amount=" + amount.setScale(0, RoundingMode.HALF_UP)
+                + "&addInfo=" + encodedAddInfo
+                + "&accountName=" + encodedAccountName;
+    }
     @Override
     @Transactional
     public BookingIntentResponse createBookingIntent(BookingRequest request) {
@@ -571,13 +650,30 @@ public class BookingServiceImpl implements BookingService {
                         .price(slot.getPrice())
                         .build())
                 .toList();
+        BankAccount bankAccount = bankAccountRepository
+                .findByUser_UserId(intent.getRentalArea().getOwner().getUserId())
+                .orElseThrow(() -> new RuntimeException("Owner chưa cấu hình tài khoản ngân hàng"));
 
+        String transferContent = "LACEUP " + intent.getBookingIntentId().toString().substring(0, 8);
+
+        String vietQrUrl = buildVietQrUrl(
+                bankAccount.getBankBin(),
+                bankAccount.getAccountNumber(),
+                intent.getPreviewPrice(),
+                transferContent,
+                bankAccount.getAccountHolderName()
+        );
+        System.err.println(vietQrUrl);
         return BookingIntentResponse.builder()
                 .bookingIntentId(intent.getBookingIntentId())
                 .previewPrice(totalPrice)
                 .expiresAt(intent.getExpiresAt())
                 .status(intent.getStatus())
                 .slots(slotResponses)
+                .bankName(rentalArea != null && rentalArea.getOwner() != null ? rentalArea.getOwner().getBankAccount() != null ? rentalArea.getOwner().getBankAccount().getBankName() : null : null)
+                .accountNumber(rentalArea != null && rentalArea.getOwner() != null ? rentalArea.getOwner().getBankAccount() != null ? rentalArea.getOwner().getBankAccount().getAccountNumber() : null : null)
+                .accountName(rentalArea != null && rentalArea.getOwner() != null ? rentalArea.getOwner().getBankAccount() != null ? rentalArea.getOwner().getBankAccount().getAccountHolderName() : null : null)
+                .vietQrUrl(vietQrUrl)
                 .build();
     }
 
@@ -691,7 +787,9 @@ public class BookingServiceImpl implements BookingService {
                 .startTime(bookingIntent.getStartTime())
                 .endTime(bookingIntent.getEndTime())
                 .slots(intentSlotResponses)
-
+                .bankName(bookingIntent.getRentalArea() != null && bookingIntent.getRentalArea().getOwner() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount().getBankName() : null : null)
+                .accountNumber(bookingIntent.getRentalArea() != null && bookingIntent.getRentalArea().getOwner() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount().getAccountNumber() : null : null)
+                .accountName(bookingIntent.getRentalArea() != null && bookingIntent.getRentalArea().getOwner() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount().getAccountHolderName() : null : null)
                 .build();
     }
 

@@ -1,4 +1,4 @@
-import 'package:mobile/models/slot.dart';
+import 'slot.dart';
 
 class CourtCopyResponse {
   final String courtCopyId;
@@ -19,8 +19,35 @@ class CourtCopyResponse {
       courtCode: json['courtCode']?.toString() ?? '',
       status: json['status']?.toString() ?? 'ACTIVE',
       slots: json['slots'] != null
-          ? (json['slots'] as List).map((i) => SlotResponse.fromJson(i)).toList()
-          : null,
+          ? (json['slots'] as List)
+          .map((i) => SlotResponse.fromJson(i))
+          .toList()
+          : [],
+    );
+  }
+
+  CourtCopyResponse copyWith({
+    String? courtCopyId,
+    String? courtCode,
+    String? status,
+    List<SlotResponse>? slots,
+  }) {
+    return CourtCopyResponse(
+      courtCopyId: courtCopyId ?? this.courtCopyId,
+      courtCode: courtCode ?? this.courtCode,
+      status: status ?? this.status,
+      slots: slots ?? this.slots,
+    );
+  }
+
+  CourtCopyResponse copyWithFromSchedule(Map<String, dynamic> json) {
+    return copyWith(
+      status: json['status']?.toString() ?? status,
+      slots: json['slots'] != null
+          ? (json['slots'] as List)
+          .map((i) => SlotResponse.fromJson(i))
+          .toList()
+          : slots,
     );
   }
 }

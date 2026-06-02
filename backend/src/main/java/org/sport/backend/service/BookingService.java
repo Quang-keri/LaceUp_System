@@ -11,12 +11,15 @@ import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
 import org.sport.backend.entity.Payment;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
 public interface BookingService {
+    BookingResponse ownerConfirmManualBooking(UUID intentId);
+    String  uploadIntentPaymentProof(UUID bookingIntentId, MultipartFile image);
     BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request);
     BookingResponse createOwnerBooking(OwnerBookingRequest request);
     void addExtraServices(UUID bookingId, AddExtraServicesRequest request);

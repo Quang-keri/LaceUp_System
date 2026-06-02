@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:mobile/models/booking_price_helper.dart';
+import 'package:mobile/models/selected_booking_slot.dart';
 import 'package:provider/provider.dart';
-import 'package:mobile/views/area/area_detail/schedule_tab.dart';
+
 import '../../../models/court.dart';
 import '../../../models/rental_area.dart';
 import '../../../providers/auth_provider.dart';
@@ -13,6 +16,7 @@ import '../booking/match_config_widget.dart';
 import 'court_info_tab.dart';
 import 'court_price_tabs.dart';
 import 'court_review_tabs.dart';
+import 'schedule_tab.dart';
 
 class RentalAreaDetailScreen extends StatefulWidget {
   final String rentalAreaId;
@@ -38,7 +42,8 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
 
   DateTime selectedDate = DateTime.now();
   int _activeTabIndex = 0;
-  List<String> selectedTimeSlots = [];
+
+  List<SelectedBookingSlot> selectedSlots = [];
 
   final List<String> _tabs = [
     'Xem lịch',
@@ -53,6 +58,10 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     fetchRentalAreaDetail();
   }
 
+  String _formatDate(DateTime date) {
+    return DateFormat('yyyy-MM-dd').format(date);
+  }
+
   Future<void> fetchRentalAreaDetail() async {
     try {
       setState(() {
@@ -63,6 +72,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       final response = await rentalService.getRentalAreaById(
         widget.rentalAreaId,
       );
+
       final courts = response.courts ?? [];
 
       CourtResponse? firstCourt;
@@ -78,34 +88,51 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         rentalArea = response;
         activeCourt = firstCourt;
       });
+
+      await fetchSchedule();
     } catch (e) {
       setState(() => error = e.toString());
     } finally {
-      setState(() => loading = false);
+      if (mounted) setState(() => loading = false);
     }
   }
 
-  void _toggleTimeSlot(CourtResponse court, String time) {
+  Future<void> fetchSchedule() async {
+    if (rentalArea == null) return;
+
+    final scheduleCopies = await rentalService.getRentalAreaSchedule(
+      rentalAreaId: widget.rentalAreaId,
+      date: _formatDate(selectedDate),
+    );
+
     setState(() {
-      if (activeCourt?.courtId != court.courtId) {
-        activeCourt = court;
-        selectedTimeSlots = [time];
-      } else {
-        if (selectedTimeSlots.contains(time)) {
-          selectedTimeSlots.remove(time);
-          if (selectedTimeSlots.isEmpty) {
-            activeCourt = court;
-          }
-        } else {
-          selectedTimeSlots.add(time);
-          selectedTimeSlots.sort();
-        }
-      }
+      rentalArea = _mergeScheduleToRentalArea(rentalArea!, scheduleCopies);
     });
   }
 
+  RentalAreaResponse _mergeScheduleToRentalArea(
+      RentalAreaResponse area,
+      List<dynamic> scheduleCopies,
+      ) {
+    final newCourts = (area.courts ?? []).map((court) {
+      final newCopies = court.courtCopies.map((copy) {
+        final matched = scheduleCopies.cast<dynamic>().where((s) {
+          return s['courtCopyId']?.toString() == copy.courtCopyId;
+        }).toList();
+
+        if (matched.isEmpty) return copy;
+
+        return copy.copyWithFromSchedule(matched.first);
+      }).toList();
+
+      return court.copyWith(courtCopies: newCopies);
+    }).toList();
+
+    return area.copyWith(courts: newCourts);
+  }
+
   void _goToBookingForm() {
-    if (activeCourt == null || selectedTimeSlots.isEmpty) return;
+    if (selectedSlots.isEmpty) return;
 
     final authProvider = context.read<AuthProvider>();
 
@@ -114,12 +141,11 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => BookingFormScreen(
-            court: activeCourt!,
+            selectedSlots: selectedSlots,
             selectedDate: selectedDate,
-            selectedSlots: selectedTimeSlots,
+            rentalArea: rentalArea,
             isMatchMode: isMatchMode,
             matchConfig: currentMatchConfig,
-            rentalArea: rentalArea,
           ),
         ),
       );
@@ -137,9 +163,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => LoginScreen(
-            onLoginSuccess: () {
-              openForm();
-            },
+            onLoginSuccess: openForm,
           ),
         ),
       );
@@ -151,6 +175,8 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final totalPrice = calculateTotalPrice(selectedSlots);
+
     if (loading) {
       return Scaffold(
         backgroundColor: Colors.white,
@@ -185,40 +211,37 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      bottomNavigationBar:
-          (_activeTabIndex == 0 && selectedTimeSlots.isNotEmpty)
+      bottomNavigationBar: (_activeTabIndex == 0 && selectedSlots.isNotEmpty)
           ? Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                onPressed: _goToBookingForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedColor,
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  isMatchMode
-                      ? 'Tạo kèo ${activeCourt?.courtName ?? ''} (${selectedTimeSlots.length} slot)'
-                      : 'Đặt sân ${activeCourt?.courtName ?? ''} (${selectedTimeSlots.length} slot)',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            )
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 10,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: _goToBookingForm,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: selectedColor,
+            minimumSize: const Size(double.infinity, 54),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            'Đặt sân (${selectedSlots.length}) • ${NumberFormat.decimalPattern('vi_VN').format(totalPrice)} đ',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      )
           : null,
       body: SafeArea(
         child: Column(
@@ -286,18 +309,25 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           rentalArea: rentalArea,
           activeCourt: activeCourt,
           selectedDate: selectedDate,
-          selectedTimeSlots: selectedTimeSlots,
+          selectedSlots: selectedSlots,
           isMatchMode: isMatchMode,
-          onDateSelected: (date) {
+          onDateSelected: (date) async {
             setState(() {
               selectedDate = date;
-              selectedTimeSlots.clear();
+              selectedSlots.clear();
               if ((rentalArea?.courts ?? []).isNotEmpty) {
                 activeCourt = rentalArea!.courts!.first;
               }
             });
+
+            await fetchSchedule();
           },
-          onToggleSlot: _toggleTimeSlot,
+          onSelectedSlotsChanged: (slots) {
+            setState(() => selectedSlots = slots);
+          },
+          onActiveCourtChanged: (court) {
+            setState(() => activeCourt = court);
+          },
           onModeChanged: (val) {
             setState(() {
               isMatchMode = val;
@@ -320,7 +350,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           onCourtSelected: (court) {
             setState(() {
               activeCourt = court;
-              selectedTimeSlots.clear();
+              selectedSlots.clear();
             });
           },
         );
