@@ -125,7 +125,7 @@ export default function RentalAreaDetailPage() {
     if (!user) {
       message.warning(
         "Đăng nhập để có trải nghiệm tốt nhất khi đặt lịch sân",
-        2,
+        1,
         () => {
           navigate("/login");
         },
