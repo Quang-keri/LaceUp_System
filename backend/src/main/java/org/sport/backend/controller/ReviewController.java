@@ -6,6 +6,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.review.ReviewRequest;
 import org.sport.backend.dto.response.review.ReviewResponse;
 import org.sport.backend.service.ReviewService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -59,14 +60,11 @@ public class ReviewController {
     @PostMapping("/rental/{rentalId}")
     public ApiResponse<String> submitReview(
             @PathVariable UUID rentalId,
-            @RequestBody ReviewRequest request,
-            Principal principal) {
+            @RequestBody ReviewRequest request
+            ) {
 
-        if (principal == null) {
-            throw new RuntimeException("Vui lòng đăng nhập để đánh giá.");
-        }
 
-        reviewService.submitReview(rentalId, request, principal.getName());
+        reviewService.submitReview(rentalId, request);
         return ApiResponse.success("Đánh giá thành công");
     }
 

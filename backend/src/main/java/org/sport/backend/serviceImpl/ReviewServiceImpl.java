@@ -12,6 +12,7 @@ import org.sport.backend.repository.RentalAreaRepository;
 import org.sport.backend.repository.ReviewRepository;
 import org.sport.backend.repository.UserRepository;
 import org.sport.backend.service.ReviewService;
+import org.sport.backend.service.UserService;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final RentalAreaRepository rentalAreaRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final UserService userService;
 
     @Override
     public PageResponse<ReviewResponse> getReviewsByRentalArea(UUID rentalAreaId, int page, int size) {
@@ -63,17 +65,17 @@ public class ReviewServiceImpl implements ReviewService {
         RentalArea rentalArea = getRentalAreaById(rentalAreaId);
 
         boolean byUser = bookingRepository.existsByRenterAndRentalAreaAndBookingStatus(
-            user,
-            rentalArea,
-            BookingStatus.COMPLETED
+                user,
+                rentalArea,
+                BookingStatus.COMPLETED
         );
 
         boolean byPhone = false;
         if (user.getPhone() != null && !user.getPhone().isBlank()) {
             byPhone = bookingRepository.existsByBookerPhoneAndRentalAreaAndBookingStatus(
-                user.getPhone(),
-                rentalArea,
-                BookingStatus.COMPLETED
+                    user.getPhone(),
+                    rentalArea,
+                    BookingStatus.COMPLETED
             );
         }
 
@@ -82,11 +84,11 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public void submitReview(UUID rentalAreaId, ReviewRequest request, String mail) {
-        User user = getUserByUsername(mail);
+    public void submitReview(UUID rentalAreaId, ReviewRequest request) {
+        User user = userService.getCurrentUserEntity();
         RentalArea rentalArea = getRentalAreaById(rentalAreaId);
 
-        if (!checkEligibility(rentalAreaId, mail)) {
+        if (!checkEligibility(rentalAreaId, user.getEmail())) {
             throw new RuntimeException("Bạn phải trải nghiệm sân này trước khi đánh giá.");
         }
 
@@ -146,7 +148,7 @@ public class ReviewServiceImpl implements ReviewService {
                 now.toLocalDate().atStartOfDay();
 
         LocalDateTime endToday =
-                now.toLocalDate().atTime(23,59,59);
+                now.toLocalDate().atTime(23, 59, 59);
 
         LocalDateTime startWeek =
                 now.with(DayOfWeek.MONDAY)
@@ -245,7 +247,8 @@ public class ReviewServiceImpl implements ReviewService {
                             String cleanStart = startDate.replace("Z", "").trim();
                             LocalDateTime start = LocalDateTime.parse(cleanStart);
                             if (r.getCreatedAt().isBefore(start)) return false;
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
 
                     if (endDate != null && !endDate.isBlank()) {
@@ -253,7 +256,8 @@ public class ReviewServiceImpl implements ReviewService {
                             String cleanEnd = endDate.replace("Z", "").trim();
                             LocalDateTime end = LocalDateTime.parse(cleanEnd);
                             if (r.getCreatedAt().isAfter(end)) return false;
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
 
                     return true;
@@ -289,7 +293,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .createdAt(review.getCreatedAt())
                 .userName(review.getUser() != null ? review.getUser().getUserName() : "")
                 .rentalName(review.getRentalArea() != null ? review.getRentalArea().getRentalAreaName() : "")
-                .address(review.getRentalArea() != null ? review.getRentalArea().getAddress().getStreet() + " "+review.getRentalArea().getAddress().getCityName() : "")
+                .address(review.getRentalArea() != null ? review.getRentalArea().getAddress().getStreet() + " " + review.getRentalArea().getAddress().getCityName() : "")
                 .build();
     }
 
