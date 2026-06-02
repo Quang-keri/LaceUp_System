@@ -34,7 +34,6 @@ export default function PostPage() {
 
   const { filters, setFilters } = useUrlFilters({ page: 1, size: 10 });
 
-  // Thêm lại state cho ô tìm kiếm tên và dùng debounce
   const [titleDraft, setTitleDraft] = useState(filters.title || "");
   const debouncedTitle = useDebounce(titleDraft, 500);
 
@@ -59,10 +58,9 @@ export default function PostPage() {
     fetchPosts(filters);
   }, [filters]);
 
-  // Cập nhật filters khi người dùng ngừng gõ sau 500ms
   useEffect(() => {
     if (debouncedTitle !== (filters.title || "")) {
-      setFilters({ title: debouncedTitle, page: 1 }); // Reset về trang 1 khi tìm kiếm
+      setFilters({ title: debouncedTitle, page: 1 }); 
     }
   }, [debouncedTitle]);
 
@@ -82,7 +80,7 @@ export default function PostPage() {
       <div className="relative z-10 py-8">
         <div className="w-[90%] mx-auto md:px-4 lg:px-6 xl:px-8">
           
-          {/* Header & Search/Actions */}
+       
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 lg:px-6 xl:px-8">
             <div className="flex-1">
               <h1 className="text-3xl font-extrabold text-slate-800 m-0">
@@ -97,7 +95,7 @@ export default function PostPage() {
             </div>
 
             <Space className="w-full md:w-auto mt-4 md:mt-0 justify-end flex-wrap gap-4">
-              {/* Ô Input tìm kiếm theo tên */}
+            
               <Input
                 size="large"
                 placeholder="Tìm tên sân..."

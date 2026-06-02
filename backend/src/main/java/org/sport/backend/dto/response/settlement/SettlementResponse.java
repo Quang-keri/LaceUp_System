@@ -28,7 +28,9 @@ public class SettlementResponse {
     private BigDecimal commissionRate;
 
     private BigDecimal commissionAmount;
-
+    private BigDecimal bookingRevenue;
+    private BigDecimal initialPaidAmount;
+    private BigDecimal extraServiceAmount;
     private BigDecimal ownerAmount;
 
     private SettlementStatus status;

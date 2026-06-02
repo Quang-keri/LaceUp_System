@@ -8,8 +8,10 @@ import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
 import org.sport.backend.dto.response.rental.RentalAreaDetailResponse;
 import org.sport.backend.dto.response.rental.RentalAreaOptionResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
+import org.sport.backend.dto.response.rental.RentalAreaScheduleResponse;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -45,4 +47,5 @@ public interface RentalAreaService {
     RentalAreaDetailResponse getRentalAreaById(UUID rentalAreaId);
 
     void deleteRentalArea(UUID rentalAreaId);
+    RentalAreaScheduleResponse getRentalAreaSchedule(UUID rentalAreaId, LocalDate date);
 }

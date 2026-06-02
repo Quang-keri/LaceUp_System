@@ -16,8 +16,7 @@ export default function CreateCourtModal({
 
   const categoriesList = Array.isArray(categories)
     ? categories
-    : 
-    Array.isArray(categories?.result)
+    : Array.isArray(categories?.result)
     ? categories.result
     : Array.isArray(categories?.data)
     ? categories.data
@@ -96,17 +95,17 @@ export default function CreateCourtModal({
           />
         </Form.Item>
 
-        <Form.Item
-          label="Giá / giờ"
+        {/* <Form.Item
+          label="Giá / giờ (tạo sân xong "
           name="price"
-          rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+         
         >
           <InputNumber
             style={{ width: "100%" }}
             min={0}
             placeholder="Ví dụ: 100000"
           />
-        </Form.Item>
+        </Form.Item> */}
 
         <Form.Item
           label="Vị trí / Khu vực"

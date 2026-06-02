@@ -108,4 +108,39 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @Query("""
+    SELECT COALESCE(SUM(s.price), 0)
+    FROM Booking b
+    JOIN b.slots s
+    WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+      AND CAST(b.startTime AS date) = :date
+      AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+""")
+    BigDecimal sumSlotRevenueOfCompletedBookings(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("date") LocalDate date
+    );
+    @Query("""
+    SELECT COALESCE(SUM(b.depositAmount), 0)
+    FROM Booking b
+    WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+      AND CAST(b.startTime AS date) = :date
+      AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+""")
+    BigDecimal sumInitialPaidAmountOfCompletedBookings(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("date") LocalDate date
+    );
+    @Query("""
+    SELECT COALESCE(SUM(b.totalPrice), 0)
+    FROM Booking b
+    WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+      AND CAST(b.startTime AS date) = :date
+      AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+""")
+    BigDecimal sumTotalPriceOfCompletedBookings(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("date") LocalDate date
+    );
 }

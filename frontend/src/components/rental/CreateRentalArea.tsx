@@ -219,7 +219,7 @@ const FormContainer: React.FC = () => {
           <br />
           Đội ngũ của chúng tôi sẽ xác thực trong vòng <b>1–2 ngày làm việc</b>.
           <br />
-          Sau khi hoàn tất, bạn có thể đăng sân và bắt đầu cho thuê.
+          Sau khi hoàn tất, sân sẽ được duyệt và bắt đầu cho đặt lịch.
         </p>
 
         <Flex justify="center" gap={12} style={{ marginTop: 24 }}>

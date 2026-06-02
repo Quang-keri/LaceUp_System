@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -25,4 +27,17 @@ public interface BookingServiceItemRepository extends JpaRepository<BookingServi
     );
 
     List<BookingServiceItem> findByBooking_BookingIdIn(List<UUID> bookingIds);
+
+    @Query("""
+    SELECT COALESCE(SUM(bsi.price * bsi.quantity), 0)
+    FROM BookingServiceItem bsi
+    JOIN bsi.booking b
+    WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+      AND CAST(b.startTime AS date) = :date
+      AND b.bookingStatus = org.sport.backend.constant.BookingStatus.COMPLETED
+""")
+    BigDecimal sumExtraServiceAmountOfCompletedBookings(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("date") LocalDate date
+    );
 }

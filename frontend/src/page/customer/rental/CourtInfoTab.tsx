@@ -21,7 +21,9 @@ export default function CourtInfoTab({
           className="w-full h-full object-cover"
         />
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full font-semibold text-[#ea580c] shadow">
-          {activeCourt.categoryName || "Sân Thể Thao"}
+          {activeCourt.category?.categoryName ||
+            activeCourt.categoryName ||
+            "Sân Thể Thao"}
         </div>
       </div>
 

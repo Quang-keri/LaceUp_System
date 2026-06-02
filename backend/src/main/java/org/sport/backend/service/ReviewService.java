@@ -19,7 +19,7 @@ public interface ReviewService {
 
     boolean checkEligibility(UUID rentalAreaId, String username);
 
-    void submitReview(UUID rentalAreaId, ReviewRequest request, String username);
+    void submitReview(UUID rentalAreaId, ReviewRequest request);
 
 
     Map<String, Object> getReviewStats();

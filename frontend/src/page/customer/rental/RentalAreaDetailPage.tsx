@@ -1,40 +1,41 @@
 import { useEffect, useState } from "react";
+import { Row, Col, ConfigProvider, DatePicker, Spin, message } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import { Row, Col, ConfigProvider, message, DatePicker } from "antd";
 import dayjs from "dayjs";
 
 import { useAuth } from "../../../context/AuthContext";
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
-import courtService from "../../../service/courtService";
-
-import BookingConfirmModal from "../bookings/BookingConfirmModal";
-import ReviewSection from "../../../components/review/ReviewSection";
-import BookingMatchTabs from "./BookingMatchTabs";
 
 import CourtScheduleTab from "./CourtScheduleTab";
 import CourtInfoTab from "./CourtInfoTab";
 import CourtPriceTab from "./CourtPriceTab";
+import ReviewSection from "../../../components/review/ReviewSection";
+import BookingMatchTabs from "./BookingMatchTabs";
+import BookingConfirmModal from "../bookings/BookingConfirmModal";
 
 export default function RentalAreaDetailPage() {
-  const { user } = useAuth();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [data, setData] = useState<any>(null);
   const [activeCourt, setActiveCourt] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("schedule");
+
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs>(dayjs());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("schedule");
-  const [openModal, setOpenModal] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState<number>(1);
+
+  const [selectedSlots, setSelectedSlots] = useState<any[]>([]);
   const [cartToSubmit, setCartToSubmit] = useState<any[]>([]);
+  const [openModal, setOpenModal] = useState(false);
+
   const [userInfo, setUserInfo] = useState({
     userName: "",
     userPhone: "",
     note: "",
   });
-
-  const [selectedDuration, setSelectedDuration] = useState<number>(1);
 
   useEffect(() => {
     if (user) {
@@ -46,59 +47,122 @@ export default function RentalAreaDetailPage() {
     }
   }, [user]);
 
-  const fetchDetail = async () => {
-    try {
-      const res = await rentalService.getRentalAreaById(id!);
-      if (res.code === 200) {
-        const courts = res.result.courts || [];
-        const detailedCourts = await Promise.all(
-          courts.map(async (court: any) => {
-            try {
-              const courtDetail = await courtService.getCourtById(
-                court.courtId,
-              );
-              return courtDetail.result;
-            } catch (err) {
-              return court;
-            }
-          }),
-        );
-
-        const mergedData = { ...res.result, courts: detailedCourts };
-        setData(mergedData);
-        if (detailedCourts.length > 0) setActiveCourt(detailedCourts[0]);
-      }
-    } catch (error) {
-      message.error("Không thể tải thông tin khu vực sân");
-    }
-  };
-
   useEffect(() => {
     fetchDetail();
   }, [id]);
 
-  const handleDirectBooking = (bookingData: any) => {
-    setCartToSubmit([
-      {
-        court: activeCourt,
-        date: bookingData.date,
-        startTime: bookingData.start,
-        endTime: bookingData.end,
-        quantity: bookingData.quantity,
-      },
-    ]);
+  useEffect(() => {
+    setSelectedSlots([]);
+    setCartToSubmit([]);
+  }, [selectedDate]);
+  useEffect(() => {
+    if (data) {
+      fetchSchedule();
+    }
+  }, [selectedDate, data?.rentalAreaId]);
+  const fetchDetail = async () => {
+    if (!id) return;
+
+    try {
+      const res = await rentalService.getRentalAreaById(id);
+
+      if (res.code === 200) {
+        const result = res.result;
+        const courts = result.courts || [];
+
+        setData(result);
+
+        if (courts.length > 0) {
+          setActiveCourt(courts[0]);
+        }
+      }
+    } catch (error) {
+      message.error("Không thể tải thông tin khu vực sân");
+      navigate("/");
+    }
+  };
+  const fetchSchedule = async () => {
+    if (!id || !data) return;
+
+    try {
+      const date = selectedDate.format("YYYY-MM-DD");
+      const res = await rentalService.getRentalAreaSchedule(id, date);
+
+      if (res.code === 200) {
+        const scheduleCopies = res.result?.courtCopies || [];
+
+        setData((prev: any) => ({
+          ...prev,
+          courts: mergeScheduleToCourts(prev.courts || [], scheduleCopies),
+        }));
+      }
+    } catch (error) {
+      message.error("Không thể tải lịch sân");
+    }
+  };
+  const mergeScheduleToCourts = (courts: any[], scheduleCopies: any[]) => {
+    return courts.map((court) => ({
+      ...court,
+      courtCopies: (court.courtCopies || []).map((copy: any) => {
+        const matched = scheduleCopies.find(
+          (s: any) => s.courtCopyId === copy.courtCopyId,
+        );
+
+        return {
+          ...copy,
+          slots: matched?.slots || [],
+        };
+      }),
+    }));
+  };
+  const handleDirectBooking = () => {
+    if (selectedSlots.length === 0) {
+      message.info("Vui lòng chọn ít nhất 1 sân và khung giờ");
+      return;
+    }
+
+    // Chưa đăng nhập
+    if (!user) {
+      message.warning(
+        "Đăng nhập để có trải nghiệm tốt nhất khi đặt lịch sân",
+        1,
+        () => {
+          navigate("/login");
+        },
+      );
+      return;
+    }
+
+    if (!user.phone || user.phone.trim() === "") {
+      message.warning(
+        "Vui lòng cập nhật số điện thoại trước khi đặt sân",
+        2,
+        () => {
+          navigate("/profile");
+        },
+      );
+      return;
+    }
+
+    setCartToSubmit(selectedSlots);
     setOpenModal(true);
   };
 
   const submitBooking = async () => {
     if (!userInfo.userName.trim() || !userInfo.userPhone.trim()) {
-      message.info("Vui lòng nhập tên và số điện thoại liên hệ");
+      message.info(
+        "Vui lòng nhập tên và số điện thoại ,nếu đã đăng nhập thì vui long cập nhật thông tin cá nhân đầy đủ để đặt sân",
+      );
+      return;
+    }
+
+    if (cartToSubmit.length === 0) {
+      message.info("Vui lòng chọn ít nhất 1 sân và khung giờ");
       return;
     }
 
     const slotRequests = cartToSubmit.map((item) => ({
-      courtId: item.court.courtId,
-      quantity: item.quantity,
+      courtCopyId: item.courtCopyId,
       startTime: `${item.date}T${item.startTime}:00`,
       endTime: `${item.date}T${item.endTime}:00`,
     }));
@@ -113,8 +177,12 @@ export default function RentalAreaDetailPage() {
 
     try {
       const res = await bookingService.createBooking(payload);
+
       if (res.code === 201 || res.code === 200) {
         message.success("Đặt sân thành công! Đang chuyển hướng thanh toán...");
+        setOpenModal(false);
+        setSelectedSlots([]);
+        setCartToSubmit([]);
         navigate(`/payment/${res.result.bookingIntentId}`);
       } else {
         message.error(res.message || "Đặt sân thất bại");
@@ -131,14 +199,16 @@ export default function RentalAreaDetailPage() {
     }
   };
 
-  if (!data || !activeCourt)
+  if (!data || !activeCourt) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-gray-500 animate-pulse text-lg">
-          Đang tải dữ liệu sân...
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8F9FA]">
+        <Spin size="large" />
+        <p className="text-gray-500 font-medium mt-4">
+          Đang tải thông tin khu sân...
         </p>
       </div>
     );
+  }
 
   const getTabClass = (tabName: string) =>
     activeTab === tabName
@@ -188,6 +258,7 @@ export default function RentalAreaDetailPage() {
                       Đánh giá
                     </button>
                   </div>
+
                   <DatePicker
                     value={selectedDate}
                     onChange={(date) => date && setSelectedDate(date)}
@@ -204,8 +275,11 @@ export default function RentalAreaDetailPage() {
                     setActiveCourt={setActiveCourt}
                     setSelectedTime={setSelectedTime}
                     setSelectedDuration={setSelectedDuration}
+                    selectedSlots={selectedSlots}
+                    setSelectedSlots={setSelectedSlots}
                   />
                 )}
+
                 {activeTab === "info" && (
                   <CourtInfoTab
                     activeCourt={activeCourt}
@@ -213,9 +287,11 @@ export default function RentalAreaDetailPage() {
                     onSelectCourt={setActiveCourt}
                   />
                 )}
+
                 {activeTab === "price" && (
                   <CourtPriceTab activeCourt={activeCourt} />
                 )}
+
                 {activeTab === "review" && (
                   <div className="p-6 animate-in fade-in duration-300">
                     <ReviewSection rentalAreaId={id!} />
@@ -232,6 +308,8 @@ export default function RentalAreaDetailPage() {
                 selectedDate={selectedDate}
                 selectedTime={selectedTime}
                 selectedDuration={selectedDuration}
+                selectedSlots={selectedSlots}
+                priceRules={activeCourt?.priceRules || []}
               />
             </Col>
           </Row>

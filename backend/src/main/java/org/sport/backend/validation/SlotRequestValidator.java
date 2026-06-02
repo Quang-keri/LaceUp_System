@@ -38,8 +38,8 @@ public class SlotRequestValidator
             }
 
             long minutes = Duration.between(start, end).toMinutes();
-            if (minutes < 60) {
-                replaceMessage(context, "Thời gian thuê tối thiểu cho mỗi slot là 1 giờ");
+            if (minutes < 30) {
+                replaceMessage(context, "Thời gian thuê tối thiểu cho mỗi slot là 30 phút ");
                 return false;
             }
 

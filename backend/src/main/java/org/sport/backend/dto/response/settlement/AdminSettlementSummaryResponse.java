@@ -10,7 +10,13 @@ import java.time.LocalDate;
 @Builder
 public class AdminSettlementSummaryResponse {
     private LocalDate date;
-    private BigDecimal totalGrossAmount;
+
+    private BigDecimal totalBookingRevenue;
+
+    private BigDecimal totalInitialPaidAmount;
+
+    private BigDecimal totalExtraServiceAmount;
+
     private BigDecimal totalCommissionAmount;
     private BigDecimal totalOwnerAmount;
     private BigDecimal totalPaidAmount;

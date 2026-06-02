@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface PostRepository extends JpaRepository<Post, UUID>, JpaSpecificationExecutor<Post> {
     List<Post> findByUser_UserId(UUID userId);
+    boolean existsByCourt_CourtId(UUID courtId);
 }
