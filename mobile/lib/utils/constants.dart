@@ -20,4 +20,6 @@ class AppConstants {
 
   static String matchUrl = '$baseUrl/matches';
   static String matchResultUrl = '$baseUrl/match-results';
+
+  static String chatBotUrl = '$baseUrl/chatbot/ask';
 }

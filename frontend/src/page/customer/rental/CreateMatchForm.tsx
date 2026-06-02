@@ -14,7 +14,7 @@ import matchService from "../../../service/match/matchService";
 import { useAuth } from "../../../context/AuthContext";
 import type { MatchRequest } from "../../../types/match";
 import { Info } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const calculateTotalPrice = (
   court: any,
@@ -83,6 +83,7 @@ export default function CreateMatchForm({
   const watchDuration = Form.useWatch("duration", form);
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const categoryName = (
     court?.categoryName ||
@@ -96,6 +97,22 @@ export default function CreateMatchForm({
   const maxAllowed = isFootball ? 12 : 4;
 
   useEffect(() => {
+    const savedData = sessionStorage.getItem("pendingMatchForm");
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        if (parsedData.startTime) {
+          parsedData.startTime = dayjs(parsedData.startTime);
+        }
+        form.setFieldsValue(parsedData);
+      } catch (e) {
+        console.error("Lỗi khi khôi phục dữ liệu form", e);
+      }
+      sessionStorage.removeItem("pendingMatchForm");
+    }
+  }, [form]);
+
+  useEffect(() => {
     if (watchStartTime && watchDuration) {
       const price = calculateTotalPrice(court, watchStartTime, watchDuration);
       setCalculatedPrice(price);
@@ -105,7 +122,7 @@ export default function CreateMatchForm({
   }, [watchStartTime, watchDuration, court]);
 
   useEffect(() => {
-    if (selectedDate && selectedTime) {
+    if (selectedDate && selectedTime && !form.getFieldValue("startTime")) {
       const [hour, minute] = selectedTime.split(":").map(Number);
       const newDateTime = selectedDate
         .clone()
@@ -119,24 +136,26 @@ export default function CreateMatchForm({
   useEffect(() => {
     if (!court) return;
 
-    const currentCategoryId = court?.category?.id || court?.categoryId;
-    const ranks = (user as any)?.categoryRank || user?.categoryRanks || [];
+    if (!form.getFieldValue("matchType")) {
+      const currentCategoryId = court?.category?.id || court?.categoryId;
+      const ranks = (user as any)?.categoryRank || user?.categoryRanks || [];
 
-    const userRankData = ranks.find(
-      (item: any) => item.categoryId === currentCategoryId,
-    );
+      const userRankData = ranks.find(
+        (item: any) => item.categoryId === currentCategoryId,
+      );
 
-    const currentRank = userRankData ? userRankData.rankPoint : 0;
+      const currentRank = userRankData ? userRankData.rankPoint : 0;
 
-    form.setFieldsValue({
-      maxPlayers: minAllowed,
-      minPlayersToStart: minAllowed / 2,
-      duration: 1,
-      matchType: "NORMAL",
-      minRank: Math.max(0, currentRank - 500),
-      maxRank: currentRank + 500,
-      note: "",
-    });
+      form.setFieldsValue({
+        maxPlayers: minAllowed,
+        minPlayersToStart: minAllowed / 2,
+        duration: 1,
+        matchType: "NORMAL",
+        minRank: Math.max(0, currentRank - 500),
+        maxRank: currentRank + 500,
+        note: "",
+      });
+    }
   }, [court, user, form, minAllowed]);
 
   const disabledDateTime = (current: any) => {
@@ -164,7 +183,26 @@ export default function CreateMatchForm({
     };
   };
 
+  const handleRequireLogin = (values: any) => {
+    message.warning("Vui lòng đăng nhập để tiếp tục tạo trận đấu!");
+    sessionStorage.setItem(
+      "pendingMatchForm",
+      JSON.stringify({
+        ...values,
+        startTime: values.startTime ? values.startTime.toISOString() : null,
+      }),
+    );
+    navigate("/login", {
+      state: { from: location.pathname + location.search },
+    });
+  };
+
   const handleCreateMatch = async (values: any) => {
+    if (!user) {
+      handleRequireLogin(values);
+      return;
+    }
+
     setLoadingMatch(true);
     try {
       const matchStart = values.startTime;
@@ -197,6 +235,13 @@ export default function CreateMatchForm({
       form.resetFields();
       navigate("/my-matches");
     } catch (error: any) {
+      if (
+        error.response?.status === 401 ||
+        error.response?.data?.message?.toLowerCase().includes("unauthenticated")
+      ) {
+        handleRequireLogin(values);
+        return;
+      }
       console.error("Lỗi Backend trả về:", error.response?.data);
       message.error(error.response?.data?.message || "Không thể tạo trận đấu.");
     } finally {
@@ -405,9 +450,9 @@ export default function CreateMatchForm({
           htmlType="submit"
           loading={loadingMatch}
           className="w-full h-[52px] text-base font-bold rounded-xl mt-1
-               !bg-[#9156F1] !border-[#9156F1]
-               hover:!bg-[#7e43d9] hover:!border-[#7e43d9]
-               flex items-center justify-center gap-2 shadow-md transition-colors"
+                 !bg-[#F97316] !border-[#F97316] !text-white
+                 hover:!bg-[#EA580C] hover:!border-[#EA580C]
+                 flex items-center justify-center gap-2 shadow-md transition-colors"
         >
           Xác nhận tạo kèo
         </Button>

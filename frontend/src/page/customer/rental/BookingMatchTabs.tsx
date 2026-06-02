@@ -19,7 +19,10 @@ export default function BookingMatchTabs({
   selectedTime?: string | null;
   selectedDuration?: number;
 }) {
-  const [activeTab, setActiveTab] = useState("booking");
+    const [activeTab, setActiveTab] = useState(() => {
+    const hasPendingMatch = sessionStorage.getItem("pendingMatchForm");
+    return hasPendingMatch ? "match" : "booking";
+  });
 
   return (
     <div className="sticky top-6 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">

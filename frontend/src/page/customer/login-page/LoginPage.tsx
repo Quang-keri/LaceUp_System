@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import authService from "../../../service/authService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { message } from "antd";
 import { useAuth } from "../../../context/AuthContext";
 import {
@@ -30,9 +30,12 @@ const LoginPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { refreshProfile } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
+
+  const from = location.state?.from || "/home";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +70,7 @@ const LoginPage: React.FC = () => {
       if (response.code === 200) {
         message.success("Đăng nhập thành công!");
         await refreshProfile();
-        navigate("/home");
+        navigate(from, { replace: true });
       }
     } catch (error: any) {
       const errorData = error.response?.data;
@@ -107,7 +110,7 @@ const LoginPage: React.FC = () => {
         if (response.code === 200) {
           message.success("Đăng nhập bằng Google thành công!");
           await refreshProfile();
-          navigate("/");
+          navigate(from, { replace: true });
         }
       } catch (error: any) {
         setErrorMessage("Đăng nhập bằng Google thất bại. Vui lòng thử lại!");

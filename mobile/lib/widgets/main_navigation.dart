@@ -6,6 +6,8 @@ import 'package:mobile/views/match/match_page.dart';
 import 'package:mobile/views/news/news_screen.dart';
 import 'package:mobile/views/profile/profile_screen.dart';
 
+import 'chatbot_bubble.dart';
+
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -31,84 +33,71 @@ class _MainNavigationState extends State<MainNavigation> {
     return Scaffold(
       extendBody: true,
 
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
+      body: IndexedStack(index: _selectedIndex, children: _pages),
+
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: bottomSafeArea + 85),
+        child: const ChatbotBubble(),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.only(
-          bottom: bottomSafeArea + 8,
-        ),
-        child: CurvedNavigationBar(
-          index: _selectedIndex,
-
-          backgroundColor: Colors.transparent,
-
-          color: const Color(0xFF9156F1),
-
-          buttonBackgroundColor: const Color(0xFF9156F1),
-
-          height: 75,
-
-          animationDuration: const Duration(milliseconds: 250),
-
-          letIndexChange: (index) => true,
-
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-
-          items: [
-            const Icon(
-              Icons.home_rounded,
-              size: 26,
-              color: Colors.white,
-            ),
-
-            const Icon(
-              Icons.location_on_rounded,
-              size: 26,
-              color: Colors.white,
-            ),
-
-            Container(
-              height: 46,
-              width: 46,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.groups_rounded,
-                  size: 28,
-                  color: Color(0xFF9156F1),
+      bottomNavigationBar: Container(
+        color: Colors.transparent,
+        child: SafeArea(
+          bottom: true,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: CurvedNavigationBar(
+              index: _selectedIndex,
+              backgroundColor: Colors.transparent,
+              color: const Color(0xFF9156F1),
+              buttonBackgroundColor: const Color(0xFF9156F1),
+              height: 75,
+              animationDuration: const Duration(milliseconds: 250),
+              letIndexChange: (index) => true,
+              onTap: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              items: [
+                const Icon(Icons.home_rounded, size: 26, color: Colors.white),
+                const Icon(
+                  Icons.location_on_rounded,
+                  size: 26,
+                  color: Colors.white,
                 ),
-              ),
+                Container(
+                  height: 46,
+                  width: 46,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.groups_rounded,
+                      size: 28,
+                      color: Color(0xFF9156F1),
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.article_rounded,
+                  size: 26,
+                  color: Colors.white,
+                ),
+                const Icon(Icons.person_rounded, size: 26, color: Colors.white),
+              ],
             ),
-
-            const Icon(
-              Icons.article_rounded,
-              size: 26,
-              color: Colors.white,
-            ),
-
-            const Icon(
-              Icons.person_rounded,
-              size: 26,
-              color: Colors.white,
-            ),
-          ],
+          ),
         ),
       ),
     );

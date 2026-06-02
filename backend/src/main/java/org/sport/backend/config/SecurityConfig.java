@@ -57,6 +57,8 @@ public class SecurityConfig {
             "/api/v1/lace-up/ws/**",
 
             "/matches/open",
+
+            "/chatbot/ask"
     };
     UrlProperties urlProperties;
 
