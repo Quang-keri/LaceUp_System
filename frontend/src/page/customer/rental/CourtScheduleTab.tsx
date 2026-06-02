@@ -10,19 +10,19 @@ export default function CourtScheduleTab({
   setSelectedSlots,
 }: any) {
   const courtCopyRows = (data.courts || []).flatMap((court: any) =>
-  (court.courtCopies || []).map((copy: any) => ({
-    ...copy,
-    courtId: court.courtId,
-    courtName: court.courtName,
-    categoryName: court.category?.categoryName || court.categoryName,
-    minPrice: court.minPrice,
-    maxPrice: court.maxPrice,
-    priceRules: court.priceRules || [],
-    coverImage: court.coverImage,
-    images: court.images || [],
-    slots: copy.slots || [],
-  }))
-);
+    (court.courtCopies || []).map((copy: any) => ({
+      ...copy,
+      courtId: court.courtId,
+      courtName: court.courtName,
+      categoryName: court.category?.categoryName || court.categoryName,
+      minPrice: court.minPrice,
+      maxPrice: court.maxPrice,
+      priceRules: court.priceRules || [],
+      coverImage: court.coverImage,
+      images: court.images || [],
+      slots: copy.slots || [],
+    })),
+  );
 
   return (
     <div className="animate-in fade-in duration-300">
@@ -51,9 +51,13 @@ export default function CourtScheduleTab({
         </div>
 
         <div className="bg-orange-50 text-[#ea580c] px-3 py-2.5 rounded-lg text-xs italic border border-orange-100">
-          <span className="font-semibold">* Lưu ý:</span>Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây. <br />
+          <b>* Lưu ý:</b>Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất
+          dưới các ô dưới đây. <br />
+          <b>Đăng nhập để đặt lịch</b> nhanh hơn, theo dõi lịch sử đặt sân và
+          nhận thông báo ưu đãi từ chúng tôi.
           <br />
-          Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.
+          Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù
+          hợp.
         </div>
       </div>
 
