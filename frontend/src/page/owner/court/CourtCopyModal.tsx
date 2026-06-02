@@ -79,7 +79,7 @@ export default function CourtCopyModal({
           name="courtCode"
           rules={[{ required: true, message: "Mã sân con không bỏ trống" }]}
         >
-          <Input placeholder="Ví dụ: A1, A2, ..." disabled={!!copy} />
+          <Input placeholder="Ví dụ: A1, A2, ..." />
         </Form.Item>
 
         <Form.Item

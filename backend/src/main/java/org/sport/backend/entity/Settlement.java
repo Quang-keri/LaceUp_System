@@ -39,21 +39,26 @@ public class Settlement extends BaseEntity {
     @Column(name = "settlement_date", nullable = false)
     private LocalDate settlementDate;
 
-    // Tổng tiền user đã trả cho hệ thống
     @Column(name = "gross_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal grossAmount;
 
-    // % hoa hồng
     @Column(name = "commission_rate", nullable = false, precision = 5, scale = 4)
     private BigDecimal commissionRate;
 
-    // Tiền admin ăn
     @Column(name = "commission_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal commissionAmount;
 
-    // Tiền phải trả owner
     @Column(name = "owner_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal ownerAmount;
+
+    @Column(name = "booking_revenue", nullable = false, precision = 18, scale = 2)
+    private BigDecimal bookingRevenue;
+
+    @Column(name = "initial_paid_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal initialPaidAmount;
+
+    @Column(name = "extra_service_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal extraServiceAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

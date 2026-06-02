@@ -133,7 +133,6 @@ export default function PostManagementPage() {
                   <Space direction="vertical" size={0} className="w-full">
                     <Text type="secondary">{post.address.street}</Text>
                     <Text type="secondary">{post.address.ward}</Text>
-                    <Text type="secondary">{post.address.district}</Text>
                     <Text type="secondary">{post.address.city?.cityName}</Text>
                     <Text type="secondary">{post.courtName}</Text>
                     <div className="mt-2 flex justify-between items-center">

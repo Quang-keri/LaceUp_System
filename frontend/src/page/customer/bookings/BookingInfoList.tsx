@@ -23,7 +23,6 @@ export default function BookingInfoList({ intent }: any) {
                   minute: "2-digit",
                 })}
               </div>
-
               <div>Giá: {slot.price?.toLocaleString()} VNĐ</div>
             </div>
           </List.Item>

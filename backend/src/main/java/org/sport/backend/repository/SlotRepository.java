@@ -110,4 +110,19 @@ public interface SlotRepository extends JpaRepository<Slot, UUID>, JpaSpecificat
             @Param("settlementDate") LocalDate settlementDate
     );
 
+
+    @Query("""
+        SELECT s FROM Slot s
+        JOIN FETCH s.courtCopy cc
+        JOIN FETCH cc.court c
+        WHERE c.rentalArea.rentalAreaId = :rentalAreaId
+        AND s.startTime < :endOfDay
+        AND s.endTime > :startOfDay
+    """)
+    List<Slot> findScheduleByRentalAreaAndDate(
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay
+    );
+
 }

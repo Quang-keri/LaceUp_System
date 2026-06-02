@@ -26,9 +26,9 @@ export default function PaymentSummary({
 
   return (
     <Card title="Thanh toán">
-      <div style={{ marginBottom: 16 }}>
+      {/* <div style={{ marginBottom: 16 }}>
         <b>Số sân:</b> {intent.slots?.length || 0}
-      </div>
+      </div> */}
 
       <Card size="small" style={{ marginTop: 20 }}>
         <h3 className="font-semibold mb-3">Hình thức thanh toán</h3>

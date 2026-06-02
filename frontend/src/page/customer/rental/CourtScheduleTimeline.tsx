@@ -10,10 +10,7 @@ const generateTimeSlots = (openTimeStr: string, closeTimeStr: string) => {
   for (let hour = startHour; hour < endHour; hour++) {
     const formattedHour = hour.toString().padStart(2, "0");
     slots.push(`${formattedHour}:00`);
-
-    if (hour !== endHour) {
-      slots.push(`${formattedHour}:30`);
-    }
+    slots.push(`${formattedHour}:30`);
   }
 
   return slots;
@@ -30,31 +27,24 @@ export default function CourtScheduleTimeline({
   onSelectSlot,
   openTime,
   closeTime,
+  selectedSlots = [],
+  setSelectedSlots,
 }: any) {
   const timeSlots = generateTimeSlots(openTime, closeTime);
-
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
-  const [selection, setSelection] = useState<{
-    courtId: string;
-    anchor: number;
-    startIndex: number;
-    endIndex: number;
-  } | null>(null);
-
   useEffect(() => {
-    setSelection(null);
+    setSelectedSlots?.([]);
   }, [selectedDate]);
 
   const handleScroll = () => {
     const container = scrollContainerRef.current;
-    if (container) {
-      const maxScrollLeft = container.scrollWidth - container.clientWidth;
-      if (maxScrollLeft > 0) {
-        const progress = (container.scrollLeft / maxScrollLeft) * 100;
-        setScrollProgress(progress);
-      }
+    if (!container) return;
+
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    if (maxScrollLeft > 0) {
+      setScrollProgress((container.scrollLeft / maxScrollLeft) * 100);
     }
   };
 
@@ -69,13 +59,8 @@ export default function CourtScheduleTimeline({
     }
   };
 
-  useEffect(() => {
-    handleScroll();
-  }, [courts, timeSlots]);
-
-  const getSlotAtTime = (court: any, time: string) => {
-    const allSlots =
-      court.courtCopies?.flatMap((copy: any) => copy.slots || []) || [];
+  const getSlotAtTime = (courtCopy: any, time: string) => {
+    const allSlots = courtCopy.slots || [];
     if (allSlots.length === 0) return null;
 
     const slotMinute = timeToMinutes(time);
@@ -83,131 +68,104 @@ export default function CourtScheduleTimeline({
     return allSlots.find((slot: any) => {
       const start = dayjs(slot.startTime);
       const end = dayjs(slot.endTime);
-      const sameDay = start.isSame(selectedDate, "day");
 
-      if (!sameDay) return false;
+      if (!start.isSame(selectedDate, "day")) return false;
 
       const startMinute = start.hour() * 60 + start.minute();
       const endMinute = end.hour() * 60 + end.minute();
+
       return slotMinute >= startMinute && slotMinute < endMinute;
     });
   };
 
-  const handleSlotClick = (court: any, idx: number, slotStatus?: string) => {
+  // Thuật toán chọn / hủy slot linh hoạt (Cho phép chọn nhiều khung giờ rời rạc)
+  const handleSlotClick = (
+    courtCopy: any,
+    idx: number,
+    slotStatus?: string,
+  ) => {
     if (slotStatus && ["BOOKED", "MATCH_FULL", "LOCKED"].includes(slotStatus)) {
       return;
     }
 
-    if (
-      selection &&
-      selection.courtId === court.courtId &&
-      idx >= selection.startIndex &&
-      idx <= selection.endIndex
-    ) {
-      setSelection(null);
-      return;
-    }
+    setSelectedSlots((prev: any[]) => {
+      // 1. Tách riêng các lựa chọn của các sân khác và sân hiện tại đang click
+      const otherCourts = prev.filter(
+        (item) => item.courtCopyId !== courtCopy.courtCopyId,
+      );
+      let myBlocks = prev.filter(
+        (item) => item.courtCopyId === courtCopy.courtCopyId,
+      );
 
-    const isSlotBlocked = (index: number) => {
-      if (index < 0 || index >= timeSlots.length) return true;
-      const t = timeSlots[index];
-      const s = getSlotAtTime(court, t);
-      return s && ["BOOKED", "MATCH_FULL", "LOCKED"].includes(s.slotStatus);
-    };
+      // 2. Tìm xem ô click (idx) có nằm trong block nào đã chọn trước đó không
+      const clickedInsideIndex = myBlocks.findIndex(
+        (b) => idx >= b.startIndex && idx <= b.endIndex,
+      );
 
-    let newSelection;
+      if (clickedInsideIndex !== -1) {
+        // TRƯỜNG HỢP A: Bấm vào ô đã chọn -> HỦY (Cắt hoặc thu hẹp block)
+        const b = myBlocks[clickedInsideIndex];
+        const newBlocks = [];
 
-    if (!selection || selection.courtId !== court.courtId) {
-      if (!isSlotBlocked(idx + 1)) {
-        newSelection = {
-          courtId: court.courtId,
-          anchor: idx,
+        // Nếu ô click không phải là ô đầu tiên, tạo phần đầu của block
+        if (idx > b.startIndex) {
+          newBlocks.push({ ...b, endIndex: idx - 1 });
+        }
+        // Nếu ô click không phải là ô cuối cùng, tạo phần đuôi của block
+        if (idx < b.endIndex) {
+          newBlocks.push({ ...b, startIndex: idx + 1 });
+        }
+        // Thay thế block cũ bằng các block mới (nếu bấm ô duy nhất thì mảng newBlocks rỗng -> Xóa luôn)
+        myBlocks.splice(clickedInsideIndex, 1, ...newBlocks);
+      } else {
+        // TRƯỜNG HỢP B: Bấm vào ô trống -> CHỌN MỚI
+        myBlocks.push({
+          courtCopyId: courtCopy.courtCopyId,
+          courtCode: courtCopy.courtCode,
+          courtId: courtCopy.courtId,
+          courtName: courtCopy.courtName,
+          categoryName: courtCopy.categoryName,
+          date: selectedDate.format("YYYY-MM-DD"),
           startIndex: idx,
-          endIndex: idx + 1,
-        };
-      } else if (!isSlotBlocked(idx - 1)) {
-        newSelection = {
-          courtId: court.courtId,
-          anchor: idx,
-          startIndex: idx - 1,
           endIndex: idx,
-        };
-      } else {
-        message.warning(
-          "Cần tối thiểu 1 giờ (2 ô liên tiếp) trống để đặt sân!",
-        );
-        return;
-      }
-    } else {
-      let start = Math.min(selection.anchor, idx);
-      let end = Math.max(selection.anchor, idx);
+          court: courtCopy, // Lưu lại nguyên object court để bên Modal tính toán priceRules
+        });
 
-      if (end - start === 0) {
-        if (!isSlotBlocked(start + 1)) {
-          end = start + 1;
-        } else if (!isSlotBlocked(start - 1)) {
-          start = start - 1;
-        } else {
-          message.warning(
-            "Cần tối thiểu 1 giờ (2 ô liên tiếp) trống để đặt sân!",
-          );
-          return;
+        // Sort lại theo thời gian
+        myBlocks.sort((a, b) => a.startIndex - b.startIndex);
+
+        // Nối các block liền kề nhau thành 1 block lớn
+        const merged = [];
+        for (const block of myBlocks) {
+          if (merged.length === 0) {
+            merged.push(block);
+          } else {
+            const last = merged[merged.length - 1];
+            // Nếu block này sát ngay sau block trước -> Gộp lại
+            if (last.endIndex + 1 === block.startIndex) {
+              last.endIndex = block.endIndex;
+            } else {
+              merged.push(block);
+            }
+          }
         }
+        myBlocks = merged;
       }
 
-      if (end - start + 1 > 8) {
-        message.info("Bạn chỉ được phép đặt tối đa 4 giờ!");
-        if (idx === end) {
-          end = start + 7;
-        } else {
-          start = end - 7;
-        }
-      }
+      // 3. Tính toán lại startTime, endTime, duration chuẩn chỉnh cho từng block của sân này
+      myBlocks = myBlocks.map((b) => {
+        const startTime = timeSlots[b.startIndex];
+        const endTime =
+          timeSlots[b.endIndex + 1] || closeTime?.slice(0, 5) || "22:00";
+        const duration = (b.endIndex - b.startIndex + 1) * 0.5;
+        return { ...b, startTime, endTime, duration };
+      });
 
-      let hasConflict = false;
-      for (let i = start; i <= end; i++) {
-        if (isSlotBlocked(i)) {
-          hasConflict = true;
-          break;
-        }
-      }
+      // 4. Trả về mảng tổng
+      return [...otherCourts, ...myBlocks];
+    });
 
-      if (hasConflict) {
-        if (!isSlotBlocked(idx + 1)) {
-          newSelection = {
-            courtId: court.courtId,
-            anchor: idx,
-            startIndex: idx,
-            endIndex: idx + 1,
-          };
-        } else if (!isSlotBlocked(idx - 1)) {
-          newSelection = {
-            courtId: court.courtId,
-            anchor: idx,
-            startIndex: idx - 1,
-            endIndex: idx,
-          };
-        } else {
-          message.warning("Khu vực này không đủ 1 giờ trống liền mạch!");
-          return;
-        }
-      } else {
-        newSelection = {
-          courtId: court.courtId,
-          anchor: selection.anchor,
-          startIndex: start,
-          endIndex: end,
-        };
-      }
-    }
-
-    setSelection(newSelection);
-
-    const durationInHours =
-      (newSelection.endIndex - newSelection.startIndex + 1) * 0.5;
-    const startTime = timeSlots[newSelection.startIndex];
-
-    onSelectSlot(court, startTime, durationInHours);
+    onSelectSlot?.(courtCopy, timeSlots[idx], 0.5);
   };
 
   return (
@@ -218,117 +176,113 @@ export default function CourtScheduleTimeline({
         className="overflow-x-auto w-full relative"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        <style>{`
-          div::-webkit-scrollbar { display: none; }
-        `}</style>
+        <style>{`div::-webkit-scrollbar { display: none; }`}</style>
 
         <div className="w-max min-w-full">
-          {/* Timeline Header - Thay đổi sang màu tím nhạt bg-purple-50 */}
-          <div className="flex border-b border-gray-300 bg-purple-50 sticky top-0 z-40 h-10 md:h-12 shadow-sm">
-            <div className="sticky left-0 z-50 w-16 md:w-36 flex-shrink-0 border-r border-gray-300 bg-purple-50" />
+          <div className="flex border-b border-gray-300 bg-purple-50 sticky top-0 z-40 h-12 shadow-sm">
+            <div className="sticky left-0 z-50 w-28 md:w-36 flex-shrink-0 border-r border-gray-300 bg-purple-50" />
 
             {timeSlots.map((time, idx) => (
               <div
                 key={idx}
                 className="w-10 md:w-24 relative border-r border-gray-300 flex-shrink-0 bg-purple-50"
               >
-                <span
-                  className={`absolute top-2 text-[10px] md:text-xs text-gray-700 font-medium whitespace-nowrap ${
-                    idx === 0 ? "left-1.5" : "left-0 -translate-x-1/2"
-                  }`}
-                >
+                <span className="absolute top-2 left-0 -translate-x-1/2 text-[10px] md:text-xs text-gray-700 font-medium whitespace-nowrap">
                   {time}
                 </span>
-
-                {/* Vạch chia giờ - Đổi sang màu tím đậm hoặc cam */}
-                <div
-                  className={`absolute bottom-0 w-[2px] h-1.5 md:h-2 bg-[#9156F1] ${
-                    idx === 0 ? "left-0" : "left-0 -translate-x-1/2"
-                  }`}
-                ></div>
+                <div className="absolute bottom-0 left-0 -translate-x-1/2 w-[2px] h-2 bg-[#9156F1]" />
               </div>
             ))}
           </div>
 
-          {courts.map((court: any) => (
-            <div
-              key={court.courtId}
-              className="flex border-b border-gray-300 relative"
-            >
-              {/* Tên sân - Đổi sang tone tím nhạt */}
-              <div className="sticky left-0 z-30 w-16 md:w-36 flex-shrink-0 bg-purple-50 flex items-center justify-center border-r border-gray-300 text-[10px] md:text-[13px] font-medium text-purple-900 px-1 md:px-4 py-2 md:py-3 break-words text-center shadow-[1px_0_2px_rgba(0,0,0,0.05)]">
-                <span className="leading-tight">{court.courtName}</span>
-              </div>
+          {courts.map((court: any) => {
+            // Lấy TẤT CẢ các khoảng thời gian (blocks) đang chọn của sân này
+            const myBlocks = selectedSlots.filter(
+              (item) => item.courtCopyId === court.courtCopyId,
+            );
 
-              <div className="flex">
-                {timeSlots.map((time, idx) => {
-                  const slot = getSlotAtTime(court, time);
+            return (
+              <div
+                key={court.courtCopyId}
+                className="flex border-b border-gray-300 relative"
+              >
+                <div className="sticky left-0 z-30 w-28 md:w-36 flex-shrink-0 bg-purple-50 flex flex-col items-center justify-center border-r border-gray-300 text-[10px] md:text-[12px] font-medium text-purple-900 px-1 py-2 text-center shadow-[1px_0_2px_rgba(0,0,0,0.05)]">
+                  <span className="leading-tight">{court.courtName}</span>
+                  <span className="text-orange-600 text-[10px] md:text-[12px] font-bold mt-1">
+                    {court.courtCode}
+                  </span>
+                </div>
 
-                  const isSelected =
-                    selection !== null &&
-                    selection.courtId === court.courtId &&
-                    idx >= selection.startIndex &&
-                    idx <= selection.endIndex;
+                <div className="flex">
+                  {timeSlots.map((time, idx) => {
+                    const slot = getSlotAtTime(court, time);
 
-                  let dynamicClasses =
-                    "border-r border-gray-300 bg-white hover:bg-gray-50";
+                    // Kiểm tra xem idx hiện tại có rơi vào BẤT KỲ block nào của sân này không
+                    const activeBlock = myBlocks.find(
+                      (b) => idx >= b.startIndex && idx <= b.endIndex,
+                    );
+                    const isSelected = !!activeBlock;
 
-                  if (slot) {
-                    switch (slot.slotStatus) {
-                      case "BOOKED": // Cập nhật đúng màu Đã đặt lịch
-                        dynamicClasses =
-                          "border-r border-gray-300 bg-[#ea580c]";
-                        break;
-                      case "MATCH_FULL": // Cập nhật đúng màu Đã có trận
-                        dynamicClasses =
-                          "border-r border-gray-300 bg-[#9156F1]";
-                        break;
-                      case "MATCH_PENDING": // Đã có trận (chưa đủ)
-                        dynamicClasses =
-                          "border-r border-gray-300 bg-orange-300";
-                        break;
-                      case "LOCKED": // Khóa
-                        dynamicClasses = "border-r border-gray-300 bg-gray-400";
-                        break;
-                      default:
-                        dynamicClasses =
-                          "border-r border-gray-300 bg-[#ea580c]";
-                    }
-                  }
+                    let dynamicClasses =
+                      "border-r border-gray-300 bg-white hover:bg-gray-50";
 
-                  // Cập nhật trạng thái đang được chọn (Selected) theo màu Cam để đồng bộ với nút "Đặt sân ngay"
-                  if (isSelected) {
-                    dynamicClasses =
-                      "bg-orange-50 border-y-[2px] border-y-[#ea580c] z-10 shadow-sm";
-
-                    if (idx === selection.startIndex) {
-                      dynamicClasses +=
-                        " border-l-[2px] border-l-[#ea580c] rounded-l-md";
-                    }
-                    if (idx === selection.endIndex) {
-                      dynamicClasses +=
-                        " border-r-[2px] border-r-[#ea580c] rounded-r-md";
-                    }
-                  }
-
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() =>
-                        handleSlotClick(court, idx, slot?.slotStatus)
+                    if (slot) {
+                      switch (slot.slotStatus) {
+                        case "BOOKED":
+                          dynamicClasses =
+                            "border-r border-gray-300 bg-[#ea580c]";
+                          break;
+                        case "MATCH_FULL":
+                          dynamicClasses =
+                            "border-r border-gray-300 bg-[#9156F1]";
+                          break;
+                        case "MATCH_PENDING":
+                          dynamicClasses =
+                            "border-r border-gray-300 bg-orange-300";
+                          break;
+                        case "LOCKED":
+                          dynamicClasses =
+                            "border-r border-gray-300 bg-gray-400";
+                          break;
                       }
-                      className={`relative w-10 md:w-24 h-10 md:h-16 flex-shrink-0 transition-all cursor-pointer overflow-hidden ${dynamicClasses}`}
-                    ></div>
-                  );
-                })}
+                    }
+
+                    if (isSelected) {
+                      dynamicClasses =
+                        "bg-orange-50 border-y-[2px] border-y-[#ea580c] z-10 shadow-sm";
+
+                      // Bo góc và viền trái cho ô đầu tiên của mỗi block
+                      if (idx === activeBlock.startIndex) {
+                        dynamicClasses +=
+                          " border-l-[2px] border-l-[#ea580c] rounded-l-md";
+                      }
+
+                      // Bo góc và viền phải cho ô cuối cùng của mỗi block
+                      if (idx === activeBlock.endIndex) {
+                        dynamicClasses +=
+                          " border-r-[2px] border-r-[#ea580c] rounded-r-md";
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() =>
+                          handleSlotClick(court, idx, slot?.slotStatus)
+                        }
+                        className={`relative w-10 md:w-24 h-10 md:h-16 flex-shrink-0 transition-all cursor-pointer overflow-hidden ${dynamicClasses}`}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-4/5 max-w-sm z-30">
-        <div className="bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200 flex items-center justify-center">
+        <div className="bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200">
           <input
             type="range"
             min="0"
