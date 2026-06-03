@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/utils/error_utils.dart';
+import 'package:mobile/utils/top_message.dart';
 import 'package:mobile/views/profile/history/booking_history_screen.dart';
 import '../../../models/rental_area.dart';
 import '../../../models/selected_booking_slot.dart';
@@ -78,8 +79,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
   Future<void> _uploadProof() async {
     if (selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn ảnh chuyển khoản')),
+      showTopMessage(
+        context,
+        'Vui lòng chọn ảnh chuyển khoản',
       );
       return;
     }
@@ -96,7 +98,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Upload ảnh thành công, vui lòng chờ chủ sân xác nhận'),
+          content: Text('Tải ảnh thành công, vui lòng chờ chủ sân xác nhận'),
           backgroundColor: Colors.green,
         ),
       );
@@ -140,7 +142,13 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
         foregroundColor: Colors.white,
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
+        // Sửa dòng padding này để chừa khoảng trống cho nút Home
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 16 + MediaQuery.of(context).padding.bottom,
+        ),
         color: Colors.white,
         child: ElevatedButton(
           onPressed: uploading ? null : _uploadProof,
@@ -151,12 +159,12 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
           child: uploading
               ? const CircularProgressIndicator(color: Colors.white)
               : const Text(
-                  'Upload ảnh chuyển khoản',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            'Xác nhận đã tải ảnh chuyển khoản',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ),
       body: ListView(

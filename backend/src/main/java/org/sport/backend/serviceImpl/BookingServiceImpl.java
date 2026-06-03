@@ -71,7 +71,7 @@ public class BookingServiceImpl implements BookingService {
         var currentUser = userService.getCurrentUserEntity();
 
         return bookingIntentRepository
-                .findByUserUserIdOrderByCreateAtDesc(currentUser.getUserId())
+                .findByBookerPhone(currentUser.getPhone())
                 .stream()
                 .map(intent -> {
 
@@ -110,7 +110,7 @@ public class BookingServiceImpl implements BookingService {
                             .status(intent.getStatus())
                             .paymentProofUrl(intent.getPaymentProofUrl())
                             .paymentProofUploadedAt(intent.getPaymentProofUploadedAt())
-                            .createdAt(intent.getCreateAt())
+                            .createdAt(intent.getCreatedAt())
                             .rentalArea(intent.getRentalArea() != null
                                     ? RentalAreaResponse.builder()
                                     .rentalAreaId(intent.getRentalArea().getRentalAreaId())
@@ -222,7 +222,19 @@ public class BookingServiceImpl implements BookingService {
 
         return confirmBooking(intentId, payment);
     }
+    @Override
+    @Transactional
+    public void ownerRejectManualBooking(UUID intentId) {
+        BookingIntent intent = bookingIntentRepository.findById(intentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đặt sân"));
 
+        if (intent.getStatus() != BookingIntentStatus.PENDING_OWNER_CONFIRM) {
+            throw new RuntimeException("Yêu cầu này chưa ở trạng thái chờ owner xác nhận");
+        }
+
+        intent.setStatus(BookingIntentStatus.REJECTED);
+        bookingIntentRepository.save(intent);
+    }
     @Override
     @Transactional
     public String uploadIntentPaymentProof(UUID intentId, MultipartFile image) {
@@ -637,16 +649,12 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingIntentResponse createBookingIntent(BookingRequest request) {
 
-        User user = null;
-        if (request.getUserId() != null) {
-            user = userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        User user = userService.getCurrentUserEntity();
 
-            String currentPhone = user.getPhone();
-            if (currentPhone == null || currentPhone.trim().isEmpty()) {
-                user.setPhone(request.getUserPhone());
-                userRepository.save(user);
-            }
+        String currentPhone = user.getPhone();
+        if (currentPhone == null || currentPhone.trim().isEmpty()) {
+            user.setPhone(request.getUserPhone());
+            userRepository.save(user);
         }
 
         BookingIntent intent = BookingIntent.builder()
@@ -656,7 +664,7 @@ public class BookingServiceImpl implements BookingService {
                 .status(BookingIntentStatus.ACTIVE)
                 .expiresAt(LocalDateTime.now().plusMinutes(5))
                 .note(request.getNote())
-                .createAt(LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
                 .build();
 
         List<IntentSlot> intentSlots = new ArrayList<>();

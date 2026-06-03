@@ -234,7 +234,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
     final actionBtnText = widget.isMatchMode
         ? 'Xác nhận tạo kèo'
-        : 'Tạo booking & chuyển khoản';
+        : 'Đặt lịch và chuyển khoản';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,

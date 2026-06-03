@@ -61,7 +61,7 @@ public class BookingController {
     }
 
 
-        @GetMapping("/intent/me")
+        @GetMapping("/intent/my-intents")
         public ApiResponse<List<BookingIntentResponse>> getMyBookingIntents() {
             return ApiResponse.<List<BookingIntentResponse>>builder()
                     .code(200)
@@ -79,6 +79,16 @@ public class BookingController {
                 bookingService.ownerConfirmManualBooking(intentId)
         );
     }
+
+    @PostMapping("/intent/{intentId}/owner-reject")
+    public ApiResponse<Void> ownerRejectManualBooking(@PathVariable UUID intentId) {
+        bookingService.ownerRejectManualBooking(intentId);
+
+        return ApiResponse.<Void>builder()
+                .message("Đã từ chối yêu cầu đặt sân")
+                .build();
+    }
+
     @PostMapping(
             value = "/intent/{intentId}/payment-proof",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE

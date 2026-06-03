@@ -7,12 +7,13 @@ class CourtInfoTab extends StatelessWidget {
   final RentalAreaResponse? rentalArea;
   final CourtResponse? activeCourt;
   final ValueChanged<CourtResponse> onCourtSelected;
-
+  final VoidCallback onViewPriceTap;
   const CourtInfoTab({
     super.key,
     required this.rentalArea,
     required this.activeCourt,
     required this.onCourtSelected,
+    required this.onViewPriceTap,
   });
 
   final Color primaryColor = const Color(0xFF9156F1);
@@ -227,13 +228,27 @@ class CourtInfoTab extends StatelessWidget {
                           color: isCurrent ? selectedColor : Colors.black87,
                         ),
                       ),
-                      Text(
-                        '${NumberFormat('#,###', 'vi_VN').format(court.pricePerHour)} đ/h',
-                        style: TextStyle(
-                          color: selectedColor,
-                          fontWeight: FontWeight.w600,
+                  InkWell(
+                    onTap: onViewPriceTap,
+                    child: Row(
+                      children: [
+                        Text(
+                          'Xem bảng giá',
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 12,
+                          color: primaryColor,
+                        ),
+                      ],
+                    ),
+                  ),
                     ],
                   ),
                 ),

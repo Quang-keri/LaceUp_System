@@ -152,12 +152,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     }
 
     if (!authProvider.isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng đăng nhập để tiếp tục!'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showTopMessage('Vui lòng đăng nhập để tiếp tục!');
 
       Navigator.push(
         context,
@@ -213,7 +208,14 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       ),
       bottomNavigationBar: (_activeTabIndex == 0 && selectedSlots.isNotEmpty)
           ? Container(
-        padding: const EdgeInsets.all(16),
+        // SỬA DÒNG PADDING NÀY:
+        // Thêm MediaQuery.of(context).padding.bottom để tự động chừa chỗ cho thanh Home
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 16 + MediaQuery.of(context).padding.bottom,
+        ),
         decoration: const BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -344,13 +346,18 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           },
         );
       case 1:
-        return CourtInfoTab(
+        return  CourtInfoTab(
           rentalArea: rentalArea,
           activeCourt: activeCourt,
           onCourtSelected: (court) {
             setState(() {
               activeCourt = court;
               selectedSlots.clear();
+            });
+          },
+          onViewPriceTap: () {
+            setState(() {
+              _activeTabIndex = 2;
             });
           },
         );
@@ -361,5 +368,49 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       default:
         return const SizedBox();
     }
+  }
+  void _showTopMessage(String message, {bool isError = false}) {
+    final overlay = Overlay.of(context);
+
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            decoration: BoxDecoration(
+              color: isError ? Colors.red : Colors.orange,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
   }
 }

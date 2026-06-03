@@ -21,6 +21,7 @@ import {
   SearchOutlined,
   CheckOutlined,
   EyeOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 
 import bookingService from "../../../../service/bookingService";
@@ -40,7 +41,27 @@ export default function PendingTransferBookingPage() {
   const [keyword, setKeyword] = useState("");
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeRecord, setActiveRecord] = useState<any>(null);
-
+  const handleReject = async (intentId: string) => {
+    Modal.confirm({
+      title: "Từ chối chuyển khoản?",
+      content:
+        "Đơn này sẽ bị từ chối và không tạo booking thật. Bạn có chắc chắn không?",
+      okText: "Từ chối",
+      cancelText: "Hủy",
+      okButtonProps: {
+        danger: true,
+      },
+      onOk: async () => {
+        try {
+          await bookingService.ownerRejectBooking(intentId);
+          message.success("Đã từ chối chuyển khoản");
+          await loadData();
+        } catch (e: any) {
+          message.error(e.response?.data?.message || "Từ chối thất bại");
+        }
+      },
+    });
+  };
   const fetchBuildings = async () => {
     try {
       setBuildingLoading(true);
@@ -191,7 +212,7 @@ export default function PendingTransferBookingPage() {
       ),
     },
     {
-      title: "Ảnh CK",
+      title: "Ảnh",
       dataIndex: "paymentProofUrl",
       width: 120,
       render: (url: string) =>
@@ -225,19 +246,27 @@ export default function PendingTransferBookingPage() {
           >
             Duyệt
           </Button>
+
+          <Button
+            danger
+            icon={<CloseOutlined />}
+            onClick={() => handleReject(record.bookingIntentId)}
+          >
+            Từ chối
+          </Button>
         </Space>
       ),
     },
   ];
 
   return (
-    <Row gutter={24} style={{ padding: 24 }}>
+    <Row gutter={24} style={{ padding: 20 }}>
       <Col xs={24} md={6} lg={5}>
         <Card
           title="Bộ lọc & Thao tác"
           bordered
           style={{ borderRadius: 8 }}
-          bodyStyle={{ padding: 16 }}
+          bodyStyle={{ padding: 10 }}
         >
           <FilterLabel>Cơ sở</FilterLabel>
           <Select
@@ -316,7 +345,7 @@ export default function PendingTransferBookingPage() {
             locale={{
               emptyText: <Empty description="No data" />,
             }}
-            scroll={{ x: 1300 }}
+            scroll={{ x: 1100 }}
           />
         </Card>
       </Col>
@@ -328,6 +357,17 @@ export default function PendingTransferBookingPage() {
         footer={[
           <Button key="close" onClick={() => setDetailOpen(false)}>
             Đóng
+          </Button>,
+          <Button
+            key="reject"
+            danger
+            icon={<CloseOutlined />}
+            onClick={() => {
+              setDetailOpen(false);
+              handleReject(activeRecord?.bookingIntentId);
+            }}
+          >
+            Từ chối
           </Button>,
           <Button
             key="confirm"

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import '../config/api_client.dart';
-
+import 'package:flutter/material.dart';
 class BookingService {
   Future<dynamic> getBookingIntent(String bookingIntentId) async {
     try {
@@ -22,7 +22,6 @@ class BookingService {
     required String note,
     required List<Map<String, dynamic>> slotRequests,
   }) async {
-    try {
       final response = await apiClient.post(
         '/bookings/intent',
         data: {
@@ -34,23 +33,10 @@ class BookingService {
       );
 
       return response.data;
-    } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['message'] ?? 'Tạo yêu cầu đặt sân thất bại',
-      );
-    }
+
   }
 
-  Future<dynamic> getMyBookingIntents() async {
-    try {
-      final response = await apiClient.get('/bookings/intent/me');
-      return response.data;
-    } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['message'] ?? 'Không thể tải đơn chờ xác nhận',
-      );
-    }
-  }
+
 
   Future<dynamic> uploadPaymentProof({
     required String bookingIntentId,
@@ -67,10 +53,37 @@ class BookingService {
         options: Options(contentType: 'multipart/form-data'),
       );
 
+      debugPrint('UPLOAD SUCCESS = ${response.data}');
       return response.data;
     } on DioException catch (e) {
+      debugPrint('UPLOAD ERROR STATUS = ${e.response?.statusCode}');
+      debugPrint('UPLOAD ERROR DATA = ${e.response?.data}');
+      debugPrint('UPLOAD ERROR MESSAGE = ${e.message}');
+      debugPrint('UPLOAD ERROR URL = ${e.requestOptions.uri}');
+      debugPrint('UPLOAD ERROR HEADERS = ${e.requestOptions.headers}');
+
       throw Exception(
-        e.response?.data['message'] ?? 'Upload ảnh thất bại',
+        e.response?.data?['message'] ??
+            e.response?.data?.toString() ??
+            e.message ??
+            'Upload ảnh thất bại',
+      );
+    } catch (e) {
+      debugPrint('UPLOAD UNKNOWN ERROR = $e');
+      throw Exception('Upload ảnh thất bại: $e');
+    }
+  }
+
+  Future<dynamic> getMyBookingIntents() async {
+    try {
+      final response = await apiClient.get('/bookings/intent/my-intents');
+      // IN KIỂU DỮ LIỆU RA ĐÂY ĐỂ CHECK
+      debugPrint('KIỂU DỮ LIỆU CỦA DATA: ${response.data.runtimeType}');
+      debugPrint('DỮ LIỆU THẬT: ${response.data}');
+      return response.data['result'] ?? [];
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['message'] ?? 'Không thể tải đơn chờ xác nhận',
       );
     }
   }
@@ -85,21 +98,23 @@ class BookingService {
       ) async {
     try {
       final response = await apiClient.get(
-        '/bookings/me',
+        '/bookings/my-bookings',
         queryParameters: {
-          if (status != null) 'status': status,
-          if (fromDate != null) 'fromDate': fromDate,
-          if (toDate != null) 'toDate': toDate,
+          if (status != null) 'bookingStatus': status,
+          if (fromDate != null) 'from': fromDate,
+          if (toDate != null) 'to': toDate,
           if (keyword != null) 'keyword': keyword,
           'page': page,
           'size': size,
         },
       );
 
-      return response.data;
+
+      return response.data['result'] ?? response.data;
+
     } on DioException catch (e) {
       throw Exception(
-        e.response?.data['message'] ?? 'Không thể tải lịch sử đặt sân',
+        e.response?.data?['message'] ?? 'Không thể tải lịch sử đặt sân',
       );
     }
   }

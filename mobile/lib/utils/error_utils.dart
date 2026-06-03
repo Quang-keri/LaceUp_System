@@ -8,7 +8,9 @@ String getErrorMessage(dynamic error) {
       final result = data['result'];
 
       if (result is Map && result.isNotEmpty) {
-        return result.values.map((e) => e.toString()).join('\n');
+        return result.values
+            .map((e) => e.toString())
+            .join('\n');
       }
 
       return data['message']?.toString() ??
@@ -16,8 +18,11 @@ String getErrorMessage(dynamic error) {
           'Có lỗi xảy ra';
     }
 
-    return data?.toString() ?? error.message ?? 'Có lỗi xảy ra';
+    return data?.toString() ??
+        error.message ??
+        'Có lỗi xảy ra';
   }
 
-  return error.toString();
+  return error.toString().replaceAll('Exception: ', '');
 }
+

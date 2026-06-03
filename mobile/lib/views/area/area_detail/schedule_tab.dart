@@ -286,7 +286,11 @@ class _ScheduleTabState extends State<ScheduleTab> {
         _buildLegends(),
         const SizedBox(height: 16),
         _buildScrollHint(),
+
+        const SizedBox(height: 8),
         _buildTimelineMatrix(rows),
+        const SizedBox(height: 16),
+        _buildBookingNotice(),
         if (widget.isMatchMode)
           MatchConfigWidget(
             categoryName: widget.activeCourt?.categoryName ?? '',
@@ -422,7 +426,42 @@ class _ScheduleTabState extends State<ScheduleTab> {
       ),
     );
   }
-
+  Widget _buildBookingNotice() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFFDBA74),
+        ),
+      ),
+      child: RichText(
+        text: const TextSpan(
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.6,
+            color: Color(0xFFEA580C),
+          ),
+          children: [
+            TextSpan(
+              text: '* Lưu ý: ',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text:
+              'Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây.\n'
+                  'Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử đặt sân và nhận thông báo ưu đãi từ chúng tôi.\n'
+                  'Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildLegendItem(Color color, String label, {Color? borderColor}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -595,13 +634,45 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                   ),
                                 ),
                               ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                time,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              // Dùng Stack để ép text nằm đè lên vạch chia (Border)
+                              child: Stack(
+                                clipBehavior: Clip.none, // Quan trọng: Cho phép chữ tràn ra ngoài viền Container
+                                children: [
+                                  // 1. Mốc giờ bắt đầu nằm ở vạch bên TRÁI
+                                  Positioned(
+                                    // Ô đầu tiên nhích vào trong 4px để không bị lẹm vào cột Tên Sân.
+                                    // Các ô tiếp theo dịch sang trái -16px để chữ (rộng khoảng 32px) nằm ngay chính giữa vạch kẻ.
+                                    left: idx == 0 ? 4 : -16,
+                                    top: 0,
+                                    bottom: 0,
+                                    child: Center(
+                                      child: Text(
+                                        time,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // 2. Xử lý riêng cho ô CUỐI CÙNG: Thêm mốc giờ kết thúc ở vạch bên PHẢI
+                                  if (idx == dynamicTimeSlots.length - 1)
+                                    Positioned(
+                                      right: 4, // Nhích vào trong 4px ở lề phải cùng để không tràn khỏi màn hình
+                                      top: 0,
+                                      bottom: 0,
+                                      child: Center(
+                                        child: Text(
+                                          widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             );
                           }).toList(),

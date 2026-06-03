@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/views/profile/history/booking_history_screen.dart';
+import 'package:mobile/views/profile/terms/terms_policy_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
@@ -40,7 +42,12 @@ class ProfileScreen extends StatelessWidget {
       ProfileMenuItemData(
         title: 'Lịch sử đặt lịch',
         icon: Icons.history,
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
+          );
+        },
       ),
       ProfileMenuItemData(
         title: 'Xếp hạng của tôi',
@@ -62,16 +69,30 @@ class ProfileScreen extends StatelessWidget {
       ProfileMenuItemData(
         title: 'Gói hội viên',
         icon: Icons.card_membership,
-        onTap: () {},
+        onTap: () {
+          showTopSnackBar(
+            Overlay.of(context),
+            const CustomSnackBar.success(
+              message: 'Chức năng đang được phát triển',
+            ),
+          );
+        },
       ),
     ];
 
     final systemItems = [
-      ProfileMenuItemData(
-        title: 'Cài đặt',
-        icon: Icons.settings_outlined,
-        onTap: () {},
-      ),
+    ProfileMenuItemData(
+      title: 'Cài đặt',
+      icon: Icons.settings_outlined,
+      onTap: () {
+        showTopSnackBar(
+          Overlay.of(context),
+          const CustomSnackBar.success(
+            message: 'Chức năng đang được phát triển',
+          ),
+        );
+      },
+    ),
       ProfileMenuItemData(
         title: 'Thông tin cá nhân',
         icon: Icons.info_outline,
@@ -85,7 +106,12 @@ class ProfileScreen extends StatelessWidget {
       ProfileMenuItemData(
         title: 'Điều khoản và chính sách',
         icon: Icons.verified_user_outlined,
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TermsPolicyScreen()),
+          );
+        },
       ),
       ProfileMenuItemData(
         title: 'Đăng xuất',
@@ -392,4 +418,11 @@ class ProfileMenuTile extends StatelessWidget {
       ),
     );
   }
+}
+
+void showComingSoon(BuildContext context) {
+  showTopSnackBar(
+    Overlay.of(context),
+    const CustomSnackBar.success(message: 'Chức năng đang được phát triển'),
+  );
 }

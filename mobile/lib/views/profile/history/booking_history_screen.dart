@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/services/booking_service.dart';
 import 'package:mobile/utils/error_utils.dart';
+import 'package:mobile/views/profile/profile_screen.dart';
+
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -34,12 +36,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     setState(() => loadingIntents = true);
 
     try {
+      debugPrint('CALL API: /bookings/intent/me');
+
       final res = await bookingService.getMyBookingIntents();
 
+      debugPrint('BOOKING INTENTS RESPONSE = $res');
+
       setState(() {
-        bookingIntents = res['result'] ?? [];
+        bookingIntents = res;
       });
     } catch (e) {
+      debugPrint('BOOKING INTENTS ERROR = $e');
       _showError(e);
     } finally {
       if (mounted) setState(() => loadingIntents = false);
@@ -47,9 +54,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   }
 
   Future<void> _loadBookings() async {
+    if (!mounted) return;
     setState(() => loadingBookings = true);
 
     try {
+      debugPrint('CALL API: /bookings/my-bookings');
+
       final res = await bookingService.getMyBookings(
         null,
         null,
@@ -59,11 +69,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         20,
       );
 
+      debugPrint('BOOKINGS RESPONSE = $res');
+
+      if (!mounted) return;
+
       setState(() {
-        bookings = res['result']?['data'] ?? [];
+        bookings = res['data'] ?? [];
       });
     } catch (e) {
-      _showError(e);
+      debugPrint('BOOKINGS ERROR = $e');
+      if (mounted) _showError(e);
     } finally {
       if (mounted) setState(() => loadingBookings = false);
     }
@@ -118,6 +133,20 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     }
   }
 
+  String _bookingStatusLabel(String status) {
+    switch (status) {
+      case 'BOOKED':
+      case 'CONFIRMED':
+        return 'Đã đặt';
+      case 'COMPLETED':
+        return 'Hoàn thành';
+      case 'CANCELLED':
+        return 'Đã hủy';
+      default:
+        return status;
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'ACTIVE':
@@ -138,21 +167,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
 
       default:
         return Colors.grey;
-    }
-
-  }
-
-  String _bookingStatusLabel(String status) {
-    switch (status) {
-      case 'BOOKED':
-      case 'CONFIRMED':
-        return 'Đã đặt';
-      case 'COMPLETED':
-        return 'Hoàn thành';
-      case 'CANCELLED':
-        return 'Đã hủy';
-      default:
-        return status;
     }
   }
 
@@ -205,6 +219,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     );
   }
 
+  void _backToProfile() {
+    Navigator.pop(context);
+  }
+
   void _showPendingDetail(dynamic intent) {
     final slots = intent['slots'] ?? [];
     final status = intent['status']?.toString() ?? '';
@@ -250,8 +268,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 const SizedBox(height: 16),
                 _infoBox(
                   title: 'Trạng thái thanh toán',
-                  content:
-                  'Bạn đã gửi thông tin chuyển khoản. Sau khi chủ sân xác nhận, đơn này sẽ chuyển sang mục Lịch sử đặt sân.',
+                  content: status == 'ACTIVE'
+                      ? 'Bạn cần chuyển khoản và upload ảnh thanh toán. Sau khi gửi ảnh, đơn sẽ chờ chủ sân xác nhận.'
+                      : 'Bạn đã gửi ảnh chuyển khoản. Sau khi chủ sân xác nhận, đơn này sẽ chuyển sang mục Lịch sử đặt sân.',
                   icon: Icons.info_outline,
                   color: Colors.orange,
                 ),
@@ -364,7 +383,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 const SizedBox(height: 16),
                 _detailCard(
                   children: [
-                    _detailRow('Mã booking', booking['bookingId'] ?? '-'),
+                    _detailRow(
+                      'Mã booking',
+                      booking['bookingId']?.toString() ?? '-',
+                    ),
                     _detailRow(
                       'Khu sân',
                       booking['rentalArea']?['rentalAreaName'] ?? '-',
@@ -444,9 +466,18 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(content, style: const TextStyle(fontSize: 13)),
+                Text(
+                  content,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ],
             ),
           ),
@@ -474,10 +505,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         children: [
           SizedBox(
             width: 105,
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -490,11 +527,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
           Text(
             _formatMoney(value),
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -576,7 +619,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 Expanded(
                   child: Text(
                     intent['rentalAreaName']?.toString() ?? courtCode,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 _statusChip(_intentStatusLabel(status), _statusColor(status)),
@@ -585,7 +631,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
             const SizedBox(height: 10),
             Text(
               'Sân: $courtCode',
-              style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -596,7 +645,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 const SizedBox(width: 16),
                 Icon(Icons.access_time, size: 16, color: primaryColor),
                 const SizedBox(width: 6),
-                Text('${_formatTime(intent['startTime'])} - ${_formatTime(intent['endTime'])}'),
+                Text(
+                  '${_formatTime(intent['startTime'])} - ${_formatTime(intent['endTime'])}',
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -648,13 +699,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
               children: [
                 CircleAvatar(
                   backgroundColor: primaryColor.withOpacity(0.12),
-                  child: Icon(Icons.sports_tennis, color: primaryColor),
+                  child: Icon(Icons.sports_sharp, color: primaryColor),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     courtCode,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 _statusChip(_bookingStatusLabel(status), _statusColor(status)),
@@ -674,7 +728,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 const SizedBox(width: 16),
                 Icon(Icons.access_time, size: 16, color: primaryColor),
                 const SizedBox(width: 6),
-                Text('${_formatTime(booking['startTime'])} - ${_formatTime(booking['endTime'])}'),
+                Text(
+                  '${_formatTime(booking['startTime'])} - ${_formatTime(booking['endTime'])}',
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -744,32 +800,43 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        title: const Text(
-          'Lịch sử đặt sân',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return PopScope(
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _backToProfile();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _backToProfile,
+          ),
+          title: const Text(
+            'Lịch sử đặt sân',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          bottom: TabBar(
+            controller: tabController,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            tabs: const [
+              Tab(text: 'Chờ xác nhận'),
+              Tab(text: 'Lịch sử đặt sân'),
+            ],
+          ),
         ),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        bottom: TabBar(
+        body: TabBarView(
           controller: tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: 'Chờ xác nhận'),
-            Tab(text: 'Lịch sử đặt sân'),
+          children: [
+            _pendingTab(),
+            _bookedTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: tabController,
-        children: [
-          _pendingTab(),
-          _bookedTab(),
-        ],
       ),
     );
   }

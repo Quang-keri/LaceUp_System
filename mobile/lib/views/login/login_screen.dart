@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/utils/error_utils.dart';
+import 'package:mobile/utils/top_message.dart';
 import 'package:mobile/widgets/main_navigation.dart';
 import 'package:provider/provider.dart';
+
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import './register_screen.dart';
@@ -22,24 +25,55 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
+  String? _emailError;
+  String? _passwordError;
+
   static const Color primaryColor = Color(0xFF9156F1);
 
   Future<void> _handleLogin() async {
     FocusScope.of(context).unfocus();
 
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    bool hasError = false;
+
+    if (email.isEmpty) {
+      _emailError = 'Vui lòng nhập email';
+      hasError = true;
+    }
+
+    if (password.isEmpty) {
+      _passwordError = 'Vui lòng nhập mật khẩu';
+      hasError = true;
+    }
+
+    if (hasError) {
+      setState(() {});
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      await authService.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      await authService.login(email, password);
 
       final userInfo = await userService.getMyInfo();
 
       if (!mounted) return;
 
       await context.read<AuthProvider>().setUser(userInfo);
+
+      showTopMessage(
+        context,
+        'Đăng nhập thành công',
+        isError: false,
+      );
 
       if (widget.onLoginSuccess != null) {
         Navigator.pop(context);
@@ -51,7 +85,13 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-      _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
+      if (!mounted) return;
+
+      showTopMessage(
+        context,
+        getErrorMessage(e),
+        isError: true,
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -66,19 +106,54 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  InputDecoration _inputDecoration({
+    required String hintText,
+    String? errorText,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: hintText,
+      errorText: errorText,
+      filled: true,
+      fillColor: const Color(0xFFEAF2FF),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 17,
+      ),
+      suffixIcon: suffixIcon,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: primaryColor, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.4),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
       ),
     );
   }
 
   Widget _buildDividerText() {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         Expanded(child: Divider()),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 14),
@@ -96,17 +171,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F0FF),
-
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -117,7 +184,6 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         ),
       ),
-
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -146,28 +212,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.black,
                     ),
                   ),
-
                   const SizedBox(height: 30),
 
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
+                    onChanged: (_) {
+                      if (_emailError != null) {
+                        setState(() => _emailError = null);
+                      }
+                    },
+                    decoration: _inputDecoration(
                       hintText: 'Email',
-                      filled: true,
-                      fillColor: const Color(0xFFEAF2FF),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 17,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
-                      ),
+                      errorText: _emailError,
                     ),
                   ),
 
@@ -176,14 +233,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
+                    onChanged: (_) {
+                      if (_passwordError != null) {
+                        setState(() => _passwordError = null);
+                      }
+                    },
+                    decoration: _inputDecoration(
                       hintText: 'Mật khẩu',
-                      filled: true,
-                      fillColor: const Color(0xFFEAF2FF),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 17,
-                      ),
+                      errorText: _passwordError,
                       suffixIcon: IconButton(
                         icon: Icon(
                           _isPasswordVisible
@@ -196,14 +253,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             _isPasswordVisible = !_isPasswordVisible;
                           });
                         },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
                       ),
                     ),
                   ),
@@ -225,20 +274,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                           : const Text(
-                              'Đăng nhập',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                        'Đăng nhập',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
 
@@ -253,7 +302,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 54,
                     child: OutlinedButton.icon(
                       onPressed: () {
-                        // TODO: gọi login google ở đây
+                        showTopMessage(
+                          context,
+                          'Tính năng đăng nhập Google đang phát triển',
+                          isError: true,
+                        );
                       },
                       icon: const Text(
                         'G',
@@ -272,7 +325,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: primaryColor,
-                        side: const BorderSide(color: primaryColor, width: 1.2),
+                        side: const BorderSide(
+                          color: primaryColor,
+                          width: 1.2,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),

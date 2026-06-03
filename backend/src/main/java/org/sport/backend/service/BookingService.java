@@ -28,6 +28,7 @@ public interface BookingService {
     );
     List<BookingIntentResponse> getMyBookingIntents();
     BookingResponse ownerConfirmManualBooking(UUID intentId);
+    void ownerRejectManualBooking(UUID intentId);
     String  uploadIntentPaymentProof(UUID bookingIntentId, MultipartFile image);
     BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request);
     BookingResponse createOwnerBooking(OwnerBookingRequest request);

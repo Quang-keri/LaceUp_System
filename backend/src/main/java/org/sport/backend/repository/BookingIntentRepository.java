@@ -24,5 +24,6 @@ public interface BookingIntentRepository extends JpaRepository<BookingIntent, UU
             BookingIntentStatus status,
             Pageable pageable
     );
-    List<BookingIntent> findByUserUserIdOrderByCreateAtDesc(UUID userId);
+    List<BookingIntent> findByUserUserIdOrderByCreatedAtDesc(UUID userId);
+    List<BookingIntent> findByBookerPhone(String bookerPhone);
 }

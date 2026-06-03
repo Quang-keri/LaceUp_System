@@ -20,6 +20,10 @@ class BookingService {
 
     return res.data;
   }
+  async ownerRejectBooking(intentId: string) {
+    const res = await api.post(`/bookings/intent/${intentId}/owner-reject`);
+    return res.data;
+  }
   async previewOwnerBookingPrice(payload: {
     slots: { courtCopyId: string; startTime: string; endTime: string }[];
   }) {

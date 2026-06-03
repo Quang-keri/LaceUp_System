@@ -38,7 +38,7 @@ public class AuthController {
         LoginResponse loginResponse = authService.login(request);
         return ResponseEntity.ok(ApiResponse.<LoginResponse>builder()
                 .code(200)
-                .message("Login successfully")
+                .message("Đăng nhập thành công")
                 .result(loginResponse)
                 .build());
     }
@@ -57,7 +57,7 @@ public class AuthController {
 
         return ResponseEntity.ok(ApiResponse.<LoginResponse>builder()
                 .code(200)
-                .message("Google Login successfully")
+                .message("Đăng nhập google thành công")
                 .result(tokens)
                 .build());
     }
