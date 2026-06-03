@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/models/booking_price_helper.dart';
+import 'package:mobile/utils/error_utils.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/match.dart';
@@ -156,15 +157,12 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           ),
         ),
       );
-    } catch (e) {
+    }catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Đặt sân thất bại: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      final message = getErrorMessage(e);
+
+      _showTopMessage(message, isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -207,11 +205,16 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       );
 
       Navigator.pop(context);
-    } catch (e) {
+    }  catch (e) {
       if (!mounted) return;
 
+      final message = getErrorMessage(e);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi tạo kèo: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -438,5 +441,47 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         ),
       ),
     );
+  }
+
+  void _showTopMessage(String message, {bool isError = true}) {
+    final overlay = Overlay.of(context);
+
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: isError ? Colors.red : Colors.green,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
   }
 }

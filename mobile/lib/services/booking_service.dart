@@ -52,23 +52,22 @@ class BookingService {
     required String note,
     required List<Map<String, dynamic>> slotRequests,
   }) async {
-    try {
-      final response = await apiClient.post(
-        '/bookings/intent',
-        data: {
-          'userName': userName,
-          'userPhone': userPhone,
-          'note': note,
-          'slotRequests': slotRequests,
-        },
-      );
+    final response = await apiClient.post(
+      '/bookings/intent',
+      data: {
+        'userName': userName,
+        'userPhone': userPhone,
+        'note': note,
+        'slotRequests': slotRequests,
+      },
+    );
 
-      return response.data;
-    } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Đặt sân thất bại');
-    }
+    return response.data;
   }
-
+  Future<dynamic> getMyBookingIntents() async {
+    final res = await apiClient.get('/bookings/intent/me');
+    return res.data;
+  }
   Future<dynamic> uploadPaymentProof({
     required String bookingIntentId,
     required String imagePath,

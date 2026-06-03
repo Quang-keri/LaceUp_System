@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
+import 'package:flutter/services.dart';
+import 'package:mobile/utils/error_utils.dart';
+import 'package:mobile/views/profile/history/booking_history_screen.dart';
 import '../../../models/rental_area.dart';
 import '../../../models/selected_booking_slot.dart';
 import '../../../services/booking_service.dart';
@@ -94,18 +96,24 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Upload ảnh thành công, vui lòng chờ owner xác nhận'),
+          content: Text('Upload ảnh thành công, vui lòng chờ chủ sân xác nhận'),
           backgroundColor: Colors.green,
         ),
       );
 
-      Navigator.popUntil(context, (route) => route.isFirst);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BookingHistoryScreen(),
+        ),
+            (route) => false,
+      );
     } catch (e) {
-      if (!mounted) return;
+      final message = getErrorMessage(e);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Upload ảnh thất bại: $e'),
+          content: Text(message),
           backgroundColor: Colors.red,
         ),
       );
@@ -166,10 +174,26 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                 ),
                 const SizedBox(height: 12),
                 _infoRow('Ngân hàng', bankName),
-                _infoRow('Số tài khoản', accountNumber),
-                _infoRow('Chủ tài khoản', accountName),
+
+                _infoRow(
+                  'Số tài khoản',
+                  accountNumber,
+                  enableCopy: true,
+                ),
+
+                _infoRow(
+                  'Chủ tài khoản',
+                  accountName,
+                  enableCopy: true,
+                ),
+
                 _infoRow('Số tiền', totalStr),
-                _infoRow('Nội dung', transferContent),
+
+                _infoRow(
+                  'Nội dung',
+                  transferContent,
+                  enableCopy: true,
+                ),
               ],
             ),
           ),
@@ -190,8 +214,31 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     vietQrUrl,
                     height: 260,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) {
-                      return const Text('Không tải được mã QR');
+                    headers: const {
+                      'User-Agent': 'Mozilla/5.0',
+                      'Accept': 'image/png,image/*,*/*',
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+
+                      return const SizedBox(
+                        height: 260,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('VIETQR URL = $vietQrUrl');
+                      debugPrint('VIETQR ERROR = $error');
+
+                      return const SizedBox(
+                        height: 120,
+                        child: Center(
+                          child: Text(
+                            'Không tải được mã QR',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      );
                     },
                   )
                 else
@@ -260,21 +307,55 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(
+      String label,
+      String value, {
+        bool enableCopy = false,
+      }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 110,
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
+
           Expanded(
             child: Text(
               value.isEmpty ? 'Chưa có' : value,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
+
+          if (enableCopy && value.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                Icons.copy_rounded,
+                size: 20,
+                color: primaryColor,
+              ),
+              onPressed: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: value),
+                );
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Đã sao chép $label'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
