@@ -93,4 +93,28 @@ class RentalAreaResponse {
       'longitude': longitude,
     };
   }
+
+  RentalAreaResponse copyWith({
+    List<CourtResponse>? courts,
+  }) {
+    return RentalAreaResponse(
+      rentalAreaId: rentalAreaId,
+      rentalAreaName: rentalAreaName,
+      address: address,
+      contactName: contactName,
+      contactPhone: contactPhone,
+      status: status,
+      cityId: cityId,
+      cityName: cityName,
+      courts: courts ?? this.courts,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      deletedAt: deletedAt,
+      openTime: openTime,
+      closeTime: closeTime,
+      isActive: isActive,
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
 }

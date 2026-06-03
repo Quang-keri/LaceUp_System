@@ -26,8 +26,8 @@ class AuthService {
       } else {
         throw Exception(data['message'] ?? 'Đăng nhập thất bại');
       }
-    } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Lỗi kết nối hoặc sai thông tin');
+    }on DioException catch (e) {
+      rethrow;
     }
   }
 

@@ -181,13 +181,7 @@ export default function BuildingListPage() {
         </Tag>
       ),
     },
-    {
-      title: "Ngày tạo",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: string) =>
-        date ? new Date(date).toLocaleDateString("vi-VN") : "---",
-    },
+
     {
       title: "Ảnh",
       key: "image",

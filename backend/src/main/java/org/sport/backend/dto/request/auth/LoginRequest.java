@@ -11,11 +11,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LoginRequest {
 
-    @NotBlank(message = "EMAIL_REQUIRED")
-    @Email(message = "INVALID_EMAIL")
+    @NotBlank(message = "Email không được bỏ trống")
+    @Email(message = "Sai định dạng email vd abc@gmai.com")
     String email;
 
-    @NotBlank(message = "PASSWORD_REQUIRED")
-    @Size(min = 6, message = "PASSWORD_TOO_SHORT")
+    @NotBlank(message = "Mật khẩu không được bỏ trống")
+    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     String password;
 }

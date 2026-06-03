@@ -1,27 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile/models/booking_price_helper.dart';
+import 'package:mobile/utils/error_utils.dart';
 import 'package:provider/provider.dart';
-import 'package:mobile/views/area/booking/payment_screen.dart';
-import '../../../models/court.dart';
+
 import '../../../models/match.dart';
 import '../../../models/rental_area.dart';
+import '../../../models/selected_booking_slot.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../services/booking_service.dart';
 import '../../../services/match_service.dart';
+
+import '../area_detail/payment_proof_screen.dart';
 import 'match_config_widget.dart';
 
-class BookingFormScreen extends StatefulWidget {
-  final CourtResponse court;
-  final DateTime selectedDate;
-  final List<String> selectedSlots;
 
+class BookingFormScreen extends StatefulWidget {
+  final DateTime selectedDate;
+  final List<SelectedBookingSlot> selectedSlots;
   final bool isMatchMode;
   final MatchConfigData? matchConfig;
-
   final RentalAreaResponse? rentalArea;
 
   const BookingFormScreen({
     super.key,
-    required this.court,
     required this.selectedDate,
     required this.selectedSlots,
     required this.isMatchMode,
@@ -41,19 +43,13 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  late double duration;
-  late String timeRangeDisplay;
-  late String startTimeStr;
-  late double totalPrice;
   bool _isLoading = false;
 
-  late DateTime startDateTime;
-  late DateTime endDateTime;
+  double get totalPrice => calculateTotalPrice(widget.selectedSlots);
 
   @override
   void initState() {
     super.initState();
-    _calculateBookingInfo();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
@@ -71,91 +67,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     });
   }
 
-  void _calculateBookingInfo() {
-    duration = widget.selectedSlots.length * 0.5;
-    startTimeStr = widget.selectedSlots.isNotEmpty
-        ? widget.selectedSlots.first
-        : '17:00';
-
-    // 1. Tính toán chính xác End Time
-    final timeParts = startTimeStr.split(':');
-    startDateTime = DateTime(
-      widget.selectedDate.year,
-      widget.selectedDate.month,
-      widget.selectedDate.day,
-      int.parse(timeParts[0]),
-      int.parse(timeParts[1]),
-    );
-
-    endDateTime = startDateTime.add(Duration(minutes: (duration * 60).toInt()));
-    final endTimeStr = DateFormat('HH:mm').format(endDateTime);
-
-    timeRangeDisplay = '$startTimeStr - $endTimeStr';
-
-    // 2. Tính toán giá tiền chi tiết theo Price Rules
-    _calculatePrice();
-  }
-
-  void _calculatePrice() {
-    double calcPrice = 0.0;
-    int chunks = (duration * 2).toInt();
-    DateTime currentTime = startDateTime;
-
-    // Xác định Ngày thường (WEEKDAY) hay Cuối tuần (WEEKEND)
-    String dayType =
-        (widget.selectedDate.weekday >= 1 && widget.selectedDate.weekday <= 5)
-        ? 'WEEKDAY'
-        : 'WEEKEND';
-
-    final rules = widget.court.priceRules;
-
-    if (rules.isEmpty) {
-      double basePrice = widget.court.pricePerHour > 0
-          ? widget.court.pricePerHour.toDouble()
-          : 0.0;
-      calcPrice = basePrice * duration;
-    } else {
-      // Duyệt qua từng khung 30 phút để map giá tương ứng
-      for (int i = 0; i < chunks; i++) {
-        int currentMins = currentTime.hour * 60 + currentTime.minute;
-        double chunkPricePerHour = widget.court.pricePerHour.toDouble();
-
-        for (var rule in rules) {
-          // Bỏ qua nếu rule không khớp loại ngày
-          if (rule.dayType != null &&
-              rule.dayType != 'ALL' &&
-              rule.dayType != dayType) {
-            continue;
-          }
-          if (rule.startTime != null && rule.endTime != null) {
-            try {
-              final sParts = rule.startTime!.split(':');
-              final eParts = rule.endTime!.split(':');
-              int rStartMins = int.parse(sParts[0]) * 60 + int.parse(sParts[1]);
-              int rEndMins = int.parse(eParts[0]) * 60 + int.parse(eParts[1]);
-
-              // Nếu giờ kết thúc là 00:00 (qua ngày hôm sau), đổi thành 24 * 60 = 1440
-              if (rEndMins == 0 && rStartMins > 0) rEndMins = 1440;
-
-              if (currentMins >= rStartMins && currentMins < rEndMins) {
-                chunkPricePerHour = rule.pricePerHour.toDouble();
-                break;
-              }
-            } catch (e) {
-              // Ignore parse error
-            }
-          }
-        }
-        calcPrice += chunkPricePerHour * 0.5; // Mỗi chunk tính 30 phút (0.5h)
-        currentTime = currentTime.add(const Duration(minutes: 30));
-      }
-    }
-
-    setState(() {
-      totalPrice = calcPrice;
-    });
-  }
-
   @override
   void dispose() {
     _nameController.dispose();
@@ -164,49 +75,115 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     super.dispose();
   }
 
-  void _onSubmit() async {
-    if (_nameController.text.isEmpty || _phoneController.text.isEmpty) {
+  String _toIsoDateTime(DateTime date, String time) {
+    final parts = time.split(':');
+
+    final dt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      int.parse(parts[0]),
+      int.parse(parts[1]),
+    );
+
+    return dt.toIso8601String();
+  }
+
+  Future<void> _onSubmit() async {
+    if (_nameController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng nhập tên và số điện thoại')),
       );
       return;
     }
 
+    if (widget.selectedSlots.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn ít nhất 1 khung giờ')),
+      );
+      return;
+    }
+
     if (widget.isMatchMode) {
-      _createMatchFlow();
-    } else {
-      Navigator.push(
+      await _createMatchFlow();
+      return;
+    }
+
+    await _createBookingIntentFlow();
+  }
+
+  Future<void> _createBookingIntentFlow() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final slotRequests = widget.selectedSlots.map((item) {
+        return {
+          'courtCopyId': item.courtCopyId,
+          'startTime': _toIsoDateTime(item.date, item.startTime),
+          'endTime': _toIsoDateTime(item.date, item.endTime),
+        };
+      }).toList();
+
+      final response = await bookingService.createBookingIntent(
+        userName: _nameController.text.trim(),
+        userPhone: _phoneController.text.trim(),
+        note: _noteController.text.trim(),
+        slotRequests: slotRequests,
+      );
+
+      final result = response['result'] ?? response;
+
+      final bookingId = result['bookingIntentId']?.toString();
+
+      final totalPriceFromBe =
+          double.tryParse(result['previewPrice']?.toString() ?? '') ?? totalPrice;
+
+      if (bookingId == null || bookingId.isEmpty) {
+        throw Exception('API chưa trả về bookingId / bookingIntentId');
+      }
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => PaymentScreen(
-            court: widget.court,
-            selectedDate: widget.selectedDate,
-            timeStr: timeRangeDisplay,
-            duration: duration,
-            quantity: 1,
-            totalPrice: totalPrice,
+          builder: (_) => PaymentProofScreen(
+            bookingId: bookingId!,
+            rentalArea: widget.rentalArea,
+            selectedSlots: widget.selectedSlots,
+            totalPrice: totalPriceFromBe,
+            bookingResult: result,
           ),
         ),
       );
+    }catch (e) {
+      if (!mounted) return;
+
+      final message = getErrorMessage(e);
+
+      _showTopMessage(message, isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _createMatchFlow() async {
-    if (widget.matchConfig == null) return;
+    if (widget.matchConfig == null || widget.selectedSlots.isEmpty) return;
 
     setState(() => _isLoading = true);
 
     try {
+      final firstSlot = widget.selectedSlots.first;
+
       final payload = MatchRequest(
-        courtId: widget.court.courtId,
-        categoryId: widget.court.categoryId,
-
-        street: widget.rentalArea?.address?.street ?? "Không rõ",
-        ward: widget.rentalArea?.address?.ward ?? "Không rõ",
+        courtId: firstSlot.courtId,
+        categoryId: firstSlot.court.categoryId,
+        street: widget.rentalArea?.address?.street ?? 'Không rõ',
+        ward: widget.rentalArea?.address?.ward ?? 'Không rõ',
         cityId: widget.rentalArea?.cityId ?? 1,
-
-        startTime: startDateTime.toIso8601String(),
-        endTime: endDateTime.toIso8601String(),
+        startTime: _toIsoDateTime(firstSlot.date, firstSlot.startTime),
+        endTime: _toIsoDateTime(firstSlot.date, firstSlot.endTime),
         maxPlayers: widget.matchConfig!.maxPlayers,
         minPlayersToStart: widget.matchConfig!.minPlayersToStart,
         isRecurring: false,
@@ -219,6 +196,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       await matchService.createMatch(payload);
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tạo kèo thành công!'),
@@ -227,10 +205,16 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       );
 
       Navigator.pop(context);
-    } catch (e) {
+    }  catch (e) {
       if (!mounted) return;
+
+      final message = getErrorMessage(e);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi tạo kèo: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -239,7 +223,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('dd/MM/yyyy').format(widget.selectedDate);
     final totalStr = NumberFormat.currency(
       locale: 'vi_VN',
       symbol: 'VNĐ',
@@ -248,9 +231,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     final screenTitle = widget.isMatchMode
         ? 'Xác nhận tạo kèo'
         : 'Xác nhận đặt sân';
+
     final actionBtnText = widget.isMatchMode
         ? 'Xác nhận tạo kèo'
-        : 'Xác nhận thanh toán';
+        : 'Đặt lịch và chuyển khoản';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -266,7 +250,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
             color: Color(0xFF4338CA),
           ),
         ),
-        centerTitle: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -283,12 +266,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Thông tin người tạo',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Colors.black87,
-                ),
+                'Thông tin người đặt',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 12),
               _buildTextField(controller: _nameController, hintText: 'Họ tên'),
@@ -306,87 +285,78 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               ),
               const SizedBox(height: 24),
 
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          widget.court.courtName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        Text(
-                          NumberFormat.currency(
-                            locale: 'vi_VN',
-                            symbol: 'VNĐ',
-                          ).format(totalPrice / duration), // Hiển thị giá tb 1h
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$dateStr • $timeRangeDisplay ($duration giờ)',
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
+              const Text(
+                'Danh sách sân đã chọn',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 12),
 
-                    if (widget.isMatchMode && widget.matchConfig != null) ...[
-                      const Divider(height: 24),
-                      Text(
-                        'Thể thức: ${widget.matchConfig!.matchType}',
-                        style: TextStyle(
-                          color: confirmColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+              ...widget.selectedSlots.map((item) {
+                final price = calculateSlotPrice(item);
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.orange.shade100),
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${item.courtName} - ${item.courtCode}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${DateFormat('dd/MM/yyyy').format(item.date)} • ${item.startTime} - ${item.endTime}',
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '${item.duration} giờ • ${item.categoryName}',
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
                       Text(
-                        'Số người: Tối đa ${widget.matchConfig!.maxPlayers} (Chia đều ${widget.matchConfig!.minPlayersToStart}/đội)',
+                        NumberFormat.currency(
+                          locale: 'vi_VN',
+                          symbol: 'đ',
+                        ).format(price),
                         style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 13,
+                          color: Color(0xFFEA580C),
+                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ] else ...[
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Số lượng sân: 1',
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
                       ),
                     ],
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }),
 
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Divider(),
-              ),
+              const Divider(height: 32),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Tổng chi phí dự kiến',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: Colors.black54,
-                    ),
+                    'Tổng tiền',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                   Text(
                     totalStr,
@@ -398,24 +368,15 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 24),
 
               Row(
                 children: [
                   Expanded(
-                    flex: 1,
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Hủy',
-                        style: TextStyle(color: Colors.black87),
-                      ),
+                      child: const Text('Hủy'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -426,26 +387,23 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: confirmColor,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                           : Text(
-                              actionBtnText,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        actionBtnText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -469,7 +427,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -484,5 +441,47 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         ),
       ),
     );
+  }
+
+  void _showTopMessage(String message, {bool isError = true}) {
+    final overlay = Overlay.of(context);
+
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: isError ? Colors.red : Colors.green,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
   }
 }

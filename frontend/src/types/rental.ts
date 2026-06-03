@@ -58,6 +58,7 @@ export interface UpdateRentalAreaRequest {
   isActive?: boolean;
   status: RentalAreaStatus;
   facebookLink?: string;
+  
 }
 
 export interface RentalAreaListResponse {

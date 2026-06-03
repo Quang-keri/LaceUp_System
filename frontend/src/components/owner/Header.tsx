@@ -22,6 +22,7 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import type { UserResponse } from "../../types/user.ts";
+import PendingTransferBookingPage from "../../page/owner/booking/ConfirmBookingApp/PendingTransferBookingPage.tsx";
 
 const { Header } = Layout;
 
@@ -72,6 +73,12 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
         {
           key: "/owner/bookings/calendar",
           label: <Link to="/owner/bookings/calendar">Lịch hẹn</Link>,
+        },
+        {
+          key: "/owner/bookings/pending-payment",
+          label: (
+            <Link to="/owner/bookings/pending-payment">Chờ xác nhận</Link>
+          ),
         },
       ],
     },

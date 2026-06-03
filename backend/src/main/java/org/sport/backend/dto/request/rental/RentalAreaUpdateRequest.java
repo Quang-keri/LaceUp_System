@@ -5,6 +5,7 @@ import lombok.*;
 import org.sport.backend.constant.RentalAreaStatus;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,8 +29,10 @@ public class RentalAreaUpdateRequest {
     private String ward;
     @NotNull(message = "thành phố không bỏ trống")
     private Long cityId;
-
     private RentalAreaStatus status;
-
+    @NotNull(message = "Giờ mở cửa không bỏ trống")
+    private LocalTime openTime;
+    @NotNull(message = "Giờ đóng cửa không bỏ trống")
+    private LocalTime closeTime;
     private List<MultipartFile> images;
 }

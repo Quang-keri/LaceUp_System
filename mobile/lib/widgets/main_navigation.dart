@@ -38,7 +38,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
       bottomNavigationBar: Padding(
         padding: EdgeInsets.only(
-          bottom: bottomSafeArea + 8,
+          bottom: bottomSafeArea ,
         ),
         child: CurvedNavigationBar(
           index: _selectedIndex,

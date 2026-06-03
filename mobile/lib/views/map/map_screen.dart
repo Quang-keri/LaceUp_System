@@ -383,30 +383,33 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          Positioned(
-            bottom: 30,
-            right: 20,
-            child: Column(
-              children: [
-                FloatingActionButton(
-                  heroTag: 'list_btn',
-                  backgroundColor: Colors.purple,
-                  onPressed: () {},
-                  child: const Icon(
-                    Icons.format_list_bulleted,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                FloatingActionButton(
-                  heroTag: 'location_btn',
-                  backgroundColor: Colors.white,
-                  onPressed: _handleMyLocation,
-                  child: const Icon(Icons.my_location, color: Colors.purple),
-                ),
-              ],
+      Positioned(
+        bottom: MediaQuery.of(context).padding.bottom + 110,
+        right: 20,
+        child: Column(
+          children: [
+            FloatingActionButton(
+              heroTag: 'list_btn',
+              backgroundColor: const Color(0xFF9156F1),
+              onPressed: () {},
+              child: const Icon(
+                Icons.format_list_bulleted,
+                color: Colors.white,
+              ),
             ),
-          ),
+            const SizedBox(height: 14),
+            FloatingActionButton(
+              heroTag: 'location_btn',
+              backgroundColor: Colors.white,
+              onPressed: _handleMyLocation,
+              child: const Icon(
+                Icons.my_location,
+                color: Color(0xFF9156F1),
+              ),
+            ),
+          ],
+        ),
+      ),
         ],
       ),
     );

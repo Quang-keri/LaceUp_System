@@ -116,7 +116,8 @@ export default function BuildingEditModal({
         contactPhone: getOwnerPhone() || data.contactPhone,
         gmailLink: getOwnerEmail() || data.gmailLink,
         facebookLink: data.facebookLink,
-
+openTime: data.openTime,
+closeTime: data.closeTime,
         status: data.status === "SUSPENDED" ? undefined : data.status,
       });
 
@@ -168,11 +169,13 @@ export default function BuildingEditModal({
           ward: values.ward,
         },
         cityId: values.cityId,
-
+    
         contactName: getOwnerName() || values.contactName,
         contactPhone: getOwnerPhone() || values.contactPhone,
 
         status: currentStatus === "SUSPENDED" ? undefined : values.status,
+        openTime: values.openTime,
+closeTime: values.closeTime,
       };
 
       await RentalService.updateRentalArea(buildingId, updateData, imageFiles);
@@ -308,7 +311,27 @@ export default function BuildingEditModal({
               </Form.Item>
             </Col>
           </Row>
+<Row gutter={16}>
+  <Col span={12}>
+    <Form.Item
+      label="Giờ mở cửa"
+      name="openTime"
+      rules={[{ required: true, message: "Vui lòng nhập giờ mở cửa" }]}
+    >
+      <Input type="time" />
+    </Form.Item>
+  </Col>
 
+  <Col span={12}>
+    <Form.Item
+      label="Giờ đóng cửa"
+      name="closeTime"
+      rules={[{ required: true, message: "Vui lòng nhập giờ đóng cửa" }]}
+    >
+      <Input type="time" />
+    </Form.Item>
+  </Col>
+</Row>
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item label="Facebook" name="facebookLink">

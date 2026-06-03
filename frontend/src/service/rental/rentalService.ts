@@ -114,7 +114,8 @@ class RentalService {
     formData.append("contactPhone", request.contactPhone || "");
     formData.append("cityId", request.cityId ? request.cityId.toString() : "");
     formData.append("status", request.status);
-
+formData.append("openTime", request.openTime || "");
+formData.append("closeTime", request.closeTime || "");
     if (request.facebookLink) {
       formData.append("facebookLink", request.facebookLink);
     }

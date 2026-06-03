@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../models/court.dart';
+import '../../../models/court_copy.dart';
 import '../../../models/rental_area.dart';
+import '../../../models/selected_booking_slot.dart';
 import '../booking/match_config_widget.dart';
 
 class ScheduleTab extends StatefulWidget {
   final RentalAreaResponse? rentalArea;
   final CourtResponse? activeCourt;
   final DateTime selectedDate;
-  final List<String> selectedTimeSlots;
+  final List<SelectedBookingSlot> selectedSlots;
   final bool isMatchMode;
+
   final ValueChanged<DateTime> onDateSelected;
-  final void Function(CourtResponse, String) onToggleSlot;
+  final ValueChanged<List<SelectedBookingSlot>> onSelectedSlotsChanged;
+  final ValueChanged<CourtResponse> onActiveCourtChanged;
   final ValueChanged<bool> onModeChanged;
   final ValueChanged<MatchConfigData> onMatchConfigChanged;
 
@@ -20,10 +25,11 @@ class ScheduleTab extends StatefulWidget {
     required this.rentalArea,
     required this.activeCourt,
     required this.selectedDate,
-    required this.selectedTimeSlots,
+    required this.selectedSlots,
     required this.isMatchMode,
     required this.onDateSelected,
-    required this.onToggleSlot,
+    required this.onSelectedSlotsChanged,
+    required this.onActiveCourtChanged,
     required this.onModeChanged,
     required this.onMatchConfigChanged,
   });
@@ -59,8 +65,8 @@ class _ScheduleTabState extends State<ScheduleTab> {
   }
 
   List<String> _generateTimeSlots() {
-    String openTimeStr = "05:00";
-    String closeTimeStr = "22:00";
+    final openTimeStr = widget.rentalArea?.openTime ?? '05:00';
+    final closeTimeStr = widget.rentalArea?.closeTime ?? '22:00';
 
     final slots = <String>[];
     final startHour = int.tryParse(openTimeStr.split(':')[0]) ?? 5;
@@ -71,39 +77,132 @@ class _ScheduleTabState extends State<ScheduleTab> {
       slots.add('$formattedHour:00');
       slots.add('$formattedHour:30');
     }
+
     return slots;
   }
 
-  String? _getSlotStatus(CourtResponse court, String timeStr) {
+  int _timeToMinutes(String timeStr) {
     final parts = timeStr.split(':');
-    final slotMinute = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+  }
 
-    final allCopies = court.courtCopies ?? [];
-    if (allCopies.isEmpty) return null;
+  String? _getSlotStatus(CourtCopyResponse copy, String timeStr) {
+    final slotMinute = _timeToMinutes(timeStr);
+    final slots = copy.slots ?? [];
 
-    for (var copy in allCopies) {
-      final slots = copy.slots ?? [];
+    for (var slot in slots) {
+      final start = DateTime.tryParse(slot.startTime ?? '');
+      final end = DateTime.tryParse(slot.endTime ?? '');
 
-      for (var slot in slots) {
-        final start = DateTime.tryParse(slot.startTime ?? '');
-        final end = DateTime.tryParse(slot.endTime ?? '');
+      if (start == null || end == null) continue;
 
-        if (start == null || end == null) continue;
+      if (start.year == widget.selectedDate.year &&
+          start.month == widget.selectedDate.month &&
+          start.day == widget.selectedDate.day) {
+        final startMin = start.hour * 60 + start.minute;
+        final endMin = end.hour * 60 + end.minute;
 
-        if (start.year == widget.selectedDate.year &&
-            start.month == widget.selectedDate.month &&
-            start.day == widget.selectedDate.day) {
-          final startMin = start.hour * 60 + start.minute;
-          final endMin = end.hour * 60 + end.minute;
-
-          if (slotMinute >= startMin && slotMinute < endMin) {
-            return slot.slotStatus;
-          }
+        if (slotMinute >= startMin && slotMinute < endMin) {
+          return slot.slotStatus;
         }
       }
     }
 
     return null;
+  }
+
+  void _toggleSlot({
+    required CourtResponse court,
+    required CourtCopyResponse copy,
+    required int idx,
+  }) {
+    final currentSlots = [...widget.selectedSlots];
+
+    final otherCopies = currentSlots
+        .where((item) => item.courtCopyId != copy.courtCopyId)
+        .toList();
+
+    var myBlocks = currentSlots
+        .where((item) => item.courtCopyId == copy.courtCopyId)
+        .toList();
+
+    final clickedInsideIndex = myBlocks.indexWhere(
+          (b) => idx >= b.startIndex && idx <= b.endIndex,
+    );
+
+    if (clickedInsideIndex != -1) {
+      final b = myBlocks[clickedInsideIndex];
+      final newBlocks = <SelectedBookingSlot>[];
+
+      if (idx > b.startIndex) {
+        newBlocks.add(b.copyWith(endIndex: idx - 1));
+      }
+
+      if (idx < b.endIndex) {
+        newBlocks.add(b.copyWith(startIndex: idx + 1));
+      }
+
+      myBlocks.removeAt(clickedInsideIndex);
+      myBlocks.insertAll(clickedInsideIndex, newBlocks);
+    } else {
+      myBlocks.add(
+        SelectedBookingSlot(
+          courtCopyId: copy.courtCopyId,
+          courtCode: copy.courtCode,
+          courtId: court.courtId,
+          courtName: court.courtName,
+          categoryName: court.categoryName ?? 'Sân thể thao',
+          date: widget.selectedDate,
+          startIndex: idx,
+          endIndex: idx,
+          startTime: dynamicTimeSlots[idx],
+          endTime: idx + 1 < dynamicTimeSlots.length
+              ? dynamicTimeSlots[idx + 1]
+              : widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00',
+          duration: 0.5,
+          court: court,
+          courtCopy: copy,
+        ),
+      );
+    }
+
+    myBlocks.sort((a, b) => a.startIndex.compareTo(b.startIndex));
+
+    final merged = <SelectedBookingSlot>[];
+
+    for (final block in myBlocks) {
+      if (merged.isEmpty) {
+        merged.add(block);
+      } else {
+        final last = merged.last;
+
+        if (last.endIndex + 1 == block.startIndex) {
+          merged[merged.length - 1] = last.copyWith(
+            endIndex: block.endIndex,
+          );
+        } else {
+          merged.add(block);
+        }
+      }
+    }
+
+    myBlocks = merged.map((b) {
+      final startTime = dynamicTimeSlots[b.startIndex];
+      final endTime = b.endIndex + 1 < dynamicTimeSlots.length
+          ? dynamicTimeSlots[b.endIndex + 1]
+          : widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00';
+
+      final duration = (b.endIndex - b.startIndex + 1) * 0.5;
+
+      return b.copyWith(
+        startTime: startTime,
+        endTime: endTime,
+        duration: duration,
+      );
+    }).toList();
+
+    widget.onActiveCourtChanged(court);
+    widget.onSelectedSlotsChanged([...otherCopies, ...myBlocks]);
   }
 
   void _onScroll() {
@@ -146,9 +245,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(
-            context,
-          ).copyWith(colorScheme: ColorScheme.light(primary: primaryColor)),
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(primary: primaryColor),
+          ),
           child: child!,
         );
       },
@@ -159,8 +258,25 @@ class _ScheduleTabState extends State<ScheduleTab> {
     }
   }
 
+  List<Map<String, dynamic>> _buildCourtCopyRows() {
+    final rows = <Map<String, dynamic>>[];
+
+    for (final court in widget.rentalArea?.courts ?? []) {
+      for (final copy in court.courtCopies) {
+        rows.add({
+          'court': court,
+          'copy': copy,
+        });
+      }
+    }
+
+    return rows;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final rows = _buildCourtCopyRows();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -170,7 +286,11 @@ class _ScheduleTabState extends State<ScheduleTab> {
         _buildLegends(),
         const SizedBox(height: 16),
         _buildScrollHint(),
-        _buildTimelineMatrix(),
+
+        const SizedBox(height: 8),
+        _buildTimelineMatrix(rows),
+        const SizedBox(height: 16),
+        _buildBookingNotice(),
         if (widget.isMatchMode)
           MatchConfigWidget(
             categoryName: widget.activeCourt?.categoryName ?? '',
@@ -234,22 +354,12 @@ class _ScheduleTabState extends State<ScheduleTab> {
                 onTap: () => widget.onModeChanged(false),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: !widget.isMatchMode
                         ? primaryColor
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: !widget.isMatchMode
-                        ? [
-                            BoxShadow(
-                              color: primaryColor.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : [],
                   ),
                   child: Text(
                     'Đặt sân',
@@ -269,22 +379,12 @@ class _ScheduleTabState extends State<ScheduleTab> {
                 onTap: () => widget.onModeChanged(true),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: widget.isMatchMode
                         ? selectedColor
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: widget.isMatchMode
-                        ? [
-                            BoxShadow(
-                              color: selectedColor.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : [],
                   ),
                   child: Text(
                     'Ghép kèo',
@@ -317,21 +417,52 @@ class _ScheduleTabState extends State<ScheduleTab> {
             'Trống',
             borderColor: Colors.grey.shade400,
           ),
-          _buildLegendItem(selectedColor, 'Đang chọn', textColor: Colors.white),
-          _buildLegendItem(primaryColor, 'Đã có trận (đủ)'),
-          _buildLegendItem(Colors.orange.shade300, 'Đã có trận (thiếu)'),
-          _buildLegendItem(Colors.grey.shade400, 'Khóa / Đã đặt'),
+          _buildLegendItem(selectedColor, 'Đang chọn'),
+          _buildLegendItem(const Color(0xFFEA580C), 'Đã đặt'),
+          _buildLegendItem(primaryColor, 'Đã có trận'),
+          _buildLegendItem(Colors.orange.shade300, 'Trận chưa đủ'),
+          _buildLegendItem(Colors.grey.shade400, 'Khóa'),
         ],
       ),
     );
   }
-
-  Widget _buildLegendItem(
-    Color color,
-    String label, {
-    Color? borderColor,
-    Color? textColor,
-  }) {
+  Widget _buildBookingNotice() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFFFDBA74),
+        ),
+      ),
+      child: RichText(
+        text: const TextSpan(
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.6,
+            color: Color(0xFFEA580C),
+          ),
+          children: [
+            TextSpan(
+              text: '* Lưu ý: ',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text:
+              'Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây.\n'
+                  'Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử đặt sân và nhận thông báo ưu đãi từ chúng tôi.\n'
+                  'Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildLegendItem(Color color, String label, {Color? borderColor}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -345,10 +476,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.black87),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -362,7 +490,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              'Vuốt ngang hoặc bấm nút để xem thêm khung giờ',
+              'Vuốt ngang để chọn nhiều khung giờ',
               style: TextStyle(
                 fontSize: 12,
                 fontStyle: FontStyle.italic,
@@ -395,10 +523,8 @@ class _ScheduleTabState extends State<ScheduleTab> {
     );
   }
 
-  Widget _buildTimelineMatrix() {
-    final courts = widget.rentalArea?.courts ?? [];
-
-    if (courts.isEmpty) {
+  Widget _buildTimelineMatrix(List<Map<String, dynamic>> rows) {
+    if (rows.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(16),
         child: Text('Chưa có danh sách sân tại cơ sở này.'),
@@ -406,8 +532,8 @@ class _ScheduleTabState extends State<ScheduleTab> {
     }
 
     const double cellWidth = 65;
-    const double cellHeight = 45;
-    const double leftColumnWidth = 110;
+    const double cellHeight = 48;
+    const double leftColumnWidth = 120;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -439,23 +565,42 @@ class _ScheduleTabState extends State<ScheduleTab> {
                           ),
                         ),
                       ),
-                      ...courts.map((court) {
+                      ...rows.map((row) {
+                        final court = row['court'] as CourtResponse;
+                        final copy = row['copy'] as CourtCopyResponse;
+
                         return Container(
                           height: cellHeight,
                           alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
                           decoration: BoxDecoration(
                             border: Border(
                               bottom: BorderSide(color: Colors.grey.shade300),
                             ),
                           ),
-                          child: Text(
-                            court.courtName,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: primaryColor,
-                            ),
-                            textAlign: TextAlign.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                court.courtName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: primaryColor,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                copy.courtCode,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFEA580C),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }),
@@ -471,11 +616,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: dynamicTimeSlots.asMap().entries.map((
-                            entry,
-                          ) {
-                            final int idx = entry.key;
-                            final String time = entry.value;
+                          children: dynamicTimeSlots.asMap().entries.map((e) {
+                            final idx = e.key;
+                            final time = e.value;
 
                             return Container(
                               width: cellWidth,
@@ -491,77 +634,85 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                   ),
                                 ),
                               ),
+                              // Dùng Stack để ép text nằm đè lên vạch chia (Border)
                               child: Stack(
-                                clipBehavior: Clip.none,
+                                clipBehavior: Clip.none, // Quan trọng: Cho phép chữ tràn ra ngoài viền Container
                                 children: [
+                                  // 1. Mốc giờ bắt đầu nằm ở vạch bên TRÁI
                                   Positioned(
-                                    left: idx == 0 ? 4 : -24,
+                                    // Ô đầu tiên nhích vào trong 4px để không bị lẹm vào cột Tên Sân.
+                                    // Các ô tiếp theo dịch sang trái -16px để chữ (rộng khoảng 32px) nằm ngay chính giữa vạch kẻ.
+                                    left: idx == 0 ? 4 : -16,
                                     top: 0,
                                     bottom: 0,
-                                    width: 48,
-                                    child: Container(
-                                      alignment: idx == 0
-                                          ? Alignment.centerLeft
-                                          : Alignment.center,
+                                    child: Center(
                                       child: Text(
                                         time,
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  Positioned(
-                                    left: idx == 0 ? 0 : -1,
-                                    bottom: 0,
-                                    child: Container(
-                                      width: 2,
-                                      height: 6,
-                                      color: primaryColor,
+
+                                  // 2. Xử lý riêng cho ô CUỐI CÙNG: Thêm mốc giờ kết thúc ở vạch bên PHẢI
+                                  if (idx == dynamicTimeSlots.length - 1)
+                                    Positioned(
+                                      right: 4, // Nhích vào trong 4px ở lề phải cùng để không tràn khỏi màn hình
+                                      top: 0,
+                                      bottom: 0,
+                                      child: Center(
+                                        child: Text(
+                                          widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
                             );
                           }).toList(),
                         ),
-                        ...courts.map((court) {
-                          return Row(
-                            children: dynamicTimeSlots.map((time) {
-                              final isSelected =
-                                  widget.activeCourt?.courtId ==
-                                      court.courtId &&
-                                  widget.selectedTimeSlots.contains(time);
+                        ...rows.map((row) {
+                          final court = row['court'] as CourtResponse;
+                          final copy = row['copy'] as CourtCopyResponse;
 
-                              final slotStatus = _getSlotStatus(court, time);
+                          final myBlocks = widget.selectedSlots
+                              .where((e) => e.courtCopyId == copy.courtCopyId)
+                              .toList();
+
+                          return Row(
+                            children: dynamicTimeSlots.asMap().entries.map((e) {
+                              final idx = e.key;
+                              final time = e.value;
+
+                              final slotStatus = _getSlotStatus(copy, time);
+
                               final isBlocked = [
                                 'BOOKED',
                                 'MATCH_FULL',
                                 'LOCKED',
                               ].contains(slotStatus);
 
-                              Color bgColor = Colors.white;
-                              BoxBorder? customBorder;
+                              final activeBlock = myBlocks.where((b) {
+                                return idx >= b.startIndex &&
+                                    idx <= b.endIndex;
+                              }).toList();
 
-                              if (isSelected) {
-                                bgColor = const Color(0xFFFFF7ED);
-                                customBorder = Border(
-                                  top: BorderSide(
-                                    color: selectedColor,
-                                    width: 2,
-                                  ),
-                                  bottom: BorderSide(
-                                    color: selectedColor,
-                                    width: 2,
-                                  ),
-                                  right: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                );
-                              } else if (slotStatus == 'BOOKED') {
-                                bgColor = Colors.grey.shade400;
+                              final isSelected = activeBlock.isNotEmpty;
+
+                              Color bgColor = Colors.white;
+                              BoxBorder border = Border(
+                                bottom: BorderSide(color: Colors.grey.shade300),
+                                right: BorderSide(color: Colors.grey.shade300),
+                              );
+
+                              if (slotStatus == 'BOOKED') {
+                                bgColor = const Color(0xFFEA580C);
                               } else if (slotStatus == 'MATCH_FULL') {
                                 bgColor = primaryColor;
                               } else if (slotStatus == 'MATCH_PENDING') {
@@ -570,25 +721,49 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                 bgColor = Colors.grey.shade400;
                               }
 
+                              if (isSelected) {
+                                final block = activeBlock.first;
+                                bgColor = const Color(0xFFFFF7ED);
+                                border = Border(
+                                  top: BorderSide(
+                                    color: selectedColor,
+                                    width: 2,
+                                  ),
+                                  bottom: BorderSide(
+                                    color: selectedColor,
+                                    width: 2,
+                                  ),
+                                  left: idx == block.startIndex
+                                      ? BorderSide(
+                                    color: selectedColor,
+                                    width: 2,
+                                  )
+                                      : BorderSide.none,
+                                  right: idx == block.endIndex
+                                      ? BorderSide(
+                                    color: selectedColor,
+                                    width: 2,
+                                  )
+                                      : BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                );
+                              }
+
                               return InkWell(
                                 onTap: isBlocked
                                     ? null
-                                    : () => widget.onToggleSlot(court, time),
+                                    : () => _toggleSlot(
+                                  court: court,
+                                  copy: copy,
+                                  idx: idx,
+                                ),
                                 child: Container(
                                   width: cellWidth,
                                   height: cellHeight,
                                   decoration: BoxDecoration(
                                     color: bgColor,
-                                    border:
-                                        customBorder ??
-                                        Border(
-                                          bottom: BorderSide(
-                                            color: Colors.grey.shade300,
-                                          ),
-                                          right: BorderSide(
-                                            color: Colors.grey.shade300,
-                                          ),
-                                        ),
+                                    border: border,
                                   ),
                                 ),
                               );
@@ -609,36 +784,18 @@ class _ScheduleTabState extends State<ScheduleTab> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.grey.shade200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 6,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                activeTrackColor: primaryColor,
-                inactiveTrackColor: Colors.grey.shade200,
-                thumbColor: primaryColor,
-              ),
-              child: Slider(
-                value: _scrollProgress,
-                onChanged: (val) {
-                  setState(() {
-                    _scrollProgress = val;
-                  });
-                  if (_scheduleScrollController.hasClients) {
-                    final maxScroll =
-                        _scheduleScrollController.position.maxScrollExtent;
-                    _scheduleScrollController.jumpTo(val * maxScroll);
-                  }
-                },
-              ),
+            child: Slider(
+              value: _scrollProgress,
+              activeColor: primaryColor,
+              onChanged: (val) {
+                setState(() => _scrollProgress = val);
+                if (_scheduleScrollController.hasClients) {
+                  final maxScroll =
+                      _scheduleScrollController.position.maxScrollExtent;
+                  _scheduleScrollController.jumpTo(val * maxScroll);
+                }
+              },
             ),
           ),
         ],
