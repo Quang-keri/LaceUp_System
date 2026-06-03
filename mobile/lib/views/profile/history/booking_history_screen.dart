@@ -139,7 +139,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       default:
         return Colors.grey;
     }
-  }
+
   }
 
   String _bookingStatusLabel(String status) {

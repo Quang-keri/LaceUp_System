@@ -1,5 +1,6 @@
 package org.sport.backend.service;
 
+import org.sport.backend.constant.BookingIntentStatus;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.request.booking.BookingRequest;
@@ -15,9 +16,17 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public interface BookingService {
+    PageResponse<BookingIntentResponse> getMyRentalBookingIntents(
+            UUID rentalId,
+            BookingIntentStatus status,
+            int page,
+            int size
+    );
+    List<BookingIntentResponse> getMyBookingIntents();
     BookingResponse ownerConfirmManualBooking(UUID intentId);
     String  uploadIntentPaymentProof(UUID bookingIntentId, MultipartFile image);
     BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request);

@@ -70,6 +70,7 @@ import AdminCustomerManagementPage from "../page/owner/customer-management/Admin
 import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
 import UserLayout from "../layouts/UserLayout.tsx";
 import AreaMapGoong from "../page/customer/area-map/AreaMapGoong.tsx";
+import PendingTransferBookingPage from "../page/owner/booking/ConfirmBookingApp/PendingTransferBookingPage.tsx";
 // import AreaMap from "../page/customer/area-map/AreaMap.tsx";
 
 const MyDashboardWrapper = () => {
@@ -218,6 +219,10 @@ export const router = createBrowserRouter([
       { path: "/owner/courts/:courtId/prices", element: <CourtPricePage /> },
       { path: "bookings/management", element: <BookingManagementPage /> },
       { path: "bookings/calendar", element: <ManageSchedulePage /> },
+      {
+        path: "/owner/bookings/pending-payment",
+        element: <PendingTransferBookingPage />,
+      },
       { path: "posts", element: <PostManagementPage /> },
       { path: "matches", element: <MatchManagement /> },
       { path: "service-items", element: <ServiceItemManagementPage /> },

@@ -292,7 +292,6 @@ export default function BookingManagementPage() {
             />
           </Col>
 
-          {/* CỘT PHẢI: Bảng dữ liệu chính */}
           <Col xs={24} sm={24} md={16} lg={18} xl={19}>
             <Card title="Quản lý Đơn Đặt">
               <BookingTable

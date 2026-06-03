@@ -10,8 +10,10 @@ import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
 import org.sport.backend.dto.request.slot.UpdateSlotRequest;
+import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
+import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
 import org.sport.backend.dto.response.slot.IntentSlotResponse;
@@ -64,6 +66,138 @@ public class BookingServiceImpl implements BookingService {
     private final AddressMapper addressMapper;
     private final BankAccountRepository bankAccountRepository;
 
+    @Override
+    public List<BookingIntentResponse> getMyBookingIntents() {
+        var currentUser = userService.getCurrentUserEntity();
+
+        return bookingIntentRepository
+                .findByUserUserIdOrderByCreateAtDesc(currentUser.getUserId())
+                .stream()
+                .map(intent -> {
+
+                    List<IntentSlotResponse> slotResponses =
+                            intent.getSlots() == null
+                                    ? List.of()
+                                    : intent.getSlots()
+                                    .stream()
+                                    .map(slot -> IntentSlotResponse.builder()
+                                            .courtCopyId(
+                                                    slot.getCourtCopy() != null
+                                                            ? slot.getCourtCopy().getCourtCopyId()
+                                                            : null
+                                            )
+                                            .courtCode(
+                                                    slot.getCourtCopy() != null
+                                                            ? slot.getCourtCopy().getCourtCode()
+                                                            : null
+                                            )
+                                            .startTime(slot.getStartTime())
+                                            .endTime(slot.getEndTime())
+                                            .price(slot.getPrice())
+                                            .build())
+                                    .toList();
+
+                    return BookingIntentResponse.builder()
+                            .bookingIntentId(intent.getBookingIntentId())
+                            .bookerName(intent.getBookerName())
+                            .bookerPhone(intent.getBookerPhone())
+                            .title(intent.getTitle())
+                            .note(intent.getNote())
+                            .previewPrice(intent.getPreviewPrice())
+                            .startTime(intent.getStartTime())
+                            .endTime(intent.getEndTime())
+                            .expiresAt(intent.getExpiresAt())
+                            .status(intent.getStatus())
+                            .paymentProofUrl(intent.getPaymentProofUrl())
+                            .paymentProofUploadedAt(intent.getPaymentProofUploadedAt())
+                            .createdAt(intent.getCreateAt())
+                            .rentalArea(intent.getRentalArea() != null
+                                    ? RentalAreaResponse.builder()
+                                    .rentalAreaId(intent.getRentalArea().getRentalAreaId())
+                                    .rentalAreaName(intent.getRentalArea().getRentalAreaName())
+                                    .address(
+                                            intent.getRentalArea().getAddress() != null
+                                                    ? AddressResponse.builder().street(intent.getRentalArea().getAddress().getStreet()).ward(intent.getRentalArea().getAddress().getWard()).city(CityResponse.builder().cityName(intent.getRentalArea().getAddress().getCity().getCityName()).build()).build()
+                                                    : null
+                                    )
+                                    .build()
+                                    : null
+                            )
+                            .slots(slotResponses)
+                            .build();
+
+                })
+                .toList();
+    }
+
+    @Override
+    public PageResponse<BookingIntentResponse> getMyRentalBookingIntents(
+            UUID rentalId,
+            BookingIntentStatus status,
+            int page,
+            int size
+    ) {
+
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by(Sort.Order.desc("createdAt"))
+        );
+
+        Page<BookingIntent> intentPage =
+                bookingIntentRepository.findByRentalArea_RentalAreaIdAndStatus(
+                        rentalId,
+                        status,
+                        pageable
+                );
+
+        List<BookingIntentResponse> responses = intentPage.getContent()
+                .stream()
+                .map(intent -> {
+
+                    List<IntentSlotResponse> slotResponses =
+                            intent.getSlots() == null
+                                    ? List.of()
+                                    : intent.getSlots()
+                                    .stream()
+                                    .map(slot -> IntentSlotResponse.builder()
+                                            .courtCopyId(slot.getCourtCopy().getCourtCopyId())
+                                            .courtCode(slot.getCourtCopy().getCourtCode())
+                                            .startTime(slot.getStartTime())
+                                            .endTime(slot.getEndTime())
+                                            .price(slot.getPrice())
+                                            .build())
+                                    .toList();
+
+                    return BookingIntentResponse.builder()
+                            .bookingIntentId(intent.getBookingIntentId())
+                            .bookerName(intent.getBookerName())
+                            .bookerPhone(intent.getBookerPhone())
+                            .previewPrice(intent.getPreviewPrice())
+                            .startTime(intent.getStartTime())
+                            .endTime(intent.getEndTime())
+                            .expiresAt(intent.getExpiresAt())
+                            .status(intent.getStatus())
+                            .note(intent.getNote())
+
+                            .paymentProofUrl(intent.getPaymentProofUrl())
+                            .paymentProofUploadedAt(
+                                    intent.getPaymentProofUploadedAt()
+                            )
+
+                            .slots(slotResponses)
+                            .build();
+                })
+                .toList();
+
+        return PageResponse.<BookingIntentResponse>builder()
+                .currentPage(page)
+                .pageSize(size)
+                .totalPages(intentPage.getTotalPages())
+                .totalElements(intentPage.getTotalElements())
+                .data(responses)
+                .build();
+    }
 
     @Override
     @Transactional
@@ -88,6 +222,7 @@ public class BookingServiceImpl implements BookingService {
 
         return confirmBooking(intentId, payment);
     }
+
     @Override
     @Transactional
     public String uploadIntentPaymentProof(UUID intentId, MultipartFile image) {
@@ -120,6 +255,7 @@ public class BookingServiceImpl implements BookingService {
 
         return uploadResult.getUrl();
     }
+
     @Override
     public BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request) {
         if (request.getSlots() == null || request.getSlots().isEmpty()) {
@@ -476,6 +612,7 @@ public class BookingServiceImpl implements BookingService {
 
         return new CheckAvailabilityResponse(true, "Sân khả dụng", availableCount);
     }
+
     private String buildVietQrUrl(
             String bankBin,
             String accountNumber,
@@ -495,6 +632,7 @@ public class BookingServiceImpl implements BookingService {
                 + "&addInfo=" + encodedAddInfo
                 + "&accountName=" + encodedAccountName;
     }
+
     @Override
     @Transactional
     public BookingIntentResponse createBookingIntent(BookingRequest request) {
@@ -518,6 +656,7 @@ public class BookingServiceImpl implements BookingService {
                 .status(BookingIntentStatus.ACTIVE)
                 .expiresAt(LocalDateTime.now().plusMinutes(5))
                 .note(request.getNote())
+                .createAt(LocalDateTime.now())
                 .build();
 
         List<IntentSlot> intentSlots = new ArrayList<>();
@@ -541,7 +680,7 @@ public class BookingServiceImpl implements BookingService {
                 if (copy.getCourt().getCourtStatus() != CourtStatus.ACTIVE) {
                     throw new RuntimeException("Sân này hiện đang ngừng kinh doanh");
                 }
-                if(copy.getCourt().getRentalArea().getStatus() != RentalAreaStatus.ACTIVE){
+                if (copy.getCourt().getRentalArea().getStatus() != RentalAreaStatus.ACTIVE) {
                     throw new RuntimeException("Tòa nhà này hiện đang ngừng kinh doanh");
                 }
 

@@ -49,7 +49,7 @@ public class SlotRequestValidator
             }
 
             if (start.isBefore(LocalDateTime.now())) {
-                replaceMessage(context, "Không thể đặt phòng trong quá khứ");
+                replaceMessage(context, "Không thể đặt phòng trong quá khứ,vui lòng xem lại giờ của các sân đặt");
                 return false;
             }
 

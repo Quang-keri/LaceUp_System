@@ -42,6 +42,9 @@ public class BookingIntent {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Column(name = "create_at")
+    private LocalDateTime createAt;
+
     @Enumerated(EnumType.STRING)
     private BookingIntentStatus status;
 

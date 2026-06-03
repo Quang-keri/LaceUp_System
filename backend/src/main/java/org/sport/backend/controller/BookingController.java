@@ -3,6 +3,7 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.BookingIntentStatus;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.base.PageResponse;
@@ -39,6 +40,37 @@ public class BookingController {
     private final BookingService bookingService;
     private final InvoiceService invoiceService;
     private final ExcelService excelService;
+
+    @GetMapping("/intent/rental/{rentalId}")
+    public ApiResponse<PageResponse<BookingIntentResponse>>
+    getRentalBookingIntents(
+            @PathVariable UUID rentalId,
+            @RequestParam BookingIntentStatus status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        return ApiResponse.success(
+                bookingService.getMyRentalBookingIntents(
+                        rentalId,
+                        status,
+                        page,
+                        size
+                )
+        );
+    }
+
+
+        @GetMapping("/intent/me")
+        public ApiResponse<List<BookingIntentResponse>> getMyBookingIntents() {
+            return ApiResponse.<List<BookingIntentResponse>>builder()
+                    .code(200)
+                    .message("Lấy danh sách booking đang chờ xác nhận thành công")
+                    .result(bookingService.getMyBookingIntents())
+                    .build();
+        }
+
+
     @PostMapping("/intent/{intentId}/owner-confirm")
     public ApiResponse<BookingResponse> ownerConfirmManualBooking(
             @PathVariable UUID intentId
