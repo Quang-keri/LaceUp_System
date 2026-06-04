@@ -64,7 +64,7 @@ const ConfirmRegister: React.FC = () => {
                     title="Xác nhận tài khoản thành công"
                     subTitle="Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập ngay bây giờ."
                     extra={[
-                        <Button type="primary" key="login" onClick={() => navigate("/")}>
+                        <Button style={{ backgroundColor: "#9156F1", borderColor: "#9156F1" ,color: "white" }} key="login" onClick={() => navigate("/login")}>
                             Đăng nhập ngay
                         </Button>,
                     ]}

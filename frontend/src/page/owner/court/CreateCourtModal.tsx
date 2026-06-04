@@ -24,8 +24,8 @@ export default function CreateCourtModal({
 
   const handleSubmit = async (values: any) => {
     try {
-      if (fileList.length < 2) {
-        message.error("Phải upload ít nhất 2 ảnh");
+      if (fileList.length < 1) {
+        message.error("Phải upload ít nhất 1 ảnh");
         return;
       }
 
@@ -125,15 +125,15 @@ export default function CreateCourtModal({
           <Input placeholder="Ví dụ: Sân số 1, Sân số 2..." />
         </Form.Item>
 
-        <Form.Item label="Ảnh sân (2-3 ảnh)">
+        <Form.Item label="Ảnh sân (1-2 ảnh)">
           <Upload
             listType="picture-card"
             beforeUpload={() => false}
             fileList={fileList}
             onChange={({ fileList }) => setFileList(fileList)}
-            maxCount={3}
+            maxCount={2}
           >
-            {fileList.length >= 3 ? null : <PlusOutlined />}
+            {fileList.length >= 2 ? null : <PlusOutlined />}
           </Upload>
         </Form.Item>
       </Form>

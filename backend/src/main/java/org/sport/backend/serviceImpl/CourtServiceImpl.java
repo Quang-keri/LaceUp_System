@@ -66,8 +66,8 @@ public class CourtServiceImpl implements CourtService {
         int count = images == null ? 0 :
                 (int) images.stream().filter(f -> f != null && !f.isEmpty()).count();
 
-        if (count < 1 || count > 3) {
-            throw new IllegalArgumentException("Court yêu cầu 1 tới 3 ảnh");
+        if (count < 1 || count > 2) {
+            throw new IllegalArgumentException("Court yêu cầu 1 tới 2 ảnh");
         }
 
         RentalArea rentalArea = rentalAreaRepository

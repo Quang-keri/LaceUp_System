@@ -76,65 +76,167 @@ public class EmailServiceImpl implements EmailService {
         sendEmailVerification(user.getEmail(), user.getUserName(), otp);
     }
 
+    @Override
+    public void resendRegisterOtp(String email) {
+        TemporaryRegistration temp = temporaryRegistrationRepository.findById(email)
+                .orElseThrow(() -> new RuntimeException("Yêu cầu xác thực không tồn tại hoặc đã hết hạn."));
+
+        if (userRepository.existsByEmail(email)) {
+            throw new AppException(ErrorCode.USER_EXISTED);
+        }
+
+        String newOtp = String.format("%06d", new Random().nextInt(1_000_000));
+
+        temp.setOtp(newOtp);
+        temp.setCreatedAt(LocalDateTime.now());
+
+        temporaryRegistrationRepository.save(temp);
+
+        String userName = temp.getUserRequest().getUserName();
+
+        sendEmailVerification(email, userName, newOtp);
+
+
+    }
+
     @Async
     @Override
     public void sendEmailVerification(String toEmail, String name, String otp) {
 
-        String confirmUrl = urlProperties.getFrontend() + "/register/confirm?email=" + toEmail + "&otp=" + otp;
+        String confirmUrl = urlProperties.getFrontend()
+                + "/register/confirm?email=" + toEmail
+                + "&otp=" + otp;
 
-        String subject = "Xác nhận đăng ký tài khoản LaceZone";
+        String subject = "Xác nhận đăng ký tài khoản LaceUp";
 
         String content = """
-                 <!DOCTYPE html>
-                 <html lang="vi">
-                 <head>
-                     <meta charset="UTF-8">
-                     <style>
-                \s
-                         .email-container { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; }
-                         .btn-confirm {\s
-                             display: inline-block; padding: 15px 30px; margin: 20px 0;\s
-                             background-color: #4da6ff; color: #ffffff !important;\s
-                             text-decoration: none; border-radius: 8px; font-weight: bold;\s
-                         }
-                         .footer { font-size: 12px; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
-                     </style>
-                 </head>
-                 <body>
-                     <div class="email-container">
-                         <h1>Xin chào, %s!</h1>
-                         <p>Cảm ơn bạn đã đăng ký thành viên tại <strong>LaceUp</strong>.</p>
-                         <p>Vui lòng nhấn vào nút bên dưới để hoàn tất quá trình xác thực tài khoản:</p>
-                \s
-                         <div style="text-align: center;">
-                             <a href="%s" class="btn-confirm">XÁC NHẬN ĐĂNG KÝ NGAY</a>
-                         </div>
-                \s
-                         <p>Nếu nút trên không hoạt động, bạn có thể copy và dán đường link này vào trình duyệt:</p>
-                         <p style="word-break: break-all; color: #4da6ff;">%s</p>
-                \s
-                         <p>Lưu ý: Liên kết này sẽ hết hạn sau <strong>5 phút</strong>.</p>
-                         <div class="footer">© 2026 Lace Up</div>
+             <!DOCTYPE html>
+             <html lang="vi">
+             <head>
+                 <meta charset="UTF-8">
+                 <style>
+                     .email-container {
+                         font-family: Arial, sans-serif;
+                         line-height: 1.6;
+                         color: #333;
+                         max-width: 600px;
+                         margin: 0 auto;
+                         padding: 24px;
+                         border: 1px solid #eee;
+                         border-radius: 12px;
+                         background-color: #ffffff;
+                     }
+
+                     .brand {
+                         color: #9156F1;
+                         font-weight: bold;
+                     }
+
+                     .otp-box {
+                         text-align: center;
+                         margin: 24px 0;
+                         padding: 18px;
+                         border-radius: 12px;
+                         background-color: #F4EEFF;
+                         border: 1px solid #D9C7FF;
+                     }
+
+                     .otp-label {
+                         font-size: 14px;
+                         color: #666;
+                         margin-bottom: 8px;
+                     }
+
+                     .otp-code {
+                         font-size: 34px;
+                         font-weight: bold;
+                         letter-spacing: 8px;
+                         color: #9156F1;
+                     }
+
+                     .btn-confirm {
+                         display: inline-block;
+                         padding: 15px 30px;
+                         margin: 20px 0;
+                         background-color: #9156F1;
+                         color: #ffffff !important;
+                         text-decoration: none;
+                         border-radius: 8px;
+                         font-weight: bold;
+                     }
+
+                     .note {
+                         background-color: #FFF7ED;
+                         border: 1px solid #FDBA74;
+                         color: #9A3412;
+                         padding: 12px;
+                         border-radius: 10px;
+                         font-size: 14px;
+                     }
+
+                     .footer {
+                         font-size: 12px;
+                         color: #888;
+                         margin-top: 30px;
+                         border-top: 1px solid #eee;
+                         padding-top: 10px;
+                     }
+                 </style>
+             </head>
+             <body>
+                 <div class="email-container">
+                     <h2>Xin chào, %s!</h2>
+
+                     <p>Cảm ơn bạn đã đăng ký tài khoản tại <span class="brand">LaceUp</span>.</p>
+
+                     <p>Bạn có thể xác thực tài khoản bằng một trong hai cách bên dưới:</p>
+
+                     <div class="otp-box">
+                         <div class="otp-label">Mã OTP dùng để xác thực trên ứng dụng LaceUp</div>
+                         <div class="otp-code">%s</div>
                      </div>
-                 </body>
-                 </html>
-                \s""".formatted(name, confirmUrl, confirmUrl);
+
+                     <p>
+                         Nếu bạn đang đăng ký trên <strong>ứng dụng mobile</strong>,
+                         hãy nhập mã OTP phía trên vào màn hình xác thực trong app.
+                     </p>
+
+                     <div style="text-align: center;">
+                         <a href="%s" class="btn-confirm">XÁC NHẬN TRÊN WEB</a>
+                     </div>
+
+                     <p>
+                         Nếu bạn đang đăng ký trên <strong>website</strong>,
+                         hãy bấm nút phía trên để hoàn tất đăng ký.
+                     </p>
+
+                     <p>Nếu nút trên không hoạt động, bạn có thể copy và dán đường link này vào trình duyệt:</p>
+
+                     <p style="word-break: break-all; color: #9156F1;">%s</p>
+
+                     <div class="note">
+                         Lưu ý: Mã OTP và liên kết xác thực sẽ hết hạn sau <strong>5 phút</strong>.
+                         Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.
+                     </div>
+
+                     <div class="footer">© 2026 LaceUp</div>
+                 </div>
+             </body>
+             </html>
+            """.formatted(name, otp, confirmUrl, confirmUrl);
 
         sendEmail(toEmail, subject, content);
     }
 
     @Override
     public CreateUserRequest verifyAndGetPendingUser(String email, String otp) {
-        // 1. Tìm trong Mongo
         TemporaryRegistration temp = temporaryRegistrationRepository.findById(email)
                 .orElseThrow(() -> new RuntimeException("Yêu cầu xác thực không tồn tại hoặc đã hết hạn."));
 
-        // 2. Kiểm tra OTP
         if (!temp.getOtp().equals(otp)) {
             throw new RuntimeException("Mã xác thực không chính xác.");
         }
 
-        // 3. Trả về data (KHÔNG xóa ở đây để tránh lỗi 404 khi Controller gặp sự cố SQL)
         return temp.getUserRequest();
     }
 
@@ -164,7 +266,6 @@ public class EmailServiceImpl implements EmailService {
             log.info(">>> [MAIL_CONNECT] Đang kết nối tới SMTP Server: {}:{}",
                     mailProperties.getHost(), mailProperties.getPort());
 
-            // Đo thời gian gửi để xác định mức độ nghẽn mạng
             long startTime = System.currentTimeMillis();
             javaMailSender.send(message);
             long endTime = System.currentTimeMillis();

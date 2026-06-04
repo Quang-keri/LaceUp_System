@@ -7,7 +7,7 @@ public interface EmailService {
     void sendResetPasswordEmail(String toEmail, String resetUrl);
 
     void sendOtpRegister(CreateUserRequest user);
-
+    void resendRegisterOtp(String email);
     @Async
     void sendEmailVerification(String toEmail, String name, String otp);
 

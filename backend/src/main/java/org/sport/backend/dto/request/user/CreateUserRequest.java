@@ -15,34 +15,45 @@ import java.time.LocalDate;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateUserRequest {
 
-    @NotBlank(message = "USERNAME_REQUIRED")
-    @Size(min = 3, max = 50, message = "USERNAME_INVALID_SIZE")
+    @NotBlank(message = "Vui lòng nhập họ tên")
+    @Size(min = 3, max = 50, message = "Họ tên phải từ 3 đến 50 ký tự")
     @Pattern(
             regexp = "^[\\p{L}0-9._ ]+$",
-            message = "USERNAME_INVALID_CHARACTERS"
+            message = "Họ tên không được chứa ký tự đặc biệt"
     )
     private String userName;
 
-    @Pattern(regexp = "^(MALE|FEMALE|OTHER)$", message = "GENDER_INVALID")
+    @NotBlank(message = "Vui lòng chọn giới tính")
+    @Pattern(regexp = "^(MALE|FEMALE|OTHER)$", message = "Giới tính không hợp lệ")
     private String gender;
 
-    @NotBlank(message = "EMAIL_REQUIRED")
-    @Email(message = "EMAIL_INVALID_FORMAT")
+    @NotBlank(message = "Vui lòng nhập email")
+    @Email(message = "Email không đúng định dạng")
     private String email;
 
-    @NotBlank(message = "PASSWORD_REQUIRED")
-    @Size(min = 6, message = "PASSWORD_MIN_LENGTH")
+    @NotBlank(message = "Vui lòng nhập mật khẩu")
+    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     private String password;
 
-    @Pattern(regexp = "^0\\d{9}$", message = "PHONE_INVALID_FORMAT")
+    @NotBlank(message = "Vui lòng nhập số điện thoại")
+    @Pattern(regexp = "^0\\d{9}$", message = "Số điện thoại phải gồm 10 số và bắt đầu bằng 0")
     private String phone;
 
-    @NotNull(message = "DOB_REQUIRED")
-    @Past(message = "DOB_MUST_BE_IN_PAST")
+    @NotNull(message = "Vui lòng chọn ngày sinh")
+    @Past(message = "Ngày sinh phải là ngày trong quá khứ")
     private LocalDate dateOfBirth;
 
-    @NotNull(message = "ROLE_REQUIRED")
+    @NotBlank(message = "Vui lòng chọn vai trò tài khoản")
     private String roleName;
 
     private String otp;
+
+    @AssertTrue(message = "Bạn phải từ đủ 16 tuổi trở lên mới được đặt sân")
+    public boolean isOldEnough() {
+        if (dateOfBirth == null) {
+            return true;
+        }
+
+        return !dateOfBirth.isAfter(LocalDate.now().minusYears(16));
+    }
 }
