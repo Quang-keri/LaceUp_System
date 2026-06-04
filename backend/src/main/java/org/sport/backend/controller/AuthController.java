@@ -97,6 +97,8 @@ public class AuthController {
 
         userService.createUser(userRequest);
 
+        emailService.deletePendingUser(email);
+
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
                         .code(200)
@@ -104,8 +106,20 @@ public class AuthController {
                         .build()
         );
     }
+    @PostMapping("/register/resend")
+    public ResponseEntity<ApiResponse<?>> resendRegisterOtp(
+            @RequestParam String email
+    ) {
+        emailService.resendRegisterOtp(email);
 
-    @PostMapping("/forgot-password")
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .code(200)
+                        .message("Mã xác thực mới đã được gửi tới email của bạn.")
+                        .build()
+        );
+    }
+        @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<?>> forgotPassword(
             @RequestParam String email
     ) {

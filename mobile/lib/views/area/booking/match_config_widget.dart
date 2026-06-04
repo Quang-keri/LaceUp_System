@@ -57,13 +57,18 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
   void _setupLimits() {
     final cat = widget.categoryName.toLowerCase();
 
-    if (cat.contains('bóng đá') || cat.contains('đá banh')) {
-      _minAllowed = 14;
+    if (cat.contains('bóng đá') ||
+        cat.contains('bong da') ||
+        cat.contains('đá banh') ||
+        cat.contains('da banh')) {
+      _minAllowed = 10;
       _maxAllowed = 22;
-      _maxPlayers = 14;
-    } else if (cat.contains('cầu lông') || cat.contains('pickleball')) {
-      _minAllowed = 2;
-      _maxAllowed = 4;
+      _maxPlayers = 10;
+    } else if (cat.contains('cầu lông') ||
+        cat.contains('cau long') ||
+        cat.contains('pickleball')) {
+      _minAllowed = 4;
+      _maxAllowed = 8;
       _maxPlayers = 4;
     } else {
       _minAllowed = 2;

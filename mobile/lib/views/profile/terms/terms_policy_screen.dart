@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 
 
-import '../../../ theme/app_colors.dart';
+import '../../../theme/app_colors.dart';
 import 'data/terms_policy_data.dart';
 import 'widgets/ terms_sidebar.dart';
 import 'widgets/terms_content.dart';

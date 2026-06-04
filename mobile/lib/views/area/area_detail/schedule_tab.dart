@@ -119,8 +119,6 @@ class _ScheduleTabState extends State<ScheduleTab> {
     final currentSlots = [...widget.selectedSlots];
 
     if (widget.isMatchMode) {
-      // --- LOGIC CHO TAB GHÉP KÈO ---
-      // Chỉ cho phép chọn 1 dải thời gian liên tục trên 1 sân duy nhất
       var myBlocks = currentSlots
           .where((item) => item.courtCopyId == copy.courtCopyId)
           .toList();
@@ -152,28 +150,22 @@ class _ScheduleTabState extends State<ScheduleTab> {
       } else {
         final block = myBlocks.first;
         if (idx == block.startIndex - 1) {
-          // Bấm sát vào đầu block -> kéo dài lên trên
           newBlocks = [block.copyWith(startIndex: idx)];
         } else if (idx == block.endIndex + 1) {
-          // Bấm sát vào cuối block -> kéo dài xuống dưới
           newBlocks = [block.copyWith(endIndex: idx)];
         } else if (idx == block.startIndex) {
-          // Bấm ngay ô đầu tiên của block -> thu hẹp từ trên
           if (block.startIndex < block.endIndex) {
             newBlocks = [block.copyWith(startIndex: block.startIndex + 1)];
           }
         } else if (idx == block.endIndex) {
-          // Bấm ngay ô cuối của block -> thu hẹp từ dưới
           if (block.startIndex < block.endIndex) {
             newBlocks = [block.copyWith(endIndex: block.endIndex - 1)];
           }
         } else {
-          // Bấm ra ngoài khoảng sát cạnh -> reset tạo block mới ở vị trí bấm
           newBlocks = [createNewBlock(idx)];
         }
       }
 
-      // Cập nhật lại thời gian và duration
       newBlocks = newBlocks.map((b) {
         final startTime = dynamicTimeSlots[b.startIndex];
         final endTime = b.endIndex + 1 < dynamicTimeSlots.length
@@ -189,12 +181,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
       }).toList();
 
       widget.onActiveCourtChanged(court);
-      // Ghi đè toàn bộ danh sách bằng newBlocks, tự động loại bỏ các sân khác nếu người dùng bấm sang sân mới
       widget.onSelectedSlotsChanged(newBlocks);
 
     } else {
-      // --- LOGIC CHO TAB ĐẶT SÂN ---
-      // Cho phép chọn nhiều slot rời rạc, tách block, chọn cùng lúc nhiều sân (Giữ nguyên logic cũ)
       final otherCopies = currentSlots
           .where((item) => item.courtCopyId != copy.courtCopyId)
           .toList();
@@ -529,7 +518,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
               text:
               'Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây.\n'
                   'Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử đặt sân và nhận thông báo ưu đãi từ chúng tôi.\n'
-                  'Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.',
+                  'Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.\n'
+                  'Chức năng ghép trận cần chọn sân để ra cấu hình trận đấu',
+
             ),
           ],
         ),

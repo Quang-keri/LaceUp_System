@@ -2,8 +2,12 @@ import React, { useState } from "react";
 import { message } from "antd";
 import authService from "../../../service/authService";
 import { Link, useNavigate } from "react-router-dom";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
 
+import {
+  ExclamationCircleOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
 const BACKEND_ERRORS: Record<string, string> = {
   EMAIL_ALREADY_EXISTS: "Email này đã được sử dụng.",
   "Email existed": "Email này đã được đăng ký. Vui lòng dùng email khác.",
@@ -17,7 +21,8 @@ const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const [values, setValues] = useState({
@@ -202,31 +207,51 @@ const RegisterPage: React.FC = () => {
             onChange={handleChange}
           />
 
-          <input
-            name="password"
-            type="password"
-            value={values.password}
-            placeholder="Mật khẩu"
-            className={`w-full px-3 py-2 border rounded-lg outline-none transition focus:ring-2 ${
-              fieldErrors.password
-                ? "border-red-500 focus:ring-red-500"
-                : "focus:ring-[#9156F1] border-gray-300"
-            }`}
-            onChange={handleChange}
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              value={values.password}
+              placeholder="Mật khẩu"
+              className={`w-full px-3 py-2 pr-10 border rounded-lg outline-none transition focus:ring-2 ${
+                fieldErrors.password
+                  ? "border-red-500 focus:ring-red-500"
+                  : "focus:ring-[#9156F1] border-gray-300"
+              }`}
+              onChange={handleChange}
+            />
 
-          <input
-            name="confirmPassword"
-            type="password"
-            value={values.confirmPassword}
-            placeholder="Nhập lại mật khẩu"
-            className={`w-full px-3 py-2 border rounded-lg outline-none transition focus:ring-2 ${
-              fieldErrors.confirmPassword
-                ? "border-red-500 focus:ring-red-500"
-                : "focus:ring-[#9156F1] border-gray-300"
-            }`}
-            onChange={handleChange}
-          />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#9156F1]"
+            >
+              {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            </button>
+          </div>
+
+          <div className="relative">
+            <input
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              value={values.confirmPassword}
+              placeholder="Nhập lại mật khẩu"
+              className={`w-full px-3 py-2 pr-10 border rounded-lg outline-none transition focus:ring-2 ${
+                fieldErrors.confirmPassword
+                  ? "border-red-500 focus:ring-red-500"
+                  : "focus:ring-[#9156F1] border-gray-300"
+              }`}
+              onChange={handleChange}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#9156F1]"
+            >
+              {showConfirmPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            </button>
+          </div>
 
           <div className="flex items-center space-x-2 pt-1">
             <input

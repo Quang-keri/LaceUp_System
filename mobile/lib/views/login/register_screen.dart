@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'verify_otp_screen.dart';
 
@@ -11,6 +11,8 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  static const Color primaryColor = AppColors.primary;
+
   final _formKey = GlobalKey<FormState>();
 
   final userNameController = TextEditingController();
@@ -19,7 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final phoneController = TextEditingController();
   final dateOfBirthController = TextEditingController();
 
-  String gender = 'Male';
+  String gender = 'MALE';
   bool loading = false;
   bool hidePassword = true;
 
@@ -50,12 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng kiểm tra mã OTP trong email của bạn'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      showSuccess('Mã OTP đã được gửi tới email của bạn');
 
       Navigator.pushReplacement(
         context,
@@ -66,6 +63,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => loading = false);
@@ -82,14 +80,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  void showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> pickDate() async {
     final now = DateTime.now();
+    final maxAllowedDate = DateTime(now.year - 16, now.month, now.day);
 
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(now.year - 18),
+      initialDate: maxAllowedDate,
       firstDate: DateTime(1950),
-      lastDate: now,
+      lastDate: maxAllowedDate,
+      helpText: 'Chọn ngày sinh',
+      cancelText: 'Hủy',
+      confirmText: 'Chọn',
     );
 
     if (picked == null) return;
@@ -98,184 +110,336 @@ class _RegisterScreenState extends State<RegisterScreen> {
     '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
   }
 
+  InputDecoration inputDecoration({
+    required String label,
+    required IconData icon,
+    String? hint,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      prefixIcon: Icon(icon),
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: primaryColor, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Colors.red, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F6FF),
       appBar: AppBar(
         title: const Text('Đăng ký'),
         centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                const Icon(Icons.person_add_alt_1, size: 72, color: Color(0xFF9156F1)),
-                const SizedBox(height: 24),
-
-                TextFormField(
-                  controller: userNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Họ tên',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vui lòng nhập họ tên';
-                    }
-                    if (value.trim().length < 2) {
-                      return 'Họ tên quá ngắn';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vui lòng nhập email';
-                    }
-
-                    final emailRegex = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$');
-
-                    if (!emailRegex.hasMatch(value.trim())) {
-                      return 'Email không hợp lệ';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Số điện thoại',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vui lòng nhập số điện thoại';
-                    }
-
-                    final phoneRegex = RegExp(r'^(0|\+84)[0-9]{9,10}$');
-
-                    if (!phoneRegex.hasMatch(value.trim())) {
-                      return 'Số điện thoại không hợp lệ';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: passwordController,
-                  obscureText: hidePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Mật khẩu',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(hidePassword ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () {
-                        setState(() => hidePassword = !hidePassword);
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập mật khẩu';
-                    }
-
-                    if (value.length < 6) {
-                      return 'Mật khẩu phải từ 6 ký tự';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                DropdownButtonFormField<String>(
-                  value: gender,
-                  decoration: const InputDecoration(
-                    labelText: 'Giới tính',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.wc),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'Male', child: Text('Nam')),
-                    DropdownMenuItem(value: 'Female', child: Text('Nữ')),
-                    DropdownMenuItem(value: 'Other', child: Text('Khác')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => gender = value);
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: dateOfBirthController,
-                  readOnly: true,
-                  onTap: pickDate,
-                  decoration: const InputDecoration(
-                    labelText: 'Ngày sinh',
-                    hintText: 'yyyy-MM-dd',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_month),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Vui lòng chọn ngày sinh';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 28),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: loading ? null : submitRegister,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF9156F1),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: loading
-                        ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                        : const Text('Đăng ký'),
-                  ),
+          padding: const EdgeInsets.all(20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
               ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  Container(
+                    width: 82,
+                    height: 82,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_add_alt_1,
+                      size: 46,
+                      color: primaryColor,
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  const Text(
+                    'Tạo tài khoản LaceUp',
+                    style: TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    'Đăng ký tài khoản để đặt sân và theo dõi lịch sử đặt lịch của bạn',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.4,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  TextFormField(
+                    controller: userNameController,
+                    textInputAction: TextInputAction.next,
+                    decoration: inputDecoration(
+                      label: 'Họ tên',
+                      icon: Icons.person,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Vui lòng nhập họ tên';
+                      }
+
+                      if (value.trim().length < 3) {
+                        return 'Họ tên phải từ 3 ký tự';
+                      }
+
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: inputDecoration(
+                      label: 'Email',
+                      icon: Icons.email,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Vui lòng nhập email';
+                      }
+
+                      final emailRegex =
+                      RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$');
+
+                      if (!emailRegex.hasMatch(value.trim())) {
+                        return 'Email không hợp lệ';
+                      }
+
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    decoration: inputDecoration(
+                      label: 'Số điện thoại',
+                      icon: Icons.phone,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Vui lòng nhập số điện thoại';
+                      }
+
+                      final phoneRegex = RegExp(r'^0\d{9}$');
+
+                      if (!phoneRegex.hasMatch(value.trim())) {
+                        return 'Số điện thoại phải gồm 10 số và bắt đầu bằng 0';
+                      }
+
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: hidePassword,
+                    textInputAction: TextInputAction.next,
+                    decoration: inputDecoration(
+                      label: 'Mật khẩu',
+                      icon: Icons.lock,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          hidePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() => hidePassword = !hidePassword);
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Vui lòng nhập mật khẩu';
+                      }
+
+                      if (value.length < 6) {
+                        return 'Mật khẩu phải từ 6 ký tự';
+                      }
+
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    value: gender,
+                    decoration: inputDecoration(
+                      label: 'Giới tính',
+                      icon: Icons.wc,
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'MALE', child: Text('Nam')),
+                      DropdownMenuItem(value: 'FEMALE', child: Text('Nữ')),
+                      DropdownMenuItem(value: 'OTHER', child: Text('Khác')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => gender = value);
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: dateOfBirthController,
+                    readOnly: true,
+                    onTap: pickDate,
+                    decoration: inputDecoration(
+                      label: 'Ngày sinh',
+                      hint: 'yyyy-MM-dd',
+                      icon: Icons.calendar_month,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Vui lòng chọn ngày sinh';
+                      }
+
+                      final dob = DateTime.tryParse(value.trim());
+
+                      if (dob == null) {
+                        return 'Ngày sinh không hợp lệ';
+                      }
+
+                      final now = DateTime.now();
+                      final maxAllowedDate =
+                      DateTime(now.year - 16, now.month, now.day);
+
+                      if (dob.isAfter(maxAllowedDate)) {
+                        return 'Bạn phải từ đủ 16 tuổi trở lên';
+                      }
+
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Bạn cần đủ 16 tuổi trở lên để đăng ký và đặt sân trên LaceUp.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: loading ? null : submitRegister,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                          : const Text(
+                        'Gửi mã xác thực',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(
+                    'Sau khi đăng ký, mã OTP sẽ được gửi đến email của bạn.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
