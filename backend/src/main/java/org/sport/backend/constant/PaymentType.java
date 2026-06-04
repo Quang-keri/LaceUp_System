@@ -5,5 +5,6 @@ public enum PaymentType {
     FULL,
     REMAINING,
     EXTRA,
-    REFUND
+    REFUND,
+    MATCH_JOIN
 }

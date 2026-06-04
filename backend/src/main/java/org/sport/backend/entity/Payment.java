@@ -70,4 +70,7 @@ public class Payment extends BaseEntity {
     @JoinColumn(name = "booking_intent_id")
     private BookingIntent bookingIntent;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "registration_id")
+    private MatchRegistration matchRegistration;
 }

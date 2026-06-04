@@ -2,6 +2,7 @@ import type {
   TransactionResponse,
   TransactionRequest,
   PageResponse,
+  TransactionSummaryResponse,
 } from "../../src/types/transaction";
 import api from "../config/axios";
 
@@ -38,4 +39,15 @@ export const updateTransaction = async (
 ) => {
   const response = await api.put<any>(`/transactions/${id}`, data);
   return response.data.result as TransactionResponse;
+};
+
+export const getRentalAreaTransactionSummary = async (
+  rentalAreaId: string,
+  params?: any
+) => {
+  const response = await api.get<any>(
+    `/transactions/rental-area/${rentalAreaId}/summary`,
+    { params }
+  );
+  return response.data.result as TransactionSummaryResponse;
 };

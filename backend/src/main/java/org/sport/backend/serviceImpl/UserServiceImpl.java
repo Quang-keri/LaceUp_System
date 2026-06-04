@@ -149,6 +149,24 @@ public class UserServiceImpl implements UserService {
         if (request.getPhone() != null) user.setPhone(request.getPhone());
         if (request.getGender() != null) user.setGender(request.getGender());
         if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
+
+        boolean hasBankInfo = request.getBankName() != null ||
+                request.getAccountNumber() != null ||
+                request.getAccountHolderName() != null;
+
+        if (hasBankInfo) {
+            BankAccount bankAccount = user.getBankAccount();
+            if (bankAccount == null) {
+                bankAccount = new BankAccount();
+                bankAccount.setUser(user);
+            }
+
+            if (request.getBankName() != null) bankAccount.setBankName(request.getBankName());
+            if (request.getAccountNumber() != null) bankAccount.setAccountNumber(request.getAccountNumber());
+            if (request.getAccountHolderName() != null) bankAccount.setAccountHolderName(request.getAccountHolderName());
+
+            user.setBankAccount(bankAccount);
+        }
     }
 
     @Override

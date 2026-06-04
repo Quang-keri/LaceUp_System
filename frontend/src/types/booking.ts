@@ -7,6 +7,14 @@ export const BookingStatus = {
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
 
+export const BookingTypes = {
+  ONLINE: "ONLINE",
+  OFFLINE: "OFFLINE",
+  MATCH: "MATCH",
+} as const;
+
+export type BookingTypes = (typeof BookingTypes)[keyof typeof BookingTypes];
+
 export interface BookingResponse {
   userName: string;
   phoneNumber: string;
@@ -33,6 +41,7 @@ export interface BookingResponse {
   endTime: string;
   totalPrice: number;
   bookingStatus: BookingStatus;
+  bookingType: BookingTypes;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -42,6 +51,7 @@ export interface BookingResponse {
   isFullyPaid?: boolean;
   extraServiceResponses?: BookingServiceResponse[];
   paymentMethod?: string;
+
 }
 
 export interface BookingListResponse {

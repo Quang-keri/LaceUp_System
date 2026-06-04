@@ -14,22 +14,35 @@ import ReviewSection from "../../../components/review/ReviewSection";
 import BookingMatchTabs from "./BookingMatchTabs";
 import BookingConfirmModal from "../bookings/BookingConfirmModal";
 
+import type { CourtResponse, CourtCopyResponse } from "../../../types/court";
+import type { ApiErrorResponse } from "../../../types/ApiResponse";
+import type { RentalAreaResponse } from "../../../types/rental";
+
+export interface SelectedSlot {
+  courtCopyId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
 export default function RentalAreaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [data, setData] = useState<any>(null);
-  const [activeCourt, setActiveCourt] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("schedule");
+  const [data, setData] = useState<RentalAreaResponse | null>(null);
+  const [activeCourt, setActiveCourt] = useState<CourtResponse | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs>(dayjs());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number>(1);
 
-  const [selectedSlots, setSelectedSlots] = useState<any[]>([]);
-  const [cartToSubmit, setCartToSubmit] = useState<any[]>([]);
+  const [selectedSlots, setSelectedSlots] = useState<SelectedSlot[]>([]);
+  const [cartToSubmit, setCartToSubmit] = useState<SelectedSlot[]>([]);
   const [openModal, setOpenModal] = useState(false);
+
+  const [viewTab, setViewTab] = useState("schedule");
+  const [bookingMode, setBookingMode] = useState("booking");
 
   const [userInfo, setUserInfo] = useState({
     userName: "",
@@ -49,17 +62,21 @@ export default function RentalAreaDetailPage() {
 
   useEffect(() => {
     fetchDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
     setSelectedSlots([]);
     setCartToSubmit([]);
-  }, [selectedDate]);
+  }, [selectedDate, bookingMode]);
+
   useEffect(() => {
     if (data) {
       fetchSchedule();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, data?.rentalAreaId]);
+
   const fetchDetail = async () => {
     if (!id) return;
 
@@ -78,9 +95,11 @@ export default function RentalAreaDetailPage() {
       }
     } catch (error) {
       message.error("Không thể tải thông tin khu vực sân");
+      console.log(error);
       navigate("/");
     }
   };
+
   const fetchSchedule = async () => {
     if (!id || !data) return;
 
@@ -89,23 +108,32 @@ export default function RentalAreaDetailPage() {
       const res = await rentalService.getRentalAreaSchedule(id, date);
 
       if (res.code === 200) {
-        const scheduleCopies = res.result?.courtCopies || [];
+        const scheduleCopies: CourtCopyResponse[] =
+          res.result?.courtCopies || [];
 
-        setData((prev: any) => ({
-          ...prev,
-          courts: mergeScheduleToCourts(prev.courts || [], scheduleCopies),
-        }));
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            courts: mergeScheduleToCourts(prev.courts || [], scheduleCopies),
+          };
+        });
       }
     } catch (error) {
       message.error("Không thể tải lịch sân");
+      console.log(error);
     }
   };
-  const mergeScheduleToCourts = (courts: any[], scheduleCopies: any[]) => {
+
+  const mergeScheduleToCourts = (
+    courts: CourtResponse[],
+    scheduleCopies: CourtCopyResponse[],
+  ): CourtResponse[] => {
     return courts.map((court) => ({
       ...court,
-      courtCopies: (court.courtCopies || []).map((copy: any) => {
+      courtCopies: (court.courtCopies || []).map((copy: CourtCopyResponse) => {
         const matched = scheduleCopies.find(
-          (s: any) => s.courtCopyId === copy.courtCopyId,
+          (s) => s.courtCopyId === copy.courtCopyId,
         );
 
         return {
@@ -115,13 +143,13 @@ export default function RentalAreaDetailPage() {
       }),
     }));
   };
+
   const handleDirectBooking = () => {
     if (selectedSlots.length === 0) {
       message.info("Vui lòng chọn ít nhất 1 sân và khung giờ");
       return;
     }
 
-    // Chưa đăng nhập
     if (!user) {
       message.warning(
         "Đăng nhập để có trải nghiệm tốt nhất khi đặt lịch sân",
@@ -151,7 +179,7 @@ export default function RentalAreaDetailPage() {
   const submitBooking = async () => {
     if (!userInfo.userName.trim() || !userInfo.userPhone.trim()) {
       message.info(
-        "Vui lòng nhập tên và số điện thoại ,nếu đã đăng nhập thì vui long cập nhật thông tin cá nhân đầy đủ để đặt sân",
+        "Vui lòng nhập tên và số điện thoại, nếu đã đăng nhập thì vui lòng cập nhật thông tin cá nhân đầy đủ để đặt sân",
       );
       return;
     }
@@ -187,8 +215,10 @@ export default function RentalAreaDetailPage() {
       } else {
         message.error(res.message || "Đặt sân thất bại");
       }
-    } catch (error: any) {
-      const errRes = error.response?.data;
+    } catch (error: unknown) {
+      const apiError = error as ApiErrorResponse;
+      const errRes = apiError.response?.data;
+
       if (errRes?.code === 2003 && errRes?.result) {
         message.error(Object.values(errRes.result)[0] as string);
       } else {
@@ -211,7 +241,7 @@ export default function RentalAreaDetailPage() {
   }
 
   const getTabClass = (tabName: string) =>
-    activeTab === tabName
+    viewTab === tabName
       ? "text-orange-300 border-b-2 border-orange-300 pb-1"
       : "hover:text-gray-200 pb-1 transition-colors";
 
@@ -234,25 +264,25 @@ export default function RentalAreaDetailPage() {
                 <div className="flex justify-between items-center bg-[#9156F1] text-white p-3">
                   <div className="flex gap-4 font-medium ml-2">
                     <button
-                      onClick={() => setActiveTab("schedule")}
+                      onClick={() => setViewTab("schedule")}
                       className={getTabClass("schedule")}
                     >
                       Xem lịch
                     </button>
                     <button
-                      onClick={() => setActiveTab("info")}
+                      onClick={() => setViewTab("info")}
                       className={getTabClass("info")}
                     >
                       Thông tin sân
                     </button>
                     <button
-                      onClick={() => setActiveTab("price")}
+                      onClick={() => setViewTab("price")}
                       className={getTabClass("price")}
                     >
                       Bảng giá
                     </button>
                     <button
-                      onClick={() => setActiveTab("review")}
+                      onClick={() => setViewTab("review")}
                       className={getTabClass("review")}
                     >
                       Đánh giá
@@ -268,7 +298,7 @@ export default function RentalAreaDetailPage() {
                   />
                 </div>
 
-                {activeTab === "schedule" && (
+                {viewTab === "schedule" && (
                   <CourtScheduleTab
                     data={data}
                     selectedDate={selectedDate}
@@ -277,10 +307,11 @@ export default function RentalAreaDetailPage() {
                     setSelectedDuration={setSelectedDuration}
                     selectedSlots={selectedSlots}
                     setSelectedSlots={setSelectedSlots}
+                    activeTab={bookingMode}
                   />
                 )}
 
-                {activeTab === "info" && (
+                {viewTab === "info" && (
                   <CourtInfoTab
                     activeCourt={activeCourt}
                     data={data}
@@ -288,11 +319,11 @@ export default function RentalAreaDetailPage() {
                   />
                 )}
 
-                {activeTab === "price" && (
+                {viewTab === "price" && (
                   <CourtPriceTab activeCourt={activeCourt} />
                 )}
 
-                {activeTab === "review" && (
+                {viewTab === "review" && (
                   <div className="p-6 animate-in fade-in duration-300">
                     <ReviewSection rentalAreaId={id!} />
                   </div>
@@ -309,7 +340,9 @@ export default function RentalAreaDetailPage() {
                 selectedTime={selectedTime}
                 selectedDuration={selectedDuration}
                 selectedSlots={selectedSlots}
-                priceRules={activeCourt?.priceRules || []}
+                priceRules={[]}
+                activeTab={bookingMode}
+                setActiveTab={setBookingMode}
               />
             </Col>
           </Row>

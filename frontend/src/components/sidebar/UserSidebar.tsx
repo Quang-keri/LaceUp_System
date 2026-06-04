@@ -13,7 +13,6 @@ import {
   HistoryOutlined,
   SettingOutlined,
   SafetyCertificateOutlined,
-  LinkOutlined,
   LogoutOutlined,
   DashboardOutlined,
   TrophyOutlined,
@@ -44,8 +43,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
 
   const [localDashboardData, setLocalDashboardData] =
     useState<UserDashboardResponse | null>(null);
-
-  const isOwner = user?.role === "OWNER";
 
   useEffect(() => {
     if (dashboardData !== undefined) {
@@ -87,7 +84,7 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
       case "3":
         navigate("/booking-history");
         break;
-      case "9":
+      case "6":
         navigate("/bank-account");
         break;
       case "4":
@@ -95,9 +92,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
         break;
       case "5":
         message.info("Bảo mật tài khoản chưa được phát triển");
-        break;
-      case "6":
-        message.info("Liên kết tài khoản chưa được phát triển");
         break;
       default:
         break;
@@ -177,18 +171,13 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
     { key: "7", icon: <TrophyOutlined />, label: "Thành tựu" },
     { key: "3", icon: <HistoryOutlined />, label: "Lịch sử đặt sân" },
 
-    ...(isOwner
-      ? [{ key: "9", icon: <BankOutlined />, label: "Tài khoản ngân hàng" }]
-      : []),
-
+    { key: "6", icon: <BankOutlined />, label: "Tài khoản ngân hàng" },
     { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
     {
       key: "5",
       icon: <SafetyCertificateOutlined />,
       label: "Bảo mật tài khoản",
     },
-    { key: "6", icon: <LinkOutlined />, label: "Liên kết tài khoản" },
-    { type: "divider" as const },
     {
       key: "logout",
       icon: <LogoutOutlined />,

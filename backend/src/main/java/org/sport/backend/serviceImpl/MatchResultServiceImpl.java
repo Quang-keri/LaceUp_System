@@ -36,6 +36,7 @@ public class MatchResultServiceImpl implements MatchResultService {
     private final ReputationLogRepository reputationLogRepository;
     private final UserCategoryRankRepository userCategoryRankRepository;
     private final SlotRepository slotRepository;
+    private final PaymentRepository paymentRepository;
 
     private final UserService userService;
 
@@ -268,6 +269,16 @@ public class MatchResultServiceImpl implements MatchResultService {
                 for (User u : reportedUsers) {
                     updateCreditScore(u, -20, "Vắng mặt và bị hủy trận khẩn cấp (Owner duyệt)");
                 }
+            }
+
+            List<Payment> successfulPayments = paymentRepository.findSuccessfulPaymentsByMatch(match.getMatchId());
+
+            if (!successfulPayments.isEmpty()) {
+                for (Payment payment : successfulPayments) {
+                    payment.setPaymentStatus(PaymentStatus.REFUND_PENDING);
+                }
+                paymentRepository.saveAll(successfulPayments);
+                log.info("Đã đưa {} giao dịch của trận [{}] vào danh sách Chờ Hoàn Tiền.", successfulPayments.size(), match.getMatchId());
             }
         }
     }

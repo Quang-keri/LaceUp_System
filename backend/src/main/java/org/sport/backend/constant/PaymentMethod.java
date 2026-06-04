@@ -7,5 +7,6 @@ public enum PaymentMethod {
     PAY_OS,
     VN_PAY,
     MOMO,
+    VIET_QR,
     PAY_LATER
 }

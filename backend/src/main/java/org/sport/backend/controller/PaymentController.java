@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.ApiResponse;
+import org.sport.backend.dto.request.match.MatchCheckoutRequest;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.service.PaymentService;
@@ -90,7 +91,7 @@ public class PaymentController {
             for (Enumeration<String> params = request.getParameterNames(); params.hasMoreElements();) {
                 String fieldName = params.nextElement();
                 String fieldValue = request.getParameter(fieldName);
-                if (fieldValue != null && fieldValue.length() > 0) {
+                if (fieldValue != null && !fieldValue.isEmpty()) {
                     fields.put(fieldName, fieldValue);
                 }
             }
@@ -105,6 +106,22 @@ public class PaymentController {
                     .build();
         } catch (Exception e) {
             return ApiResponse.error(400, e.getMessage());
+        }
+    }
+
+    @PostMapping("/checkout-match")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<CheckoutResponse> checkoutMatchJoin(
+            @Valid @RequestBody MatchCheckoutRequest request
+    ) {
+        try {
+            return ApiResponse.success(
+                    201,
+                    "Tạo link thanh toán ghép trận thành công",
+                    paymentService.checkoutMatchJoin(request.getRegistrationId(), request.getPaymentMethod())
+            );
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
         }
     }
 

@@ -1,9 +1,9 @@
-import { Table, Button, Tag } from "antd";
+import { Table, Button, Tag, Dropdown } from "antd";
 import type { BookingResponse } from "../../../types/booking";
 import dayjs from "dayjs";
-import { Dropdown } from "antd";
-import { MoreOutlined } from "@ant-design/icons";
+import { MoreOutlined, ExportOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
+import { useNavigate } from "react-router-dom";
 
 const statusColorMap: Record<string, string> = {
   BOOKED: "blue",
@@ -36,7 +36,7 @@ interface Props {
   onUpdateStatus: (booking: BookingResponse) => void;
   onCollectPayment: (booking: BookingResponse) => void;
   onPrintInvoice: (booking: BookingResponse) => void;
-  onAddService: (booking: BookingResponse) => void; // Khai báo prop mới
+  onAddService: (booking: BookingResponse) => void;
 }
 
 export default function BookingTable({
@@ -50,12 +50,13 @@ export default function BookingTable({
   onCollectPayment,
   onPrintInvoice,
 }: Props) {
+  const navigate = useNavigate();
+
   const columns = [
     {
       title: "STT",
       key: "stt",
       render: (_: any, __: any, index: number) => {
-        // Đảm bảo không bị crash nếu pagination chưa kịp load
         const current = pagination?.current || 1;
         const pageSize = pagination?.pageSize || 10;
         return (current - 1) * pageSize + index + 1;
@@ -64,8 +65,22 @@ export default function BookingTable({
     {
       title: "Mã đơn",
       dataIndex: "bookingId",
-      // Dùng id?.substring để tránh lỗi nếu id bị null/undefined
-      render: (id: string) => (id ? id.substring(0, 8) + "..." : "---"),
+      render: (id: string, record: BookingResponse) => (
+        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <span>{id ? id.substring(0, 8) + "..." : "---"}</span>
+
+          {record.bookingType === "MATCH" && (
+            <Tag
+              color="purple"
+              style={{ cursor: "pointer", width: "max-content" }}
+              icon={<ExportOutlined />}
+              onClick={() => navigate("/owner/matches")}
+            >
+              Ghép trận
+            </Tag>
+          )}
+        </div>
+      ),
     },
     {
       title: "Khách hàng",
@@ -80,7 +95,6 @@ export default function BookingTable({
     {
       title: "Khung Giờ",
       render: (_: any, record: BookingResponse) => {
-        // Ưu tiên render giờ từ mảng slots để luôn lấy data mới nhất và chi tiết nhất
         if (record.slots && record.slots.length > 0) {
           return (
             <div
@@ -95,8 +109,6 @@ export default function BookingTable({
             </div>
           );
         }
-
-        // Fallback lại giờ của booking nếu không có slots
         return record.startTime && record.endTime
           ? `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - ${dayjs(
               record.endTime,
@@ -110,7 +122,6 @@ export default function BookingTable({
         const total = record.totalPrice || 0;
         const deposit = record.depositAmount || 0;
         const remaining = record.remainingAmount ?? total - deposit;
-
         const paid = total - remaining;
         const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
 
@@ -120,7 +131,6 @@ export default function BookingTable({
               <b>{paid.toLocaleString("vi-VN")}đ</b> /{" "}
               {total.toLocaleString("vi-VN")}đ
             </div>
-
             <div
               style={{
                 height: 6,
@@ -143,7 +153,6 @@ export default function BookingTable({
                 }}
               />
             </div>
-
             <div style={{ fontSize: 12, marginTop: 4 }}>
               {percent === 100 ? (
                 <Tag color="green">Đã thanh toán đủ</Tag>
@@ -157,7 +166,6 @@ export default function BookingTable({
         );
       },
     },
-
     {
       title: "Phương thức trả",
       dataIndex: "paymentMethod",
@@ -177,12 +185,10 @@ export default function BookingTable({
     {
       title: "Thao tác",
       render: (_: any, record: BookingResponse) => {
-        // Tính toán số tiền còn lại để quyết định disable nút thanh toán hay không
         const total = record.totalPrice || 0;
         const deposit = record.depositAmount || 0;
         const remaining = record.remainingAmount ?? total - deposit;
 
-        // Định nghĩa menu dropdown
         const items: MenuProps["items"] = [
           {
             key: "view",
@@ -214,6 +220,15 @@ export default function BookingTable({
             onClick: () => onPrintInvoice(record),
           },
         ];
+
+        if (record.bookingType === "MATCH") {
+          items.splice(1, 0, {
+            key: "go_to_match",
+            label: "Xem trận đấu ghép",
+            icon: <ExportOutlined />,
+            onClick: () => navigate("/owner/matches"),
+          });
+        }
 
         return (
           <Dropdown menu={{ items }} trigger={["click"]}>

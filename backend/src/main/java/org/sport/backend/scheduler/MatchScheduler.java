@@ -1,9 +1,11 @@
 package org.sport.backend.scheduler;
 
 import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.constant.ResultStatus;
+import org.sport.backend.entity.Match;
 import org.sport.backend.entity.MatchResult;
 import org.sport.backend.event.MatchResultApprovedEvent;
 import org.sport.backend.repository.MatchRepository;
@@ -28,6 +30,26 @@ public class MatchScheduler {
     @Scheduled(cron = "0 5 0 * * ?")
     public void scheduleMatchGeneration() {
         recurringService.generateNextMatches();
+    }
+
+    @Scheduled(cron = "0 */5 * * * *")
+    @Transactional
+    public void autoCompleteMatches() {
+
+        List<Match> matches = matchRepository
+                .findByStatusAndEndTimeBefore(
+                        MatchStatus.READY,
+                        LocalDateTime.now());
+
+        for (Match match : matches) {
+
+            match.setStatus(MatchStatus.COMPLETED);
+
+            if (match.getBooking() != null) {
+                match.getBooking().setBookingStatus(
+                        BookingStatus.COMPLETED);
+            }
+        }
     }
 
 //    @Scheduled(cron = "0 0 * * * *")

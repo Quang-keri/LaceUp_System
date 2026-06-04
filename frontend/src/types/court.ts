@@ -1,3 +1,5 @@
+import type { SlotResponse } from "./slot";
+
 export const CourtStatus = {
   ACTIVE: "ACTIVE",
   INACTIVE: "INACTIVE",
@@ -18,17 +20,6 @@ export interface BookingShortResponse {
   note?: string;
   userName: string;
   userPhone: string;
-}
-
-export interface SlotResponse {
-  slotId?: string;
-  courtCopyId?: string;
-  courtCode?: string;
-  startTime?: string;
-  endTime?: string;
-  price?: number;
-  slotStatus?: string;
-  bookingShortResponse?: BookingShortResponse;
 }
 
 export interface CourtImageResponse {
@@ -63,6 +54,21 @@ export interface CourtResponse {
   amenityIds?: number[];
   createdAt?: string;
   updatedAt?: string;
+  priceRules: CourtPriceResponse[];
+}
+
+export interface CourtPriceResponse {
+  courtPriceId: string;
+  courtId: string;
+  startTime: string;
+  endTime: string;
+  startDate: string;
+  endDate: string;
+  pricePerHour: number;
+  specificDate: string;
+  priceType: string;
+  dayType: string;
+  priority: number;
 }
 
 export interface CreateCourtRequest {

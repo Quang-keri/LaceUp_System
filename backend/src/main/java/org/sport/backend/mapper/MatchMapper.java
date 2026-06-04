@@ -60,7 +60,12 @@ public interface MatchMapper {
                                 .map(reg -> {
                                     var userRes = userMapper.toUserResponse(reg.getUser());
 
+                                    userRes.setRegistrationId(reg.getRegistrationId());
                                     userRes.setTeamNumber(reg.getTeamNumber());
+                                    userRes.setAmountDue(reg.getAmountDue());
+                                    userRes.setIsPaid(reg.getIsPaid());
+                                    userRes.setPlayerCount(reg.getPlayerCount());
+                                    userRes.setIsCancelled(reg.getIsCancelled());
 
                                     return userRes;
                                 })
@@ -74,15 +79,7 @@ public interface MatchMapper {
     }
 
     default String findCourtPriceForMatch(Match match) {
-
-        if (match.getCourt() == null) {
-            return "Chưa cập nhật";
-        }
-
-        if (match.getCourt().getCourtPrices() == null) {
-            return "Chưa cập nhật";
-        }
-        if (match.getCourt().getCourtPrices().isEmpty()) {
+        if (match.getCourt() == null || match.getCourt().getCourtPrices() == null || match.getCourt().getCourtPrices().isEmpty()) {
             return "Chưa cập nhật";
         }
 
@@ -93,29 +90,15 @@ public interface MatchMapper {
 
         LocalTime time = matchStart.toLocalTime();
 
-        for (CourtPrice cp : match.getCourt().getCourtPrices()) {
-            System.out.printf("   + ID: %s | Start: %s | End: %s | Price: %s | Priority: %s%n",
-                    cp.getCourtPriceId(), cp.getStartTime(), cp.getEndTime(), cp.getPricePerHour(), cp.getPriority());
-        }
-
         Optional<CourtPrice> bestPrice = match.getCourt().getCourtPrices().stream()
                 .filter(cp -> cp.getStartTime() != null && cp.getEndTime() != null)
                 .filter(cp -> {
                     boolean isAfterOrEqualStart = !time.isBefore(cp.getStartTime());
                     boolean isBeforeEnd = !time.isAfter(cp.getEndTime());
-                    boolean isMatch = isAfterOrEqualStart && isBeforeEnd;
-
-                    if (isMatch) {
-                        System.out.println("   => [TÌM THẤY] Khung giờ khớp: Start=" + cp.getStartTime() + ", End=" + cp.getEndTime());
-                    }
-                    return isMatch;
+                    return isAfterOrEqualStart && isBeforeEnd;
                 })
                 .max(Comparator.comparing(CourtPrice::getPriority, Comparator.nullsFirst(Integer::compareTo)));
 
-        if (bestPrice.isPresent()) {
-            return bestPrice.get().getPricePerHour().toString();
-        } else {
-            return "Chưa cập nhật";
-        }
+        return bestPrice.map(courtPrice -> courtPrice.getPricePerHour().toString()).orElse("Chưa cập nhật");
     }
 }

@@ -11,6 +11,7 @@ import paymentService from "../../../service/payment/paymentService";
 type ResultState = {
   loading: boolean;
   bookingId?: string;
+  isMatch?: boolean;
   message: string;
   mode?: string;
 };
@@ -52,11 +53,11 @@ export default function VnPayReturnPage() {
           setState({
             loading: false,
             bookingId: result?.bookingId,
+            isMatch: !result?.bookingId,
             message: result?.message || "Đã xử lý trạng thái thanh toán VNPay",
             mode: result?.mode,
           });
         } else {
-          // Trường hợp Backend trả về ApiResponse.error()
           setState({
             loading: false,
             message: res?.data?.message || "Giao dịch không hợp lệ từ hệ thống",
@@ -136,14 +137,23 @@ export default function VnPayReturnPage() {
         />
 
         <div className="flex justify-center gap-3 mt-4">
-          {state.bookingId && state.mode === "BOOKED" && (
+          {state.mode === "BOOKED" && !state.isMatch && (
             <Button
               style={{ color: "white", background: "#9156F1" }}
               size="large"
-              // onClick={() => navigate(`/booking-history/${state.bookingId}`)}
               onClick={() => navigate(`/booking-history`)}
             >
-              Xem chi tiết lịch
+              Xem lịch đặt sân
+            </Button>
+          )}
+
+          {state.mode === "BOOKED" && state.isMatch && (
+            <Button
+              style={{ color: "white", background: "#1890ff" }}
+              size="large"
+              onClick={() => navigate(`/my-matches`)}
+            >
+              Xem trận đấu của tôi
             </Button>
           )}
 

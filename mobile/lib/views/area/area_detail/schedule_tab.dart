@@ -318,7 +318,6 @@ class _ScheduleTabState extends State<ScheduleTab> {
             borderColor: Colors.grey.shade400,
           ),
           _buildLegendItem(selectedColor, 'Đang chọn', textColor: Colors.white),
-          _buildLegendItem(primaryColor, 'Đã có trận (đủ)'),
           _buildLegendItem(Colors.orange.shade300, 'Đã có trận (thiếu)'),
           _buildLegendItem(Colors.grey.shade400, 'Khóa / Đã đặt'),
         ],

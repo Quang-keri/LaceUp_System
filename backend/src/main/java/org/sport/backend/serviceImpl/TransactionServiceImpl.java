@@ -5,6 +5,7 @@ import org.sport.backend.constant.TransactionType;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.transaction.TransactionRequest;
 import org.sport.backend.dto.response.transaction.TransactionResponse;
+import org.sport.backend.dto.response.transaction.TransactionSummaryResponse;
 import org.sport.backend.entity.RentalArea;
 import org.sport.backend.entity.Transaction;
 import org.sport.backend.entity.User;
@@ -18,6 +19,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -149,6 +152,26 @@ public class TransactionServiceImpl implements TransactionService {
 
 
         return mapToResponse(transactionRepository.save(transaction));
+    }
+
+    @Override
+    public TransactionSummaryResponse getRentalAreaTransactionSummary(UUID rentalAreaId, LocalDate startDate, LocalDate endDate) {
+
+        LocalDate safeStartDate = (startDate != null) ? startDate : LocalDate.of(2000, 1, 1);
+        LocalDate safeEndDate = (endDate != null) ? endDate : LocalDate.of(2099, 12, 31);
+
+        BigDecimal totalIncome = transactionRepository.sumTotalIncomeByRentalArea(rentalAreaId, safeStartDate, safeEndDate);
+        BigDecimal totalExpense = transactionRepository.sumTotalExpenseByRentalArea(rentalAreaId, safeStartDate, safeEndDate);
+        BigDecimal systemTransferred = transactionRepository.sumSystemTransferredByRentalArea(rentalAreaId, safeStartDate, safeEndDate);
+
+        BigDecimal netProfit = totalIncome.subtract(totalExpense);
+
+        return TransactionSummaryResponse.builder()
+                .totalIncome(totalIncome)
+                .totalExpense(totalExpense)
+                .systemTransferred(systemTransferred)
+                .netProfit(netProfit)
+                .build();
     }
 
     private TransactionResponse mapToResponse(Transaction entity) {

@@ -14,7 +14,7 @@ public class TransactionRequest {
     private TransactionType type;
     private BigDecimal amount;
     private String description;
-    private UUID referenceId;
+    private String referenceId;
     private TransactionStatus status;
     private PaymentMethod paymentMethod;
     private TransactionCategory category;

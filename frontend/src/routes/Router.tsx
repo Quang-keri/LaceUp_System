@@ -70,6 +70,8 @@ import AdminCustomerManagementPage from "../page/owner/customer-management/Admin
 import CustomerManagementPage from "../page/admin/customer-management/CustomerManagementPage.tsx";
 import UserLayout from "../layouts/UserLayout.tsx";
 import AreaMapGoong from "../page/customer/area-map/AreaMapGoong.tsx";
+import MatchPaymentPage from "../page/customer/profile-page/my-match/MatchPaymentPage.tsx";
+import RefundManagement from "../page/admin/refund-page/RefundManagement.tsx";
 // import AreaMap from "../page/customer/area-map/AreaMap.tsx";
 
 const MyDashboardWrapper = () => {
@@ -144,6 +146,7 @@ export const router = createBrowserRouter([
 
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
+          { path: "payment/match/:matchId", element: <MatchPaymentPage /> },
           {
             path: "payment-success/:bookingId",
             element: <PaymentSuccessPage />,
@@ -189,6 +192,7 @@ export const router = createBrowserRouter([
         element: <PayoutHistory />,
       },
       { path: "commissions", element: <CommissionConfigManagement /> },
+      { path: "refunds", element: <RefundManagement /> },
       { path: "*", element: <NotFound /> },
     ],
   },

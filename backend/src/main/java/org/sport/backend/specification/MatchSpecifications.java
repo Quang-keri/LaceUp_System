@@ -101,14 +101,15 @@ public class MatchSpecifications {
 
     public static Specification<Match> isParticipantOrHost(UUID userId) {
         return (root, query, cb) -> {
-            if (userId == null) return null;
+            Join<Match, MatchRegistration> registrations = root.join("registrations", JoinType.INNER);
 
-            Predicate isHost = cb.equal(root.join("host", JoinType.LEFT).get("userId"), userId);
+            Predicate isParticipant = cb.equal(registrations.get("user").get("userId"), userId);
+            Predicate isNotCancelled = cb.or(
+                    cb.isNull(registrations.get("isCancelled")),
+                    cb.isFalse(registrations.get("isCancelled"))
+            );
 
-            Join<Match, MatchRegistration> registrationsJoin = root.join("registrations", JoinType.LEFT);
-            Predicate isParticipant = cb.equal(registrationsJoin.join("user", JoinType.LEFT).get("userId"), userId);
-
-            return cb.or(isHost, isParticipant);
+            return cb.and(isParticipant, isNotCancelled);
         };
     }
 

@@ -6,7 +6,6 @@ class PaymentService {
       bookingIntentId,
       paymentMethod,
     });
-
     return res.data;
   }
 
@@ -20,7 +19,14 @@ class PaymentService {
       paymentMethod,
       isDeposit: isDeposit,
     });
+    return res.data;
+  }
 
+  async checkoutMatchJoin(registrationId: string, paymentMethod: string) {
+    const res = await api.post("/payments/checkout-match", {
+      registrationId,
+      paymentMethod,
+    });
     return res.data;
   }
 
@@ -35,7 +41,6 @@ class PaymentService {
   }
 
   async handleVnPayReturn(queryString: string) {
-  
     const res = await api.get(`/payments/vnpay/return${queryString}`);
     return res;
   }

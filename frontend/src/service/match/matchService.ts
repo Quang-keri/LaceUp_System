@@ -157,6 +157,10 @@ export const matchService = {
     );
     return response.data;
   },
+
+  leaveMatch: async (matchId: string) => {
+    return api.post(`${API_BASE_URL}/${matchId}/leave`);
+  },
 };
 
 export default matchService;

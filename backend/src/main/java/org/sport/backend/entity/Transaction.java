@@ -37,7 +37,7 @@ public class Transaction {
 
     private String description;
     @Column(name = "reference_id")
-    private UUID referenceId;
+    private String referenceId;
 
     @CreationTimestamp
     @Column(name = "transaction_date", updatable = false)

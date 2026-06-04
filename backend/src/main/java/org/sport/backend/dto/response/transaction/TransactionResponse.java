@@ -18,7 +18,7 @@ public class TransactionResponse {
     private TransactionType type;
     private BigDecimal amount;
     private String description;
-    private UUID referenceId;
+    private String referenceId;
     private LocalDateTime transactionDate;
     private PaymentMethod paymentMethod;
 

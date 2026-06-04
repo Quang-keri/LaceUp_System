@@ -1,3 +1,4 @@
+import type { BankAccount } from "./bankAccount.ts";
 import type { PermissionResponse } from "./permission.ts";
 
 export type Gender = "MALE" | "FEMALE" | "OTHER";
@@ -23,6 +24,10 @@ export interface UserResponse {
   memberTier?: string;
   totalMatches?: number;
   totalSpent?: number;
+  bankName?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  bankAccount?: BankAccount;
 }
 
 export interface CreateUserRequest {
@@ -41,6 +46,9 @@ export interface UpdateUserRequest {
   phone?: string;
   gender?: Gender;
   dateOfBirth?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
 }
 
 export interface CategoryRankResponse {

@@ -1,29 +1,21 @@
 package org.sport.backend.serviceImpl;
 
-
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.config.VnPayConfig;
-import org.sport.backend.constant.BookingIntentStatus;
-import org.sport.backend.constant.PaymentMethod;
-import org.sport.backend.constant.PaymentStatus;
-import org.sport.backend.constant.PaymentType;
+import org.sport.backend.constant.*;
 
+import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
-import org.sport.backend.entity.Booking;
-import org.sport.backend.entity.BookingIntent;
-import org.sport.backend.entity.Payment;
-import org.sport.backend.entity.User;
+import org.sport.backend.dto.response.payment.RefundResponse;
+import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.properties.PayOsProperties;
 import org.sport.backend.properties.UrlProperties;
-import org.sport.backend.repository.BookingIntentRepository;
-import org.sport.backend.repository.BookingRepository;
-import org.sport.backend.repository.PaymentRepository;
+import org.sport.backend.repository.*;
 
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.PaymentService;
@@ -31,6 +23,10 @@ import org.sport.backend.service.UserService;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.payos.PayOS;
@@ -43,8 +39,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -69,6 +68,10 @@ public class PaymentServiceImpl implements PaymentService {
     private VnPayConfig vnPayConfig;
     @Autowired
     private UrlProperties urlProperties;
+    @Autowired
+    private MatchRegistrationRepository matchRegistrationRepository;
+    @Autowired
+    private TransactionRepository transactionRepository;
 
     @Override
     public CheckoutResponse checkout(CheckoutRequest checkoutRequest) {
@@ -309,6 +312,163 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+    @Override
+    @Transactional
+    public CheckoutResponse checkoutMatchJoin(UUID registrationId, PaymentMethod method) {
+        // 1. Lấy thông tin đăng ký
+        MatchRegistration reg = matchRegistrationRepository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đăng ký trận đấu"));
+
+        // 2. Tạo mã đơn hàng duy nhất (Tái sử dụng hàm có sẵn của ông)
+        long orderCode = generateUniqueOrderCode();
+
+        // 3. Khởi tạo Payment chung
+        Payment payment = Payment.builder()
+                .matchRegistration(reg) // Map vào đăng ký trận (cần khai báo ManyToOne ở Entity Payment)
+                .user(reg.getUser())
+                .amount(reg.getAmountDue())
+                .paymentMethod(method)
+                .paymentType(PaymentType.MATCH_JOIN) // Loại thanh toán mới
+                .paymentStatus(PaymentStatus.PENDING)
+                .transactionDate(LocalDateTime.now())
+                .orderCode(orderCode)
+                .build();
+        paymentRepository.save(payment);
+
+        // 4. Phân luồng thanh toán
+        if (method == PaymentMethod.VN_PAY) {
+            return handleVnPayMatchJoin(payment, reg);
+        } else if (method == PaymentMethod.PAY_OS) {
+            return handlePayOsMatchJoin(payment, reg);
+        } else if (method == PaymentMethod.VIET_QR) {
+            return handleVietQrMatchJoin(payment, reg);
+        }
+
+        throw new RuntimeException("Phương thức thanh toán chưa được hỗ trợ cho ghép trận: " + method);
+    }
+
+    @Override
+    public PageResponse<RefundResponse> getPendingRefunds(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("transactionDate").descending());
+
+        Page<Payment> payments = paymentRepository.findByPaymentStatus(PaymentStatus.REFUND_PENDING, pageable);
+
+        List<RefundResponse> responses = payments.getContent().stream().map(p -> {
+            String source = (p.getPaymentType() == PaymentType.MATCH_JOIN) ? "MATCH" : "BOOKING";
+
+            String refCode = "N/A";
+            if (source.equals("MATCH") && p.getMatchRegistration() != null) {
+                refCode = p.getMatchRegistration().getMatch().getRoomCode();
+            } else if (source.equals("BOOKING") && p.getBooking() != null) {
+                refCode = p.getBooking().getBookingId().toString().substring(0, 8).toUpperCase();
+            }
+
+            BankAccount bank = p.getUser() != null ? p.getUser().getBankAccount() : null;
+            String bankNameStr = bank != null ? bank.getBankName() : null;
+            String accNumStr = bank != null ? bank.getAccountNumber() : null;
+            String accNameStr = bank != null ? bank.getAccountHolderName() : null;
+
+            String qrUrl = null;
+            if (bankNameStr != null && accNumStr != null) {
+                // Lời nhắn chuyển khoản (Ví dụ: LACEUP HOAN TIEN 123456)
+                String description = "LACEUP HOAN TIEN " + p.getOrderCode();
+
+                // Format link ảnh QR chuẩn của VietQR
+                qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
+                        bankNameStr,
+                        accNumStr,
+                        p.getAmount().longValue(),
+                        description.replace(" ", "%20"), // URL encode dấu cách
+                        accNameStr != null ? accNameStr.replace(" ", "%20") : ""
+                );
+            }
+
+            return RefundResponse.builder()
+                    .paymentId(p.getPaymentId())
+                    .userName(p.getUser() != null ? p.getUser().getUserName() : "Khách ẩn danh")
+                    .phone(p.getUser() != null ? p.getUser().getPhone() : "N/A")
+                    .amount(p.getAmount())
+                    .paymentMethod(p.getPaymentMethod() != null ? p.getPaymentMethod().name() : "VN_PAY")
+                    .orderCode(String.valueOf(p.getOrderCode()))
+                    .transactionDate(p.getTransactionDate())
+                    .source(source)
+                    .referenceCode(refCode)
+                    .bankName(bankNameStr)
+                    .accountNumber(accNumStr)
+                    .accountHolderName(accNameStr)
+                    .qrCodeUrl(qrUrl)
+                    .build();
+        }).collect(Collectors.toList());
+
+        return PageResponse.of(payments, responses);
+    }
+
+    @Override
+    public PageResponse<RefundResponse> getCompletedRefunds(int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("transactionDate").descending());
+
+        Page<Payment> payments = paymentRepository.findByPaymentStatus(PaymentStatus.REFUNDED, pageable);
+
+        List<RefundResponse> responses = payments.getContent().stream().map(p -> {
+            String source = (p.getPaymentType() == PaymentType.MATCH_JOIN) ? "MATCH" : "BOOKING";
+
+            String refCode = "N/A";
+            if (source.equals("MATCH") && p.getMatchRegistration() != null) {
+                refCode = p.getMatchRegistration().getMatch().getRoomCode();
+            } else if (source.equals("BOOKING") && p.getBooking() != null) {
+                refCode = p.getBooking().getBookingId().toString().substring(0, 8).toUpperCase();
+            }
+
+            BankAccount bank = p.getUser() != null ? p.getUser().getBankAccount() : null;
+            String bankNameStr = bank != null ? bank.getBankName() : null;
+            String accNumStr = bank != null ? bank.getAccountNumber() : null;
+            String accNameStr = bank != null ? bank.getAccountHolderName() : null;
+
+            return RefundResponse.builder()
+                    .paymentId(p.getPaymentId())
+                    .userName(p.getUser() != null ? p.getUser().getUserName() : "Khách ẩn danh")
+                    .phone(p.getUser() != null ? p.getUser().getPhone() : "N/A")
+                    .amount(p.getAmount())
+                    .paymentMethod(p.getPaymentMethod() != null ? p.getPaymentMethod().name() : "VN_PAY")
+                    .orderCode(String.valueOf(p.getOrderCode()))
+                    .transactionDate(p.getTransactionDate())
+                    .source(source)
+                    .referenceCode(refCode)
+                    .bankName(bankNameStr)
+                    .accountNumber(accNumStr)
+                    .accountHolderName(accNameStr)
+                    .qrCodeUrl(null)
+                    .build();
+        }).collect(Collectors.toList());
+
+        return PageResponse.of(payments, responses);
+    }
+
+    @Transactional
+    @Override
+    public void confirmManualRefund(UUID paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch"));
+
+        if (payment.getPaymentStatus() != PaymentStatus.REFUND_PENDING) {
+            throw new RuntimeException("Giao dịch này không ở trạng thái chờ hoàn tiền!");
+        }
+
+        payment.setPaymentStatus(PaymentStatus.REFUNDED);
+        paymentRepository.save(payment);
+
+        Transaction expenseTx = Transaction.builder()
+                .type(TransactionType.EXPENSE)
+                .amount(payment.getAmount())
+                .description("Hoàn tiền thủ công cho Order Code: " + payment.getOrderCode())
+                .status(TransactionStatus.SUCCESS)
+                .transactionDate(LocalDateTime.now())
+                .build();
+        transactionRepository.save(expenseTx);
+
+        log.info("Admin đã xác nhận hoàn tiền thành công cho Payment ID: {}", paymentId);
+    }
+
     private CheckoutResponse handlePayLaterCheckout(BookingIntent intent, User user, PaymentMethod method, BigDecimal amountToPay, PaymentType paymentType) {
         long orderCode = generateUniqueOrderCode();
 
@@ -417,9 +577,75 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void finalizePaidBookingPayment(Payment payment) {
-        if (payment.getPaymentStatus() == PaymentStatus.SUCCESS && payment.getBooking() != null) {
+        if (payment.getPaymentStatus() == PaymentStatus.SUCCESS) {
             return;
         }
+
+        if (payment.getPaymentType() == PaymentType.MATCH_JOIN) {
+            try {
+                MatchRegistration reg = payment.getMatchRegistration();
+                if (reg != null) {
+                    reg.setIsPaid(true);
+                    matchRegistrationRepository.save(reg);
+
+                    Court court = reg.getMatch().getCourt();
+                    RentalArea rentalArea = (court != null) ? court.getRentalArea() : null;
+                    User owner = (rentalArea != null) ? rentalArea.getOwner() : null;
+
+                    if (rentalArea != null && owner != null) {
+                        String userName = (payment.getUser() != null) ? payment.getUser().getUserName() : "Người chơi";
+                        String roomCode = reg.getMatch().getRoomCode();
+
+                        Transaction transaction = Transaction.builder()
+                                .type(TransactionType.INCOME)
+                                .amount(payment.getAmount())
+                                .description("Thu phí ghép trận phòng " + roomCode + " - " + userName)
+                                .status(TransactionStatus.SUCCESS)
+                                .paymentMethod(payment.getPaymentMethod())
+                                .category(TransactionCategory.EXTRA_SERVICE_PAYMENT)
+                                .rentalArea(rentalArea)
+                                .owner(owner)
+                                .transactionDate(LocalDateTime.now())
+                                .referenceId(payment.getPaymentId().toString())
+                                .build();
+                        transactionRepository.save(transaction);
+                    }
+
+                    payment.setPaymentStatus(PaymentStatus.SUCCESS);
+                    paymentRepository.saveAndFlush(payment);
+
+                    Booking cachedBooking = reg.getMatch().getBooking();
+                    if (cachedBooking != null) {
+                        Booking matchBooking = bookingRepository.findById(cachedBooking.getBookingId()).orElse(null);
+
+                        if (matchBooking != null) {
+                            BigDecimal totalPaidForMatch = paymentRepository.sumPaidAmountForMatch(reg.getMatch().getMatchId());
+
+                            matchBooking.setDepositAmount(totalPaidForMatch);
+
+                            BigDecimal totalPrice = matchBooking.getTotalPrice() != null ? matchBooking.getTotalPrice() : BigDecimal.ZERO;
+                            BigDecimal remaining = totalPrice.subtract(totalPaidForMatch);
+
+                            if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+                                remaining = BigDecimal.ZERO;
+                                if (matchBooking.getBookingStatus() == BookingStatus.PENDING) {
+                                    matchBooking.setBookingStatus(BookingStatus.BOOKED);
+                                }
+                            }
+                            matchBooking.setRemainingAmount(remaining);
+
+                            bookingRepository.save(matchBooking);
+                        }
+                    }
+                }
+                return;
+
+            } catch (Exception e) {
+                log.error("Lỗi chí mạng khi cập nhật thanh toán ghép trận: ", e);
+                throw new RuntimeException("Lỗi xử lý ghép trận: " + e.getMessage(), e);
+            }
+        }
+
         if (payment.getBookingIntent() != null && payment.getBookingIntent().getStatus() == BookingIntentStatus.CONFIRMED && payment.getBooking() != null) {
             payment.setPaymentStatus(PaymentStatus.SUCCESS);
             paymentRepository.save(payment);
@@ -428,6 +654,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             BookingIntent intent = payment.getBookingIntent();
+            if (intent == null) throw new RuntimeException("Không tìm thấy Booking Intent");
 
             BookingResponse bookingResponse = bookingService.confirmBooking(intent.getBookingIntentId(), payment);
 
@@ -460,9 +687,8 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setPaymentStatus(PaymentStatus.SUCCESS);
             paymentRepository.save(payment);
 
-
-        } catch (Exception e) { // Đổi catch Throwable chung để bắt được lỗi NotFound
-            throw new RuntimeException("Không thể tạo booking/invoice cho thanh toán PayOS", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi xử lý xác nhận thanh toán: " + e.getMessage(), e);
         }
     }
 
@@ -600,4 +826,84 @@ public class PaymentServiceImpl implements PaymentService {
                 || "failed".equals(normalized)
                 || "fail".equals(normalized);
     }
+
+    private CheckoutResponse handleVnPayMatchJoin(Payment payment, MatchRegistration reg) {
+        try {
+            String description = "Thanh toan phi ghep tran " + reg.getMatch().getRoomCode();
+            String paymentUrl = vnPayConfig.createPaymentUrl(payment.getOrderCode(), payment.getAmount().longValue(), description);
+
+            return CheckoutResponse.builder()
+                    .mode("REDIRECT")
+                    .paymentStatus(PaymentStatus.PENDING)
+                    .paymentUrl(paymentUrl)
+                    .orderCode(String.valueOf(payment.getOrderCode()))
+                    .message("Tạo link thanh toán VNPay thành công")
+                    .build();
+        } catch (Exception e) {
+            payment.setPaymentStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            throw new RuntimeException("Không thể tạo link thanh toán VNPay", e);
+        }
+    }
+
+    private CheckoutResponse handlePayOsMatchJoin(Payment payment, MatchRegistration reg) {
+        PayOS payOS = requirePayOsClient();
+        try {
+            long amount = payment.getAmount().longValue();
+
+            PaymentLinkItem item = PaymentLinkItem.builder()
+                    .name("Phi ghep tran " + reg.getMatch().getRoomCode())
+                    .quantity(1)
+                    .price(amount)
+                    .build();
+
+            CreatePaymentLinkRequest paymentData = CreatePaymentLinkRequest.builder()
+                    .orderCode(payment.getOrderCode())
+                    .amount(amount)
+                    .description("Match " + reg.getMatch().getRoomCode())
+                    .item(item)
+                    // Tái sử dụng lại URL booking hoặc ông có thể làm URL riêng cho Match
+                    .returnUrl(buildBookingReturnUrl(payment.getOrderCode(), "success"))
+                    .cancelUrl(buildBookingReturnUrl(payment.getOrderCode(), "cancel"))
+                    .build();
+
+            CreatePaymentLinkResponse response = payOS.paymentRequests().create(paymentData);
+            payment.setPayosPaymentLinkId(response.getPaymentLinkId());
+            paymentRepository.save(payment);
+
+            return CheckoutResponse.builder()
+                    .mode("REDIRECT")
+                    .paymentStatus(PaymentStatus.PENDING)
+                    .paymentUrl(response.getCheckoutUrl())
+                    .orderCode(String.valueOf(payment.getOrderCode()))
+                    .message("Tạo link thanh toán PayOS thành công")
+                    .build();
+        } catch (Exception e) {
+            payment.setPaymentStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            log.error("Lỗi tạo link PayOS cho Match Join: ", e);
+            throw new RuntimeException("Không thể tạo link thanh toán PAYOS cho ghép trận");
+        }
+    }
+
+    private CheckoutResponse handleVietQrMatchJoin(Payment payment, MatchRegistration reg) {
+        try {
+            // TODO: Ông nhét logic VietQR của ông vào đây sau khi code xong.
+            // Thường VietQR sẽ trả về một chuỗi URL hoặc base64 để render QR Code.
+            // String qrData = vietQrService.generateQrCode(payment.getOrderCode(), payment.getAmount(), ...);
+
+            return CheckoutResponse.builder()
+                    .mode("QR_CODE") // Mode trả về mã QR, App Flutter sẽ bắt cái mode này để vẽ hình mã QR ra
+                    .paymentStatus(PaymentStatus.PENDING)
+                    // .qrData(qrData) // Ông có thể tạo thêm trường qrData trong DTO CheckoutResponse
+                    .orderCode(String.valueOf(payment.getOrderCode()))
+                    .message("Tạo mã VietQR thành công (Placeholder)")
+                    .build();
+        } catch (Exception e) {
+            payment.setPaymentStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            throw new RuntimeException("Không thể tạo mã VietQR cho ghép trận", e);
+        }
+    }
+
 }

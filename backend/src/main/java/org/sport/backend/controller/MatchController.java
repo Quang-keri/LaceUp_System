@@ -9,8 +9,10 @@ import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.constant.MatchType;
 import org.sport.backend.dto.request.chat.DivideTeamRequest;
 import org.sport.backend.dto.request.match.AutoMatchRequest;
+import org.sport.backend.dto.request.match.JoinMatchRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
+import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.service.MatchService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,22 +47,30 @@ public class MatchController {
 
     @PostMapping("/{matchId}/join")
     @PreAuthorize("hasAuthority('JOIN_MATCH')")
-    public ResponseEntity<ApiResponse<Void>> joinMatch(
-            @PathVariable UUID matchId
+    public ResponseEntity<ApiResponse<CheckoutResponse>> joinMatch(
+            @PathVariable UUID matchId,
+            @RequestBody(required = false) JoinMatchRequest request
     ) {
-        matchService.joinMatch(matchId);
+        int count = (request != null && request.getPlayerCount() != null) ? request.getPlayerCount() : 1;
+
+        CheckoutResponse checkoutInfo = matchService.joinMatch(matchId, count);
+
         return ResponseEntity.ok(ApiResponse.success(
                 200,
-                "Bạn đã tham gia trận đấu thành công!",
-                null));
+                "Đang chuyển hướng thanh toán...",
+                checkoutInfo));
     }
 
     @PostMapping("/join/code")
     @PreAuthorize("hasAuthority('JOIN_MATCH')")
     public ResponseEntity<ApiResponse<Void>> joinMatchByCode(
-            @RequestParam String roomCode
+            @RequestParam String roomCode,
+            @RequestBody(required = false) JoinMatchRequest request
     ) {
-        matchService.joinByRoomCode(roomCode);
+        int count = (request != null && request.getPlayerCount() != null) ? request.getPlayerCount() : 1;
+
+        matchService.joinByRoomCode(roomCode, count);
+
         return ResponseEntity.ok(ApiResponse.success(
                 200,
                 "Bạn đã tham gia trận đấu thành công qua mã phòng!",
@@ -189,6 +199,15 @@ public class MatchController {
                         "Lấy danh sách trận đấu của người chơi thành công.",
                         matchService.getUserMatchHistory(userId, page, size))
         );
+    }
+
+    @PostMapping("/{matchId}/leave")
+    public ApiResponse<String> leaveMatch(@PathVariable UUID matchId) {
+        matchService.leaveMatch(matchId);
+        return ApiResponse.success(
+                200,
+                "Đã rời trận đấu thành công!",
+                null);
     }
 
 }

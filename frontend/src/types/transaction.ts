@@ -4,7 +4,7 @@ export type TransactionType =
   | "PAYOUT"
   | "COMMISSION"
   | "REFUND";
-  
+
 export type PaymentMethod =
   | "BANK_TRANSFER"
   | "CASH"
@@ -74,4 +74,11 @@ export interface PageResponse<T> {
   totalElements: number;
 
   data: T[];
+}
+
+export interface TransactionSummaryResponse {
+  totalIncome: number;
+  totalExpense: number;
+  systemTransferred: number;
+  netProfit: number;
 }

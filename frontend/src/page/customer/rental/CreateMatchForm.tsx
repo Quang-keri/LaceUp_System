@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  DatePicker,
   Form,
   InputNumber,
   Select,
@@ -10,23 +9,38 @@ import {
   Tooltip,
 } from "antd";
 import dayjs from "dayjs";
-import matchService from "../../../service/match/matchService";
-import { useAuth } from "../../../context/AuthContext";
-import type { MatchRequest } from "../../../types/match";
 import { Info } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
+import matchService from "../../../service/match/matchService";
+import { useAuth } from "../../../context/AuthContext";
+
+import type { MatchRequest } from "../../../types/match";
+import type { CourtResponse, CourtPriceResponse } from "../../../types/court";
+import type { ApiErrorResponse } from "../../../types/ApiResponse";
+import type { CategoryRankResponse, UserResponse } from "../../../types/user";
+
+export interface MatchFormValues {
+  startTime: dayjs.Dayjs;
+  duration: number;
+  matchType: "NORMAL" | "BET" | "RANKED";
+  maxPlayers: number;
+  minPlayersToStart: number;
+  note?: string;
+}
+
 const calculateTotalPrice = (
-  court: any,
+  court: CourtResponse | null | undefined,
   startTime: dayjs.Dayjs,
   duration: number,
 ) => {
   if (!court || !startTime || !duration) return 0;
 
-  const rules = court.priceRules || [];
+  const rules: CourtPriceResponse[] = court.priceRules || [];
+  const basePrice = Number(court.pricePerHour || 0);
 
   if (rules.length === 0) {
-    return (court.price || court.minPrice || 0) * duration;
+    return basePrice * duration;
   }
 
   let totalPrice = 0;
@@ -36,7 +50,7 @@ const calculateTotalPrice = (
   for (let i = 0; i < chunks; i++) {
     const currentMinutes = currentTime.hour() * 60 + currentTime.minute();
 
-    const applicableRules = rules.filter((rule: any) => {
+    const applicableRules = rules.filter((rule) => {
       if (!rule.startTime || !rule.endTime) return false;
       const [startHour, startMin] = rule.startTime.split(":").map(Number);
       const [endHour, endMin] = rule.endTime.split(":").map(Number);
@@ -48,13 +62,13 @@ const calculateTotalPrice = (
     });
 
     applicableRules.sort(
-      (a: any, b: any) => (b.priority || 0) - (a.priority || 0),
+      (a, b) => (Number(b.priority) || 0) - (Number(a.priority) || 0),
     );
 
     const activeRule = applicableRules[0];
     const pricePerHour = activeRule
-      ? activeRule.pricePerHour
-      : court.price || court.minPrice || 0;
+      ? Number(activeRule.pricePerHour)
+      : basePrice;
 
     totalPrice += pricePerHour * 0.5;
     currentTime = currentTime.add(30, "minute");
@@ -63,38 +77,59 @@ const calculateTotalPrice = (
   return totalPrice;
 };
 
-export default function CreateMatchForm({
-  court,
-  address,
-  selectedDate,
-  selectedTime,
-}: {
-  court: any;
-  address?: any;
+interface CreateMatchFormProps {
+  court?: CourtResponse | null;
   selectedDate?: dayjs.Dayjs;
   selectedTime?: string | null;
-}) {
+  selectedDuration?: number;
+}
+
+export default function CreateMatchForm({
+  court,
+  selectedDate,
+  selectedTime,
+  selectedDuration,
+}: CreateMatchFormProps) {
   const { user } = useAuth();
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<MatchFormValues>();
   const [loadingMatch, setLoadingMatch] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
 
   const watchStartTime = Form.useWatch("startTime", form);
   const watchDuration = Form.useWatch("duration", form);
+  const watchMatchType = Form.useWatch("matchType", form);
+
+  const currentStartTime = watchStartTime || form.getFieldValue("startTime");
+  const currentDuration = watchDuration || form.getFieldValue("duration") || 1;
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  const categoryName = (
-    court?.categoryName ||
-    court?.category?.categoryName ||
-    ""
-  ).toLowerCase();
+  const categoryName = (court?.categoryName || "").toLowerCase();
   const isFootball =
     categoryName.includes("bóng đá") || categoryName.includes("đá banh");
 
   const minAllowed = isFootball ? 10 : 2;
   const maxAllowed = isFootball ? 12 : 4;
+
+  const currentCategoryId = court?.categoryId;
+  const currentCategoryName = court?.categoryName;
+
+  const typedUser = user as UserResponse | null;
+  const ranks: CategoryRankResponse[] = typedUser?.categoryRanks || [];
+
+  const userRankData = ranks.find(
+    (item: CategoryRankResponse) =>
+      (currentCategoryId &&
+        String(item.categoryId) === String(currentCategoryId)) ||
+      (currentCategoryName &&
+        item.categoryName?.trim().toLowerCase() ===
+          currentCategoryName?.trim().toLowerCase()),
+  );
+
+  const currentRank = userRankData ? userRankData.rankPoint : 0;
+  const calculatedMinRank = Math.max(0, currentRank - 500);
+  const calculatedMaxRank = currentRank + 500;
 
   useEffect(() => {
     const savedData = sessionStorage.getItem("pendingMatchForm");
@@ -113,77 +148,51 @@ export default function CreateMatchForm({
   }, [form]);
 
   useEffect(() => {
-    if (watchStartTime && watchDuration) {
-      const price = calculateTotalPrice(court, watchStartTime, watchDuration);
+    if (currentStartTime && currentDuration) {
+      const price = calculateTotalPrice(
+        court,
+        currentStartTime,
+        currentDuration,
+      );
       setCalculatedPrice(price);
     } else {
       setCalculatedPrice(0);
     }
-  }, [watchStartTime, watchDuration, court]);
+  }, [currentStartTime, currentDuration, court]);
 
   useEffect(() => {
-    if (selectedDate && selectedTime && !form.getFieldValue("startTime")) {
+    if (selectedDate && selectedTime) {
       const [hour, minute] = selectedTime.split(":").map(Number);
       const newDateTime = selectedDate
         .clone()
         .hour(hour)
         .minute(minute)
         .second(0);
-      form.setFieldValue("startTime", newDateTime);
+
+      form.setFieldsValue({
+        startTime: newDateTime,
+        duration: selectedDuration || form.getFieldValue("duration") || 1,
+      });
+    } else if (!selectedTime) {
+      form.setFieldsValue({ startTime: undefined as unknown as dayjs.Dayjs });
     }
-  }, [selectedDate, selectedTime, form]);
+  }, [selectedDate, selectedTime, selectedDuration, form]);
 
   useEffect(() => {
     if (!court) return;
 
     if (!form.getFieldValue("matchType")) {
-      const currentCategoryId = court?.category?.id || court?.categoryId;
-      const ranks = (user as any)?.categoryRank || user?.categoryRanks || [];
-
-      const userRankData = ranks.find(
-        (item: any) => item.categoryId === currentCategoryId,
-      );
-
-      const currentRank = userRankData ? userRankData.rankPoint : 0;
-
       form.setFieldsValue({
         maxPlayers: minAllowed,
         minPlayersToStart: minAllowed / 2,
-        duration: 1,
+        duration: selectedDuration || 1,
         matchType: "NORMAL",
-        minRank: Math.max(0, currentRank - 500),
-        maxRank: currentRank + 500,
         note: "",
       });
     }
-  }, [court, user, form, minAllowed]);
+  }, [court, minAllowed, selectedDuration, form]);
 
-  const disabledDateTime = (current: any) => {
-    const now = dayjs();
-    const isToday = current && current.isSame(now, "day");
-
-    return {
-      disabledHours: () => {
-        if (!isToday) return [];
-        return Array.from({ length: now.hour() }, (_, i) => i);
-      },
-      disabledMinutes: (selectedHour: number) => {
-        const minuteOptions = [0, 30];
-        const disabledMin = Array.from({ length: 60 }, (_, i) => i).filter(
-          (m) => !minuteOptions.includes(m),
-        );
-
-        if (isToday && selectedHour === now.hour()) {
-          if (now.minute() >= 0) disabledMin.push(0);
-          if (now.minute() >= 30) disabledMin.push(30);
-        }
-
-        return disabledMin;
-      },
-    };
-  };
-
-  const handleRequireLogin = (values: any) => {
+  const handleRequireLogin = (values: MatchFormValues) => {
     message.warning("Vui lòng đăng nhập để tiếp tục tạo trận đấu!");
     sessionStorage.setItem(
       "pendingMatchForm",
@@ -197,7 +206,7 @@ export default function CreateMatchForm({
     });
   };
 
-  const handleCreateMatch = async (values: any) => {
+  const handleCreateMatch = async (values: MatchFormValues) => {
     if (!user) {
       handleRequireLogin(values);
       return;
@@ -206,15 +215,11 @@ export default function CreateMatchForm({
     setLoadingMatch(true);
     try {
       const matchStart = values.startTime;
-      const matchEnd = matchStart.add(values.duration, "hour");
+      const matchEnd = matchStart.add(values.duration * 60, "minute");
 
       const payload: MatchRequest = {
         courtId: court?.courtId || null,
-        categoryId: Number(court?.categoryId || court?.category?.categoryId),
-
-        street: address?.street || "",
-        ward: address?.ward || "",
-        cityId: Number(address?.city?.cityId || address?.cityId || 1),
+        categoryId: currentCategoryId ? Number(currentCategoryId) : 0,
 
         startTime: matchStart.format("YYYY-MM-DDTHH:mm:ss"),
         endTime: matchEnd.format("YYYY-MM-DDTHH:mm:ss"),
@@ -223,10 +228,9 @@ export default function CreateMatchForm({
         minPlayersToStart: Number(values.minPlayersToStart),
         isRecurring: false,
         matchType: values.matchType,
-        minRank:
-          values.matchType === "RANKED" ? Number(values.minRank) : undefined,
-        maxRank:
-          values.matchType === "RANKED" ? Number(values.maxRank) : undefined,
+
+        minRank: values.matchType === "RANKED" ? calculatedMinRank : undefined,
+        maxRank: values.matchType === "RANKED" ? calculatedMaxRank : undefined,
         note: values.note || "",
       };
 
@@ -234,16 +238,21 @@ export default function CreateMatchForm({
       message.success("Tạo trận đấu thành công!");
       form.resetFields();
       navigate("/my-matches");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiErr = error as ApiErrorResponse;
+      const errRes = apiErr.response?.data;
+      const errMessage = errRes?.message;
+
       if (
-        error.response?.status === 401 ||
-        error.response?.data?.message?.toLowerCase().includes("unauthenticated")
+        apiErr.response?.status === 401 ||
+        errMessage?.toLowerCase().includes("unauthenticated")
       ) {
         handleRequireLogin(values);
         return;
       }
-      console.error("Lỗi Backend trả về:", error.response?.data);
-      message.error(error.response?.data?.message || "Không thể tạo trận đấu.");
+
+      console.error("Lỗi Backend trả về:", errRes);
+      message.error(errMessage || "Không thể tạo trận đấu.");
     } finally {
       setLoadingMatch(false);
     }
@@ -257,78 +266,82 @@ export default function CreateMatchForm({
     );
   }
 
+  const courtName = court?.courtName || "Sân chưa rõ tên";
+  const catName = court?.categoryName || "Sân thể thao";
+  const displayDate = currentStartTime
+    ? currentStartTime.format("DD/MM/YYYY")
+    : selectedDate
+    ? selectedDate.format("DD/MM/YYYY")
+    : "Chưa chọn giờ";
+  const displayStartTime = currentStartTime
+    ? currentStartTime.format("HH:mm")
+    : selectedTime || "--:--";
+  const displayEndTime =
+    currentStartTime && currentDuration
+      ? currentStartTime.add(currentDuration * 60, "minute").format("HH:mm")
+      : "--:--";
+
+  const isSlotSelected = !!currentStartTime && calculatedPrice > 0;
+
   return (
     <div className="animate-in fade-in duration-300">
-      <div className="mb-5 p-3 bg-purple-50/50 rounded-lg border border-purple-100 flex items-center gap-2">
-        <p className="text-sm text-purple-900">
-          Sân áp dụng: <strong>{court?.courtName}</strong>
+      <div className="mb-3 p-3 bg-[#f3e8ff]/50 rounded-lg border border-[#e9d5ff]">
+        <p className="text-sm text-purple-900 font-semibold">
+          Sân áp dụng cho trận ghép kèo
         </p>
       </div>
 
-      <div className="flex items-end gap-2 mb-6 border-b border-gray-100 pb-4 min-h-[56px]">
-        {calculatedPrice > 0 ? (
-          <>
-            <span className="text-gray-600 font-medium pb-1">Tạm tính</span>
-            <span className="text-3xl font-extrabold text-[#9156F1]">
-              {calculatedPrice.toLocaleString()}
-            </span>
-            <span className="text-gray-500 font-medium pb-1">VNĐ</span>
-          </>
-        ) : (
-          <span className="text-xl font-extrabold text-[#9156F1] pb-1">
-            Vui lòng chọn giờ để xem giá
-          </span>
-        )}
+      <div className="border border-[#e9d5ff] rounded-xl p-3 bg-[#f3e8ff]/40 mb-6">
+        <div className="flex justify-between gap-3">
+          <div>
+            <p className="font-bold text-gray-800">{courtName}</p>
+
+            <p className="text-sm text-gray-500 mt-1">
+              {displayDate} • {displayStartTime} - {displayEndTime}
+            </p>
+
+            <p className="text-xs font-medium text-[#9156F1] mt-1">
+              Loại sân: {catName}
+            </p>
+
+            <p className="text-xs font-medium text-gray-500 mt-1">
+              Thời lượng: {currentDuration} giờ
+            </p>
+          </div>
+
+          <div className="text-right flex-shrink-0 flex items-center">
+            {calculatedPrice > 0 ? (
+              <p className="font-bold text-lg text-[#9156F1] whitespace-nowrap">
+                {calculatedPrice.toLocaleString("vi-VN")} đ
+              </p>
+            ) : (
+              <p className="text-sm font-medium text-gray-400 whitespace-nowrap">
+                Chưa tính giá
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      <Form form={form} layout="vertical" onFinish={handleCreateMatch}>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Form.Item
-            label={
-              <span className="font-semibold text-gray-700">Giờ bắt đầu</span>
-            }
-            name="startTime"
-            rules={[{ required: true, message: "Vui lòng chọn giờ bắt đầu!" }]}
-            className="mb-0"
-          >
-            <DatePicker
-              showTime={{ format: "HH:mm", hideDisabledOptions: true }}
-              format="HH:mm - DD/MM"
-              className="w-full h-11"
-              placeholder="Chọn giờ"
-              showNow={false}
-              disabledDate={(current) =>
-                current && current < dayjs().startOf("day")
-              }
-              disabledTime={disabledDateTime}
-            />
-          </Form.Item>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleCreateMatch}
+        initialValues={{
+          duration: selectedDuration || 1,
+          matchType: "NORMAL",
+          maxPlayers: minAllowed,
+          minPlayersToStart: minAllowed / 2,
+        }}
+      >
+        <Form.Item name="startTime" hidden>
+          <Input />
+        </Form.Item>
+        <Form.Item name="duration" hidden>
+          <InputNumber />
+        </Form.Item>
 
-          <Form.Item
-            label={
-              <span className="font-semibold text-gray-700">
-                Thời lượng chơi
-              </span>
-            }
-            name="duration"
-            rules={[{ required: true }]}
-            className="mb-0"
-          >
-            <Select className="w-full h-11">
-              <Select.Option value={1}>1 giờ</Select.Option>
-              <Select.Option value={1.5}>1.5 giờ</Select.Option>
-              <Select.Option value={2}>2 giờ</Select.Option>
-              <Select.Option value={2.5}>2 giờ 30 phút</Select.Option>
-              <Select.Option value={3}>3 giờ</Select.Option>
-              <Select.Option value={3.5}>3 giờ 30 phút</Select.Option>
-              <Select.Option value={4}>4 giờ</Select.Option>
-            </Select>
-          </Form.Item>
-        </div>
-
-        <hr className="my-5 border-gray-100" />
-
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="flex flex-wrap md:flex-nowrap gap-3 mb-4">
           <Form.Item
             label={
               <span className="font-semibold text-gray-700 text-sm flex items-center gap-1">
@@ -339,7 +352,8 @@ export default function CreateMatchForm({
               </span>
             }
             name="matchType"
-            className="mb-0"
+            className="mb-0 flex-grow"
+            style={{ minWidth: "110px" }}
           >
             <Select
               className="w-full h-11 [&_.ant-select-selector]:!border-[#9156F1] [&_.ant-select-selector]:!shadow-[0_0_0_2px_rgba(145,86,241,0.15)]"
@@ -358,7 +372,7 @@ export default function CreateMatchForm({
                 <div className="flex flex-col py-1">
                   <span className="font-semibold text-[#ea580c]">Chia Kèo</span>
                   <span className="text-[11px] text-gray-500">
-                    Đội thua sẽ phải chịu phạt (tiền sân, nước, bữa ăn,...)
+                    Đội thua sẽ chịu phạt (tiền sân, nước...)
                   </span>
                 </div>
               </Select.Option>
@@ -368,7 +382,7 @@ export default function CreateMatchForm({
                     Đánh Rank
                   </span>
                   <span className="text-[11px] text-gray-500">
-                    Thi đấu nghiêm túc, tích lũy điểm hạng hệ thống
+                    Thi đấu nghiêm túc, tích lũy điểm hạng
                   </span>
                 </div>
               </Select.Option>
@@ -380,7 +394,7 @@ export default function CreateMatchForm({
               <span className="font-semibold text-gray-700 text-sm flex items-center gap-1">
                 Tối đa
                 <Tooltip
-                  title={`Số người chơi tối đa được phép tham gia (từ ${minAllowed} đến ${maxAllowed} người)`}
+                  title={`Số người chơi tối đa (từ ${minAllowed} đến ${maxAllowed} người)`}
                 >
                   <Info size={14} className="text-gray-400" />
                 </Tooltip>
@@ -397,6 +411,7 @@ export default function CreateMatchForm({
               },
             ]}
             className="mb-0"
+            style={{ width: "100px", flexShrink: 0 }}
           >
             <InputNumber
               min={minAllowed}
@@ -423,6 +438,7 @@ export default function CreateMatchForm({
             name="minPlayersToStart"
             rules={[{ required: true }]}
             className="mb-0"
+            style={{ width: "100px", flexShrink: 0 }}
           >
             <InputNumber
               readOnly
@@ -430,6 +446,21 @@ export default function CreateMatchForm({
             />
           </Form.Item>
         </div>
+
+        {/* Khối hiển thị vùng Elo khi chọn RANKED */}
+        {watchMatchType === "RANKED" && user && (
+          <div className="mb-4 px-3 py-2.5 bg-purple-50 rounded-lg border border-purple-100 flex flex-col animate-in fade-in slide-in-from-top-2 duration-300">
+            <span className="text-[13px] text-purple-900 font-medium">
+              Vùng Elo cho phép:{" "}
+              <span className="font-bold text-[#9156F1]">
+                {calculatedMinRank} - {calculatedMaxRank}
+              </span>
+            </span>
+            <span className="text-[11px] text-purple-600/80 italic mt-0.5">
+              (Dựa trên điểm rank hiện tại của bạn là {currentRank})
+            </span>
+          </div>
+        )}
 
         <Form.Item
           label={
@@ -449,12 +480,14 @@ export default function CreateMatchForm({
           type="primary"
           htmlType="submit"
           loading={loadingMatch}
-          className="w-full h-[52px] text-base font-bold rounded-xl mt-1
-                 !bg-[#F97316] !border-[#F97316] !text-white
-                 hover:!bg-[#EA580C] hover:!border-[#EA580C]
-                 flex items-center justify-center gap-2 shadow-md transition-colors"
+          disabled={!isSlotSelected}
+          className={`w-full h-[52px] text-base font-bold rounded-xl mt-1 flex items-center justify-center gap-2 shadow-md transition-colors ${
+            !isSlotSelected
+              ? ""
+              : "!bg-[#9156F1] !border-[#9156F1] !text-white hover:!bg-[#7c3aed] hover:!border-[#7c3aed]"
+          }`}
         >
-          Xác nhận tạo kèo
+          Tạo trận ghép kèo
         </Button>
       </Form>
     </div>

@@ -7,11 +7,12 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.transaction.TransactionRequest;
 import org.sport.backend.dto.response.transaction.TransactionResponse;
 
+import org.sport.backend.dto.response.transaction.TransactionSummaryResponse;
 import org.sport.backend.service.TransactionService;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -88,6 +89,19 @@ public class TransactionController {
                         startDate,
                         endDate
                 )
+        );
+    }
+
+    @GetMapping("/rental-area/{rentalAreaId}/summary")
+    public ApiResponse<TransactionSummaryResponse> getOwnerTransactionSummary(
+            @PathVariable UUID rentalAreaId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        return ApiResponse.success(
+                200,
+                "Get owner transaction summary successfully",
+                transactionService.getRentalAreaTransactionSummary(rentalAreaId, startDate, endDate)
         );
     }
 }

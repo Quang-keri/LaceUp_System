@@ -34,8 +34,8 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
     Page<Match> findByOwnerSystem(User owner, Pageable pageable);
 
     @Query("SELECT DISTINCT m FROM Match m " +
-            "LEFT JOIN m.registrations r " +
-            "WHERE m.host = :user OR r.user = :user")
+            "JOIN m.registrations r " +
+            "WHERE r.user = :user")
     Page<Match> findMatchesByParticipantOrHost(@Param("user") User user, Pageable pageable);
 
     List<Match> findByIsRecurringTrue();
@@ -51,6 +51,7 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
     );
 
     Optional<Match> findByRoomCode(String roomCode);
+
     boolean existsByRoomCode(String roomCode);
 
     @Query("SELECT m FROM Match m WHERE m.status IN :statuses AND m.startTime <= :thresholdTime")
@@ -69,6 +70,11 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime,
             @Param("excludeMatchId") UUID excludeMatchId
+    );
+
+    List<Match> findByStatusAndEndTimeBefore(
+            MatchStatus status,
+            LocalDateTime endTime
     );
 
 //    @Query("SELECT COUNT(m) > 0 FROM Match m " +

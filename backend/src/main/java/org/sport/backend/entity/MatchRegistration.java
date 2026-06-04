@@ -1,13 +1,11 @@
 package org.sport.backend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.sport.backend.dto.base.BaseEntity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -20,8 +18,8 @@ import java.util.UUID;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class MatchRegistration extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID registrationId;
@@ -38,4 +36,19 @@ public class MatchRegistration extends BaseEntity {
     private Integer teamNumber;
 
     private LocalDateTime registeredAt;
+
+    @Builder.Default
+    @Column(name = "player_count", nullable = false)
+    private Integer playerCount = 1;
+
+    @Column(name = "amount_due", precision = 19, scale = 2)
+    private BigDecimal amountDue;
+
+    @Builder.Default
+    @Column(name = "is_paid")
+    private Boolean isPaid = false;
+
+    @Column(name = "is_cancelled")
+    @Builder.Default
+    private Boolean isCancelled = false;
 }

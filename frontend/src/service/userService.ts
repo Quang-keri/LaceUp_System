@@ -52,6 +52,13 @@ export const userService = {
     return response.data;
   },
 
+  updateMyProfile: async (
+    data: UpdateUserRequest,
+  ): Promise<ApiResponse<UserResponse>> => {
+    const response = await api.put(`${API_BASE_URL}/my-info`, data);
+    return response.data;
+  },
+
   updateStatus: (userId: string, newStatus: boolean) => {
     return api.patch<any, ApiResponse<void>>(`/users/${userId}`, {
       status: newStatus,
