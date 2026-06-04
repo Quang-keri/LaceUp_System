@@ -6,6 +6,7 @@ import org.sport.backend.config.VnPayConfig;
 import org.sport.backend.constant.*;
 
 import org.sport.backend.dto.base.PageResponse;
+import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
@@ -18,6 +19,7 @@ import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.*;
 
 import org.sport.backend.service.BookingService;
+import org.sport.backend.service.EmailService;
 import org.sport.backend.service.PaymentService;
 import org.sport.backend.service.UserService;
 
@@ -29,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import vn.payos.PayOS;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
@@ -38,6 +41,7 @@ import vn.payos.model.webhooks.WebhookData;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +76,10 @@ public class PaymentServiceImpl implements PaymentService {
     private MatchRegistrationRepository matchRegistrationRepository;
     @Autowired
     private TransactionRepository transactionRepository;
+    @Autowired
+    private CloudinaryServiceImpl cloudinaryService;
+    @Autowired
+    private EmailService emailService;
 
     @Override
     public CheckoutResponse checkout(CheckoutRequest checkoutRequest) {
@@ -442,6 +450,109 @@ public class PaymentServiceImpl implements PaymentService {
         }).collect(Collectors.toList());
 
         return PageResponse.of(payments, responses);
+    }
+
+    @Transactional
+    @Override
+    public void uploadMatchPaymentProof(UUID registrationId, MultipartFile file) {
+        MatchRegistration reg = matchRegistrationRepository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đăng ký trận đấu"));
+
+        Payment payment = paymentRepository.findAllByMatchRegistration(reg).stream()
+                .filter(p -> p.getPaymentStatus() == PaymentStatus.PENDING)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch chờ thanh toán hợp lệ"));
+
+        try {
+            CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(file, "payment_proofs");
+            String imageUrl = uploadResult.getUrl();
+
+            payment.setProof(imageUrl);
+
+            paymentRepository.save(payment);
+
+            log.info("Đã nhận ảnh chứng từ ghép kèo. RegID: {}, URL: {}", registrationId, imageUrl);
+
+        } catch (Exception e) {
+            log.error("Lỗi khi upload ảnh chứng từ ghép kèo: ", e);
+            throw new RuntimeException("Không thể tải ảnh chứng từ lên hệ thống", e);
+        }
+    }
+
+    @Override
+    public List<Map<String, Object>> getMatchPaymentsForOwner(String status, String keyword, String startDateStr, String endDateStr) {
+        User owner = userService.getCurrentUserEntity();
+
+        LocalDate startDate = (startDateStr != null && !startDateStr.isBlank()) ? LocalDate.parse(startDateStr) : null;
+        LocalDate endDate = (endDateStr != null && !endDateStr.isBlank()) ? LocalDate.parse(endDateStr) : null;
+        String kw = (keyword != null) ? keyword.trim().toLowerCase() : "";
+
+        return paymentRepository.findAll().stream()
+                .filter(p -> p.getPaymentType() == PaymentType.MATCH_JOIN)
+                .filter(p -> p.getProof() != null && !p.getProof().isEmpty())
+                .filter(p -> {
+                    // Chỉ lấy sân của Owner
+                    if (p.getMatchRegistration() != null && p.getMatchRegistration().getMatch() != null) {
+                        RentalArea area = p.getMatchRegistration().getMatch().getCourt().getRentalArea();
+                        return area != null && area.getOwner().getUserId().equals(owner.getUserId());
+                    }
+                    return false;
+                })
+                .filter(p -> {
+                    // Lọc theo Tab: PENDING (Chờ duyệt) hoặc PROCESSED (Lịch sử: SUCCESS / FAILED)
+                    if ("PENDING".equalsIgnoreCase(status)) {
+                        return p.getPaymentStatus() == PaymentStatus.PENDING;
+                    } else if ("PROCESSED".equalsIgnoreCase(status)) {
+                        return p.getPaymentStatus() == PaymentStatus.SUCCESS || p.getPaymentStatus() == PaymentStatus.FAILED;
+                    }
+                    return true;
+                })
+                .filter(p -> {
+                    // Lọc theo ngày
+                    if (startDate != null && p.getTransactionDate().toLocalDate().isBefore(startDate)) return false;
+                    if (endDate != null && p.getTransactionDate().toLocalDate().isAfter(endDate)) return false;
+                    return true;
+                })
+                .filter(p -> {
+                    // Lọc theo keyword (Tên, SĐT, Mã phòng)
+                    if (kw.isEmpty()) return true;
+                    String name = p.getUser().getUserName() != null ? p.getUser().getUserName().toLowerCase() : "";
+                    String phone = p.getUser().getPhone() != null ? p.getUser().getPhone().toLowerCase() : "";
+                    String room = p.getMatchRegistration().getMatch().getRoomCode() != null ? p.getMatchRegistration().getMatch().getRoomCode().toLowerCase() : "";
+                    return name.contains(kw) || phone.contains(kw) || room.contains(kw);
+                })
+                .sorted((p1, p2) -> p2.getTransactionDate().compareTo(p1.getTransactionDate())) // Xếp mới nhất lên đầu
+                .map(p -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("paymentId", p.getPaymentId());
+                    map.put("amount", p.getAmount());
+                    map.put("transactionDate", p.getTransactionDate());
+                    map.put("proof", p.getProof());
+                    map.put("userName", p.getUser().getUserName());
+                    map.put("phone", p.getUser().getPhone()); // Lấy thêm SĐT
+                    map.put("roomCode", p.getMatchRegistration().getMatch().getRoomCode());
+                    map.put("status", p.getPaymentStatus().name()); // Trạng thái
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    @Override
+    public void confirmMatchPayment(UUID paymentId, boolean isApproved) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch"));
+
+        if (payment.getPaymentStatus() != PaymentStatus.PENDING) {
+            throw new RuntimeException("Giao dịch không ở trạng thái chờ duyệt");
+        }
+
+        if (isApproved) {
+            finalizePaidBookingPayment(payment);
+        } else {
+            payment.setPaymentStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+        }
     }
 
     @Transactional
@@ -888,21 +999,46 @@ public class PaymentServiceImpl implements PaymentService {
 
     private CheckoutResponse handleVietQrMatchJoin(Payment payment, MatchRegistration reg) {
         try {
-            // TODO: Ông nhét logic VietQR của ông vào đây sau khi code xong.
-            // Thường VietQR sẽ trả về một chuỗi URL hoặc base64 để render QR Code.
-            // String qrData = vietQrService.generateQrCode(payment.getOrderCode(), payment.getAmount(), ...);
+            Match match = reg.getMatch();
+            User host = match.getHost();
+
+            if (host == null || host.getBankAccount() == null) {
+                throw new RuntimeException("Chủ kèo chưa cấu hình tài khoản ngân hàng để nhận thanh toán.");
+            }
+
+            BankAccount bank = host.getBankAccount();
+            String bankNameStr = bank.getBankName().trim();
+            String accNumStr = bank.getAccountNumber().trim();
+            String accNameStr = bank.getAccountHolderName();
+
+            long amount = payment.getAmount().longValue();
+            String transferContent = "LACEUP MATCH " + match.getMatchId().toString().substring(0, 8).toUpperCase();
+
+            String encodedInfo = java.net.URLEncoder.encode(transferContent, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String encodedName = java.net.URLEncoder.encode(accNameStr, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+
+            String vietQrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s",
+                    bankNameStr, accNumStr, amount, encodedInfo, encodedName);
+
+            payment.setPaymentStatus(PaymentStatus.PENDING);
+            paymentRepository.save(payment);
 
             return CheckoutResponse.builder()
-                    .mode("QR_CODE") // Mode trả về mã QR, App Flutter sẽ bắt cái mode này để vẽ hình mã QR ra
+                    .mode("PENDING")
                     .paymentStatus(PaymentStatus.PENDING)
-                    // .qrData(qrData) // Ông có thể tạo thêm trường qrData trong DTO CheckoutResponse
                     .orderCode(String.valueOf(payment.getOrderCode()))
-                    .message("Tạo mã VietQR thành công (Placeholder)")
+                    .message("Tạo mã VietQR thành công")
+                    .bankName(bankNameStr)
+                    .accountNumber(accNumStr)
+                    .accountName(accNameStr)
+                    .transferContent(transferContent)
+                    .vietQrUrl(vietQrUrl)
                     .build();
+
         } catch (Exception e) {
             payment.setPaymentStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
-            throw new RuntimeException("Không thể tạo mã VietQR cho ghép trận", e);
+            throw new RuntimeException("Không thể tạo mã VietQR cho ghép trận: " + e.getMessage(), e);
         }
     }
 

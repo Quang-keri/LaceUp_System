@@ -36,7 +36,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
   }
 
   bool get isParticipant => widget.match.participants.any((p) => p.userId == widget.currentUserId);
-  bool get isHost => widget.match.hostName == widget.currentUserName;
+  bool get isHost => widget.match.host!.userName == widget.currentUserName;
 
   Future<void> _handleJoin() async {
     setState(() => _isLoading = true);
@@ -181,7 +181,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                       title: Row(
                         children: [
                           Text(player.userName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          if (player.userName == widget.match.hostName)
+                          if (player.userName == widget.match.host!.userName)
                             Container(
                               margin: const EdgeInsets.only(left: 8),
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

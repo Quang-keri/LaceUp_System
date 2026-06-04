@@ -125,4 +125,44 @@ public class PaymentController {
         }
     }
 
+    @PostMapping(value = "/match/upload-proof", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<?> uploadMatchPaymentProof(
+            @RequestParam("registrationId") java.util.UUID registrationId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+
+        paymentService.uploadMatchPaymentProof(registrationId, file);
+
+        return ApiResponse.builder()
+                .code(200)
+                .message("Tải ảnh chứng từ thành công, vui lòng chờ duyệt!")
+                .build();
+    }
+
+    @GetMapping("/owner/match-payments")
+    public ApiResponse<?> getMatchPaymentsForOwner(
+            @RequestParam(required = false, defaultValue = "PENDING") String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+
+        return ApiResponse.builder()
+                .code(200)
+                .message("Lấy danh sách thành công")
+                .result(paymentService.getMatchPaymentsForOwner(status, keyword, startDate, endDate))
+                .build();
+    }
+
+    @PostMapping("/owner/confirm-match-payment/{paymentId}")
+    public ApiResponse<?> confirmMatchPayment(
+            @PathVariable java.util.UUID paymentId,
+            @RequestParam boolean isApproved) {
+
+        paymentService.confirmMatchPayment(paymentId, isApproved);
+
+        return ApiResponse.builder()
+                .code(200)
+                .message(isApproved ? "Đã duyệt thanh toán thành công" : "Đã từ chối thanh toán")
+                .build();
+    }
+
 }

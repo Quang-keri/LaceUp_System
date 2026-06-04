@@ -215,7 +215,7 @@ class MatchCard extends StatelessWidget {
                       Row(
                         children: [
                           const Text('Host: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          Text(match.hostName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9156F1))),
+                          Text(match.host!.userName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9156F1))),
                         ],
                       ),
                     ],

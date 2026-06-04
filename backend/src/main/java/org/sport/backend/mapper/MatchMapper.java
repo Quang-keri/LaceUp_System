@@ -2,8 +2,10 @@ package org.sport.backend.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.match.MatchReportResponse;
 import org.sport.backend.dto.response.match.MatchResponse;
+import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.CourtPrice;
 import org.sport.backend.entity.Match;
 
@@ -23,6 +25,23 @@ public interface MatchMapper {
     default MatchResponse toResponse(Match match) {
         if (match == null) return null;
 
+        UserResponse hostResponse = null;
+        if (match.getHost() != null) {
+            hostResponse = userMapper.toUserResponse(match.getHost());
+
+            if (match.getHost().getBankAccount() != null) {
+                var bank = match.getHost().getBankAccount();
+                hostResponse.setBankAccount(BankAccountResponse.builder()
+                        .bankAccountId(bank.getBankAccountId())
+                        .bankName(bank.getBankName())
+                        .accountNumber(bank.getAccountNumber())
+                        .accountHolderName(bank.getAccountHolderName())
+                        .branchName(bank.getBranchName())
+                        .qrCode(bank.getQrCode())
+                        .build());
+            }
+        }
+
         return MatchResponse.builder()
                 .matchId(match.getMatchId())
                 .roomCode(match.getRoomCode())
@@ -34,7 +53,6 @@ public interface MatchMapper {
                 .currentPlayers(match.getCurrentPlayers())
                 .remainingSlots(match.getMaxPlayers() - match.getCurrentPlayers())
                 .status(match.getStatus().name())
-                .hostName(match.getHost().getUserName())
                 .isFull(match.getCurrentPlayers() >= match.getMaxPlayers())
                 .hasCourt(match.getCourt() != null)
                 .courtPrice(findCourtPriceForMatch(match))
@@ -43,6 +61,8 @@ public interface MatchMapper {
                 .minRank(match.getMinRank())
                 .maxRank(match.getMaxRank())
                 .note(match.getNote())
+
+                .host(hostResponse)
 
                 .reports(match.getReports() == null ? Collections.emptyList() :
                         match.getReports().stream()

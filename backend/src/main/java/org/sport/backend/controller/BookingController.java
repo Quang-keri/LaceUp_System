@@ -210,19 +210,19 @@ public class BookingController {
             html.append("<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}</style>");
             html.append("</head><body>");
             html.append("<h2>Hóa đơn dịch vụ</h2>");
-            html.append("<p>Mã booking: " + booking.getBookingId() + "</p>");
-            html.append("<p>Khách hàng: " + booking.getUserName() + " - " + booking.getPhoneNumber() + "</p>");
+            html.append("<p>Mã booking: ").append(booking.getBookingId()).append("</p>");
+            html.append("<p>Khách hàng: ").append(booking.getUserName()).append(" - ").append(booking.getPhoneNumber()).append("</p>");
             html.append("<table><thead><tr><th>Sân</th><th>Giờ bắt đầu</th><th>Giờ kết thúc</th><th>Giá</th></tr></thead><tbody>");
             booking.getSlots().forEach(s -> {
                 html.append("<tr>");
-                html.append("<td>" + s.getCourtCode() + "</td>");
-                html.append("<td>" + s.getStartTime() + "</td>");
-                html.append("<td>" + s.getEndTime() + "</td>");
-                html.append("<td>" + (s.getPrice() != null ? s.getPrice().toString() : "0") + "</td>");
+                html.append("<td>").append(s.getCourtCode()).append("</td>");
+                html.append("<td>").append(s.getStartTime()).append("</td>");
+                html.append("<td>").append(s.getEndTime()).append("</td>");
+                html.append("<td>").append(s.getPrice() != null ? s.getPrice().toString() : "0").append("</td>");
                 html.append("</tr>");
             });
             html.append("</tbody></table>");
-            html.append("<p>Tổng: " + (booking.getTotalPrice() != null ? booking.getTotalPrice() : "0") + "</p>");
+            html.append("<p>Tổng: ").append(booking.getTotalPrice() != null ? booking.getTotalPrice() : "0").append("</p>");
             html.append("</body></html>");
 
             return ResponseEntity.ok(html.toString());

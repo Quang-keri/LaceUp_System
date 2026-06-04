@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/match.dart';
 import '../../../models/match_result.dart';
 import '../../../services/match_result_service.dart';
+import '../../../services/match_service.dart';
 import 'match_lineup_dialog.dart';
 import 'submit_result_dialog.dart';
 import 'report_dialog.dart';
@@ -48,6 +49,26 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
     }
   }
 
+  Future<void> _handleLeaveMatch() async {
+    try {
+      await matchService.leaveMatch(widget.match.matchId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã rút lui khỏi trận đấu thành công!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      widget.onSuccess();
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   void _openSubmitDialog() {
     Navigator.pop(context);
     showDialog(
@@ -64,6 +85,54 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
       builder: (context) => ReportDialog(
         matchId: widget.match.matchId,
         allPlayers: widget.match.participants,
+      ),
+    );
+  }
+
+  void _showLeaveConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Xác nhận rời trận',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text.rich(
+          TextSpan(
+            text: 'Bạn có chắc muốn rút khỏi trận này?\n\n',
+            children: [
+              TextSpan(
+                text:
+                    'Lưu ý: Rời trận dưới 24h sẽ mất phí đã đóng và bị trừ 10 điểm uy tín.',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade50,
+              elevation: 0,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              _handleLeaveMatch();
+            },
+            child: const Text(
+              'Đồng ý rời',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -268,15 +337,33 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
       'PLAYING',
       'DISPUTED',
     ].contains(widget.match.status);
+    bool canLeave = ['OPEN', 'PENDING', 'READY'].contains(widget.match.status);
 
     return Row(
       children: [
+        // Nút Báo cáo
         TextButton.icon(
           onPressed: _openReportDialog,
           icon: const Icon(Icons.flag_outlined, color: Colors.red),
           label: const Text("Báo cáo", style: TextStyle(color: Colors.red)),
         ),
+
+        // Nút Rút lui (Chỉ hiện khi chưa bắt đầu)
+        if (canLeave) ...[
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: _showLeaveConfirmDialog,
+            icon: const Icon(Icons.exit_to_app, color: Colors.orange),
+            label: const Text(
+              "Rút lui",
+              style: TextStyle(color: Colors.orange),
+            ),
+          ),
+        ],
+
         const Spacer(),
+
+        // Cụm nút bên phải
         if (!isCompleted &&
             widget.match.status != 'CANCELLED' &&
             isNeedSubmit) ...[

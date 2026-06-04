@@ -22,7 +22,6 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import type { UserResponse } from "../../types/user.ts";
-import PendingTransferBookingPage from "../../page/owner/booking/ConfirmBookingApp/PendingTransferBookingPage.tsx";
 
 const { Header } = Layout;
 
@@ -76,9 +75,7 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
         },
         {
           key: "/owner/bookings/pending-payment",
-          label: (
-            <Link to="/owner/bookings/pending-payment">Chờ xác nhận</Link>
-          ),
+          label: <Link to="/owner/bookings/pending-payment">Chờ xác nhận</Link>,
         },
       ],
     },
@@ -91,12 +88,24 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
     {
       key: "/owner/service-items",
       icon: <InboxOutlined />,
-      label: <Link to="/owner/service-items">Hàng hóa & Dịch vụ</Link>,
+      label: "Hàng hóa & Dịch vụ",
     },
     {
       key: "/owner/matches",
       icon: <InboxOutlined />,
-      label: <Link to="/owner/matches">Trận đấu</Link>,
+      label: "Trận đấu",
+      children: [
+        {
+          key: "/owner/matches",
+          label: <Link to="/owner/matches">Danh sách</Link>,
+        },
+        {
+          key: "/owner/match-payment-approvals",
+          label: (
+            <Link to="/owner/match-payment-approvals">Duyệt thanh toán</Link>
+          ),
+        },
+      ],
     },
     {
       key: "submenu-transactions",

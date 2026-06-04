@@ -118,91 +118,166 @@ class _ScheduleTabState extends State<ScheduleTab> {
   }) {
     final currentSlots = [...widget.selectedSlots];
 
-    final otherCopies = currentSlots
-        .where((item) => item.courtCopyId != copy.courtCopyId)
-        .toList();
+    if (widget.isMatchMode) {
+      // --- LOGIC CHO TAB GHÉP KÈO ---
+      // Chỉ cho phép chọn 1 dải thời gian liên tục trên 1 sân duy nhất
+      var myBlocks = currentSlots
+          .where((item) => item.courtCopyId == copy.courtCopyId)
+          .toList();
 
-    var myBlocks = currentSlots
-        .where((item) => item.courtCopyId == copy.courtCopyId)
-        .toList();
+      List<SelectedBookingSlot> newBlocks = [];
 
-    final clickedInsideIndex = myBlocks.indexWhere(
-          (b) => idx >= b.startIndex && idx <= b.endIndex,
-    );
-
-    if (clickedInsideIndex != -1) {
-      final b = myBlocks[clickedInsideIndex];
-      final newBlocks = <SelectedBookingSlot>[];
-
-      if (idx > b.startIndex) {
-        newBlocks.add(b.copyWith(endIndex: idx - 1));
-      }
-
-      if (idx < b.endIndex) {
-        newBlocks.add(b.copyWith(startIndex: idx + 1));
-      }
-
-      myBlocks.removeAt(clickedInsideIndex);
-      myBlocks.insertAll(clickedInsideIndex, newBlocks);
-    } else {
-      myBlocks.add(
-        SelectedBookingSlot(
+      SelectedBookingSlot createNewBlock(int index) {
+        return SelectedBookingSlot(
           courtCopyId: copy.courtCopyId,
           courtCode: copy.courtCode,
           courtId: court.courtId,
           courtName: court.courtName,
           categoryName: court.categoryName ?? 'Sân thể thao',
           date: widget.selectedDate,
-          startIndex: idx,
-          endIndex: idx,
-          startTime: dynamicTimeSlots[idx],
-          endTime: idx + 1 < dynamicTimeSlots.length
-              ? dynamicTimeSlots[idx + 1]
+          startIndex: index,
+          endIndex: index,
+          startTime: dynamicTimeSlots[index],
+          endTime: index + 1 < dynamicTimeSlots.length
+              ? dynamicTimeSlots[index + 1]
               : widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00',
           duration: 0.5,
           court: court,
           courtCopy: copy,
-        ),
-      );
-    }
+        );
+      }
 
-    myBlocks.sort((a, b) => a.startIndex.compareTo(b.startIndex));
-
-    final merged = <SelectedBookingSlot>[];
-
-    for (final block in myBlocks) {
-      if (merged.isEmpty) {
-        merged.add(block);
+      if (myBlocks.isEmpty) {
+        newBlocks = [createNewBlock(idx)];
       } else {
-        final last = merged.last;
-
-        if (last.endIndex + 1 == block.startIndex) {
-          merged[merged.length - 1] = last.copyWith(
-            endIndex: block.endIndex,
-          );
+        final block = myBlocks.first;
+        if (idx == block.startIndex - 1) {
+          // Bấm sát vào đầu block -> kéo dài lên trên
+          newBlocks = [block.copyWith(startIndex: idx)];
+        } else if (idx == block.endIndex + 1) {
+          // Bấm sát vào cuối block -> kéo dài xuống dưới
+          newBlocks = [block.copyWith(endIndex: idx)];
+        } else if (idx == block.startIndex) {
+          // Bấm ngay ô đầu tiên của block -> thu hẹp từ trên
+          if (block.startIndex < block.endIndex) {
+            newBlocks = [block.copyWith(startIndex: block.startIndex + 1)];
+          }
+        } else if (idx == block.endIndex) {
+          // Bấm ngay ô cuối của block -> thu hẹp từ dưới
+          if (block.startIndex < block.endIndex) {
+            newBlocks = [block.copyWith(endIndex: block.endIndex - 1)];
+          }
         } else {
-          merged.add(block);
+          // Bấm ra ngoài khoảng sát cạnh -> reset tạo block mới ở vị trí bấm
+          newBlocks = [createNewBlock(idx)];
         }
       }
-    }
 
-    myBlocks = merged.map((b) {
-      final startTime = dynamicTimeSlots[b.startIndex];
-      final endTime = b.endIndex + 1 < dynamicTimeSlots.length
-          ? dynamicTimeSlots[b.endIndex + 1]
-          : widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00';
+      // Cập nhật lại thời gian và duration
+      newBlocks = newBlocks.map((b) {
+        final startTime = dynamicTimeSlots[b.startIndex];
+        final endTime = b.endIndex + 1 < dynamicTimeSlots.length
+            ? dynamicTimeSlots[b.endIndex + 1]
+            : widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00';
+        final duration = (b.endIndex - b.startIndex + 1) * 0.5;
 
-      final duration = (b.endIndex - b.startIndex + 1) * 0.5;
+        return b.copyWith(
+          startTime: startTime,
+          endTime: endTime,
+          duration: duration,
+        );
+      }).toList();
 
-      return b.copyWith(
-        startTime: startTime,
-        endTime: endTime,
-        duration: duration,
+      widget.onActiveCourtChanged(court);
+      // Ghi đè toàn bộ danh sách bằng newBlocks, tự động loại bỏ các sân khác nếu người dùng bấm sang sân mới
+      widget.onSelectedSlotsChanged(newBlocks);
+
+    } else {
+      // --- LOGIC CHO TAB ĐẶT SÂN ---
+      // Cho phép chọn nhiều slot rời rạc, tách block, chọn cùng lúc nhiều sân (Giữ nguyên logic cũ)
+      final otherCopies = currentSlots
+          .where((item) => item.courtCopyId != copy.courtCopyId)
+          .toList();
+
+      var myBlocks = currentSlots
+          .where((item) => item.courtCopyId == copy.courtCopyId)
+          .toList();
+
+      final clickedInsideIndex = myBlocks.indexWhere(
+            (b) => idx >= b.startIndex && idx <= b.endIndex,
       );
-    }).toList();
 
-    widget.onActiveCourtChanged(court);
-    widget.onSelectedSlotsChanged([...otherCopies, ...myBlocks]);
+      if (clickedInsideIndex != -1) {
+        final b = myBlocks[clickedInsideIndex];
+        final newBlocks = <SelectedBookingSlot>[];
+
+        if (idx > b.startIndex) {
+          newBlocks.add(b.copyWith(endIndex: idx - 1));
+        }
+
+        if (idx < b.endIndex) {
+          newBlocks.add(b.copyWith(startIndex: idx + 1));
+        }
+
+        myBlocks.removeAt(clickedInsideIndex);
+        myBlocks.insertAll(clickedInsideIndex, newBlocks);
+      } else {
+        myBlocks.add(
+          SelectedBookingSlot(
+            courtCopyId: copy.courtCopyId,
+            courtCode: copy.courtCode,
+            courtId: court.courtId,
+            courtName: court.courtName,
+            categoryName: court.categoryName ?? 'Sân thể thao',
+            date: widget.selectedDate,
+            startIndex: idx,
+            endIndex: idx,
+            startTime: dynamicTimeSlots[idx],
+            endTime: idx + 1 < dynamicTimeSlots.length
+                ? dynamicTimeSlots[idx + 1]
+                : widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00',
+            duration: 0.5,
+            court: court,
+            courtCopy: copy,
+          ),
+        );
+      }
+
+      myBlocks.sort((a, b) => a.startIndex.compareTo(b.startIndex));
+
+      final merged = <SelectedBookingSlot>[];
+      for (final block in myBlocks) {
+        if (merged.isEmpty) {
+          merged.add(block);
+        } else {
+          final last = merged.last;
+          if (last.endIndex + 1 == block.startIndex) {
+            merged[merged.length - 1] = last.copyWith(
+              endIndex: block.endIndex,
+            );
+          } else {
+            merged.add(block);
+          }
+        }
+      }
+
+      myBlocks = merged.map((b) {
+        final startTime = dynamicTimeSlots[b.startIndex];
+        final endTime = b.endIndex + 1 < dynamicTimeSlots.length
+            ? dynamicTimeSlots[b.endIndex + 1]
+            : widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00';
+        final duration = (b.endIndex - b.startIndex + 1) * 0.5;
+
+        return b.copyWith(
+          startTime: startTime,
+          endTime: endTime,
+          duration: duration,
+        );
+      }).toList();
+
+      widget.onActiveCourtChanged(court);
+      widget.onSelectedSlotsChanged([...otherCopies, ...myBlocks]);
+    }
   }
 
   void _onScroll() {

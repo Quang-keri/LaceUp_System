@@ -73,6 +73,7 @@ import AreaMapGoong from "../page/customer/area-map/AreaMapGoong.tsx";
 import PendingTransferBookingPage from "../page/owner/booking/ConfirmBookingApp/PendingTransferBookingPage.tsx";
 import MatchPaymentPage from "../page/customer/profile-page/my-match/MatchPaymentPage.tsx";
 import RefundManagement from "../page/admin/refund-page/RefundManagement.tsx";
+import MatchPaymentApprovalPage from "../page/owner/match/MatchPaymentApprovalPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -228,6 +229,10 @@ export const router = createBrowserRouter([
       },
       { path: "posts", element: <PostManagementPage /> },
       { path: "matches", element: <MatchManagement /> },
+      {
+        path: "match-payment-approvals",
+        element: <MatchPaymentApprovalPage />,
+      },
       { path: "service-items", element: <ServiceItemManagementPage /> },
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },

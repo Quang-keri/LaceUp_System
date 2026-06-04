@@ -79,7 +79,6 @@ public class MatchServiceImpl implements MatchService {
         }
 
         Match.MatchBuilder<?, ?> matchBuilder = Match.builder()
-                .host(currentUser)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .maxPlayers(request.getMaxPlayers())
@@ -125,6 +124,8 @@ public class MatchServiceImpl implements MatchService {
             }
 
             matchBuilder.court(court);
+            assert area != null;
+            matchBuilder.host(area.getOwner());
             matchBuilder.category(court.getCategory());
         } else {
             if (request.getCategoryId() == null) {
@@ -374,18 +375,36 @@ public class MatchServiceImpl implements MatchService {
 
         List<MatchRegistration> registrations = registrationRepository.findByMatch(match);
 
+        int maxTeamSize = (match.getMaxPlayers() + 1) / 2;
+        int team1Size = 0;
+        int team2Size = 0;
+
         for (MatchRegistration reg : registrations) {
             UUID userId = reg.getUser().getUserId();
 
+            int count = reg.getPlayerCount() != null ? reg.getPlayerCount() : 1;
+
             if (request.getTeam1UserIds() != null && request.getTeam1UserIds().contains(userId)) {
                 reg.setTeamNumber(1);
+                team1Size += count;
             } else if (request.getTeam2UserIds() != null && request.getTeam2UserIds().contains(userId)) {
                 reg.setTeamNumber(2);
+                team2Size += count;
+            } else {
+                reg.setTeamNumber(null);
             }
         }
 
+        if (team1Size > maxTeamSize) {
+            throw new RuntimeException("Đội 1 đã vượt quá số lượng cho phép! (Tối đa " + maxTeamSize + " slot)");
+        }
+        if (team2Size > maxTeamSize) {
+            throw new RuntimeException("Đội 2 đã vượt quá số lượng cho phép! (Tối đa " + maxTeamSize + " slot)");
+        }
+
         registrationRepository.saveAll(registrations);
-        log.info("Host {} đã chia đội cho trận đấu {}", currentUser.getUserName(), matchId);
+        log.info("Host {} đã chia đội cho trận đấu {}. Đội 1: {} người, Đội 2: {} người",
+                currentUser.getUserName(), matchId, team1Size, team2Size);
     }
 
     @Override
@@ -470,7 +489,8 @@ public class MatchServiceImpl implements MatchService {
         Pageable pageable = PageRequest.of(
                 page - 1,
                 size,
-                Sort.by("startTime").descending());
+                Sort.by("startTime").descending()
+        );
         Page<Match> matchPage = matchRepository.findMatchesByParticipantOrHost(currentUser, pageable);
 
         return PageResponse.<MatchResponse>builder()
@@ -483,7 +503,8 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public PageResponse<MatchResponse> getUserMatchHistory(UUID userId, int page, int size) {
+    public PageResponse<MatchResponse> getUserMatchHistory(
+            UUID userId, int page, int size) {
         Pageable pageable = PageRequest.of(
                 page - 1,
                 size,

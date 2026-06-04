@@ -10,7 +10,6 @@ import org.sport.backend.dto.response.court.CourtResponse;
 import org.sport.backend.dto.response.legal.LegalProfileResponse;
 import org.sport.backend.dto.response.serviceItem.ServiceItemResponse;
 import org.sport.backend.dto.response.user.UserResponse;
-import org.sport.backend.entity.Court;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -32,7 +31,7 @@ public class RentalAreaResponse {
     private LocalDateTime deletedAt;
     private CityResponse city;
     private UserResponse owner;
-    private List<Court> courts;
+    private List<CourtResponse> courts;
     private List<RentalAreaImageResponse> images;
     private LocalTime openTime;
     private LocalTime closeTime;

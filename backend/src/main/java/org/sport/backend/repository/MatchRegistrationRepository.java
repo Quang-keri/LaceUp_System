@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,10 +22,6 @@ public interface MatchRegistrationRepository extends JpaRepository<MatchRegistra
 
     @Query("SELECT COUNT(reg) FROM MatchRegistration reg WHERE reg.user.userId = :userId AND reg.match.status = 'COMPLETED'")
     long countPlayedMatches(@Param("userId") UUID userId);
-
-    List<MatchRegistration> findByMatch_Court_RentalArea_RentalAreaIdAndMatch_StartTimeBetween(
-            UUID rentalAreaId, LocalDateTime start, LocalDateTime end
-    );
 
     @Query("SELECT r FROM MatchRegistration r WHERE r.match = :match AND r.user = :user AND (r.isCancelled = false OR r.isCancelled IS NULL)")
     Optional<MatchRegistration> findActiveByMatchAndUser(@Param("match") Match match, @Param("user") User user);

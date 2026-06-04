@@ -106,7 +106,7 @@ class MatchResponse {
   final int remainingSlots;
   final double price;
   final String status;
-  final String hostName;
+  final UserResponse? host;
   final double hostRating;
   final String level;
   final bool hasCourt;
@@ -138,7 +138,7 @@ class MatchResponse {
     required this.remainingSlots,
     required this.price,
     required this.status,
-    required this.hostName,
+    required this.host,
     required this.hostRating,
     required this.level,
     required this.hasCourt,
@@ -176,7 +176,7 @@ class MatchResponse {
           int.tryParse(json['remainingSlots']?.toString() ?? '0') ?? 0,
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
       status: json['status']?.toString() ?? '',
-      hostName: json['hostName']?.toString() ?? '',
+      host: json['host'] != null ? UserResponse.fromJson(json['host']) : null,
       hostRating: double.tryParse(json['hostRating']?.toString() ?? '0') ?? 0.0,
       level: json['level']?.toString() ?? '',
       hasCourt: json['hasCourt'] as bool? ?? false,

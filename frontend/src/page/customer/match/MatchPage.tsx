@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Calendar, Zap, MapPin } from "lucide-react";
+import { Calendar, Plus, MapPin } from "lucide-react";
 import matchService from "../../../service/match/matchService.ts";
 import type { MatchResponse } from "../../../types/match.ts";
 import JoinMatchModal from "./JoinMatchModal";
-import AutoMatchModal from "./AutoMatchModal";
 import MatchFilter from "./MatchFilter";
 import { useNavigate } from "react-router-dom";
 import { locationService } from "../../../service/locationService.ts";
@@ -32,7 +31,6 @@ const MatchPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-  const [isAutoMatchOpen, setIsAutoMatchOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
     null,
   );
@@ -232,11 +230,12 @@ const MatchPage: React.FC = () => {
               style={{ borderRadius: "12px" }}
             />
 
+            {/* NÚT "TẠO TRẬN NGAY" MỚI */}
             <Button
               type="primary"
               size="large"
-              icon={<Zap size={18} className="fill-white" />}
-              onClick={() => setIsAutoMatchOpen(true)}
+              icon={<Plus size={18} />}
+              onClick={() => navigate("/courts")} // Đổi đường dẫn thành /courts
               style={{
                 backgroundColor: "#9156F1",
                 borderColor: "#9156F1",
@@ -247,7 +246,7 @@ const MatchPage: React.FC = () => {
               }}
               className="font-bold shadow-sm hover:opacity-90"
             >
-              Ghép Trận
+              Tạo trận ngay
             </Button>
 
             <Button
@@ -274,11 +273,6 @@ const MatchPage: React.FC = () => {
           onClose={() => setIsJoinModalOpen(false)}
           onSuccess={() => fetchMatches(currentPage)}
           match={selectedMatch}
-        />
-        <AutoMatchModal
-          isOpen={isAutoMatchOpen}
-          onClose={() => setIsAutoMatchOpen(false)}
-          onSuccess={() => fetchMatches(currentPage)}
         />
 
         <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -311,8 +305,13 @@ const MatchPage: React.FC = () => {
                   <span className="text-slate-500 font-medium text-base">
                     Không tìm thấy trận đấu nào! <br />
                     <span className="text-sm font-normal">
-                      Hãy thử chọn "Làm mới" hoặc thay đổi tiêu chí bộ lọc của
-                      bạn.
+                      Hãy thử thay đổi tiêu chí bộ lọc hoặc{" "}
+                      <span
+                        onClick={() => navigate("/courts")}
+                        className="text-purple-600 font-semibold cursor-pointer hover:underline"
+                      >
+                        tạo trận ngay
+                      </span>
                     </span>
                   </span>
                 }

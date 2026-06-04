@@ -17,8 +17,13 @@ export const matchService = {
     return response.data;
   },
 
-  joinMatch: async (matchId: string): Promise<ApiResponse<void>> => {
-    const response = await api.post(`${API_BASE_URL}/${matchId}/join`);
+  joinMatch: async (
+    matchId: string,
+    playerCount: number = 1,
+  ): Promise<ApiResponse<any>> => {
+    const response = await api.post(`${API_BASE_URL}/${matchId}/join`, {
+      playerCount,
+    });
     return response.data;
   },
 

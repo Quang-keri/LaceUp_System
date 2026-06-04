@@ -35,7 +35,6 @@ public class ReportServiceImpl implements ReportService {
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final MatchRepository matchRepository;
-    private final MatchRegistrationRepository matchRegistrationRepository;
     private final BookingServiceItemRepository bookingServiceItemRepository;
     private final TransactionRepository transactionRepository;
     private final UserService userService;

@@ -34,6 +34,27 @@ class PaymentService {
   async handleVnPayReturn(queryString: string) {
     return await api.get(`/payments/vnpay/return${queryString}`);
   }
+
+  async getMatchPayments(params: {
+    status: string;
+    keyword?: string;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    const res = await api.get("/payments/owner/match-payments", { params });
+    return res.data;
+  }
+
+  async confirmMatchPayment(paymentId: string, isApproved: boolean) {
+    const res = await api.post(
+      `/payments/owner/confirm-match-payment/${paymentId}`,
+      null,
+      {
+        params: { isApproved },
+      },
+    );
+    return res.data;
+  }
 }
 
 export default new PaymentService();

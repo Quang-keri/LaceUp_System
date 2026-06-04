@@ -1,5 +1,10 @@
 server:
   port: ${SERVER_PORT}
+  servlet:
+    encoding:
+      force: true
+      charset: UTF-8
+      enabled: true
 
 url:
   backend: ${BACKEND_URL}

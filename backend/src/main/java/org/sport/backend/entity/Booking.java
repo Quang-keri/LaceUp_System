@@ -3,7 +3,6 @@ package org.sport.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.sport.backend.constant.PaymentMethod;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.BookingType;

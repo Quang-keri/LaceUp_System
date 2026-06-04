@@ -243,12 +243,6 @@ export default function MatchPaymentPage() {
                       VNPay
                     </Space>
                   </Radio>
-                  <Radio value="VIETQR" className="font-semibold text-gray-700">
-                    <Space>
-                      <QrcodeOutlined className="text-orange-500" /> Mã QR Ngân
-                      hàng (VietQR)
-                    </Space>
-                  </Radio>
                 </Radio.Group>
               </div>
 
@@ -258,7 +252,7 @@ export default function MatchPaymentPage() {
                 block
                 loading={confirming}
                 onClick={handleConfirm}
-                className="bg-gradient-to-r from-orange-500 to-purple-600 border-none font-bold h-12 text-base mt-2 shadow-md hover:opacity-90"
+                className="!bg-[#9156F1] !border-[#9156F1] !text-white font-bold h-12 text-base mt-2 shadow-md hover:!bg-[#7c3aed] hover:!border-[#7c3aed] transition-colors"
                 style={{ borderRadius: "8px" }}
               >
                 Xác nhận thanh toán

@@ -7,6 +7,7 @@ import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.dto.response.payment.RefundResponse;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,6 +28,14 @@ public interface PaymentService {
     PageResponse<RefundResponse> getPendingRefunds(int page, int size);
 
     PageResponse<RefundResponse> getCompletedRefunds(int page, int size);
+
+    @Transactional
+    void uploadMatchPaymentProof(UUID registrationId, org.springframework.web.multipart.MultipartFile file);
+
+    List<Map<String, Object>> getMatchPaymentsForOwner(String status, String keyword, String startDateStr, String endDateStr);
+
+    @Transactional
+    void confirmMatchPayment(UUID paymentId, boolean isApproved);
 
     @Transactional
     void confirmManualRefund(UUID paymentId);
