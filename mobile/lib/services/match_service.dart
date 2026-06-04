@@ -12,9 +12,13 @@ class MatchService {
     return MatchResponse.fromJson(res.data['result']);
   }
 
-  Future<void> joinMatch(String matchId) async {
+  Future<dynamic> joinMatch(String matchId, [int playerCount = 1]) async {
     try {
-      await apiClient.post('/matches/$matchId/join');
+      final res = await apiClient.post(
+        '$_baseUrl/$matchId/join',
+        data: {'playerCount': playerCount},
+      );
+      return res.data['result'];
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         throw Exception('Bạn chưa đăng nhập hoặc phiên đã hết hạn!');
@@ -168,7 +172,6 @@ class MatchService {
     return MatchResponse.fromJson(res.data['result']);
   }
 
-  // Chú ý: API bên TypeScript nằm ở /match-results/submit, nên gọi apiClient thẳng
   Future<dynamic> submitResult({
     required String matchId,
     required int winningTeamNumber,
@@ -185,17 +188,23 @@ class MatchService {
     return res.data['result'] ?? res.data;
   }
 
-  // Chú ý: API bên TypeScript nằm ở /match-results/report
   Future<void> reportViolation(ReportRequest data) async {
     await apiClient.post('/match-results/report', data: data.toJson());
   }
 
-  // Chú ý: API bên TypeScript nằm ở /match-results/report/{reportId}/resolve
   Future<void> resolveMatchReport(String reportId, bool isAccepted) async {
     await apiClient.post(
       '/match-results/report/$reportId/resolve',
       queryParameters: {'isAccepted': isAccepted},
     );
+  }
+
+  Future<void> leaveMatch(String matchId) async {
+    try {
+      await apiClient.post('$_baseUrl/$matchId/leave');
+    } catch (e) {
+      rethrow;
+    }
   }
 }
 

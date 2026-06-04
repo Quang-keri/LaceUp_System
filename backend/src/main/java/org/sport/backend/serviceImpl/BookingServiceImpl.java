@@ -22,6 +22,7 @@ import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.AddressMapper;
+import org.sport.backend.mapper.BookingMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.*;
 import org.sport.backend.specification.BookingSpecification;
@@ -34,8 +35,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLEncoder;
@@ -59,11 +58,14 @@ public class BookingServiceImpl implements BookingService {
     private final TransactionRepository transactionRepository;
     private final CourtPriceRepository courtPriceRepository;
     private final PaymentRepository paymentRepository;
+    private final ReputationLogRepository reputationLogRepository;
 
     private final UserService userService;
     private final CourtCopyService courtCopyService;
     private final CloudinaryService cloudinaryService;
+
     private final AddressMapper addressMapper;
+    private final BookingMapper bookingMapper;
     private final BankAccountRepository bankAccountRepository;
 
     @Override
@@ -73,6 +75,7 @@ public class BookingServiceImpl implements BookingService {
         return bookingIntentRepository
                 .findByBookerPhone(currentUser.getPhone())
                 .stream()
+                .filter(intent -> intent.getStatus() != BookingIntentStatus.CONFIRMED)
                 .map(intent -> {
 
                     List<IntentSlotResponse> slotResponses =
@@ -420,7 +423,7 @@ public class BookingServiceImpl implements BookingService {
                     .type(TransactionType.INCOME)
                     .amount(deposit)
                     .booking(booking)
-                    .referenceId(booking.getBookingId())
+                    .referenceId(String.valueOf(booking.getBookingId()))
                     .rentalArea(booking.getRentalArea())
                     .owner(booking.getRentalArea().getOwner())
                     .paymentMethod(request.getPaymentMethod())
@@ -440,7 +443,7 @@ public class BookingServiceImpl implements BookingService {
             transactionRepository.save(transaction);
         }
 
-        return mapToBookingResponse(booking);
+        return bookingMapper.toBookingResponse(booking);
     }
 
     public BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime) {
@@ -548,7 +551,7 @@ public class BookingServiceImpl implements BookingService {
 
         Transaction transaction = Transaction.builder()
                 .booking(booking)
-                .referenceId(booking.getBookingId())
+                .referenceId(String.valueOf(booking.getBookingId()))
                 .rentalArea(booking.getRentalArea())
                 .owner(booking.getRentalArea().getOwner())
                 .type(TransactionType.INCOME)
@@ -1015,7 +1018,7 @@ public class BookingServiceImpl implements BookingService {
                 .type(TransactionType.INCOME)
                 .amount(paidAmount)
                 .booking(booking)
-                .referenceId(booking.getBookingId())
+                .referenceId(String.valueOf(booking.getBookingId()))
                 .rentalArea(booking.getRentalArea())
                 .owner(booking.getRentalArea().getOwner())
                 .paymentMethod(payment.getPaymentMethod())
@@ -1042,6 +1045,7 @@ public class BookingServiceImpl implements BookingService {
                 .remainingAmount(booking.getRemainingAmount())
                 .slots(slotResponses)
                 .createdAt(booking.getCreatedAt())
+                .bookingType(booking.getBookingType())
                 .build();
     }
 
@@ -1103,6 +1107,7 @@ public class BookingServiceImpl implements BookingService {
                 .remainingAmount(booking.getRemainingAmount())
                 .paymentMethod(paymentMethod)
                 .extraServiceResponses(extraServiceResponses)
+                .bookingType(booking.getBookingType())
                 .build();
     }
 
@@ -1135,7 +1140,7 @@ public class BookingServiceImpl implements BookingService {
 
         List<BookingResponse> responses = bookingPage.getContent()
                 .stream()
-                .map(this::mapToResponse)
+                .map(bookingMapper::toBookingResponse)
                 .toList();
 
         return PageResponse.<BookingResponse>builder()
@@ -1174,7 +1179,7 @@ public class BookingServiceImpl implements BookingService {
 
         List<BookingResponse> responses = bookingPage.getContent()
                 .stream()
-                .map(this::mapToResponse)
+                .map(bookingMapper::toBookingResponse)
                 .toList();
 
         return PageResponse.<BookingResponse>builder()
@@ -1210,7 +1215,7 @@ public class BookingServiceImpl implements BookingService {
 
         List<BookingResponse> responses = bookingPage.getContent()
                 .stream()
-                .map(this::mapToResponse)
+                .map(bookingMapper::toBookingResponse)
                 .toList();
 
         return PageResponse.<BookingResponse>builder()
@@ -1220,57 +1225,6 @@ public class BookingServiceImpl implements BookingService {
                 .totalElements(bookingPage.getTotalElements())
                 .data(responses)
                 .build();
-    }
-
-    private BookingResponse mapToResponse(Booking booking) {
-        Optional<Payment> payment = paymentRepository
-                .findFirstByBookingOrderByTransactionDateDesc(booking);
-
-        String paymentMethod;
-        if (payment.isPresent()) {
-            paymentMethod = payment.get().getPaymentMethod().toString();
-        } else {
-            paymentMethod = "không có";
-        }
-
-        List<SlotResponse> slots = booking.getSlots()
-                .stream()
-                .map(slot -> SlotResponse.builder()
-                        .slotId(slot.getSlotId())
-                        .courtCopyId(slot.getCourtCopy().getCourtCopyId())
-                        .courtCode(slot.getCourtCopy().getCourtCode())
-                        .startTime(slot.getStartTime())
-                        .endTime(slot.getEndTime())
-                        .price(slot.getPrice())
-                        .slotStatus(slot.getSlotStatus())
-                        .build())
-                .toList();
-
-        BookingResponse bookingResponse = BookingResponse.builder()
-                .bookingId(booking.getBookingId())
-                .totalPrice(booking.getTotalPrice())
-                .bookingStatus(booking.getBookingStatus())
-                .startTime(booking.getStartTime())
-                .endTime(booking.getEndTime())
-                .createdAt(booking.getCreatedAt())
-                .slots(slots)
-                .userName(booking.getBookerName())
-                .phoneNumber(booking.getBookerPhone())
-                .note(booking.getNote())
-                .rentalArea(booking.getRentalArea() != null ?
-                        RentalAreaResponse.builder()
-                                .rentalAreaId(booking.getRentalArea().getRentalAreaId())
-                                .rentalAreaName(booking.getRentalArea().getRentalAreaName())
-
-                                .address(addressMapper.toAddressResponse(booking.getRentalArea().getAddress()))
-                                .build() : null)
-                .depositAmount(booking.getDepositAmount())
-                .remainingAmount(booking.getRemainingAmount())
-                .paymentMethod(paymentMethod)
-                .build();
-
-
-        return bookingResponse;
     }
 
     @Override
@@ -1290,7 +1244,7 @@ public class BookingServiceImpl implements BookingService {
 
         bookingRepository.save(booking);
 
-        return mapToResponse(booking);
+        return bookingMapper.toBookingResponse(booking);
     }
 
     private void updateBookingInfo(Booking booking, UpdateBookingRequest request) {
@@ -1336,7 +1290,7 @@ public class BookingServiceImpl implements BookingService {
             slot.setEndTime(newEnd);
             slot.setCourtCopy(targetCopy);
 
-            updateSlotPrice(slot, targetCopy, newStart, newEnd);
+            updateSlotPrice(newStart, newEnd);
 
             slotRepository.save(slot);
         }
@@ -1385,18 +1339,11 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void updateSlotPrice(
-            Slot slot,
-            CourtCopy courtCopy,
             LocalDateTime start,
             LocalDateTime end) {
 
-        BigDecimal hours = BigDecimal.valueOf(
-                Duration.between(start, end).toMinutes()
-        ).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        Duration.between(start, end);
 
-//        slot.setPrice(
-//                courtCopy.getCourt().getPrice().multiply(hours)
-//        );
     }
 
     private void validateSlotLogic(LocalDateTime start, LocalDateTime end, LocalDateTime oldStart) {
@@ -1488,75 +1435,13 @@ public class BookingServiceImpl implements BookingService {
                     .type(TransactionType.EXPENSE)
                     .amount(overpaid)
                     .booking(booking)
-                    .referenceId(booking.getBookingId())
+                    .referenceId(String.valueOf(booking.getBookingId()))
                     .paymentMethod(PaymentMethod.CASH)
                     .description("Hoàn tiền do cập nhật booking giảm giá")
                     .build();
 
             transactionRepository.save(refundTransaction);
         }
-    }
-
-    private BookingResponse mapToBookingResponse(Booking booking) {
-        if (booking == null) {
-            return null;
-        }
-        List<SlotResponse> slotResponses = new ArrayList<>();
-        LocalDateTime bookingStart = null;
-        LocalDateTime bookingEnd = null;
-        RentalAreaResponse rentalAreaResponse = null;
-
-        if (booking.getSlots() != null && !booking.getSlots().isEmpty()) {
-            slotResponses = booking.getSlots().stream()
-                    .map(slot -> SlotResponse.builder()
-                            .slotId(slot.getSlotId())
-                            .courtCopyId(slot.getCourtCopy().getCourtCopyId())
-                            .startTime(slot.getStartTime())
-                            .endTime(slot.getEndTime())
-                            .price(slot.getPrice())
-                            .build())
-                    .toList();
-
-            bookingStart = booking.getSlots().stream()
-                    .map(Slot::getStartTime)
-                    .min(LocalDateTime::compareTo)
-                    .orElse(null);
-
-            bookingEnd = booking.getSlots().stream()
-                    .map(Slot::getEndTime)
-                    .max(LocalDateTime::compareTo)
-                    .orElse(null);
-
-            RentalArea rentalArea = booking.getSlots().getFirst().getCourtCopy().getCourt().getRentalArea();
-            if (rentalArea != null) {
-                rentalAreaResponse = RentalAreaResponse.builder()
-                        .rentalAreaId(rentalArea.getRentalAreaId())
-                        .rentalAreaName(rentalArea.getRentalAreaName())
-                        .build();
-            }
-        }
-
-        List<BookingResponse.BookingServiceResponse> extraServiceResponses = new ArrayList<>();
-
-
-        return BookingResponse.builder()
-                .bookingId(booking.getBookingId())
-                .totalPrice(booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO)
-                .bookingStatus(booking.getBookingStatus())
-                .status(booking.getBookingStatus())
-                .startTime(bookingStart)
-                .endTime(bookingEnd)
-                .slots(slotResponses)
-                .createdAt(booking.getCreatedAt())
-                .rentalArea(rentalAreaResponse)
-                .userName(booking.getBookerName())
-                .phoneNumber(booking.getBookerPhone())
-                .note(booking.getNote())
-                // .paymentMethod(booking.getPaymentMethod().name())
-                .depositAmount(booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO)
-                .remainingAmount(booking.getRemainingAmount() != null ? booking.getRemainingAmount() : BigDecimal.ZERO)
-                .extraServiceResponses(extraServiceResponses)
-                .build();
     }
 
     @Override
@@ -1580,12 +1465,43 @@ public class BookingServiceImpl implements BookingService {
         booking.setBookingStatus(BookingStatus.CANCELLED);
         booking.setRemainingAmount(BigDecimal.ZERO);
 
+        String noteAppend;
+
+        if (depositAmount.compareTo(BigDecimal.ZERO) > 0) {
+            boolean isLateCancel = false;
+
+            if (booking.getStartTime() != null) {
+                LocalDateTime cancelThreshold = booking.getStartTime().minusHours(5);
+                if (!LocalDateTime.now().isBefore(cancelThreshold)) {
+                    isLateCancel = true;
+                }
+            }
+
+            if (isLateCancel) {
+                noteAppend = "Người dùng tự hủy booking. Mất cọc " + depositAmount + "đ và bị trừ điểm uy tín.";
+
+                if (booking.getRenter() != null) {
+                    User renter = booking.getRenter();
+                    int currentScore = renter.getCreditScore() != null ? renter.getCreditScore() : 100;
+                    renter.setCreditScore(Math.max(0, currentScore - 10));
+                    userRepository.save(renter);
+
+                    reputationLogRepository.save(
+                            ReputationLog.builder()
+                                    .user(renter)
+                                    .pointsChanged(-10)
+                                    .reason("Hủy booking dưới 24h")
+                                    .build());
+                }
+            } else {
+                noteAppend = "Người dùng tự hủy booking sớm (trước 24h). Mất cọc " + depositAmount + "đ (Không trừ uy tín).";
+            }
+        } else {
+            noteAppend = "Người dùng tự hủy booking (Chưa phát sinh tiền cọc).";
+        }
+
         String oldNote = booking.getNote();
-        booking.setNote(
-                (oldNote == null || oldNote.isBlank() ? "" : oldNote + "\n")
-                        + "Người dùng đã hủy booking. Tiền cọc không được hoàn lại: "
-                        + depositAmount
-        );
+        booking.setNote((oldNote == null || oldNote.isBlank() ? "" : oldNote + "\n") + noteAppend);
 
         if (booking.getSlots() != null && !booking.getSlots().isEmpty()) {
             booking.getSlots().forEach(slot -> {
@@ -1599,6 +1515,6 @@ public class BookingServiceImpl implements BookingService {
 
         Booking savedBooking = bookingRepository.save(booking);
 
-        return mapToResponse(savedBooking);
+        return bookingMapper.toBookingResponse(savedBooking);
     }
 }

@@ -1,5 +1,6 @@
 package org.sport.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,8 +27,9 @@ public class Ward {
     private  String wardName;
 
     @Column(name = "ward_code")
-    private Integer wardCode;;
+    private Integer wardCode;
 
+    @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "city_id")
     private City city;

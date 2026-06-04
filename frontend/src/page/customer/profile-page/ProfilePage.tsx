@@ -35,6 +35,10 @@ const ProfilePage: React.FC = () => {
         phone: user.phone || "",
         dob: user.dateOfBirth || "",
         gender: user.gender || "",
+        // Đổ dữ liệu ngân hàng vào Form
+        bankName: user.bankAccount?.bankName || "",
+        accountNumber: user.bankAccount?.accountNumber || "",
+        accountHolderName: user.bankAccount?.accountHolderName || "",
       });
     }
   }, [user, form]);
@@ -44,11 +48,14 @@ const ProfilePage: React.FC = () => {
 
     setLoadingSave(true);
     try {
-      await userService.updateUser(user.userId, {
+      await userService.updateMyProfile({
         userName: values.userName,
         phone: values.phone,
         dateOfBirth: values.dob,
         gender: values.gender,
+        bankName: values.bankName,
+        accountNumber: values.accountNumber,
+        accountHolderName: values.accountHolderName,
       });
 
       message.success("Cập nhật thông tin thành công!");
@@ -82,7 +89,6 @@ const ProfilePage: React.FC = () => {
 
   return (
     <Row gutter={[24, 24]}>
-      {/* KHỐI TRÁI CỦA NỘI DUNG CHÍNH (Form) */}
       <Col xs={24} lg={16}>
         <Card
           title={
@@ -145,6 +151,7 @@ const ProfilePage: React.FC = () => {
                 disabled={true}
               />
             </Form.Item>
+
             <Form.Item label="Môn thể thao" name="sports">
               <Checkbox.Group>
                 <Space direction="horizontal" wrap>
@@ -153,14 +160,19 @@ const ProfilePage: React.FC = () => {
                 </Space>
               </Checkbox.Group>
             </Form.Item>
+
             {isEditing && (
-              <Form.Item style={{ marginTop: "24px" }}>
+              <Form.Item
+                style={{ marginTop: "24px" }}
+                wrapperCol={{ offset: 6, span: 18 }}
+              >
                 <Space>
                   <Button
                     type="primary"
                     htmlType="submit"
                     size="large"
                     loading={loadingSave}
+                    style={{ background: "#9156F1", borderColor: "#9156F1" }}
                   >
                     Lưu thay đổi
                   </Button>
@@ -168,7 +180,18 @@ const ProfilePage: React.FC = () => {
                     size="large"
                     onClick={() => {
                       setIsEditing(false);
-                      if (user) form.resetFields();
+                      if (user) {
+                        form.setFieldsValue({
+                          userName: user.userName,
+                          email: user.email,
+                          phone: user.phone || "",
+                          dob: user.dateOfBirth || "",
+                          gender: user.gender || "",
+                          bankName: user.bankName || "",
+                          accountNumber: user.accountNumber || "",
+                          accountHolderName: user.accountHolderName || "",
+                        });
+                      }
                     }}
                   >
                     Hủy
@@ -180,7 +203,6 @@ const ProfilePage: React.FC = () => {
         </Card>
       </Col>
 
-      {/* KHỐI PHẢI CỦA NỘI DUNG CHÍNH (Thống kê & Hoạt động) */}
       <Col xs={24} lg={8}>
         <Card
           title="Các môn đang chơi"

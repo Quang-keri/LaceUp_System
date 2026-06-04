@@ -62,6 +62,10 @@ public class Match extends BaseEntity {
 
     private LocalDate endDate;
 
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
+
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<MatchRegistration> registrations;
 

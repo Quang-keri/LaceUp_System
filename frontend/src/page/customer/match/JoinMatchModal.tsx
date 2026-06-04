@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, List, Avatar, Tag, Typography, Radio } from "antd";
+import {
+  Modal,
+  Button,
+  List,
+  Avatar,
+  Tag,
+  Typography,
+  Radio,
+  message,
+} from "antd";
 import {
   Calendar,
   Clock,
@@ -7,8 +16,8 @@ import {
   CheckCircle2,
   ShieldAlert,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import matchService from "../../../service/match/matchService";
-import { message } from "antd";
 import { useAuth } from "../../../context/AuthContext";
 import type { MatchResponse } from "../../../types/match";
 
@@ -28,6 +37,8 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
   match,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [loadingAction, setLoadingAction] = useState(false);
   const [loadingDivide, setLoadingDivide] = useState(false);
 
@@ -59,6 +70,13 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
   const isHost = match.hostName === user?.userName;
 
   const handleJoin = async () => {
+    if (!user) {
+      message.warning("Vui lòng đăng nhập để tham gia trận đấu!");
+      onClose();
+      navigate("/login");
+      return;
+    }
+
     setLoadingAction(true);
     try {
       const response = await matchService.joinMatch(match.matchId);
@@ -178,8 +196,7 @@ const JoinMatchModal: React.FC<JoinMatchModalProps> = ({
           </Button>,
         );
       }
-    }
-    else if (match.status === "FULL" || match.status === "CONFIRMED") {
+    } else if (match.status === "FULL" || match.status === "CONFIRMED") {
       actions.push(
         <Button
           key="full"

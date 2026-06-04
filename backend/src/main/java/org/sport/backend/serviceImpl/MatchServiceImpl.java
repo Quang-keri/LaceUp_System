@@ -4,20 +4,19 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sport.backend.constant.SlotStatus;
+import org.sport.backend.constant.*;
 import org.sport.backend.dto.base.PageResponse;
-import org.sport.backend.constant.MatchStatus;
-import org.sport.backend.constant.MatchType;
-import org.sport.backend.constant.RecurringType;
 import org.sport.backend.dto.request.chat.DivideTeamRequest;
 import org.sport.backend.dto.request.match.AutoMatchRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
+import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.mapper.MatchMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.CourtPriceService;
 import org.sport.backend.service.MatchService;
+import org.sport.backend.service.PaymentService;
 import org.sport.backend.service.UserService;
 import org.sport.backend.specification.MatchSpecifications;
 import org.springframework.data.domain.Page;
@@ -29,6 +28,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -46,11 +46,17 @@ public class MatchServiceImpl implements MatchService {
     private final CategoryRepository categoryRepository;
     private final UserCategoryRankRepository userCategoryRankRepository;
     private final SlotRepository slotRepository;
+    private final BookingRepository bookingRepository;
+    private final PaymentRepository paymentRepository;
+    private final ReputationLogRepository reputationLogRepository;
+    private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
 
     private final MatchMapper matchMapper;
 
     private final UserService userService;
     private final CourtPriceService courtPriceService;
+    private final PaymentService paymentService;
 
     @Override
     @Transactional
@@ -73,7 +79,6 @@ public class MatchServiceImpl implements MatchService {
         }
 
         Match.MatchBuilder<?, ?> matchBuilder = Match.builder()
-                .host(currentUser)
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .maxPlayers(request.getMaxPlayers())
@@ -119,6 +124,8 @@ public class MatchServiceImpl implements MatchService {
             }
 
             matchBuilder.court(court);
+            assert area != null;
+            matchBuilder.host(area.getOwner());
             matchBuilder.category(court.getCategory());
         } else {
             if (request.getCategoryId() == null) {
@@ -171,20 +178,26 @@ public class MatchServiceImpl implements MatchService {
         }
 
         if (currentUser.getRole().getRoleName().equals("RENTER")) {
-            joinMatch(savedMatch.getMatchId());
+            joinMatch(savedMatch.getMatchId(), 1);
         }
 
         return matchMapper.toResponse(savedMatch);
     }
 
-    @Override
     @Transactional
-    public void joinMatch(UUID matchId) {
+    @Override
+    public CheckoutResponse joinMatch(UUID matchId, Integer playerCount) {
+        if (playerCount == null || playerCount < 1) {
+            playerCount = 1;
+        }
+
         User currentUser = userService.getCurrentUserEntity();
         Match match = matchRepository.findByIdWithLock(matchId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
 
-        if (currentUser.getCreditScore() < 60 && (match.getMatchType() == MatchType.RANKED || match.getMatchType() == MatchType.BET)) {
+        if (currentUser.getCreditScore() < 60
+                && (match.getMatchType() == MatchType.RANKED
+                || match.getMatchType() == MatchType.BET)) {
             throw new RuntimeException("Điểm uy tín của bạn (" + currentUser.getCreditScore() + ") dưới 60. Bạn chỉ có thể tham gia trận thường (NORMAL)!");
         }
 
@@ -194,8 +207,9 @@ public class MatchServiceImpl implements MatchService {
             throw new RuntimeException("Trận đấu đã đóng, đã đủ người hoặc không còn khả dụng!");
         }
 
-        if (match.getCurrentPlayers() >= match.getMaxPlayers()) {
-            throw new RuntimeException("Trận đấu đã đủ người!");
+        if (match.getCurrentPlayers() + playerCount > match.getMaxPlayers()) {
+            throw new RuntimeException("Trận đấu không đủ chỗ trống. Chỉ còn " +
+                    (match.getMaxPlayers() - match.getCurrentPlayers()) + " slot.");
         }
 
         if (match.getMatchType() == MatchType.RANKED) {
@@ -222,37 +236,75 @@ public class MatchServiceImpl implements MatchService {
             throw new RuntimeException("Bạn đã tham gia trận này rồi");
         }
 
+        List<Slot> matchSlots = slotRepository.findByMatch(match);
+        BigDecimal totalMatchPrice = BigDecimal.ZERO;
+        if (matchSlots != null) {
+            totalMatchPrice = matchSlots.stream()
+                    .map(Slot::getPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        BigDecimal unitPrice = totalMatchPrice.divide(BigDecimal.valueOf(
+                        match.getMaxPlayers()),
+                2,
+                RoundingMode.HALF_UP);
+        BigDecimal amountDue = unitPrice.multiply(BigDecimal.valueOf(playerCount));
+
         MatchRegistration reg = MatchRegistration.builder()
                 .user(currentUser)
                 .match(match)
+                .playerCount(playerCount)
+                .amountDue(amountDue)
+                .isPaid(false)
                 .registeredAt(LocalDateTime.now())
                 .build();
         registrationRepository.save(reg);
 
-        match.setCurrentPlayers(match.getCurrentPlayers() + 1);
+        match.setCurrentPlayers(match.getCurrentPlayers() + playerCount);
 
-        if (match.getCurrentPlayers() >= match.getMaxPlayers()) {
+
+        if (match.getCurrentPlayers().equals(match.getMaxPlayers())) {
             match.setStatus(MatchStatus.READY);
 
-            List<Slot> matchSlots = slotRepository.findByMatch(match);
-            if (matchSlots != null && !matchSlots.isEmpty()) {
-                for (Slot slot : matchSlots) {
-                    slot.setSlotStatus(SlotStatus.MATCH_FULL);
-                }
-                slotRepository.saveAll(matchSlots);
+            assert matchSlots != null;
+            for (Slot slot : matchSlots) {
+                slot.setSlotStatus(SlotStatus.MATCH_FULL);
             }
+
+            Booking matchBooking = Booking.builder()
+                    .renter(match.getHost())
+                    .rentalArea(match.getCourt().getRentalArea())
+                    .totalPrice(totalMatchPrice)
+                    .remainingAmount(totalMatchPrice)
+                    .bookingStatus(BookingStatus.BOOKED)
+                    .startTime(match.getStartTime())
+                    .endTime(match.getEndTime())
+                    .bookingType(BookingType.MATCH)
+                    .build();
+
+            matchBooking = bookingRepository.save(matchBooking);
+
+            match.setBooking(matchBooking);
+
+            for (Slot slot : matchSlots) {
+                slot.setBooking(matchBooking);
+            }
+
+            slotRepository.saveAll(matchSlots);
         }
 
         matchRepository.save(match);
+
+        return paymentService.checkoutMatchJoin(reg.getRegistrationId(), PaymentMethod.VN_PAY);
     }
 
     @Transactional
     @Override
-    public void joinByRoomCode(String roomCode) {
+    public void joinByRoomCode(String roomCode, Integer playerCount) {
         Match match = matchRepository.findByRoomCode(roomCode.toUpperCase())
                 .orElseThrow(() -> new RuntimeException("Mã phòng không tồn tại hoặc không hợp lệ!"));
 
-        joinMatch(match.getMatchId());
+        joinMatch(match.getMatchId(), playerCount);
     }
 
     @Transactional
@@ -263,7 +315,9 @@ public class MatchServiceImpl implements MatchService {
         Integer userRankPoint = null;
         if (request.getMatchType() == MatchType.RANKED) {
             userRankPoint = userCategoryRankRepository
-                    .findByUser_UserIdAndCategory_CategoryId(currentUser.getUserId(), request.getCategoryId())
+                    .findByUser_UserIdAndCategory_CategoryId(
+                            currentUser.getUserId(),
+                            request.getCategoryId())
                     .map(UserCategoryRank::getRankPoint)
                     .orElse(0);
         }
@@ -272,8 +326,10 @@ public class MatchServiceImpl implements MatchService {
                 .and(MatchSpecifications.hasMatchType(request.getMatchType()))
                 .and(MatchSpecifications.hasCity(request.getCity()))
                 .and(MatchSpecifications.isNotParticipant(currentUser.getUserId()))
-                .and((root, query, cb) -> cb.equal(root.join("category").get("categoryId"), request.getCategoryId()))
-                .and((root, query, cb) -> cb.lessThan(root.get("currentPlayers"), root.get("maxPlayers")));
+                .and((root, query, cb)
+                        -> cb.equal(root.join("category").get("categoryId"), request.getCategoryId()))
+                .and((root, query, cb)
+                        -> cb.lessThan(root.get("currentPlayers"), root.get("maxPlayers")));
 
         if (userRankPoint != null) {
             final int rankToCompare = userRankPoint;
@@ -296,7 +352,7 @@ public class MatchServiceImpl implements MatchService {
         }
 
         Match selectedMatch = candidateMatches.getContent().getFirst();
-        joinMatch(selectedMatch.getMatchId());
+        joinMatch(selectedMatch.getMatchId(), 1);
 
         return matchMapper.toResponse(selectedMatch);
     }
@@ -319,18 +375,36 @@ public class MatchServiceImpl implements MatchService {
 
         List<MatchRegistration> registrations = registrationRepository.findByMatch(match);
 
+        int maxTeamSize = (match.getMaxPlayers() + 1) / 2;
+        int team1Size = 0;
+        int team2Size = 0;
+
         for (MatchRegistration reg : registrations) {
             UUID userId = reg.getUser().getUserId();
 
+            int count = reg.getPlayerCount() != null ? reg.getPlayerCount() : 1;
+
             if (request.getTeam1UserIds() != null && request.getTeam1UserIds().contains(userId)) {
                 reg.setTeamNumber(1);
+                team1Size += count;
             } else if (request.getTeam2UserIds() != null && request.getTeam2UserIds().contains(userId)) {
                 reg.setTeamNumber(2);
+                team2Size += count;
+            } else {
+                reg.setTeamNumber(null);
             }
         }
 
+        if (team1Size > maxTeamSize) {
+            throw new RuntimeException("Đội 1 đã vượt quá số lượng cho phép! (Tối đa " + maxTeamSize + " slot)");
+        }
+        if (team2Size > maxTeamSize) {
+            throw new RuntimeException("Đội 2 đã vượt quá số lượng cho phép! (Tối đa " + maxTeamSize + " slot)");
+        }
+
         registrationRepository.saveAll(registrations);
-        log.info("Host {} đã chia đội cho trận đấu {}", currentUser.getUserName(), matchId);
+        log.info("Host {} đã chia đội cho trận đấu {}. Đội 1: {} người, Đội 2: {} người",
+                currentUser.getUserName(), matchId, team1Size, team2Size);
     }
 
     @Override
@@ -386,7 +460,10 @@ public class MatchServiceImpl implements MatchService {
             String keyword, LocalDateTime startDate, LocalDateTime endDate) {
 
         User currentUser = userService.getCurrentUserEntity();
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by("createdAt").descending());
 
         Specification<Match> spec = Specification.where(MatchSpecifications.fetchAllDetails())
                 .and(MatchSpecifications.isOwnerSystem(currentUser.getUserId()))
@@ -409,7 +486,11 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public PageResponse<MatchResponse> getMyMatches(int page, int size) {
         User currentUser = userService.getCurrentUserEntity();
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").descending());
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by("startTime").descending()
+        );
         Page<Match> matchPage = matchRepository.findMatchesByParticipantOrHost(currentUser, pageable);
 
         return PageResponse.<MatchResponse>builder()
@@ -422,8 +503,12 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Override
-    public PageResponse<MatchResponse> getUserMatchHistory(UUID userId, int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("startTime").descending());
+    public PageResponse<MatchResponse> getUserMatchHistory(
+            UUID userId, int page, int size) {
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by("startTime").descending());
 
         Specification<Match> spec = Specification.where(MatchSpecifications.fetchAllDetails())
                 .and(MatchSpecifications.isParticipantOrHost(userId))
@@ -463,7 +548,8 @@ public class MatchServiceImpl implements MatchService {
 
                     RentalArea area = config.getCourt().getRentalArea();
                     if (area != null && area.getOpenTime() != null && area.getCloseTime() != null) {
-                        if (configStartTime.isBefore(area.getOpenTime()) || configEndTime.isAfter(area.getCloseTime())) {
+                        if (configStartTime.isBefore(area.getOpenTime())
+                                || configEndTime.isAfter(area.getCloseTime())) {
                             log.warn("Bỏ qua tạo Match tự động định kỳ cho sân [{}] do nằm ngoài giờ hoạt động (Mở: {}, Đóng: {}).",
                                     config.getCourt().getCourtId(), area.getOpenTime(), area.getCloseTime());
                             continue;
@@ -494,13 +580,74 @@ public class MatchServiceImpl implements MatchService {
         }
     }
 
+    @Transactional
+    @Override
+    public void leaveMatch(UUID matchId) {
+        User currentUser = userService.getCurrentUserEntity();
+        Match match = matchRepository.findByIdWithLock(matchId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
+
+        MatchRegistration reg = registrationRepository.findActiveByMatchAndUser(match, currentUser)
+                .orElseThrow(() -> new RuntimeException("Bạn chưa tham gia hoặc đã rời trận đấu này!"));
+
+        if (match.getStatus() == MatchStatus.COMPLETED
+                || match.getStatus() == MatchStatus.CANCELLED) {
+            throw new RuntimeException("Không thể rời trận đấu đã kết thúc hoặc đã hủy.");
+        }
+
+        boolean isLateCancel = false;
+        if (match.getStartTime() != null) {
+            LocalDateTime cancelThreshold = match.getStartTime().minusHours(24);
+            if (!LocalDateTime.now().isBefore(cancelThreshold)) {
+                isLateCancel = true;
+            }
+        }
+
+        if (isLateCancel) {
+            int currentScore = currentUser.getCreditScore() != null ? currentUser.getCreditScore() : 100;
+            currentUser.setCreditScore(Math.max(0, currentScore - 10));
+            userRepository.save(currentUser);
+
+            ReputationLog log = ReputationLog.builder()
+                    .user(currentUser)
+                    .pointsChanged(-10)
+                    .reason("Rút lui khỏi trận ghép quá sát giờ thi đấu (dưới 24h)")
+                    .build();
+            reputationLogRepository.save(log);
+        }
+
+        List<Payment> relatedPayments = paymentRepository.findAllByMatchRegistration(reg);
+        for (Payment payment : relatedPayments) {
+            if (payment.getPaymentStatus() == PaymentStatus.PENDING) {
+                payment.setPaymentStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+            }
+        }
+
+        reg.setIsCancelled(true);
+        reg.setTeamNumber(null);
+        registrationRepository.save(reg);
+
+        match.setCurrentPlayers(match.getCurrentPlayers() - reg.getPlayerCount());
+
+        if (match.getStatus() == MatchStatus.READY
+                && match.getCurrentPlayers() < match.getMaxPlayers()) {
+            match.setStatus(MatchStatus.OPEN);
+        }
+
+        matchRepository.save(match);
+        log.info("User {} đã tự rút khỏi trận {}. Tiền vé không được hoàn lại.",
+                currentUser.getUserId(), matchId);
+    }
+
     @Scheduled(cron = "0 */5 * * * *")
     @Transactional
     public void autoCancelInvalidMatches() {
         LocalDateTime checkThreshold = LocalDateTime.now().plusMinutes(30);
 
         List<MatchStatus> pendingStatuses = List.of(MatchStatus.OPEN);
-        List<Match> matchesToCheck = matchRepository.findMatchesToAutoCancel(pendingStatuses, checkThreshold);
+        List<Match> matchesToCheck =
+                matchRepository.findMatchesToAutoCancel(pendingStatuses, checkThreshold);
 
         if (matchesToCheck.isEmpty()) {
             return;
@@ -543,6 +690,23 @@ public class MatchServiceImpl implements MatchService {
             }
             slotRepository.saveAll(matchSlots);
             log.info("Đã giải phóng {} slot(s) của trận [{}]", matchSlots.size(), match.getMatchId());
+        }
+
+        List<Payment> successfulPayments =
+                paymentRepository.findSuccessfulPaymentsByMatch(match.getMatchId());
+        if (!successfulPayments.isEmpty()) {
+            for (Payment payment : successfulPayments) {
+                payment.setPaymentStatus(PaymentStatus.REFUND_PENDING);
+
+                transactionRepository.findByReferenceId(payment.getPaymentId().toString())
+                        .ifPresent(tx -> {
+                            tx.setStatus(TransactionStatus.FAILED);
+                            transactionRepository.save(tx);
+                        });
+            }
+            paymentRepository.saveAll(successfulPayments);
+            log.info("Đã đưa {} giao dịch của trận Auto-Cancel [{}] vào danh sách Chờ Hoàn Tiền.",
+                    successfulPayments.size(), match.getMatchId());
         }
     }
 

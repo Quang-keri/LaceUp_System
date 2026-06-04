@@ -5,6 +5,7 @@ import lombok.Data;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.constant.MatchType;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -23,7 +24,7 @@ public class MatchResponse {
     private Integer currentPlayers;
     private Integer remainingSlots;
     private String status;
-    private String hostName;
+    private UserResponse host;
     private boolean isFull;
     private boolean hasCourt;
     private List<UserResponse> participants;
@@ -32,4 +33,6 @@ public class MatchResponse {
     private Integer minRank;
     private Integer maxRank;
     private List<MatchReportResponse> reports;
+    private Boolean isPaid;
+    private BigDecimal amountDue;
 }

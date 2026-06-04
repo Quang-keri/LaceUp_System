@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.ApiResponse;
+import org.sport.backend.dto.request.match.MatchCheckoutRequest;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.service.PaymentService;
@@ -90,7 +91,7 @@ public class PaymentController {
             for (Enumeration<String> params = request.getParameterNames(); params.hasMoreElements();) {
                 String fieldName = params.nextElement();
                 String fieldValue = request.getParameter(fieldName);
-                if (fieldValue != null && fieldValue.length() > 0) {
+                if (fieldValue != null && !fieldValue.isEmpty()) {
                     fields.put(fieldName, fieldValue);
                 }
             }
@@ -106,6 +107,62 @@ public class PaymentController {
         } catch (Exception e) {
             return ApiResponse.error(400, e.getMessage());
         }
+    }
+
+    @PostMapping("/checkout-match")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<CheckoutResponse> checkoutMatchJoin(
+            @Valid @RequestBody MatchCheckoutRequest request
+    ) {
+        try {
+            return ApiResponse.success(
+                    201,
+                    "Tạo link thanh toán ghép trận thành công",
+                    paymentService.checkoutMatchJoin(request.getRegistrationId(), request.getPaymentMethod())
+            );
+        } catch (Exception e) {
+            return ApiResponse.error(500, e.getMessage());
+        }
+    }
+
+    @PostMapping(value = "/match/upload-proof", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<?> uploadMatchPaymentProof(
+            @RequestParam("registrationId") java.util.UUID registrationId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+
+        paymentService.uploadMatchPaymentProof(registrationId, file);
+
+        return ApiResponse.builder()
+                .code(200)
+                .message("Tải ảnh chứng từ thành công, vui lòng chờ duyệt!")
+                .build();
+    }
+
+    @GetMapping("/owner/match-payments")
+    public ApiResponse<?> getMatchPaymentsForOwner(
+            @RequestParam(required = false, defaultValue = "PENDING") String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+
+        return ApiResponse.builder()
+                .code(200)
+                .message("Lấy danh sách thành công")
+                .result(paymentService.getMatchPaymentsForOwner(status, keyword, startDate, endDate))
+                .build();
+    }
+
+    @PostMapping("/owner/confirm-match-payment/{paymentId}")
+    public ApiResponse<?> confirmMatchPayment(
+            @PathVariable java.util.UUID paymentId,
+            @RequestParam boolean isApproved) {
+
+        paymentService.confirmMatchPayment(paymentId, isApproved);
+
+        return ApiResponse.builder()
+                .code(200)
+                .message(isApproved ? "Đã duyệt thanh toán thành công" : "Đã từ chối thanh toán")
+                .build();
     }
 
 }

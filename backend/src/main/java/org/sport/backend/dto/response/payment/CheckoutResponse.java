@@ -17,4 +17,9 @@ public class CheckoutResponse {
     private String paymentUrl;
     private String orderCode;
     private String message;
+    private String bankName;
+    private String accountNumber;
+    private String accountName;
+    private String transferContent;
+    private String vietQrUrl;
 }

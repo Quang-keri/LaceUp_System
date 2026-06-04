@@ -13,7 +13,6 @@ import {
   Modal as AntModal,
   message,
 } from "antd";
-
 import {
   CalendarOutlined,
   ClockCircleOutlined,
@@ -29,9 +28,15 @@ interface Props {
   bookingId: string | null;
   open: boolean;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
-const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
+const BookingDetailModal: React.FC<Props> = ({
+  bookingId,
+  open,
+  onClose,
+  onRefresh,
+}) => {
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState<BookingResponse | null>(null);
 
@@ -70,11 +75,25 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
   };
 
   const handleCancelBooking = () => {
-    if (!bookingId) return;
+    if (!bookingId || !booking) return;
+
+    const hoursDifference = dayjs(booking.startTime).diff(dayjs(), "hour");
+    const isLateCancel = hoursDifference < 5;
 
     AntModal.confirm({
       title: "Xác nhận hủy booking?",
-      content: "Nếu hủy booking, bạn sẽ mất tiền cọc và không được hoàn lại.",
+      content: isLateCancel ? (
+        <span style={{ color: "#ff4d4f" }}>
+          <b>CẢNH BÁO:</b> Bạn đang hủy lịch <b>QUÁ SÁT GIỜ (dưới 5h)</b>. Bạn
+          sẽ <b>MẤT TIỀN CỌC</b> và <b>BỊ TRỪ 10 ĐIỂM UY TÍN</b> trên hệ thống.
+          Bạn vẫn muốn tiếp tục hủy?
+        </span>
+      ) : (
+        <span>
+          Bạn đang hủy lịch trước 5h. Theo quy định, tiền cọc của bạn sẽ{" "}
+          <b>KHÔNG được hoàn lại</b>. Bạn có chắc chắn muốn hủy?
+        </span>
+      ),
       okText: "Đồng ý hủy",
       cancelText: "Không",
       okButtonProps: {
@@ -86,8 +105,12 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
 
           if (res.code === 200) {
             message.success("Hủy đặt lịch thành công");
-            setBooking((prev) => prev ? { ...prev, bookingStatus: "CANCELLED" } : null);
+            setBooking((prev) =>
+              prev ? { ...prev, bookingStatus: "CANCELLED" } : null,
+            );
+
             onClose();
+            if (onRefresh) onRefresh();
           }
         } catch (error: any) {
           message.error(
@@ -124,18 +147,20 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
         </div>
       ) : (
         <>
-          {/* STATUS */}
           <div style={{ marginBottom: 16 }}>
             <Tag
               color={statusColorMap[booking.bookingStatus]}
               icon={statusIconMap[booking.bookingStatus]}
               style={{ fontSize: 14, padding: "4px 10px" }}
             >
-              {booking.bookingStatus}
+              {booking.bookingStatus === "BOOKED"
+                ? "Đã xác nhận"
+                : booking.bookingStatus === "COMPLETED"
+                ? "Hoàn thành"
+                : "Đã hủy"}
             </Tag>
           </div>
 
-          {/* MAIN INFO */}
           <Card size="small" style={{ marginBottom: 16 }}>
             <Descriptions column={2} size="small">
               <Descriptions.Item label="Mã booking">
@@ -177,7 +202,6 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
             </Descriptions>
           </Card>
 
-          {/* PAYMENT */}
           <Card size="small" style={{ marginBottom: 16 }}>
             <Row gutter={16}>
               <Col span={8}>
@@ -209,7 +233,6 @@ const BookingDetailModal: React.FC<Props> = ({ bookingId, open, onClose }) => {
             </div>
           </Card>
 
-          {/* SLOTS */}
           <Card size="small">
             <div style={{ marginBottom: 8, fontWeight: 600 }}>
               Danh sách khung giờ

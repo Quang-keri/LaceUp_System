@@ -1,5 +1,6 @@
 package org.sport.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -28,6 +29,7 @@ public class City {
     @Column(name = "province_code", unique = true)
     Integer provinceCode;
 
+    @JsonManagedReference
     @OneToMany(mappedBy = "city", fetch = FetchType.LAZY)
     List<Ward> wards;
 }

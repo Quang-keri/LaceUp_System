@@ -95,7 +95,7 @@ public class ReportController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(value = "rentalAreaId") UUID rentalAreaId) { // Thêm tham số rentalAreaId
+            @RequestParam(value = "rentalAreaId") UUID rentalAreaId) {
 
         ReportResponse report = reportService.getEndOfDayReport(startDate, endDate, rentalAreaId);
         return ResponseEntity.ok(report);
@@ -106,7 +106,7 @@ public class ReportController {
     public ResponseEntity<byte[]> exportEndOfDayReport(
             @RequestParam(value = "startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(value = "rentalAreaId") UUID rentalAreaId) { // Thêm tham số rentalAreaId khi xuất Excel
+            @RequestParam(value = "rentalAreaId") UUID rentalAreaId) {
 
         try {
             ReportResponse data = reportService.getEndOfDayReport(startDate, endDate, rentalAreaId);

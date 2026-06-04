@@ -97,6 +97,26 @@ const MatchDetailModal: React.FC<Props> = ({
         </Tag>
       ),
     },
+    {
+      title: "Cần góp",
+      dataIndex: "amountDue",
+      key: "amountDue",
+      render: (amount: number) => (
+        <span style={{ color: "#fa8c16", fontWeight: "bold" }}>
+          {amount ? amount.toLocaleString("vi-VN") : "0"} đ
+        </span>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "isPaid",
+      key: "isPaid",
+      render: (isPaid: boolean) => (
+        <Tag color={isPaid ? "purple" : "default"}>
+          {isPaid ? "ĐÃ GÓP" : "CHƯA GÓP"}
+        </Tag>
+      ),
+    },
   ];
 
   return (
@@ -203,6 +223,25 @@ const MatchDetailModal: React.FC<Props> = ({
               {match.categoryName}
             </Tag>
           </Descriptions.Item>
+
+          <Descriptions.Item label="Loại trận">
+            {match.matchType === 'RANKED' && <Tag color="gold"> Leo Rank</Tag>}
+            {match.matchType === 'BET' && <Tag color="volcano"> Đá Kèo</Tag>}
+            {(!match.matchType || match.matchType === 'NORMAL') && <Tag color="green"> Giao lưu</Tag>}
+          </Descriptions.Item>
+
+          <Descriptions.Item label="Yêu cầu Rank">
+            {match.minRank || match.maxRank ? (
+              <Text strong style={{ color: '#d4380d' }}>
+                {match.minRank ? match.minRank : "0"} 
+                {" - "} 
+                {match.maxRank ? match.maxRank : "MAX"}
+              </Text>
+            ) : (
+              <Text type="secondary">Tất cả trình độ</Text>
+            )}
+          </Descriptions.Item>
+
           <Descriptions.Item label="Trình độ">
             <Tag color="orange">{match.level || "Tất cả"}</Tag>
           </Descriptions.Item>

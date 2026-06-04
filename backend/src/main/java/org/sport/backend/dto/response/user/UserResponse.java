@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.user;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.permission.PermissionResponse;
 
 import java.math.BigDecimal;
@@ -40,4 +41,11 @@ public class UserResponse {
     private String memberTier;
     private Integer totalMatches;
     private BigDecimal totalSpent;
+    private BigDecimal amountDue;
+    private Boolean isPaid;
+    private Integer playerCount;
+    private UUID registrationId;
+    private Boolean isCancelled;
+    private BankAccountResponse bankAccount;
+
 }

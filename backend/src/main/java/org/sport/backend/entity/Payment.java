@@ -60,6 +60,9 @@ public class Payment extends BaseEntity {
     @Column(name = "transaction_code")
     private String transactionCode;
 
+    @Column(name = "proof")
+    private String proof;
+
     @Column(name = "order_code", unique = true)
     Long orderCode;
 
@@ -70,4 +73,7 @@ public class Payment extends BaseEntity {
     @JoinColumn(name = "booking_intent_id")
     private BookingIntent bookingIntent;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "registration_id")
+    private MatchRegistration matchRegistration;
 }

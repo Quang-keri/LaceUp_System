@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Row,
   Col,
@@ -12,6 +13,7 @@ import {
   Tabs,
   Button,
   message,
+  Popconfirm,
 } from "antd";
 import {
   CalendarOutlined,
@@ -28,7 +30,8 @@ import SubmitResultModal from "./my-match/SubmitResultModal.tsx";
 const { Title, Text } = Typography;
 
 const MyMatchPage: React.FC = () => {
-  const { isLoading } = useAuth();
+  const { isLoading, user } = useAuth();
+  const navigate = useNavigate();
   const [matches, setMatches] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
@@ -71,6 +74,18 @@ const MyMatchPage: React.FC = () => {
     if (modalType === "SUBMIT") setIsSubmitModalOpen(true);
   };
 
+  const handleLeaveMatch = async (matchId: string) => {
+    try {
+      await matchService.leaveMatch(matchId);
+      message.success("Đã rút lui khỏi trận đấu thành công!");
+      fetchMyMatches();
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || "Không thể rời trận lúc này!",
+      );
+    }
+  };
+
   if (isLoading)
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
@@ -103,10 +118,20 @@ const MyMatchPage: React.FC = () => {
     );
   };
 
-  const renderStatusTag = (status: string) => {
+  const renderStatusTag = (status: string, isMeCancelled?: boolean) => {
+    if (isMeCancelled) {
+      return <Tag color="error">Đã rút lui</Tag>;
+    }
+
     switch (status) {
       case "OPEN":
         return <Tag color="blue">Đang chờ người</Tag>;
+      case "PENDING":
+        return (
+          <Tag color="gold" className="font-semibold">
+            Chờ thanh toán
+          </Tag>
+        );
       case "READY":
         return <Tag color="green">Sẵn sàng chiến</Tag>;
       case "PLAYING":
@@ -131,108 +156,179 @@ const MyMatchPage: React.FC = () => {
       children: (
         <List
           loading={loadingData}
-          dataSource={matches.filter((m) =>
-            [
-              "OPEN",
-              "READY",
-              "PLAYING",
-              "WAITING_RESULT_APPROVAL",
-              "DISPUTED",
-            ].includes(m.status),
-          )}
-          renderItem={(match) => (
-            <Card
-              size="small"
-              style={{
-                marginBottom: 16,
-                borderRadius: "12px",
-                border: "1px solid #e2e8f0",
-              }}
-            >
-              <Row align="middle" justify="space-between">
-                <Col xs={24} md={16}>
-                  <Space direction="vertical" size={2}>
-                    <Space wrap>
-                      <Title level={5} style={{ margin: 0, color: "#1e293b" }}>
-                        {match.title || `Giao lưu ${match.categoryName}`}
-                      </Title>
-                      {renderStatusTag(match.status)}
-                      {renderMatchTypeTag(
-                        match.matchType,
-                        match.minRank,
-                        match.maxRank,
-                        match.note,
+          dataSource={matches.filter((m) => {
+            const myParticipantInfo = m.participants?.find(
+              (p: any) => p.userId === user?.userId,
+            );
+            return (
+              [
+                "OPEN",
+                "PENDING",
+                "READY",
+                "PLAYING",
+                "WAITING_RESULT_APPROVAL",
+                "DISPUTED",
+              ].includes(m.status) && !myParticipantInfo?.isCancelled
+            );
+          })}
+          renderItem={(match) => {
+            // KHAI BÁO BIẾN Ở ĐẦY ĐỂ DÙNG CHUNG CHO CẢ KHỐI CARD
+            const myParticipantInfo = match.participants?.find(
+              (p: any) => p.userId === user?.userId,
+            );
+            const needsPayment =
+              myParticipantInfo &&
+              myParticipantInfo.amountDue > 0 &&
+              !myParticipantInfo.isPaid;
+
+            return (
+              <Card
+                size="small"
+                style={{
+                  marginBottom: 16,
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <Row align="middle" justify="space-between">
+                  <Col xs={24} md={12}>
+                    <Space direction="vertical" size={2}>
+                      <Space wrap>
+                        <Title
+                          level={5}
+                          style={{ margin: 0, color: "#1e293b" }}
+                        >
+                          {match.title || `Giao lưu ${match.categoryName}`}
+                        </Title>
+                        {renderStatusTag(
+                          match.status,
+                          myParticipantInfo?.isCancelled,
+                        )}
+                        {renderMatchTypeTag(
+                          match.matchType,
+                          match.minRank,
+                          match.maxRank,
+                          match.note,
+                        )}
+                      </Space>
+                      <Space
+                        style={{
+                          color: "#64748b",
+                          fontSize: "13px",
+                          marginTop: 6,
+                        }}
+                        wrap
+                      >
+                        <span>
+                          <CalendarOutlined className="text-orange-500" />{" "}
+                          {new Date(match.startTime).toLocaleTimeString(
+                            "vi-VN",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}{" "}
+                          {new Date(match.startTime).toLocaleDateString(
+                            "vi-VN",
+                          )}
+                        </span>
+                        <Divider type="vertical" />
+                        <span>
+                          <EnvironmentOutlined className="text-purple-500" />{" "}
+                          {match.courtName || "Tự thỏa thuận"}
+                        </span>
+                      </Space>
+                    </Space>
+                  </Col>
+
+                  <Col
+                    xs={24}
+                    md={12}
+                    style={{ textAlign: "right", marginTop: "8px" }}
+                  >
+                    <Space
+                      wrap
+                      style={{ justifyContent: "flex-end", width: "100%" }}
+                    >
+                      {["OPEN", "PENDING", "READY"].includes(match.status) && (
+                        <Popconfirm
+                          title="Xác nhận rời trận đấu"
+                          description={
+                            <div>
+                              Bạn có chắc muốn rút khỏi trận này?
+                              <br />
+                              <span style={{ color: "red" }}>
+                                Lưu ý: Rời trận dưới 24h sẽ mất phí đã đóng
+                                <br />
+                                và bị trừ 10 điểm uy tín.
+                              </span>
+                            </div>
+                          }
+                          onConfirm={() => handleLeaveMatch(match.matchId)}
+                          okText="Đồng ý rời"
+                          cancelText="Đóng"
+                        >
+                          <Button
+                            danger
+                            type="dashed"
+                            style={{ borderRadius: "8px" }}
+                          >
+                            Rút lui
+                          </Button>
+                        </Popconfirm>
+                      )}
+
+                      {needsPayment &&
+                        !["COMPLETED", "CANCELLED"].includes(match.status) && (
+                          <Button
+                            type="primary"
+                            onClick={() =>
+                              navigate(`/payment/match/${match.matchId}`)
+                            }
+                            className="bg-gradient-to-r from-orange-500 to-purple-600 border-none hover:opacity-90 font-medium"
+                            style={{ borderRadius: "8px" }}
+                          >
+                            Thanh toán ngay
+                          </Button>
+                        )}
+
+                      {match.status === "WAITING_RESULT_APPROVAL" ? (
+                        <Button
+                          type="primary"
+                          onClick={() => openModal(match, "APPROVE")}
+                          style={{
+                            borderRadius: "8px",
+                            background: "#f59e0b",
+                            borderColor: "#f59e0b",
+                          }}
+                        >
+                          Xử lý kết quả
+                        </Button>
+                      ) : ["READY", "PLAYING", "DISPUTED"].includes(
+                          match.status,
+                        ) && !needsPayment ? (
+                        <Button
+                          type="primary"
+                          onClick={() => openModal(match, "DETAIL")}
+                          className="bg-gradient-to-r from-orange-500 to-purple-600 border-none hover:opacity-90 font-medium"
+                          style={{ borderRadius: "8px" }}
+                        >
+                          Đội hình / Báo KQ
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => openModal(match, "DETAIL")}
+                          style={{ borderRadius: "8px" }}
+                        >
+                          Xem chi tiết
+                        </Button>
                       )}
                     </Space>
-                    <Space
-                      style={{
-                        color: "#64748b",
-                        fontSize: "13px",
-                        marginTop: 6,
-                      }}
-                      wrap
-                    >
-                      <span>
-                        <CalendarOutlined className="text-orange-500" />{" "}
-                        {new Date(match.startTime).toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        {new Date(match.startTime).toLocaleDateString("vi-VN")}
-                      </span>
-                      <Divider type="vertical" />
-                      <span>
-                        <EnvironmentOutlined className="text-purple-500" />{" "}
-                        {match.courtName || "Tự thỏa thuận"}
-                      </span>
-                    </Space>
-                  </Space>
-                </Col>
-                <Col
-                  xs={24}
-                  md={8}
-                  style={{ textAlign: "right", marginTop: "8px" }}
-                >
-                  <Space
-                    wrap
-                    style={{ justifyContent: "flex-end", width: "100%" }}
-                  >
-                    {match.status === "WAITING_RESULT_APPROVAL" ? (
-                      <Button
-                        type="primary"
-                        onClick={() => openModal(match, "APPROVE")}
-                        style={{
-                          borderRadius: "8px",
-                          background: "#f59e0b",
-                          borderColor: "#f59e0b",
-                        }}
-                      >
-                        Xử lý kết quả
-                      </Button>
-                    ) : ["READY", "PLAYING", "DISPUTED"].includes(
-                        match.status,
-                      ) ? (
-                      <Button
-                        type="primary"
-                        onClick={() => openModal(match, "DETAIL")}
-                        className="bg-gradient-to-r from-orange-500 to-purple-600 border-none hover:opacity-90 font-medium"
-                        style={{ borderRadius: "8px" }}
-                      >
-                        Đội hình / Báo KQ
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => openModal(match, "DETAIL")}
-                        style={{ borderRadius: "8px" }}
-                      >
-                        Xem chi tiết
-                      </Button>
-                    )}
-                  </Space>
-                </Col>
-              </Row>
-            </Card>
-          )}
+                  </Col>
+                </Row>
+              </Card>
+            );
+          }}
         />
       ),
     },
@@ -242,55 +338,71 @@ const MyMatchPage: React.FC = () => {
       children: (
         <List
           loading={loadingData}
-          dataSource={matches.filter((m) =>
-            ["COMPLETED", "CANCELLED"].includes(m.status),
-          )}
-          renderItem={(match) => (
-            <Card
-              size="small"
-              style={{
-                marginBottom: 16,
-                borderRadius: "12px",
-                background: "#f8fafc",
-                border: "none",
-              }}
-            >
-              <Row align="middle" justify="space-between">
-                <Col>
-                  <Space direction="vertical" size={2}>
-                    <Space wrap>
-                      <Text
-                        strong
-                        style={{ color: "#475569", fontSize: "15px" }}
-                      >
-                        {match.title || `Giao lưu ${match.categoryName}`}
+          dataSource={matches.filter((m) => {
+            const myParticipantInfo = m.participants?.find(
+              (p: any) => p.userId === user?.userId,
+            );
+            return (
+              ["COMPLETED", "CANCELLED"].includes(m.status) ||
+              myParticipantInfo?.isCancelled
+            );
+          })}
+          renderItem={(match) => {
+            // FIX LỖI Ở ĐÂY: Phải khai báo biến trước khi return giao diện
+            const myParticipantInfo = match.participants?.find(
+              (p: any) => p.userId === user?.userId,
+            );
+
+            return (
+              <Card
+                size="small"
+                style={{
+                  marginBottom: 16,
+                  borderRadius: "12px",
+                  background: "#f8fafc",
+                  border: "none",
+                }}
+              >
+                <Row align="middle" justify="space-between">
+                  <Col>
+                    <Space direction="vertical" size={2}>
+                      <Space wrap>
+                        <Text
+                          strong
+                          style={{ color: "#475569", fontSize: "15px" }}
+                        >
+                          {match.title || `Giao lưu ${match.categoryName}`}
+                        </Text>
+                        {renderStatusTag(
+                          match.status,
+                          myParticipantInfo?.isCancelled,
+                        )}
+                        {renderMatchTypeTag(
+                          match.matchType,
+                          match.minRank,
+                          match.maxRank,
+                          match.note,
+                        )}
+                      </Space>
+                      <Text type="secondary" style={{ fontSize: "13px" }}>
+                        {new Date(match.startTime).toLocaleDateString("vi-VN")}{" "}
+                        • {match.courtName || "Sân tự do"}
                       </Text>
-                      {renderStatusTag(match.status)}
-                      {renderMatchTypeTag(
-                        match.matchType,
-                        match.minRank,
-                        match.maxRank,
-                        match.note,
-                      )}
                     </Space>
-                    <Text type="secondary" style={{ fontSize: "13px" }}>
-                      {new Date(match.startTime).toLocaleDateString("vi-VN")} •{" "}
-                      {match.courtName || "Sân tự do"}
-                    </Text>
-                  </Space>
-                </Col>
-                <Col>
-                  <Button
-                    onClick={() => openModal(match, "DETAIL")}
-                    type="link"
-                    className="text-purple-600 hover:text-purple-700 font-semibold"
-                  >
-                    Chi tiết
-                  </Button>
-                </Col>
-              </Row>
-            </Card>
-          )}
+                  </Col>
+                  <Col>
+                    <Button
+                      onClick={() => openModal(match, "DETAIL")}
+                      type="link"
+                      className="text-purple-600 hover:text-purple-700 font-semibold"
+                    >
+                      Chi tiết
+                    </Button>
+                  </Col>
+                </Row>
+              </Card>
+            );
+          }}
         />
       ),
     },

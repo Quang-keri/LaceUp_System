@@ -1,9 +1,7 @@
-// lib/models/user.dart
+import 'bank_account.dart';
 
-// 1. Enum cho Gender
 enum Gender { MALE, FEMALE, OTHER }
 
-// Extension để dễ dàng parse JSON thành Enum và ngược lại
 extension GenderExtension on Gender {
   String get name => toString().split('.').last;
 }
@@ -18,15 +16,12 @@ Gender? _parseGender(String? value) {
   }
 }
 
-// ----------------------------------------------------
-// 2. Category Rank Model
-// ----------------------------------------------------
 class CategoryRankResponse {
   final int categoryId;
   final String categoryName;
-  final double rankPoint; // number -> double
+  final double rankPoint;
   final String displayRank;
-  final int totalMatches; // number -> int
+  final int totalMatches;
   final int totalWins;
   final int currentWinStreak;
   final double winRate;
@@ -56,9 +51,6 @@ class CategoryRankResponse {
   }
 }
 
-// ----------------------------------------------------
-// 3. User Response Model
-// ----------------------------------------------------
 class UserResponse {
   final String userId;
   final String userName;
@@ -78,6 +70,13 @@ class UserResponse {
   final int? teamNumber;
   final List<CategoryRankResponse>? categoryRanks;
 
+  final String? registrationId;
+  final double? amountDue;
+  final bool? isPaid;
+  final int? playerCount;
+
+  final BankAccountResponse? bankAccount;
+
   UserResponse({
     required this.userId,
     required this.userName,
@@ -95,6 +94,12 @@ class UserResponse {
     this.isDepositConfirmed,
     this.teamNumber,
     this.categoryRanks,
+
+    this.registrationId,
+    this.amountDue,
+    this.isPaid,
+    this.playerCount,
+    this.bankAccount,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
@@ -102,7 +107,7 @@ class UserResponse {
       userId: json['userId'] ?? '',
       userName: json['userName'] ?? '',
       email: json['email'] ?? '',
-      gender: _parseGender(json['gender']) ?? Gender.OTHER, // Mặc định OTHER nếu lỗi
+      gender: _parseGender(json['gender']) ?? Gender.OTHER,
       phone: json['phone'] ?? '',
       dateOfBirth: json['dateOfBirth'] ?? '',
       age: json['age'] ?? 0,
@@ -121,13 +126,18 @@ class UserResponse {
           .map((i) => CategoryRankResponse.fromJson(i))
           .toList()
           : null,
+
+      registrationId: json['registrationId']?.toString(),
+      amountDue: double.tryParse(json['amountDue']?.toString() ?? '0'),
+      isPaid: json['isPaid'] as bool?,
+      playerCount: int.tryParse(json['playerCount']?.toString() ?? '1'),
+      bankAccount: json['bankAccount'] != null
+          ? BankAccountResponse.fromJson(json['bankAccount'])
+          : null,
     );
   }
 }
 
-// ----------------------------------------------------
-// 4. User Dashboard Response Model
-// ----------------------------------------------------
 class UserDashboardResponse {
   final String userId;
   final String userName;

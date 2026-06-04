@@ -2,7 +2,6 @@ package org.sport.backend.repository;
 
 import jakarta.persistence.LockModeType;
 import org.sport.backend.constant.MatchStatus;
-import org.sport.backend.entity.Court;
 import org.sport.backend.entity.Match;
 import org.sport.backend.entity.User;
 import org.springframework.data.domain.Page;
@@ -26,21 +25,12 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
     @Query("SELECT m FROM Match m WHERE m.matchId = :id")
     Optional<Match> findByIdWithLock(UUID id);
 
-    List<Match> findByStatusIn(List<MatchStatus> statuses);
-
-    @Query("SELECT m FROM Match m " +
-            "WHERE m.court.rentalArea.owner = :owner " +
-            "OR m.host = :owner")
-    Page<Match> findByOwnerSystem(User owner, Pageable pageable);
-
     @Query("SELECT DISTINCT m FROM Match m " +
-            "LEFT JOIN m.registrations r " +
-            "WHERE m.host = :user OR r.user = :user")
+            "JOIN m.registrations r " +
+            "WHERE r.user = :user")
     Page<Match> findMatchesByParticipantOrHost(@Param("user") User user, Pageable pageable);
 
     List<Match> findByIsRecurringTrue();
-
-    boolean existsByCourtAndStartTime(Court court, LocalDateTime localDateTime);
 
     List<Match> findByStatus(MatchStatus status);
 
@@ -51,6 +41,7 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
     );
 
     Optional<Match> findByRoomCode(String roomCode);
+
     boolean existsByRoomCode(String roomCode);
 
     @Query("SELECT m FROM Match m WHERE m.status IN :statuses AND m.startTime <= :thresholdTime")
@@ -71,17 +62,9 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             @Param("excludeMatchId") UUID excludeMatchId
     );
 
-//    @Query("SELECT COUNT(m) > 0 FROM Match m " +
-//            "WHERE m.court.courtId = :courtId " +
-//            "AND m.status NOT IN :excludedStatuses " +
-//            "AND m.startTime < :endTime AND m.endTime > :startTime " +
-//            "AND (:excludeMatchId IS NULL OR m.matchId != :excludeMatchId)")
-//    boolean existsConflictMatch(
-//            @Param("courtId") UUID courtId,
-//            @Param("startTime") LocalDateTime startTime,
-//            @Param("endTime") LocalDateTime endTime,
-//            @Param("excludeMatchId") UUID excludeMatchId,
-//            @Param("excludedStatuses") List<MatchStatus> excludedStatuses
-//    );
+    List<Match> findByStatusAndEndTimeBefore(
+            MatchStatus status,
+            LocalDateTime endTime
+    );
 
 }

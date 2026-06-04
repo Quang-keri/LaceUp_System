@@ -1,9 +1,49 @@
 import dayjs from "dayjs";
 import { useRef, useState, useEffect } from "react";
-import { message } from "antd";
 
-const generateTimeSlots = (openTimeStr: string, closeTimeStr: string) => {
-  const slots = [];
+import type { CourtCopyResponse } from "../../../types/court";
+import type { SlotResponse } from "../../../types/slot";
+
+export interface TimelineCourt extends Omit<CourtCopyResponse, "courtCopyId"> {
+  courtCopyId: string | number;
+  courtId: string | number;
+  courtName: string;
+  categoryName?: string;
+  slots?: SlotResponse[];
+}
+
+export interface SelectedBlock {
+  courtCopyId: string | number;
+  courtCode: string;
+  courtId: string | number;
+  courtName: string;
+  categoryName?: string;
+  date: string;
+  startIndex: number;
+  endIndex: number;
+  court: TimelineCourt;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+}
+
+interface CourtScheduleTimelineProps {
+  courts: TimelineCourt[];
+  selectedDate: dayjs.Dayjs;
+  onSelectSlot?: (
+    courtCopy: TimelineCourt,
+    time: string,
+    duration: number,
+  ) => void;
+  openTime?: string;
+  closeTime?: string;
+  selectedSlots?: SelectedBlock[];
+  setSelectedSlots: React.Dispatch<React.SetStateAction<SelectedBlock[]>>;
+  activeTab: "booking" | "match";
+}
+
+const generateTimeSlots = (openTimeStr?: string, closeTimeStr?: string) => {
+  const slots: string[] = [];
   const startHour = openTimeStr ? parseInt(openTimeStr.split(":")[0], 10) : 5;
   const endHour = closeTimeStr ? parseInt(closeTimeStr.split(":")[0], 10) : 22;
 
@@ -29,13 +69,15 @@ export default function CourtScheduleTimeline({
   closeTime,
   selectedSlots = [],
   setSelectedSlots,
-}: any) {
+  activeTab,
+}: CourtScheduleTimelineProps) {
   const timeSlots = generateTimeSlots(openTime, closeTime);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
     setSelectedSlots?.([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const handleScroll = () => {
@@ -59,28 +101,33 @@ export default function CourtScheduleTimeline({
     }
   };
 
-  const getSlotAtTime = (courtCopy: any, time: string) => {
+  const getSlotAtTime = (
+    courtCopy: TimelineCourt,
+    time: string,
+  ): SlotResponse | null => {
     const allSlots = courtCopy.slots || [];
     if (allSlots.length === 0) return null;
 
     const slotMinute = timeToMinutes(time);
 
-    return allSlots.find((slot: any) => {
-      const start = dayjs(slot.startTime);
-      const end = dayjs(slot.endTime);
+    return (
+      allSlots.find((slot) => {
+        if (!slot.startTime || !slot.endTime) return false;
+        const start = dayjs(slot.startTime);
+        const end = dayjs(slot.endTime);
 
-      if (!start.isSame(selectedDate, "day")) return false;
+        if (!start.isSame(selectedDate, "day")) return false;
 
-      const startMinute = start.hour() * 60 + start.minute();
-      const endMinute = end.hour() * 60 + end.minute();
+        const startMinute = start.hour() * 60 + start.minute();
+        const endMinute = end.hour() * 60 + end.minute();
 
-      return slotMinute >= startMinute && slotMinute < endMinute;
-    });
+        return slotMinute >= startMinute && slotMinute < endMinute;
+      }) || null
+    );
   };
 
-  // Thuật toán chọn / hủy slot linh hoạt (Cho phép chọn nhiều khung giờ rời rạc)
   const handleSlotClick = (
-    courtCopy: any,
+    courtCopy: TimelineCourt,
     idx: number,
     slotStatus?: string,
   ) => {
@@ -88,84 +135,120 @@ export default function CourtScheduleTimeline({
       return;
     }
 
-    setSelectedSlots((prev: any[]) => {
-      // 1. Tách riêng các lựa chọn của các sân khác và sân hiện tại đang click
-      const otherCourts = prev.filter(
+    let nextSelectedSlots: SelectedBlock[];
+
+    const createNewBlock = (index: number) => ({
+      courtCopyId: courtCopy.courtCopyId,
+      courtCode: courtCopy.courtCode,
+      courtId: courtCopy.courtId,
+      courtName: courtCopy.courtName,
+      categoryName: courtCopy.categoryName,
+      date: selectedDate.format("YYYY-MM-DD"),
+      startIndex: index,
+      endIndex: index,
+      court: courtCopy,
+    });
+
+    if (activeTab === "match") {
+      const myBlocks = selectedSlots.filter(
+        (b) => b.courtCopyId === courtCopy.courtCopyId,
+      );
+      let newBlocks: SelectedBlock[] = [];
+
+      if (myBlocks.length === 0) {
+        newBlocks = [createNewBlock(idx)];
+      } else {
+        const block = { ...myBlocks[0] };
+
+        if (idx === block.startIndex - 1) {
+          block.startIndex = idx;
+          newBlocks = [block];
+        } else if (idx === block.endIndex + 1) {
+          block.endIndex = idx;
+          newBlocks = [block];
+        } else if (idx === block.startIndex) {
+          block.startIndex += 1;
+          if (block.startIndex <= block.endIndex) newBlocks = [block];
+        } else if (idx === block.endIndex) {
+          block.endIndex -= 1;
+          if (block.startIndex <= block.endIndex) newBlocks = [block];
+        } else {
+          newBlocks = [createNewBlock(idx)];
+        }
+      }
+
+      const finalBlocks = newBlocks.map((b) => ({
+        ...b,
+        startTime: timeSlots[b.startIndex],
+        endTime: timeSlots[b.endIndex + 1] || closeTime?.slice(0, 5) || "22:00",
+        duration: (b.endIndex - b.startIndex + 1) * 0.5,
+      }));
+
+      nextSelectedSlots = finalBlocks;
+
+      if (finalBlocks.length > 0) {
+        onSelectSlot?.(
+          courtCopy,
+          finalBlocks[0].startTime,
+          finalBlocks[0].duration,
+        );
+      } else {
+        onSelectSlot?.(courtCopy, "", 0);
+      }
+    } else {
+      const otherCourts = selectedSlots.filter(
         (item) => item.courtCopyId !== courtCopy.courtCopyId,
       );
-      let myBlocks = prev.filter(
+      const myBlocks = selectedSlots.filter(
         (item) => item.courtCopyId === courtCopy.courtCopyId,
       );
 
-      // 2. Tìm xem ô click (idx) có nằm trong block nào đã chọn trước đó không
-      const clickedInsideIndex = myBlocks.findIndex(
+      const clickedIdx = myBlocks.findIndex(
         (b) => idx >= b.startIndex && idx <= b.endIndex,
       );
 
-      if (clickedInsideIndex !== -1) {
-        // TRƯỜNG HỢP A: Bấm vào ô đã chọn -> HỦY (Cắt hoặc thu hẹp block)
-        const b = myBlocks[clickedInsideIndex];
-        const newBlocks = [];
-
-        // Nếu ô click không phải là ô đầu tiên, tạo phần đầu của block
-        if (idx > b.startIndex) {
-          newBlocks.push({ ...b, endIndex: idx - 1 });
-        }
-        // Nếu ô click không phải là ô cuối cùng, tạo phần đuôi của block
-        if (idx < b.endIndex) {
-          newBlocks.push({ ...b, startIndex: idx + 1 });
-        }
-        // Thay thế block cũ bằng các block mới (nếu bấm ô duy nhất thì mảng newBlocks rỗng -> Xóa luôn)
-        myBlocks.splice(clickedInsideIndex, 1, ...newBlocks);
+      if (clickedIdx !== -1) {
+        const b = myBlocks[clickedIdx];
+        myBlocks.splice(clickedIdx, 1);
+        if (idx > b.startIndex) myBlocks.push({ ...b, endIndex: idx - 1 });
+        if (idx < b.endIndex) myBlocks.push({ ...b, startIndex: idx + 1 });
       } else {
-        // TRƯỜNG HỢP B: Bấm vào ô trống -> CHỌN MỚI
-        myBlocks.push({
-          courtCopyId: courtCopy.courtCopyId,
-          courtCode: courtCopy.courtCode,
-          courtId: courtCopy.courtId,
-          courtName: courtCopy.courtName,
-          categoryName: courtCopy.categoryName,
-          date: selectedDate.format("YYYY-MM-DD"),
-          startIndex: idx,
-          endIndex: idx,
-          court: courtCopy, // Lưu lại nguyên object court để bên Modal tính toán priceRules
-        });
-
-        // Sort lại theo thời gian
-        myBlocks.sort((a, b) => a.startIndex - b.startIndex);
-
-        // Nối các block liền kề nhau thành 1 block lớn
-        const merged = [];
-        for (const block of myBlocks) {
-          if (merged.length === 0) {
-            merged.push(block);
-          } else {
-            const last = merged[merged.length - 1];
-            // Nếu block này sát ngay sau block trước -> Gộp lại
-            if (last.endIndex + 1 === block.startIndex) {
-              last.endIndex = block.endIndex;
-            } else {
-              merged.push(block);
-            }
-          }
-        }
-        myBlocks = merged;
+        myBlocks.push(createNewBlock(idx));
       }
 
-      // 3. Tính toán lại startTime, endTime, duration chuẩn chỉnh cho từng block của sân này
-      myBlocks = myBlocks.map((b) => {
-        const startTime = timeSlots[b.startIndex];
-        const endTime =
-          timeSlots[b.endIndex + 1] || closeTime?.slice(0, 5) || "22:00";
-        const duration = (b.endIndex - b.startIndex + 1) * 0.5;
-        return { ...b, startTime, endTime, duration };
-      });
+      myBlocks.sort((a, b) => a.startIndex - b.startIndex);
+      const merged: SelectedBlock[] = [];
+      for (const block of myBlocks) {
+        if (
+          merged.length > 0 &&
+          merged[merged.length - 1].endIndex + 1 === block.startIndex
+        ) {
+          merged[merged.length - 1].endIndex = block.endIndex;
+        } else {
+          merged.push(block);
+        }
+      }
 
-      // 4. Trả về mảng tổng
-      return [...otherCourts, ...myBlocks];
-    });
+      const finalBlocks = merged.map((b) => ({
+        ...b,
+        startTime: timeSlots[b.startIndex],
+        endTime: timeSlots[b.endIndex + 1] || closeTime?.slice(0, 5) || "22:00",
+        duration: (b.endIndex - b.startIndex + 1) * 0.5,
+      }));
 
-    onSelectSlot?.(courtCopy, timeSlots[idx], 0.5);
+      nextSelectedSlots = [...otherCourts, ...finalBlocks];
+
+      const activeBlock = finalBlocks.find(
+        (b) => idx >= b.startIndex && idx <= b.endIndex,
+      );
+      if (activeBlock && activeBlock.startTime && activeBlock.duration) {
+        onSelectSlot?.(courtCopy, activeBlock.startTime, activeBlock.duration);
+      } else {
+        onSelectSlot?.(courtCopy, "", 0);
+      }
+    }
+
+    setSelectedSlots(nextSelectedSlots);
   };
 
   return (
@@ -195,8 +278,7 @@ export default function CourtScheduleTimeline({
             ))}
           </div>
 
-          {courts.map((court: any) => {
-            // Lấy TẤT CẢ các khoảng thời gian (blocks) đang chọn của sân này
+          {courts.map((court) => {
             const myBlocks = selectedSlots.filter(
               (item) => item.courtCopyId === court.courtCopyId,
             );
@@ -217,7 +299,6 @@ export default function CourtScheduleTimeline({
                   {timeSlots.map((time, idx) => {
                     const slot = getSlotAtTime(court, time);
 
-                    // Kiểm tra xem idx hiện tại có rơi vào BẤT KỲ block nào của sân này không
                     const activeBlock = myBlocks.find(
                       (b) => idx >= b.startIndex && idx <= b.endIndex,
                     );
@@ -234,7 +315,7 @@ export default function CourtScheduleTimeline({
                           break;
                         case "MATCH_FULL":
                           dynamicClasses =
-                            "border-r border-gray-300 bg-[#9156F1]";
+                            "border-r border-gray-300 bg-[#ea580c]";
                           break;
                         case "MATCH_PENDING":
                           dynamicClasses =
@@ -247,17 +328,15 @@ export default function CourtScheduleTimeline({
                       }
                     }
 
-                    if (isSelected) {
+                    if (isSelected && activeBlock) {
                       dynamicClasses =
                         "bg-orange-50 border-y-[2px] border-y-[#ea580c] z-10 shadow-sm";
 
-                      // Bo góc và viền trái cho ô đầu tiên của mỗi block
                       if (idx === activeBlock.startIndex) {
                         dynamicClasses +=
                           " border-l-[2px] border-l-[#ea580c] rounded-l-md";
                       }
 
-                      // Bo góc và viền phải cho ô cuối cùng của mỗi block
                       if (idx === activeBlock.endIndex) {
                         dynamicClasses +=
                           " border-r-[2px] border-r-[#ea580c] rounded-r-md";

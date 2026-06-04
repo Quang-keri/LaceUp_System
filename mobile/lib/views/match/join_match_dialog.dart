@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../models/match.dart';
 import '../../services/match_service.dart';
@@ -23,33 +24,49 @@ class JoinMatchDialog extends StatefulWidget {
 class _JoinMatchDialogState extends State<JoinMatchDialog> {
   bool _isLoading = false;
   Map<String, int> _teamAssignments = {};
+  int _playerCount = 1;
 
   @override
   void initState() {
     super.initState();
     for (var p in widget.match.participants) {
-      // Giả sử UserResponse có thuộc tính teamNumber.
-      // Nếu không có trong model, bạn có thể bổ sung vào UserResponse.
-      // Tạm thời set mặc định nếu ko có
-      // _teamAssignments[p.userId] = p.teamNumber ?? 0;
+      if (p.teamNumber != null) {
+        _teamAssignments[p.userId] = p.teamNumber!;
+      }
     }
   }
 
-  bool get isParticipant => widget.match.participants.any((p) => p.userId == widget.currentUserId);
-  bool get isHost => widget.match.hostName == widget.currentUserName;
+  bool get isParticipant =>
+      widget.match.participants.any((p) => p.userId == widget.currentUserId);
+
+  bool get isHost => widget.match.host?.userName == widget.currentUserName;
+
+  int get maxAllowed {
+    int maxTeamSize = (widget.match.maxPlayers + 1) ~/ 2;
+    return math.min(maxTeamSize, widget.match.remainingSlots);
+  }
 
   Future<void> _handleJoin() async {
     setState(() => _isLoading = true);
     try {
-      await matchService.joinMatch(widget.match.matchId);
+      await matchService.joinMatch(widget.match.matchId, _playerCount);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tham gia trận thành công!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tham gia trận thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
         widget.onSuccess();
+
         Navigator.pop(context);
+        Navigator.pushNamed(context, '/my-matches');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -57,19 +74,32 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
   }
 
   Future<void> _handleSaveTeams() async {
-    final team1 = _teamAssignments.entries.where((e) => e.value == 1).map((e) => e.key).toList();
-    final team2 = _teamAssignments.entries.where((e) => e.value == 2).map((e) => e.key).toList();
+    final team1 = _teamAssignments.entries
+        .where((e) => e.value == 1)
+        .map((e) => e.key)
+        .toList();
+    final team2 = _teamAssignments.entries
+        .where((e) => e.value == 2)
+        .map((e) => e.key)
+        .toList();
 
     setState(() => _isLoading = true);
     try {
       await matchService.divideTeams(widget.match.matchId, team1, team2);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lưu đội hình thành công!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lưu đội hình thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
         widget.onSuccess();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -83,33 +113,75 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
       actions.add(
         ElevatedButton(
           onPressed: _isLoading ? null : _handleSaveTeams,
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.purple,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
           child: _isLoading
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Lưu Đội Hình', style: TextStyle(color: Colors.white)),
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text(
+                  'Lưu Đội Hình',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
         ),
       );
     }
 
-    if (widget.match.status == "OPEN" || (widget.match.status == "CONFIRMED" && widget.match.remainingSlots > 0)) {
+    if (widget.match.status == "OPEN" ||
+        (widget.match.status == "CONFIRMED" &&
+            widget.match.remainingSlots > 0)) {
       if (isParticipant) {
-        actions.add(const ElevatedButton(onPressed: null, child: Text('Bạn đã tham gia')));
+        actions.add(
+          const ElevatedButton(onPressed: null, child: Text('Đã tham gia')),
+        );
       } else {
         actions.add(
           ElevatedButton(
             onPressed: _isLoading ? null : _handleJoin,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: const Text('Tham Gia Ngay', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Xác nhận',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         );
       }
     } else if (widget.match.status == "WAITING_DEPOSIT") {
-      actions.add(const ElevatedButton(onPressed: null, child: Text('Đang chờ chốt cọc')));
+      actions.add(
+        const ElevatedButton(onPressed: null, child: Text('Chờ chốt cọc')),
+      );
     } else if (['FULL', 'CONFIRMED'].contains(widget.match.status)) {
-      actions.add(const ElevatedButton(onPressed: null, child: Text('Đã đủ người')));
+      actions.add(
+        const ElevatedButton(onPressed: null, child: Text('Đã đủ người')),
+      );
     }
 
-    actions.add(TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')));
+    actions.add(
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Đóng', style: TextStyle(color: Colors.grey)),
+      ),
+    );
 
     return actions.reversed.toList();
   }
@@ -120,49 +192,172 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(20),
-        constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+        constraints: const BoxConstraints(maxHeight: 650, maxWidth: 500),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Chi tiết trận đấu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Chi tiết trận đấu',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+            ),
             const SizedBox(height: 16),
 
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue.shade100)),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.purple.shade100),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.match.title.isNotEmpty ? widget.match.title : 'Giao lưu ${widget.match.categoryName}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
+                  Text(
+                    widget.match.title.isNotEmpty
+                        ? widget.match.title
+                        : 'Giao lưu ${widget.match.categoryName}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple.shade900,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Row(children: [const Icon(Icons.location_on, size: 16, color: Colors.blue), const SizedBox(width: 8), Expanded(child: Text(widget.match.hasCourt ? widget.match.courtName : 'Tự thỏa thuận'))]),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 18,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.match.hasCourt
+                              ? widget.match.courtName
+                              : 'Tự thỏa thuận',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
+            if (!isParticipant &&
+                (widget.match.status == "OPEN" ||
+                    (widget.match.status == "CONFIRMED" &&
+                        widget.match.remainingSlots > 0))) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.orange.shade200),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Số lượng tham gia:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          color: Colors.orange,
+                          onPressed: _playerCount > 1
+                              ? () => setState(() => _playerCount--)
+                              : null,
+                        ),
+                        Text(
+                          '$_playerCount',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          color: Colors.orange,
+                          onPressed: _playerCount < maxAllowed
+                              ? () => setState(() => _playerCount++)
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Danh sách tham gia', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Danh sách tham gia',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(20)),
-                  child: Text('${widget.match.currentPlayers} / ${widget.match.maxPlayers}', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${widget.match.currentPlayers} / ${widget.match.maxPlayers}',
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
+
             if (isHost)
               Container(
                 margin: const EdgeInsets.only(top: 8),
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: const Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, size: 16, color: Colors.purple),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 16,
+                      color: Colors.orange,
+                    ),
                     SizedBox(width: 8),
-                    Expanded(child: Text('Bạn là Chủ phòng. Hãy chia đội cho người chơi!', style: TextStyle(fontSize: 12, color: Colors.purple))),
+                    Expanded(
+                      child: Text(
+                        'Bạn là Chủ phòng. Hãy chia đội cho người chơi!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -170,42 +365,103 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
 
             Expanded(
               child: Container(
-                decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: ListView.separated(
                   itemCount: widget.match.participants.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final player = widget.match.participants[index];
+                    final playerCount =
+                        player.playerCount ?? 1;
+
                     return ListTile(
-                      leading: CircleAvatar(backgroundColor: Colors.blue, child: Text(player.userName[0].toUpperCase(), style: const TextStyle(color: Colors.white))),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.purple,
+                        child: Text(
+                          player.userName[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                       title: Row(
                         children: [
-                          Text(player.userName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          if (player.userName == widget.match.hostName)
+                          Expanded(
+                            child: Text(
+                              player.userName +
+                                  (playerCount > 1 ? ' (+$playerCount)' : ''),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (player.userName == widget.match.host?.userName)
                             Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(4)),
-                              child: const Text('HOST', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                            )
+                              margin: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'HOST',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                      trailing: isHost ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('1'),
-                            selected: _teamAssignments[player.userId] == 1,
-                            onSelected: (val) => setState(() => _teamAssignments[player.userId] = 1),
-                          ),
-                          const SizedBox(width: 4),
-                          ChoiceChip(
-                            label: const Text('2'),
-                            selected: _teamAssignments[player.userId] == 2,
-                            onSelected: (val) => setState(() => _teamAssignments[player.userId] = 2),
-                          ),
-                        ],
-                      ) : null,
+                      trailing: isHost
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ChoiceChip(
+                                  label: const Text('Đội 1'),
+                                  selectedColor: Colors.purple.shade100,
+                                  selected:
+                                      _teamAssignments[player.userId] == 1,
+                                  onSelected: (val) => setState(
+                                    () => _teamAssignments[player.userId] = 1,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                ChoiceChip(
+                                  label: const Text('Đội 2'),
+                                  selectedColor: Colors.purple.shade100,
+                                  selected:
+                                      _teamAssignments[player.userId] == 2,
+                                  onSelected: (val) => setState(
+                                    () => _teamAssignments[player.userId] = 2,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : (player.teamNumber != null
+                                ? Text(
+                                    'Đội ${player.teamNumber}',
+                                    style: const TextStyle(
+                                      color: Colors.purple,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Chưa xếp đội',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  )),
                     );
                   },
                 ),
@@ -217,7 +473,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
               runSpacing: 8,
               alignment: WrapAlignment.end,
               children: _buildFooterActions(),
-            )
+            ),
           ],
         ),
       ),

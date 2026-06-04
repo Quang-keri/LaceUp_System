@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../models/match.dart';
 import '../../../services/match_service.dart';
 import 'approve_result_dialog.dart';
 import 'match_detail_bottom_sheet.dart';
+import 'match_payment_screen.dart';
 
 const Color kAppOrange = Colors.orange;
 const Color kAppPurple = Colors.purple;
@@ -48,6 +51,25 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     }
   }
 
+  Future<void> _handleLeaveMatch(String matchId) async {
+    try {
+      await matchService.leaveMatch(matchId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã rút lui khỏi trận đấu thành công!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _fetchMyMatches();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   void _openDetailBottomSheet(MatchResponse match) {
     showModalBottomSheet(
       context: context,
@@ -65,6 +87,54 @@ class _MyMatchScreenState extends State<MyMatchScreen>
       context: context,
       builder: (context) =>
           ApproveResultDialog(match: match, onSuccess: _fetchMyMatches),
+    );
+  }
+
+  void _showLeaveConfirmDialog(String matchId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Xác nhận rời trận',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text.rich(
+          TextSpan(
+            text: 'Bạn có chắc muốn rút khỏi trận này?\n\n',
+            children: [
+              TextSpan(
+                text:
+                    'Lưu ý: Rời trận dưới 24h sẽ mất phí đã đóng và bị trừ 10 điểm uy tín.',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Đóng', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade50,
+              elevation: 0,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              _handleLeaveMatch(matchId);
+            },
+            child: const Text(
+              'Đồng ý rời',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -197,6 +267,20 @@ class _MyMatchScreenState extends State<MyMatchScreen>
   }
 
   Widget _buildMatchCard(MatchResponse match) {
+    // 1. Tìm thông tin của user hiện tại trong danh sách participants
+    final authProvider = context.read<AuthProvider>();
+    final myUserId = authProvider.user?['userId'];
+
+    var myInfo = match.participants
+        .where((p) => p.userId == myUserId)
+        .firstOrNull;
+
+    // 2. Kiểm tra cờ thanh toán
+    bool needsPayment = false;
+    if (myInfo != null) {
+      needsPayment = (myInfo.amountDue ?? 0) > 0 && myInfo.isPaid != true;
+    }
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 2,
@@ -248,54 +332,110 @@ class _MyMatchScreenState extends State<MyMatchScreen>
               ],
             ),
             const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: match.status == 'WAITING_RESULT_APPROVAL'
-                  ? ElevatedButton(
-                      onPressed: () => _openApproveDialog(match),
+
+            // Dãy nút hành động
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                // Nút Rút lui
+                if (['OPEN', 'PENDING', 'READY'].contains(match.status))
+                  OutlinedButton(
+                    onPressed: () => _showLeaveConfirmDialog(match.matchId),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Rút lui'),
+                  ),
+
+                // Nút Thanh toán
+                if (needsPayment &&
+                    !['COMPLETED', 'CANCELLED'].contains(match.status))
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              MatchPaymentScreen(matchId: match.matchId),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kAppOrange,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Thanh toán ngay',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                // Nút Chức năng chính tuỳ trạng thái
+                if (match.status == 'WAITING_RESULT_APPROVAL')
+                  ElevatedButton(
+                    onPressed: () => _openApproveDialog(match),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kAppOrange,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Xử lý kết quả',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
+                else if ([
+                      'READY',
+                      'PLAYING',
+                      'DISPUTED',
+                    ].contains(match.status) &&
+                    !needsPayment)
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: kAppGradient,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () => _openDetailBottomSheet(match),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kAppOrange,
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       child: const Text(
-                        'Xử lý kết quả',
+                        'Đội hình / Báo KQ',
                         style: TextStyle(color: Colors.white),
                       ),
-                    )
-                  : ['READY', 'PLAYING', 'DISPUTED'].contains(match.status)
-                  ? Container(
-                      decoration: BoxDecoration(
-                        gradient: kAppGradient,
+                    ),
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: () => _openDetailBottomSheet(match),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade200,
+                      foregroundColor: Colors.black87,
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: ElevatedButton(
-                        onPressed: () => _openDetailBottomSheet(match),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'Đội hình / Báo KQ',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    )
-                  : ElevatedButton(
-                      onPressed: () => _openDetailBottomSheet(match),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade200,
-                        foregroundColor: Colors.black87,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Xem chi tiết'),
                     ),
+                    child: const Text('Xem chi tiết'),
+                  ),
+              ],
             ),
           ],
         ),

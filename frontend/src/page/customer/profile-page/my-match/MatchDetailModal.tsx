@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Radio, Tag, Avatar, Button, Spin, message, List } from "antd";
+import {
+  Modal,
+  Radio,
+  Tag,
+  Avatar,
+  Button,
+  Spin,
+  message,
+  List,
+  Popconfirm,
+} from "antd";
 import {
   FireOutlined,
   WarningOutlined,
@@ -15,6 +25,7 @@ import { useAuth } from "../../../../context/AuthContext.tsx";
 import matchService from "../../../../service/match/matchService.ts";
 import { matchResultService } from "../../../../service/match/matchResultService.ts";
 import ReportModal from "./ReportModal.tsx";
+import { useNavigate } from "react-router-dom";
 
 interface MatchDetailModalProps {
   isOpen: boolean;
@@ -32,6 +43,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
   match,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [teamAssignments, setTeamAssignments] = useState<
     Record<string, number>
@@ -97,6 +109,19 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
       message.error(error.response?.data?.message || "Lỗi lưu đội");
     } finally {
       setLoadingDivide(false);
+    }
+  };
+
+  const handleLeaveMatch = async () => {
+    try {
+      await matchService.leaveMatch(match.matchId);
+      message.success("Đã rút lui khỏi trận đấu thành công!");
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || "Không thể rời trận lúc này!",
+      );
     }
   };
 
@@ -347,47 +372,103 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
                           </span>
                         }
                         description={
-                          <span className="text-xs text-gray-500 mt-0.5 block">
-                            Điểm Rank:{" "}
-                            <span className="font-semibold text-gray-700">
-                              {displayRankPoint}
+                          <div className="flex flex-col gap-1 mt-1">
+                            <span className="text-xs text-gray-500">
+                              Điểm Rank:{" "}
+                              <span className="font-semibold text-gray-700">
+                                {displayRankPoint}
+                              </span>
                             </span>
-                          </span>
+
+                            {player.amountDue > 0 && (
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs font-semibold text-orange-600">
+                                  Cần góp:{" "}
+                                  {player.amountDue.toLocaleString("vi-VN")} đ
+                                </span>
+
+                                {player.isPaid ? (
+                                  <Tag
+                                    color="purple"
+                                    className="m-0 text-[10px] border-0 font-bold"
+                                  >
+                                    ĐÃ GÓP
+                                  </Tag>
+                                ) : (
+                                  <Tag
+                                    color="default"
+                                    className="m-0 text-[10px] border-0"
+                                  >
+                                    CHƯA GÓP
+                                  </Tag>
+                                )}
+
+                                {player.playerCount > 1 && (
+                                  <Tag
+                                    color="orange"
+                                    className="m-0 text-[10px] border-0"
+                                  >
+                                    +{player.playerCount - 1} slot
+                                  </Tag>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         }
                       />
 
                       <div className="ml-3 shrink-0 flex items-center gap-3">
                         {isMe && match.status !== "COMPLETED" ? (
-                          <Radio.Group
-                            size="small"
-                            buttonStyle="solid"
-                            value={teamAssignments[player.userId]}
-                            onChange={(e) =>
-                              setTeamAssignments((prev) => ({
-                                ...prev,
-                                [player.userId]: e.target.value,
-                              }))
-                            }
-                          >
-                            <Radio.Button
-                              value={1}
-                              disabled={
-                                teamAssignments[player.userId] !== 1 &&
-                                isTeam1Full
+                          player.isPaid || !player.amountDue ? (
+                            <Radio.Group
+                              size="small"
+                              buttonStyle="solid"
+                              value={teamAssignments[player.userId]}
+                              onChange={(e) =>
+                                setTeamAssignments((prev) => ({
+                                  ...prev,
+                                  [player.userId]: e.target.value,
+                                }))
                               }
                             >
-                              Đội 1
-                            </Radio.Button>
-                            <Radio.Button
-                              value={2}
-                              disabled={
-                                teamAssignments[player.userId] !== 2 &&
-                                isTeam2Full
-                              }
-                            >
-                              Đội 2
-                            </Radio.Button>
-                          </Radio.Group>
+                              <Radio.Button
+                                value={1}
+                                disabled={
+                                  teamAssignments[player.userId] !== 1 &&
+                                  isTeam1Full
+                                }
+                              >
+                                Đội 1
+                              </Radio.Button>
+                              <Radio.Button
+                                value={2}
+                                disabled={
+                                  teamAssignments[player.userId] !== 2 &&
+                                  isTeam2Full
+                                }
+                              >
+                                Đội 2
+                              </Radio.Button>
+                            </Radio.Group>
+                          ) : (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-[11px] font-semibold text-red-500 bg-red-50 px-2 py-1 rounded-md flex items-center gap-1">
+                                Chưa thanh toán
+                              </span>
+                              <Button
+                                size="small"
+                                type="primary"
+                                danger
+                                className="text-[10px] h-6 px-2 rounded"
+                                onClick={() => {
+                                  onClose();
+                                  navigate(`/payment/match/${match.matchId}`);
+                                }}
+                              >
+                                Nộp tiền ngay
+                              </Button>
+                            </div>
+                          )
                         ) : player.teamNumber ? (
                           <span className="font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-md text-xs">
                             Đội {player.teamNumber}
@@ -447,15 +528,46 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
         </div>
 
         <div className="pt-4 flex items-center justify-between border-t border-gray-100">
-          <Button
-            type="text"
-            danger
-            className="flex items-center gap-1.5 font-semibold text-rose-500 hover:bg-rose-50 px-3 h-10 rounded-lg"
-            onClick={() => setIsReportModalOpen(true)}
-          >
-            <Flag size={18} />
-            Báo cáo
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="text"
+              danger
+              className="flex items-center gap-1.5 font-semibold text-rose-500 hover:bg-rose-50 px-3 h-10 rounded-lg"
+              onClick={() => setIsReportModalOpen(true)}
+            >
+              <Flag size={18} />
+              Báo cáo
+            </Button>
+
+            {/* NÚT RÚT LUI TRONG MODAL */}
+            {["OPEN", "PENDING", "READY"].includes(match.status) && (
+              <Popconfirm
+                title="Xác nhận rời trận đấu"
+                description={
+                  <div>
+                    Bạn có chắc muốn rút khỏi trận này?
+                    <br />
+                    <span style={{ color: "red" }}>
+                      Lưu ý: Rời trận dưới 24h sẽ mất phí đã đóng
+                      <br />
+                      và bị trừ 10 điểm uy tín.
+                    </span>
+                  </div>
+                }
+                onConfirm={handleLeaveMatch}
+                okText="Đồng ý rời"
+                cancelText="Đóng"
+              >
+                <Button
+                  danger
+                  type="dashed"
+                  className="h-10 rounded-lg font-medium"
+                >
+                  Rút lui
+                </Button>
+              </Popconfirm>
+            )}
+          </div>
 
           <div className="flex gap-3">
             <Button

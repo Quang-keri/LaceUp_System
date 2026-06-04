@@ -8,6 +8,7 @@ import org.sport.backend.dto.request.chat.DivideTeamRequest;
 import org.sport.backend.dto.request.match.AutoMatchRequest;
 import org.sport.backend.dto.request.match.MatchRequest;
 import org.sport.backend.dto.response.match.MatchResponse;
+import org.sport.backend.dto.response.payment.CheckoutResponse;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,10 +17,11 @@ public interface MatchService {
 
     MatchResponse createMatch(MatchRequest request);
 
-    void joinMatch(UUID matchId);
+    @Transactional
+    CheckoutResponse joinMatch(UUID matchId, Integer playerCount);
 
     @Transactional
-    void joinByRoomCode(String roomCode);
+    void joinByRoomCode(String roomCode, Integer playerCount);
 
     @Transactional
     MatchResponse autoMatch(AutoMatchRequest request);
@@ -50,4 +52,7 @@ public interface MatchService {
     PageResponse<MatchResponse> getMyMatches(int page, int size);
 
     PageResponse<MatchResponse> getUserMatchHistory(UUID userId, int page, int size);
+
+    @Transactional
+    void leaveMatch(UUID matchId);
 }

@@ -130,7 +130,7 @@ export default function CourtBookingPanel({
                       - {item.endTime}
                     </p>
 
-                    <p className="text-xs font-medium text-[#9156F1] mt-1">
+                    <p className="text-xs font-medium text-orange-600 mt-1">
                       Loại sân: {item.categoryName || "Sân thể thao"}
                     </p>
 

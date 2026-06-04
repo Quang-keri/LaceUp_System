@@ -1,6 +1,6 @@
 import api from "../config/axios";
-import type { BookingListResponse, BookingResponse } from "../types/booking";
-import type { ApiResponse } from "../types/ApiResponse";
+import type {BookingListResponse, BookingResponse} from "../types/booking";
+import type {ApiResponse} from "../types/ApiResponse";
 
 class BookingService {
   async getPendingTransferBookings(rentalId: string, page = 1, size = 10) {
@@ -145,10 +145,9 @@ class BookingService {
   }
 
   async downloadInvoice(bookingId: string) {
-    const response = await api.get(`/bookings/${bookingId}/invoice/download`, {
+    return await api.get(`/bookings/${bookingId}/invoice/download`, {
       responseType: "blob",
     });
-    return response;
   }
 
   async collectRemainingPayment(bookingId: string) {
@@ -207,11 +206,10 @@ class BookingService {
     from?: string;
     to?: string;
   }) {
-    const response = await api.get(`/bookings/export/excel`, {
+    return await api.get(`/bookings/export/excel`, {
       params,
       responseType: "blob",
     });
-    return response;
   }
 }
 

@@ -25,4 +25,8 @@ public class UpdateUserRequest {
 
     @Past(message = "DOB_INVALID")
     private LocalDate dateOfBirth;
+
+    private String bankName;
+    private String accountNumber;
+    private String accountHolderName;
 }

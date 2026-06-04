@@ -1,6 +1,7 @@
 package org.sport.backend.mapper;
 
 import org.mapstruct.*;
+import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.user.CategoryRankResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Role;
@@ -16,11 +17,13 @@ import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", uses = {PermissionMapper.class})
 public interface UserMapper {
+
     @Mapping(target = "userId", source = "userId")
     @Mapping(source = "role", target = "role", qualifiedByName = "mapRoleName")
     @Mapping(source = "dateOfBirth", target = "age", qualifiedByName = "calculateAge")
     @Mapping(target = "permissions", expression = "java(mergePermissions(user))")
     @Mapping(target = "categoryRanks", expression = "java(mapAllRanks(user))")
+    @Mapping(target = "bankAccount", source = "bankAccount")
     UserResponse toUserResponse(User user);
 
     default Set<String> mergePermissions(User user) {
@@ -80,5 +83,20 @@ public interface UserMapper {
             return 0;
         }
         return Period.between(dateOfBirth, LocalDate.now()).getYears();
+    }
+
+    @Named("mapBankAccount")
+    default BankAccountResponse mapBankAccount(org.sport.backend.entity.BankAccount bankAccount) {
+        if (bankAccount == null) return null;
+        return BankAccountResponse.builder()
+                .bankAccountId(bankAccount.getBankAccountId())
+                .bankName(bankAccount.getBankName())
+                .accountNumber(bankAccount.getAccountNumber())
+                .accountHolderName(bankAccount.getAccountHolderName())
+                .branchName(bankAccount.getBranchName())
+                .qrCode(bankAccount.getQrCode())
+                .isVerified(bankAccount.getIsVerified())
+                .createdAt(bankAccount.getCreatedAt())
+                .build();
     }
 }

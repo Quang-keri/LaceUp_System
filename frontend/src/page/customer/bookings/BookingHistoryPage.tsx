@@ -228,6 +228,7 @@ const BookingHistoryPage: React.FC = () => {
         bookingId={selectedBookingId}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        onRefresh={() => fetchBookings(pagination.current, pagination.pageSize, statusFilter)}
       />
     </>
   );

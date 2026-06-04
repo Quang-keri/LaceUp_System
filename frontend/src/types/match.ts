@@ -4,9 +4,6 @@ import type { UserResponse } from "./user.ts";
 export interface MatchRequest {
   courtId: string | null;
   categoryId: number;
-  street: string;
-  ward: string;
-  cityId: number;
   startTime: string;
   endTime: string;
   maxPlayers: number;

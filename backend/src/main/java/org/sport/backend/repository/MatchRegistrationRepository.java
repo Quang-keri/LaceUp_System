@@ -23,6 +23,7 @@ public interface MatchRegistrationRepository extends JpaRepository<MatchRegistra
     @Query("SELECT COUNT(reg) FROM MatchRegistration reg WHERE reg.user.userId = :userId AND reg.match.status = 'COMPLETED'")
     long countPlayedMatches(@Param("userId") UUID userId);
 
-    @Query("SELECT COUNT(DISTINCT reg.match.category.categoryId) FROM MatchRegistration reg WHERE reg.user.userId = :userId AND reg.match.status = 'COMPLETED'")
-    long countDistinctCategoriesPlayed(@Param("userId") UUID userId);
+    @Query("SELECT r FROM MatchRegistration r WHERE r.match = :match AND r.user = :user AND (r.isCancelled = false OR r.isCancelled IS NULL)")
+    Optional<MatchRegistration> findActiveByMatchAndUser(@Param("match") Match match, @Param("user") User user);
+
 }

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/services/booking_service.dart';
 import 'package:mobile/utils/error_utils.dart';
-import 'package:mobile/views/profile/profile_screen.dart';
-
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -36,17 +34,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     setState(() => loadingIntents = true);
 
     try {
-      debugPrint('CALL API: /bookings/intent/me');
-
       final res = await bookingService.getMyBookingIntents();
-
-      debugPrint('BOOKING INTENTS RESPONSE = $res');
-
       setState(() {
         bookingIntents = res;
       });
     } catch (e) {
-      debugPrint('BOOKING INTENTS ERROR = $e');
       _showError(e);
     } finally {
       if (mounted) setState(() => loadingIntents = false);
@@ -84,12 +76,71 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     }
   }
 
+  Future<void> _handleCancelBooking(String bookingId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Xác nhận hủy',
+          style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Bạn có chắc chắn muốn hủy lịch đặt sân này không? Tiền cọc sẽ không được hoàn lại.',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Đóng', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Đồng ý hủy',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    Navigator.pop(context);
+
+    setState(() => loadingBookings = true);
+    try {
+      await bookingService.cancelBooking(bookingId);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Hủy booking thành công!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      _loadBookings();
+    } catch (e) {
+      if (!mounted) return;
+      _showError(e);
+    } finally {
+      if (mounted) setState(() => loadingBookings = false);
+    }
+  }
+
   void _showError(dynamic e) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(getErrorMessage(e)),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(getErrorMessage(e)), backgroundColor: Colors.red),
     );
   }
 
@@ -294,10 +345,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                       'Người đặt',
                       intent['bookerName']?.toString() ?? '-',
                     ),
-                    _detailRow(
-                      'SĐT',
-                      intent['bookerPhone']?.toString() ?? '-',
-                    ),
+                    _detailRow('SĐT', intent['bookerPhone']?.toString() ?? '-'),
                     _detailRow(
                       'Ghi chú',
                       intent['note']?.toString().isNotEmpty == true
@@ -408,8 +456,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 _detailCard(
                   children: [
                     _moneyRow('Tổng tiền', booking['totalPrice'], Colors.black),
-                    _moneyRow('Đã cọc', booking['depositAmount'], Colors.orange),
-                    _moneyRow('Còn lại', booking['remainingAmount'], Colors.red),
+                    _moneyRow(
+                      'Đã cọc',
+                      booking['depositAmount'],
+                      Colors.orange,
+                    ),
+                    _moneyRow(
+                      'Còn lại',
+                      booking['remainingAmount'],
+                      Colors.red,
+                    ),
                     _detailRow(
                       'Phương thức',
                       booking['paymentMethod']?.toString() ?? '-',
@@ -418,6 +474,34 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 ),
                 const SizedBox(height: 12),
                 _slotListCard(slots),
+
+                if (status == 'BOOKED' || status == 'CONFIRMED') ...[
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        _handleCancelBooking(booking['bookingId'].toString()),
+                    icon: const Icon(
+                      Icons.cancel_outlined,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Hủy Lịch Đặt Sân',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ],
             );
           },
@@ -468,16 +552,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  content,
-                  style: const TextStyle(fontSize: 13),
-                ),
+                Text(content, style: const TextStyle(fontSize: 13)),
               ],
             ),
           ),
@@ -505,10 +583,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         children: [
           SizedBox(
             width: 105,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.black54),
-            ),
+            child: Text(label, style: const TextStyle(color: Colors.black54)),
           ),
           Expanded(
             child: Text(
@@ -527,17 +602,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.black54),
-            ),
+            child: Text(label, style: const TextStyle(color: Colors.black54)),
           ),
           Text(
             _formatMoney(value),
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -613,7 +682,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
               children: [
                 CircleAvatar(
                   backgroundColor: Colors.orange.withOpacity(0.12),
-                  child: const Icon(Icons.pending_actions, color: Colors.orange),
+                  child: const Icon(
+                    Icons.pending_actions,
+                    color: Colors.orange,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -771,14 +843,15 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       child: bookingIntents.isEmpty
           ? _emptyView('Không có đơn chờ xác nhận', Icons.pending_actions)
           : ListView(
-        padding: const EdgeInsets.all(16),
-        children: bookingIntents.map((e) => _pendingCard(e)).toList(),
-      ),
+              padding: const EdgeInsets.all(16),
+              children: bookingIntents.map((e) => _pendingCard(e)).toList(),
+            ),
     );
   }
 
   Widget _bookedTab() {
-    if (loadingBookings) return const Center(child: CircularProgressIndicator());
+    if (loadingBookings)
+      return const Center(child: CircularProgressIndicator());
 
     return RefreshIndicator(
       color: primaryColor,
@@ -786,9 +859,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       child: bookings.isEmpty
           ? _emptyView('Chưa có lịch đặt sân nào', Icons.event_busy)
           : ListView(
-        padding: const EdgeInsets.all(16),
-        children: bookings.map((e) => _bookingCard(e)).toList(),
-      ),
+              padding: const EdgeInsets.all(16),
+              children: bookings.map((e) => _bookingCard(e)).toList(),
+            ),
     );
   }
 
@@ -832,10 +905,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         ),
         body: TabBarView(
           controller: tabController,
-          children: [
-            _pendingTab(),
-            _bookedTab(),
-          ],
+          children: [_pendingTab(), _bookedTab()],
         ),
       ),
     );

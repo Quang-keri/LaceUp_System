@@ -71,7 +71,9 @@ import CustomerManagementPage from "../page/admin/customer-management/CustomerMa
 import UserLayout from "../layouts/UserLayout.tsx";
 import AreaMapGoong from "../page/customer/area-map/AreaMapGoong.tsx";
 import PendingTransferBookingPage from "../page/owner/booking/ConfirmBookingApp/PendingTransferBookingPage.tsx";
-// import AreaMap from "../page/customer/area-map/AreaMap.tsx";
+import MatchPaymentPage from "../page/customer/profile-page/my-match/MatchPaymentPage.tsx";
+import RefundManagement from "../page/admin/refund-page/RefundManagement.tsx";
+import MatchPaymentApprovalPage from "../page/owner/match/MatchPaymentApprovalPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -145,6 +147,7 @@ export const router = createBrowserRouter([
 
           { path: "chat", element: <ChatHome /> },
           { path: "payment/:bookingId", element: <PaymentPage /> },
+          { path: "payment/match/:matchId", element: <MatchPaymentPage /> },
           {
             path: "payment-success/:bookingId",
             element: <PaymentSuccessPage />,
@@ -190,6 +193,7 @@ export const router = createBrowserRouter([
         element: <PayoutHistory />,
       },
       { path: "commissions", element: <CommissionConfigManagement /> },
+      { path: "refunds", element: <RefundManagement /> },
       { path: "*", element: <NotFound /> },
     ],
   },
@@ -225,6 +229,10 @@ export const router = createBrowserRouter([
       },
       { path: "posts", element: <PostManagementPage /> },
       { path: "matches", element: <MatchManagement /> },
+      {
+        path: "match-payment-approvals",
+        element: <MatchPaymentApprovalPage />,
+      },
       { path: "service-items", element: <ServiceItemManagementPage /> },
       { path: "courts/:courtId", element: <CourtDetailPage /> },
       { path: "courts/:courtId/copies", element: <CourtCopyPage /> },

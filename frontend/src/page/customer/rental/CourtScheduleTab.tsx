@@ -8,6 +8,7 @@ export default function CourtScheduleTab({
   setSelectedDuration,
   selectedSlots,
   setSelectedSlots,
+  activeTab,
 }: any) {
   const courtCopyRows = (data.courts || []).flatMap((court: any) =>
     (court.courtCopies || []).map((copy: any) => ({
@@ -35,10 +36,6 @@ export default function CourtScheduleTab({
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-3.5 bg-[#ea580c] rounded-full shadow-sm"></span>
             <span>Đã đặt lịch</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-3.5 bg-[#9156F1] rounded-full shadow-sm"></span>
-            <span>Đã có trận</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-3.5 bg-orange-300 rounded-full shadow-sm"></span>
@@ -69,6 +66,7 @@ export default function CourtScheduleTab({
           closeTime={data.closeTime}
           selectedSlots={selectedSlots}
           setSelectedSlots={setSelectedSlots}
+          activeTab={activeTab as "booking" | "match"}
           onSelectSlot={(courtCopy: any, time: string, duration: number) => {
             setActiveCourt(courtCopy);
             setSelectedTime(time);

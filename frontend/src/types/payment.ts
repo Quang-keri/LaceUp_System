@@ -12,3 +12,19 @@ export interface PaymentResponse {
     orderCode: number | null;
     payosPaymentLinkId: string | null;
 }
+
+export interface RefundResponse {
+  paymentId: string;
+  userName: string;
+  phone: string;
+  amount: number;
+  paymentMethod: string;
+  orderCode: string;
+  transactionDate: string;
+  source: "BOOKING" | "MATCH";
+  referenceCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolderName: string;
+  qrCodeUrl: string;
+}

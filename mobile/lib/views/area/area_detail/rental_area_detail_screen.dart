@@ -333,6 +333,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           onModeChanged: (val) {
             setState(() {
               isMatchMode = val;
+              selectedSlots.clear();
               currentMatchConfig ??= MatchConfigData(
                 matchType: 'NORMAL',
                 maxPlayers: 10,

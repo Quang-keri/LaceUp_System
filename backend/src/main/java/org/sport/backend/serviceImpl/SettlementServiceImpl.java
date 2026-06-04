@@ -31,7 +31,6 @@ public class SettlementServiceImpl implements SettlementService {
     private final SettlementRepository settlementRepository;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
-    private final SlotRepository slotRepository;
     private final BookingRepository bookingRepository;
     private final BookingServiceItemRepository bookingServiceItemRepository;
     private final CommissionConfigService commissionService;
@@ -110,29 +109,20 @@ public class SettlementServiceImpl implements SettlementService {
         for (RentalArea rentalArea : rentalAreas) {
             UUID rentalAreaId = rentalArea.getRentalAreaId();
 
+            BigDecimal bookingRevenue = bookingRepository.sumSlotRevenueByDate(rentalAreaId, date);
 
-            BigDecimal bookingRevenue =
-                    bookingRepository.sumSlotRevenueOfCompletedBookings(rentalAreaId, date);
+            BigDecimal initialPaidAmount = bookingRepository.sumInitialPaidAmountByDate(rentalAreaId, date);
 
-            BigDecimal initialPaidAmount =
-                    bookingRepository.sumInitialPaidAmountOfCompletedBookings(rentalAreaId, date);
-
-//            BigDecimal totalBookingPrice =
-//                    bookingRepository.sumTotalPriceOfCompletedBookings(rentalAreaId, date);
+            BigDecimal matchJoinPaidAmount = paymentRepository.sumMatchJoinPaidAmount(rentalAreaId, date);
 
             bookingRevenue = bookingRevenue == null ? BigDecimal.ZERO : bookingRevenue;
             initialPaidAmount = initialPaidAmount == null ? BigDecimal.ZERO : initialPaidAmount;
-//            totalBookingPrice = totalBookingPrice == null ? BigDecimal.ZERO : totalBookingPrice;
+            matchJoinPaidAmount = matchJoinPaidAmount == null ? BigDecimal.ZERO : matchJoinPaidAmount;
 
-            BigDecimal extraServiceAmount =
-                    bookingServiceItemRepository.sumExtraServiceAmountOfCompletedBookings(
-                            rentalAreaId,
-                            date
-                    );
+            initialPaidAmount = initialPaidAmount.add(matchJoinPaidAmount);
 
-            extraServiceAmount = extraServiceAmount == null
-                    ? BigDecimal.ZERO
-                    : extraServiceAmount;
+            BigDecimal extraServiceAmount = bookingServiceItemRepository.sumExtraServiceAmountOfCompletedBookings(rentalAreaId, date);
+            extraServiceAmount = extraServiceAmount == null ? BigDecimal.ZERO : extraServiceAmount;
 
             if (bookingRevenue.compareTo(BigDecimal.ZERO) <= 0
                     && initialPaidAmount.compareTo(BigDecimal.ZERO) <= 0
@@ -140,12 +130,13 @@ public class SettlementServiceImpl implements SettlementService {
                 continue;
             }
 
+            BigDecimal totalBaseRevenue = bookingRevenue.add(matchJoinPaidAmount);
+
             BigDecimal commissionRate = commissionService.getApplicableRate(rentalAreaId);
 
-            BigDecimal commissionAmount = bookingRevenue
+            BigDecimal commissionAmount = totalBaseRevenue
                     .multiply(commissionRate)
                     .setScale(2, RoundingMode.HALF_UP);
-
 
             BigDecimal ownerAmount = initialPaidAmount
                     .subtract(commissionAmount)
@@ -287,7 +278,7 @@ public class SettlementServiceImpl implements SettlementService {
                 .type(TransactionType.PAYOUT)
                 .amount(saved.getOwnerAmount())
                 .description("Admin chuyển tiền cho owner sau đối soát ngày " + saved.getSettlementDate())
-                .referenceId(saved.getSettlementId())
+                .referenceId(String.valueOf(saved.getSettlementId()))
                 .rentalArea(saved.getRentalArea())
                 .owner(saved.getRentalArea().getOwner())
                 .status(TransactionStatus.SUCCESS)

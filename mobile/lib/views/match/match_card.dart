@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/match.dart';
-import '../../services/match_service.dart';
-import '../login/login_screen.dart';
 
 class MatchCard extends StatelessWidget {
   final MatchResponse match;
@@ -38,61 +36,39 @@ class MatchCard extends StatelessWidget {
     }
   }
 
-  Future<void> _handleJoinMatch(BuildContext context) async {
-    try {
-      await matchService.joinMatch(match.matchId);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tham gia trận thành công!')),
-        );
-        onJoinSuccess();
-        Navigator.pushNamed(context, '/my-matches');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        String errorMsg = e.toString().replaceAll('Exception: ', '');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
-        if (errorMsg.contains('đăng nhập')) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-        }
-      }
-    }
-  }
-
   Widget _buildActionButton(BuildContext context) {
-    final isParticipant = match.participants.any((p) => p.userId == currentUserId);
+    final isParticipant = match.participants.any(
+      (p) => p.userId == currentUserId,
+    );
 
-    if (match.status == "OPEN" || (match.status == "CONFIRMED" && match.remainingSlots > 0)) {
+    if (match.status == "OPEN" ||
+        (match.status == "CONFIRMED" && match.remainingSlots > 0)) {
       if (isParticipant) {
         return ElevatedButton(
           onPressed: null,
           style: ElevatedButton.styleFrom(
             disabledBackgroundColor: Colors.grey.shade200,
             disabledForegroundColor: Colors.grey.shade600,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: const Text('Đã Tham Gia'),
         );
       }
       return ElevatedButton(
-        onPressed: () => _handleJoinMatch(context),
+        onPressed: onOpenJoinModal,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF9156F1),
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-        child: const Text('Tham Gia', style: TextStyle(fontWeight: FontWeight.bold)),
+        child: const Text(
+          'Tham Gia',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       );
     }
 
@@ -103,21 +79,29 @@ class MatchCard extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             disabledBackgroundColor: const Color(0xFF9156F1).withOpacity(0.5),
             disabledForegroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           child: const Text('Sẵn Sàng'),
         );
       }
       return ElevatedButton(
         onPressed: null,
-        style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
         child: const Text('Đã Đầy'),
       );
     }
 
     return ElevatedButton(
       onPressed: null,
-      style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+      style: ElevatedButton.styleFrom(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
       child: const Text('Đã Chốt'),
     );
   }
@@ -143,32 +127,73 @@ class MatchCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (match.matchType == 'RANKED')
-                        _buildTag('Rank (${match.minRank}-${match.maxRank})', Colors.purple, Icons.emoji_events)
+                        _buildTag(
+                          'Rank (${match.minRank}-${match.maxRank})',
+                          Colors.purple,
+                          Icons.emoji_events,
+                        )
                       else if (match.matchType == 'BET')
-                        _buildTag('Kèo: ${match.note ?? 'Tự thỏa thuận'}', Colors.green, Icons.local_fire_department)
+                        _buildTag(
+                          'Kèo: ${match.note ?? 'Tự thỏa thuận'}',
+                          Colors.green,
+                          Icons.local_fire_department,
+                        )
                       else
-                        _buildTag('Giao lưu', Colors.blue, Icons.sentiment_satisfied),
+                        _buildTag(
+                          'Giao lưu',
+                          Colors.blue,
+                          Icons.sentiment_satisfied,
+                        ),
 
-                      _buildTag('MÃ: ${match.roomCode ?? 'TRỐNG'}', Colors.orange, null, isOutline: true),
+                      _buildTag(
+                        'MÃ: ${match.roomCode ?? 'TRỐNG'}',
+                        Colors.orange,
+                        null,
+                        isOutline: true,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     match.categoryName,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF9156F1)),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF9156F1),
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 8),
-                      Text(_formatDate(match.startTime), style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87)),
+                      Text(
+                        _formatDate(match.startTime),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
                       const SizedBox(width: 16),
-                      const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 8),
-                      Text('${_formatTime(match.startTime)} - ${_formatTime(match.endTime)}', style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87)),
+                      Text(
+                        '${_formatTime(match.startTime)} - ${_formatTime(match.endTime)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -177,19 +202,36 @@ class MatchCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.people, size: 16, color: Colors.grey),
+                          const Icon(
+                            Icons.people,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 8),
-                          Text('${match.currentPlayers}/${match.maxPlayers} người', style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(
+                            '${match.currentPlayers}/${match.maxPlayers} người',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
-                      Text('Còn ${match.remainingSlots} slot', style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Còn ${match.remainingSlots} slot',
+                        style: const TextStyle(
+                          color: Colors.teal,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
-                    value: match.maxPlayers > 0 ? (match.currentPlayers / match.maxPlayers) : 0,
+                    value: match.maxPlayers > 0
+                        ? (match.currentPlayers / match.maxPlayers)
+                        : 0,
                     backgroundColor: Colors.grey.shade200,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF9156F1)),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF9156F1),
+                    ),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ],
@@ -199,7 +241,9 @@ class MatchCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
                 border: Border(top: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Row(
@@ -209,13 +253,35 @@ class MatchCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       match.courtPrice > 0
-                          ? Text('${NumberFormat.currency(locale: 'vi_VN', symbol: '').format(match.courtPrice)}đ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))
-                          : const Text('Sân tự thỏa thuận', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+                          ? Text(
+                              '${NumberFormat.currency(locale: 'vi_VN', symbol: '').format(match.courtPrice)}đ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            )
+                          : const Text(
+                              'Sân tự thỏa thuận',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Text('Host: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          Text(match.hostName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9156F1))),
+                          const Text(
+                            'Host: ',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            match.host!.userName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF9156F1),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -230,7 +296,12 @@ class MatchCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTag(String text, Color color, IconData? icon, {bool isOutline = false}) {
+  Widget _buildTag(
+    String text,
+    Color color,
+    IconData? icon, {
+    bool isOutline = false,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -247,7 +318,11 @@ class MatchCard extends StatelessWidget {
           ],
           Text(
             text,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

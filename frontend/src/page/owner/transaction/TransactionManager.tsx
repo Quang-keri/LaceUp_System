@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button, Select, Space, message } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
   getRentalAreaTransactions,
+  getRentalAreaTransactionSummary,
   createTransaction,
   updateTransaction,
 } from "../../../service/transactionService";
@@ -15,6 +16,7 @@ import type {
   TransactionRequest,
   TransactionType,
   PageResponse,
+  TransactionSummaryResponse,
 } from "../../../types/transaction";
 
 import TransactionSummaryCards from "./TransactionSummaryCards";
@@ -30,6 +32,13 @@ const TransactionManager: React.FC = () => {
   const [data, setData] = useState<PageResponse<TransactionResponse> | null>(
     null,
   );
+
+  const [summary, setSummary] = useState<TransactionSummaryResponse>({
+    totalIncome: 0,
+    totalExpense: 0,
+    systemTransferred: 0,
+    netProfit: 0,
+  });
 
   const [rentalAreas, setRentalAreas] = useState<any[]>([]);
   const [loadingRentals, setLoadingRentals] = useState(false);
@@ -63,19 +72,13 @@ const TransactionManager: React.FC = () => {
     rentalAreaId,
   });
 
-  // Load khu sân của owner
   const fetchMyRentalAreas = async () => {
     try {
       setLoadingRentals(true);
-
       const res = await rentalService.getMyRentalAreas(1, 100);
-
-      const rentals =
-        res.result?.data|| res.result || [];
-
+      const rentals = res.result?.data || res.result || [];
       setRentalAreas(rentals);
 
-      // Nếu chưa có rentalAreaId -> chuyển sang sân đầu tiên
       if (!rentalAreaId && rentals.length > 0) {
         navigate(`/owner/transactions/${rentals[0].rentalAreaId}`, {
           replace: true,
@@ -90,28 +93,6 @@ const TransactionManager: React.FC = () => {
     }
   };
 
-  // Tổng thu
-  const totalIncome = useMemo(() => {
-    return (data?.data || []).reduce((sum, tx) => {
-      return tx.type === "INCOME" ? sum + tx.amount : sum;
-    }, 0);
-  }, [data]);
-
-  // Tổng chi
-  const totalExpense = useMemo(() => {
-    return (data?.data || []).reduce((sum, tx) => {
-      return tx.type === "EXPENSE" ? sum + tx.amount : sum;
-    }, 0);
-  }, [data]);
-
-  // Tổng tiền admin đã chuyển cho owner
-  const totalPayout = useMemo(() => {
-    return (data?.data || []).reduce((sum, tx) => {
-      return tx.type === "PAYOUT" ? sum + tx.amount : sum;
-    }, 0);
-  }, [data]);
-
-  // Fetch transaction
   const fetchTransactions = useCallback(async () => {
     if (!rentalAreaId) return;
 
@@ -126,26 +107,35 @@ const TransactionManager: React.FC = () => {
 
       if (filterType) params.type = filterType;
       if (keyword) params.keyword = keyword;
-
-      if (startDate) {
-        params.startDate = `${startDate}T00:00:00`;
-      }
-
-      if (endDate) {
-        params.endDate = `${endDate}T23:59:59`;
-      }
+      if (startDate) params.startDate = `${startDate}T00:00:00`;
+      if (endDate) params.endDate = `${endDate}T23:59:59`;
 
       const res = await getRentalAreaTransactions(rentalAreaId, params);
-
       setData(res);
     } catch (error) {
       console.error("Lỗi tải dữ liệu", error);
-
       setError("Không thể tải dữ liệu giao dịch. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
   }, [rentalAreaId, page, filterType, keyword, startDate, endDate]);
+
+  const fetchSummary = useCallback(async () => {
+    if (!rentalAreaId) return;
+
+    try {
+      const params: Record<string, unknown> = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const res = await getRentalAreaTransactionSummary(rentalAreaId, params);
+      if (res) {
+        setSummary(res);
+      }
+    } catch (error) {
+      console.error("Lỗi tải thông số tổng quan", error);
+    }
+  }, [rentalAreaId, startDate, endDate]);
 
   useEffect(() => {
     fetchMyRentalAreas();
@@ -154,22 +144,21 @@ const TransactionManager: React.FC = () => {
   useEffect(() => {
     if (rentalAreaId) {
       fetchTransactions();
+      fetchSummary();
     }
-  }, [rentalAreaId, fetchTransactions]);
+  }, [rentalAreaId, fetchTransactions, fetchSummary]);
 
-  // Đổi sân
   const handleChangeRentalArea = (id: string) => {
     setPage(1);
     navigate(`/owner/transactions/${id}`);
   };
 
-  // Search
   const handleSearch = () => {
     setPage(1);
     fetchTransactions();
+    fetchSummary();
   };
 
-  // Reset filter
   const handleResetFilters = () => {
     setKeyword("");
     setFilterType("");
@@ -178,7 +167,6 @@ const TransactionManager: React.FC = () => {
     setPage(1);
   };
 
-  // Mở modal tạo
   const openCreateModal = () => {
     setFormData({
       type: "INCOME",
@@ -189,12 +177,10 @@ const TransactionManager: React.FC = () => {
       category: "EXTRA_SERVICE_PAYMENT",
       rentalAreaId,
     });
-
     setEditingId(null);
     setIsFormModalOpen(true);
   };
 
-  // Edit
   const handleEdit = (tx: TransactionResponse) => {
     setFormData({
       type: tx.type,
@@ -206,32 +192,27 @@ const TransactionManager: React.FC = () => {
       category: tx.category,
       rentalAreaId: tx.rentalAreaId || rentalAreaId,
     });
-
     setEditingId(tx.id);
     setIsFormModalOpen(true);
   };
 
-  // View detail
   const handleView = (tx: TransactionResponse) => {
     setSelectedTransaction(tx);
   };
 
-  // Submit
   const handleSubmit = async (values: TransactionRequest) => {
     try {
       setIsSubmitting(true);
-
       if (editingId) {
         await updateTransaction(editingId, values);
       } else {
         await createTransaction(values);
       }
-
       setIsFormModalOpen(false);
-
       setPage(1);
 
       await fetchTransactions();
+      await fetchSummary();
 
       message.success(
         editingId
@@ -240,7 +221,6 @@ const TransactionManager: React.FC = () => {
       );
     } catch (error: any) {
       console.error("Lỗi lưu giao dịch", error);
-
       setError(
         error.response?.data?.message ||
           "Không thể lưu giao dịch. Vui lòng thử lại.",
@@ -264,7 +244,6 @@ const TransactionManager: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900">
               Quản Lý Giao Dịch
             </h1>
-
             <p className="text-gray-600 mt-1">
               Xem giao dịch phát sinh theo từng khu sân
             </p>
@@ -282,7 +261,6 @@ const TransactionManager: React.FC = () => {
                 label: item.rentalAreaName,
               }))}
             />
-
             <Button type="primary" onClick={openCreateModal}>
               + Thêm Giao Dịch
             </Button>
@@ -290,9 +268,9 @@ const TransactionManager: React.FC = () => {
         </Space>
 
         <TransactionSummaryCards
-          totalIncome={totalIncome}
-          totalExpense={totalExpense}
-          totalPayout={totalPayout}
+          totalIncome={summary.totalIncome}
+          totalExpense={summary.totalExpense}
+          totalPayout={summary.systemTransferred}
         />
 
         <TransactionFilters
@@ -308,7 +286,6 @@ const TransactionManager: React.FC = () => {
           onReset={handleResetFilters}
         />
 
-        
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
             {error}

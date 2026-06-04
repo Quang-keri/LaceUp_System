@@ -1,33 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
-import {
-  Table,
-  Button,
-  Space,
-  Input,
-  Select,
-  message,
-  Tag,
-  Card,
-  Skeleton,
-  Layout,
-  Radio,
-  Dropdown,
-} from "antd";
-import type { MenuProps } from "antd";
-import {
-  EditOutlined,
-  PlusOutlined,
-  SearchOutlined,
-  DownOutlined,
-  HomeOutlined,
-} from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import {useEffect, useMemo, useState} from "react";
+import type {MenuProps} from "antd";
+import {Button, Card, Dropdown, Input, Layout, message, Radio, Select, Skeleton, Space, Table, Tag,} from "antd";
+import {DownOutlined, EditOutlined, HomeOutlined, PlusOutlined, SearchOutlined,} from "@ant-design/icons";
+import {useNavigate} from "react-router-dom";
 
 import RentalService from "../../../service/rental/rentalService";
-import type {
-  RentalAreaResponse,
-  RentalAreaStatus,
-} from "../../../types/rental";
+import type {RentalAreaResponse, RentalAreaStatus,} from "../../../types/rental";
 import BuildingEditModal from "./BuildingEditModal";
 
 const { Sider, Content } = Layout;
@@ -108,16 +86,10 @@ export default function BuildingListPage() {
         .join(" ")
         .toLowerCase();
 
-      const matchSearch =
-        building.rentalAreaName?.toLowerCase().includes(keyword) ||
-        addressText.includes(keyword) ||
-        building.contactName?.toLowerCase().includes(keyword) ||
-        building.contactPhone?.toLowerCase().includes(keyword);
-
-      // const matchStatus =
-      //   filterStatus === "ALL" ? true : building.status === filterStatus;
-
-      return matchSearch;
+      return building.rentalAreaName?.toLowerCase().includes(keyword) ||
+          addressText.includes(keyword) ||
+          building.contactName?.toLowerCase().includes(keyword) ||
+          building.contactPhone?.toLowerCase().includes(keyword);
     });
   }, [buildings, searchKeyword, filterStatus]);
 
