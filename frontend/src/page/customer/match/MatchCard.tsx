@@ -215,6 +215,10 @@ const MatchCard: React.FC<MatchCardProps> = ({
           <h3 className="text-xl font-bold text-purple-600 pr-4 line-clamp-2 mt-1">
             {match.categoryName}
           </h3>
+          <div className="text-sm font-semibold text-slate-500 mb-2 flex items-center gap-1">
+            <span className="text-slate-400">Sân:</span>
+            {match.courtName || "Sân không xác định"}
+          </div>
           <div className="space-y-2 mb-2 text-slate-600">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">

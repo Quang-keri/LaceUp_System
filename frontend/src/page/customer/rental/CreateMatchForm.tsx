@@ -108,10 +108,19 @@ export default function CreateMatchForm({
   const categoryName = (court?.categoryName || "").toLowerCase();
   const isFootball =
     categoryName.includes("bóng đá") || categoryName.includes("đá banh");
+  const isRacketSport =
+    categoryName.includes("cầu lông") || categoryName.includes("pickleball");
 
-  const minAllowed = isFootball ? 10 : 2;
-  const maxAllowed = isFootball ? 12 : 4;
+  let minAllowed = 2;
+  let maxAllowed = 4;
 
+  if (isFootball) {
+    minAllowed = 10;
+    maxAllowed = 20;
+  } else if (isRacketSport) {
+    minAllowed = 2;
+    maxAllowed = 10;
+  }
   const currentCategoryId = court?.categoryId;
   const currentCategoryName = court?.categoryName;
 
@@ -392,9 +401,9 @@ export default function CreateMatchForm({
           <Form.Item
             label={
               <span className="font-semibold text-gray-700 text-sm flex items-center gap-1">
-                Tối đa
+                Tổng số người
                 <Tooltip
-                  title={`Số người chơi tối đa (từ ${minAllowed} đến ${maxAllowed} người)`}
+                  title={`Tổng số người tham gia tối đa của cả trận đấu (từ ${minAllowed} đến ${maxAllowed} người)`}
                 >
                   <Info size={14} className="text-gray-400" />
                 </Tooltip>
@@ -411,7 +420,7 @@ export default function CreateMatchForm({
               },
             ]}
             className="mb-0"
-            style={{ width: "100px", flexShrink: 0 }}
+            style={{ minWidth: "125px", flexShrink: 0 }}
           >
             <InputNumber
               min={minAllowed}
@@ -429,8 +438,8 @@ export default function CreateMatchForm({
           <Form.Item
             label={
               <span className="font-semibold text-gray-700 text-sm flex items-center gap-1">
-                Tối thiểu
-                <Tooltip title="Số lượng tối thiểu chia đều 2 bên để trận đấu được phép bắt đầu.">
+                Số người / Team
+                <Tooltip title="Số lượng thành viên tối đa của 1 đội (Tự động chia đôi từ tổng số người).">
                   <Info size={14} className="text-gray-400" />
                 </Tooltip>
               </span>
@@ -438,7 +447,7 @@ export default function CreateMatchForm({
             name="minPlayersToStart"
             rules={[{ required: true }]}
             className="mb-0"
-            style={{ width: "100px", flexShrink: 0 }}
+            style={{ minWidth: "125px", flexShrink: 0 }}
           >
             <InputNumber
               readOnly

@@ -25,9 +25,9 @@ class PaymentService {
   }
 
   Future<dynamic> checkoutMatchJoin(
-      String registrationId,
-      String paymentMethod,
-      ) async {
+    String registrationId,
+    String paymentMethod,
+  ) async {
     try {
       final response = await apiClient.post(
         '$_baseUrl/checkout-match',
@@ -49,10 +49,7 @@ class PaymentService {
     try {
       final response = await apiClient.get(
         '$_baseUrl/result',
-        queryParameters: {
-          'orderCode': orderCode,
-          'status': status,
-        },
+        queryParameters: {'orderCode': orderCode, 'status': status},
       );
       return response.data;
     } catch (e) {
@@ -62,7 +59,9 @@ class PaymentService {
 
   Future<dynamic> handleVnPayReturn(String queryString) async {
     try {
-      final response = await apiClient.get('$_baseUrl/vnpay/return$queryString');
+      final response = await apiClient.get(
+        '$_baseUrl/vnpay/return$queryString',
+      );
       return response.data;
     } catch (e) {
       rethrow;

@@ -323,32 +323,58 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public CheckoutResponse checkoutMatchJoin(UUID registrationId, PaymentMethod method) {
-        // 1. Lấy thông tin đăng ký
         MatchRegistration reg = matchRegistrationRepository.findById(registrationId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin đăng ký trận đấu"));
 
-        // 2. Tạo mã đơn hàng duy nhất (Tái sử dụng hàm có sẵn của ông)
+        if (reg.getIsPaid() != null && reg.getIsPaid()) {
+            throw new RuntimeException("Bạn đã thanh toán phí ghép trận này rồi");
+        }
+
+        List<Payment> pendingPayments = paymentRepository.findAllByMatchRegistration(reg).stream()
+                .filter(p -> p.getPaymentStatus() == PaymentStatus.PENDING)
+                .collect(Collectors.toList());
+
+        // Nếu app mở lại màn VietQR, dùng lại payment VietQR cũ, không tạo thêm dòng mới
+        if (method == PaymentMethod.VIET_QR) {
+            Optional<Payment> existingVietQr = pendingPayments.stream()
+                    .filter(p -> p.getPaymentMethod() == PaymentMethod.VIET_QR)
+                    .max(java.util.Comparator.comparing(Payment::getTransactionDate));
+
+            if (existingVietQr.isPresent()) {
+                return handleVietQrMatchJoin(existingVietQr.get(), reg);
+            }
+        }
+
+        // Nếu đổi phương thức thanh toán, hủy các payment pending cũ để khỏi loạn
+        for (Payment oldPayment : pendingPayments) {
+            oldPayment.setPaymentStatus(PaymentStatus.CANCELLED);
+        }
+        paymentRepository.saveAll(pendingPayments);
+
         long orderCode = generateUniqueOrderCode();
 
-        // 3. Khởi tạo Payment chung
         Payment payment = Payment.builder()
-                .matchRegistration(reg) // Map vào đăng ký trận (cần khai báo ManyToOne ở Entity Payment)
+                .matchRegistration(reg)
                 .user(reg.getUser())
                 .amount(reg.getAmountDue())
                 .paymentMethod(method)
-                .paymentType(PaymentType.MATCH_JOIN) // Loại thanh toán mới
+                .paymentType(PaymentType.MATCH_JOIN)
                 .paymentStatus(PaymentStatus.PENDING)
                 .transactionDate(LocalDateTime.now())
                 .orderCode(orderCode)
                 .build();
+
         paymentRepository.save(payment);
 
-        // 4. Phân luồng thanh toán
         if (method == PaymentMethod.VN_PAY) {
             return handleVnPayMatchJoin(payment, reg);
-        } else if (method == PaymentMethod.PAY_OS) {
+        }
+
+        if (method == PaymentMethod.PAY_OS) {
             return handlePayOsMatchJoin(payment, reg);
-        } else if (method == PaymentMethod.VIET_QR) {
+        }
+
+        if (method == PaymentMethod.VIET_QR) {
             return handleVietQrMatchJoin(payment, reg);
         }
 
@@ -460,18 +486,24 @@ public class PaymentServiceImpl implements PaymentService {
 
         Payment payment = paymentRepository.findAllByMatchRegistration(reg).stream()
                 .filter(p -> p.getPaymentStatus() == PaymentStatus.PENDING)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch chờ thanh toán hợp lệ"));
+                .filter(p -> p.getPaymentMethod() == PaymentMethod.VIET_QR)
+                .max(java.util.Comparator.comparing(Payment::getTransactionDate))
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch VietQR chờ thanh toán hợp lệ"));
 
         try {
             CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(file, "payment_proofs");
             String imageUrl = uploadResult.getUrl();
 
             payment.setProof(imageUrl);
-
             paymentRepository.save(payment);
 
-            log.info("Đã nhận ảnh chứng từ ghép kèo. RegID: {}, URL: {}", registrationId, imageUrl);
+            log.info(
+                    "Đã nhận ảnh chứng từ VietQR ghép kèo. RegID: {}, PaymentID: {}, Method: {}, URL: {}",
+                    registrationId,
+                    payment.getPaymentId(),
+                    payment.getPaymentMethod(),
+                    imageUrl
+            );
 
         } catch (Exception e) {
             log.error("Lỗi khi upload ảnh chứng từ ghép kèo: ", e);
@@ -480,7 +512,9 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public List<Map<String, Object>> getMatchPaymentsForOwner(String status, String keyword, String startDateStr, String endDateStr) {
+    public List<Map<String, Object>> getMatchPaymentsForOwner(
+            String status, String keyword, String startDateStr, String endDateStr
+    ) {
         User owner = userService.getCurrentUserEntity();
 
         LocalDate startDate = (startDateStr != null && !startDateStr.isBlank()) ? LocalDate.parse(startDateStr) : null;
@@ -489,6 +523,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         return paymentRepository.findAll().stream()
                 .filter(p -> p.getPaymentType() == PaymentType.MATCH_JOIN)
+                .filter(p -> p.getPaymentMethod() == PaymentMethod.VIET_QR)
                 .filter(p -> p.getProof() != null && !p.getProof().isEmpty())
                 .filter(p -> {
                     // Chỉ lấy sân của Owner
@@ -542,6 +577,18 @@ public class PaymentServiceImpl implements PaymentService {
     public void confirmMatchPayment(UUID paymentId, boolean isApproved) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch"));
+
+        if (payment.getPaymentType() != PaymentType.MATCH_JOIN) {
+            throw new RuntimeException("Giao dịch này không phải thanh toán ghép trận");
+        }
+
+        if (payment.getPaymentMethod() != PaymentMethod.VIET_QR) {
+            throw new RuntimeException("Owner chỉ được duyệt thanh toán VietQR");
+        }
+
+        if (payment.getProof() == null || payment.getProof().isBlank()) {
+            throw new RuntimeException("Chưa có ảnh chuyển khoản");
+        }
 
         if (payment.getPaymentStatus() != PaymentStatus.PENDING) {
             throw new RuntimeException("Giao dịch không ở trạng thái chờ duyệt");
@@ -713,7 +760,12 @@ public class PaymentServiceImpl implements PaymentService {
                                 .description("Thu phí ghép trận phòng " + roomCode + " - " + userName)
                                 .status(TransactionStatus.SUCCESS)
                                 .paymentMethod(payment.getPaymentMethod())
-                                .category(TransactionCategory.EXTRA_SERVICE_PAYMENT)
+                                .category(TransactionCategory.MATCH_JOIN_PAYMENT)
+                                .moneyFlow(
+                                        payment.getPaymentMethod() == PaymentMethod.VIET_QR
+                                                ? MoneyFlow.OWNER_COLLECTED
+                                                : MoneyFlow.ADMIN_COLLECTED
+                                )
                                 .rentalArea(rentalArea)
                                 .owner(owner)
                                 .transactionDate(LocalDateTime.now())
@@ -724,6 +776,17 @@ public class PaymentServiceImpl implements PaymentService {
 
                     payment.setPaymentStatus(PaymentStatus.SUCCESS);
                     paymentRepository.saveAndFlush(payment);
+
+                    List<Payment> oldPendingPayments = paymentRepository.findAllByMatchRegistration(reg).stream()
+                            .filter(p -> !p.getPaymentId().equals(payment.getPaymentId()))
+                            .filter(p -> p.getPaymentStatus() == PaymentStatus.PENDING)
+                            .collect(Collectors.toList());
+
+                    for (Payment oldPayment : oldPendingPayments) {
+                        oldPayment.setPaymentStatus(PaymentStatus.CANCELLED);
+                    }
+
+                    paymentRepository.saveAll(oldPendingPayments);
 
                     Booking cachedBooking = reg.getMatch().getBooking();
                     if (cachedBooking != null) {
@@ -1000,25 +1063,49 @@ public class PaymentServiceImpl implements PaymentService {
     private CheckoutResponse handleVietQrMatchJoin(Payment payment, MatchRegistration reg) {
         try {
             Match match = reg.getMatch();
-            User host = match.getHost();
 
-            if (host == null || host.getBankAccount() == null) {
-                throw new RuntimeException("Chủ kèo chưa cấu hình tài khoản ngân hàng để nhận thanh toán.");
+            if (match == null || match.getCourt() == null || match.getCourt().getRentalArea() == null) {
+                throw new RuntimeException("Không tìm thấy thông tin sân của trận đấu");
             }
 
-            BankAccount bank = host.getBankAccount();
-            String bankNameStr = bank.getBankName().trim();
-            String accNumStr = bank.getAccountNumber().trim();
-            String accNameStr = bank.getAccountHolderName();
+            RentalArea rentalArea = match.getCourt().getRentalArea();
+            User owner = rentalArea.getOwner();
+
+            if (owner == null || owner.getBankAccount() == null) {
+                throw new RuntimeException("Owner chưa cấu hình tài khoản ngân hàng để nhận thanh toán.");
+            }
+
+            BankAccount bank = owner.getBankAccount();
+
+            String bankNameStr = bank.getBankName() != null ? bank.getBankName().trim() : "";
+            String accNumStr = bank.getAccountNumber() != null ? bank.getAccountNumber().trim() : "";
+            String accNameStr = bank.getAccountHolderName() != null ? bank.getAccountHolderName().trim() : "";
+
+            if (bankNameStr.isBlank() || accNumStr.isBlank() || accNameStr.isBlank()) {
+                throw new RuntimeException("Thông tin tài khoản ngân hàng của owner chưa đầy đủ");
+            }
 
             long amount = payment.getAmount().longValue();
-            String transferContent = "LACEUP MATCH " + match.getMatchId().toString().substring(0, 8).toUpperCase();
 
-            String encodedInfo = java.net.URLEncoder.encode(transferContent, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
-            String encodedName = java.net.URLEncoder.encode(accNameStr, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String transferContent = "LACEUP MATCH "
+                    + match.getMatchId().toString().substring(0, 8).toUpperCase();
 
-            String vietQrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s",
-                    bankNameStr, accNumStr, amount, encodedInfo, encodedName);
+            String encodedInfo = java.net.URLEncoder
+                    .encode(transferContent, java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+
+            String encodedName = java.net.URLEncoder
+                    .encode(accNameStr, java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+
+            String vietQrUrl = String.format(
+                    "https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s",
+                    bankNameStr,
+                    accNumStr,
+                    amount,
+                    encodedInfo,
+                    encodedName
+            );
 
             payment.setPaymentStatus(PaymentStatus.PENDING);
             paymentRepository.save(payment);
