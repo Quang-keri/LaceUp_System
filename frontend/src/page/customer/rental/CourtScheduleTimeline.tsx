@@ -135,7 +135,7 @@ export default function CourtScheduleTimeline({
       return;
     }
 
-    let nextSelectedSlots: SelectedBlock[] = [];
+    let nextSelectedSlots: SelectedBlock[];
 
     const createNewBlock = (index: number) => ({
       courtCopyId: courtCopy.courtCopyId,

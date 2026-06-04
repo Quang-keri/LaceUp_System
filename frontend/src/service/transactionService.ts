@@ -3,7 +3,7 @@ import type {
   TransactionRequest,
   PageResponse,
   TransactionSummaryResponse,
-} from "../../src/types/transaction";
+} from "../types/transaction.ts";
 import api from "../config/axios";
 
 export const getTransactions = async (params: any) => {

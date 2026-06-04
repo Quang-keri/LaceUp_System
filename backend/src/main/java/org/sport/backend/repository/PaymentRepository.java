@@ -21,22 +21,6 @@ import java.util.UUID;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
-    @Query("""
-                SELECT COALESCE(SUM(p.amount), 0)
-                FROM Payment p
-                WHERE p.paymentStatus = 'SUCCESS'
-                  AND p.transactionDate BETWEEN :startDate AND :endDate
-                  AND (
-                        :ownerId IS NULL
-                        OR p.booking.rentalArea.owner.userId = :ownerId
-                  )
-            """)
-    BigDecimal getTotalRevenue(
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate,
-            @Param("ownerId") UUID ownerId
-    );
-
     @Query("SELECT p.paymentStatus, COUNT(p) FROM Payment p " +
             "WHERE p.transactionDate BETWEEN :startDate AND :endDate " +
             "AND (:ownerId IS NULL OR p.booking.rentalArea.owner.userId = :ownerId) " +
@@ -50,42 +34,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Optional<Payment> findFirstByBookingOrderByTransactionDateDesc(Booking booking);
 
     Optional<Payment> findByOrderCode(Long orderCode);
-
-    @Query("SELECT DISTINCT b.rentalArea.rentalAreaId FROM Payment p " +
-            "JOIN p.booking b " +
-            "WHERE p.paymentStatus = 'SUCCESS' " + // Giả sử Enum của bạn có giá trị SUCCESS
-            "AND p.transactionDate >= :startDate AND p.transactionDate <= :endDate")
-    List<UUID> findRentalAreasWithSuccessfulPayments(
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
-
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
-            "JOIN p.booking b " +
-            "WHERE b.rentalArea.rentalAreaId = :rentalAreaId " +
-            "AND p.paymentStatus = 'SUCCESS' " +
-            "AND p.transactionDate >= :startDate AND p.transactionDate <= :endDate")
-    BigDecimal sumRevenueByRentalAreaAndDate(
-            @Param("rentalAreaId") UUID rentalAreaId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
-
-    @Query("SELECT COUNT(DISTINCT b.bookingId) FROM Payment p " +
-            "JOIN p.booking b " +
-            "WHERE b.rentalArea.rentalAreaId = :rentalAreaId " +
-            "AND p.paymentStatus = 'SUCCESS' " +
-            "AND p.transactionDate >= :startDate AND p.transactionDate <= :endDate")
-    Long countBookingsByRentalAreaAndDate(
-            @Param("rentalAreaId") UUID rentalAreaId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
-
-    @Query("SELECT p FROM Payment p WHERE p.transactionDate >= :startOfDay AND p.transactionDate <= :endOfDay " +
-            "AND p.booking.rentalArea.rentalAreaId = :rentalAreaId AND p.paymentStatus = 'SUCCESS'")
-    List<Payment> findAllPaymentsForReport(
-            @Param("startOfDay") LocalDateTime startOfDay,
-            @Param("endOfDay") LocalDateTime endOfDay,
-            @Param("rentalAreaId") UUID rentalAreaId
-    );
 
     @Query("""
                 SELECT COALESCE(SUM(p.amount), 0)
@@ -125,8 +73,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     List<Payment> findSuccessfulPaymentsByMatch(@Param("matchId") UUID matchId);
 
     Page<Payment> findByPaymentStatus(PaymentStatus status, Pageable pageable);
-
-    Optional<Payment> findFirstByMatchRegistrationOrderByTransactionDateDesc(MatchRegistration reg);
 
     List<Payment> findAllByMatchRegistration(MatchRegistration reg);
 }

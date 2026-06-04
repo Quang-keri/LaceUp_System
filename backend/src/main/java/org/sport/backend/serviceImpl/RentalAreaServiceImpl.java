@@ -488,7 +488,13 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         }
 
         rentalArea.setAddress(currentAddress);
+        if (request.getOpenTime() != null) {
+            rentalArea.setOpenTime(request.getOpenTime());
+        }
 
+        if (request.getCloseTime() != null) {
+            rentalArea.setCloseTime(request.getCloseTime());
+        }
         rentalAreaRepository.save(rentalArea);
 
 

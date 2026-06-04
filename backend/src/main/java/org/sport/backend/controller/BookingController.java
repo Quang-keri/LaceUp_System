@@ -3,6 +3,7 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.BookingIntentStatus;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.dto.base.PageResponse;
@@ -23,6 +24,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,6 +40,67 @@ public class BookingController {
     private final BookingService bookingService;
     private final InvoiceService invoiceService;
     private final ExcelService excelService;
+
+    @GetMapping("/intent/rental/{rentalId}")
+    public ApiResponse<PageResponse<BookingIntentResponse>>
+    getRentalBookingIntents(
+            @PathVariable UUID rentalId,
+            @RequestParam BookingIntentStatus status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        return ApiResponse.success(
+                bookingService.getMyRentalBookingIntents(
+                        rentalId,
+                        status,
+                        page,
+                        size
+                )
+        );
+    }
+
+
+        @GetMapping("/intent/my-intents")
+        public ApiResponse<List<BookingIntentResponse>> getMyBookingIntents() {
+            return ApiResponse.<List<BookingIntentResponse>>builder()
+                    .code(200)
+                    .message("Lấy danh sách booking đang chờ xác nhận thành công")
+                    .result(bookingService.getMyBookingIntents())
+                    .build();
+        }
+
+
+    @PostMapping("/intent/{intentId}/owner-confirm")
+    public ApiResponse<BookingResponse> ownerConfirmManualBooking(
+            @PathVariable UUID intentId
+    ) {
+        return ApiResponse.success(
+                bookingService.ownerConfirmManualBooking(intentId)
+        );
+    }
+
+    @PostMapping("/intent/{intentId}/owner-reject")
+    public ApiResponse<Void> ownerRejectManualBooking(@PathVariable UUID intentId) {
+        bookingService.ownerRejectManualBooking(intentId);
+
+        return ApiResponse.<Void>builder()
+                .message("Đã từ chối yêu cầu đặt sân")
+                .build();
+    }
+
+    @PostMapping(
+            value = "/intent/{intentId}/payment-proof",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ApiResponse<String> uploadIntentPaymentProof(
+            @PathVariable UUID intentId,
+            @RequestParam("image") MultipartFile image
+    ) {
+        return ApiResponse.success(
+                bookingService.uploadIntentPaymentProof(intentId, image)
+        );
+    }
 
     @PostMapping("/preview-price")
     public ResponseEntity<?> previewOwnerBookingPrice(
@@ -364,4 +427,6 @@ public class BookingController {
             );
         }
     }
+
+
 }

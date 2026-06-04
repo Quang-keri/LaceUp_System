@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.booking;
 
 import lombok.*;
 import org.sport.backend.constant.BookingIntentStatus;
+import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.slot.IntentSlotResponse;
 
 import java.math.BigDecimal;
@@ -17,33 +18,26 @@ import java.util.UUID;
 public class BookingIntentResponse {
 
     private UUID bookingIntentId;
-
-
     private BigDecimal previewPrice;
-
-
     private BigDecimal tax;
     private BigDecimal discount;
     private BigDecimal totalAmount;
-
-
     private BookingIntentStatus status;
-
-
     private LocalDateTime expiresAt;
-
-
     private String bookerName;
     private String bookerPhone;
-
-
-
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-
     private String title;
     private String note;
-
-
     private List<IntentSlotResponse> slots;
+    private String bankName;
+    private String accountNumber;
+    private String accountName;
+    private String qrCode;
+    private String vietQrUrl;
+    private String paymentProofUrl;
+    private LocalDateTime paymentProofUploadedAt;
+    private LocalDateTime createdAt;
+    private RentalAreaResponse rentalArea;
 }

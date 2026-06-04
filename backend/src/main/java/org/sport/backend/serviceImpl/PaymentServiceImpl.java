@@ -694,7 +694,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private boolean tryFinalizeByPayOsPaymentStatus(Payment payment) {
         PayOS payOS = requirePayOsClient();
-        if (payOS == null || payment.getOrderCode() == null) {
+        if (payment.getOrderCode() == null) {
             return false;
         }
         try {

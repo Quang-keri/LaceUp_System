@@ -81,10 +81,6 @@ public class ReportServiceImpl implements ReportService {
 
         List<Match> matches = matchRepository.findAllMatchesForReport(startDateTime, endDateTime);
 
-        List<MatchRegistration> matchRegistrations = matchRegistrationRepository.findByMatch_Court_RentalArea_RentalAreaIdAndMatch_StartTimeBetween(
-                rentalAreaId, startDateTime, endDateTime
-        );
-
         List<Payment> bookingPayments = paymentRepository.findAllPaymentsByRentalArea(startDateTime, endDateTime, rentalAreaId);
 
         List<Payment> matchPayments = paymentRepository.findAllMatchPaymentsByRentalArea(startDateTime, endDateTime, rentalAreaId);
@@ -257,7 +253,6 @@ public class ReportServiceImpl implements ReportService {
         Map<String, Object> fullDashboard = new HashMap<>();
         fullDashboard.put("bookingStats", getBookingStats(dates[0], dates[1], ownerId));
         fullDashboard.put("paymentStats", getPaymentStats(dates[0], dates[1], ownerId));
-//        fullDashboard.put("totalRevenue", paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) != null ? paymentRepository.getTotalRevenue(dates[0], dates[1], ownerId) : BigDecimal.ZERO);
         BigDecimal totalRevenue = transactionRepository.getTotalIncomeRevenue(
                 dates[0],
                 dates[1],

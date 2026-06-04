@@ -192,4 +192,28 @@ class CourtResponse {
       updatedAt: json['updatedAt']?.toString(),
     );
   }
+
+  CourtResponse copyWith({
+    List<CourtCopyResponse>? courtCopies,
+  }) {
+    return CourtResponse(
+      courtId: courtId,
+      courtName: courtName,
+      courtCode: courtCode,
+      categoryId: categoryId,
+      categoryName: categoryName,
+      pricePerHour: pricePerHour,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+      rentalAreaId: rentalAreaId,
+      status: status,
+      description: description,
+      images: images,
+      courtCopies: courtCopies ?? this.courtCopies,
+      amenities: amenities,
+      priceRules: priceRules,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 }

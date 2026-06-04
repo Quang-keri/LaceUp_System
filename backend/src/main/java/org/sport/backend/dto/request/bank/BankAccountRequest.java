@@ -12,5 +12,6 @@ public class BankAccountRequest {
     private String accountNumber;
     private String accountHolderName;
     private String branchName;
+    private String bankBin;
     private String qrCode;
 }

@@ -50,7 +50,7 @@ public class BankAccountServiceImpl implements BankAccountService {
         bankAccount.setAccountHolderName(request.getAccountHolderName());
         bankAccount.setBranchName(request.getBranchName());
         bankAccount.setIsVerified(false);
-
+        bankAccount.setBankBin(request.getBankBin());
         if (qrCodeFile != null && !qrCodeFile.isEmpty()) {
             CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(qrCodeFile, "bank_qrcodes");
             bankAccount.setQrCode(uploadResult.getUrl());

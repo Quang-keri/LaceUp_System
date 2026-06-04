@@ -3,6 +3,27 @@ import type { BookingListResponse, BookingResponse } from "../types/booking";
 import type { ApiResponse } from "../types/ApiResponse";
 
 class BookingService {
+  async getPendingTransferBookings(rentalId: string, page = 1, size = 10) {
+    const res = await api.get(`/bookings/intent/rental/${rentalId}`, {
+      params: {
+        status: "PENDING_OWNER_CONFIRM",
+        page,
+        size,
+      },
+    });
+
+    return res.data;
+  }
+
+  async ownerConfirmBooking(intentId: string) {
+    const res = await api.post(`/bookings/intent/${intentId}/owner-confirm`);
+
+    return res.data;
+  }
+  async ownerRejectBooking(intentId: string) {
+    const res = await api.post(`/bookings/intent/${intentId}/owner-reject`);
+    return res.data;
+  }
   async previewOwnerBookingPrice(payload: {
     slots: { courtCopyId: string; startTime: string; endTime: string }[];
   }) {

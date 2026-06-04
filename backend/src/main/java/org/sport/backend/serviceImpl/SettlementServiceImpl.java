@@ -31,7 +31,6 @@ public class SettlementServiceImpl implements SettlementService {
     private final SettlementRepository settlementRepository;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
-    private final SlotRepository slotRepository;
     private final BookingRepository bookingRepository;
     private final BookingServiceItemRepository bookingServiceItemRepository;
     private final CommissionConfigService commissionService;

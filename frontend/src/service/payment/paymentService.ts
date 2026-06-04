@@ -1,14 +1,6 @@
 import api from "../../config/axios";
 
 class PaymentService {
-  async checkout(bookingIntentId: string, paymentMethod: string) {
-    const res = await api.post("/payments/checkout", {
-      bookingIntentId,
-      paymentMethod,
-    });
-    return res.data;
-  }
-
   async checkoutPayment(
     bookingIntentId: string,
     paymentMethod: string,
@@ -34,15 +26,13 @@ class PaymentService {
     orderCode: string;
     status: string;
   }) {
-    const res = await api.get("/payments/result", {
+    return await api.get("/payments/result", {
       params: data,
     });
-    return res;
   }
 
   async handleVnPayReturn(queryString: string) {
-    const res = await api.get(`/payments/vnpay/return${queryString}`);
-    return res;
+    return await api.get(`/payments/vnpay/return${queryString}`);
   }
 }
 
