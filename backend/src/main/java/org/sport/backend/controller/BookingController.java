@@ -60,16 +60,14 @@ public class BookingController {
         );
     }
 
-
-        @GetMapping("/intent/my-intents")
-        public ApiResponse<List<BookingIntentResponse>> getMyBookingIntents() {
-            return ApiResponse.<List<BookingIntentResponse>>builder()
-                    .code(200)
-                    .message("Lấy danh sách booking đang chờ xác nhận thành công")
-                    .result(bookingService.getMyBookingIntents())
-                    .build();
-        }
-
+    @GetMapping("/intent/my-intents")
+    public ApiResponse<List<BookingIntentResponse>> getMyBookingIntents() {
+        return ApiResponse.<List<BookingIntentResponse>>builder()
+                .code(200)
+                .message("Lấy danh sách booking đang chờ xác nhận thành công")
+                .result(bookingService.getMyBookingIntents())
+                .build();
+    }
 
     @PostMapping("/intent/{intentId}/owner-confirm")
     public ApiResponse<BookingResponse> ownerConfirmManualBooking(
@@ -112,6 +110,7 @@ public class BookingController {
                 new ApiResponse<>(200, "Preview price successfully", total)
         );
     }
+
     @PostMapping("/owner")
     @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<BookingResponse> ownerCreateBooking(

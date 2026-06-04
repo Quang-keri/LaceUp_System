@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mobile/views/match/in_profile_page/my_match_screen.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile/widgets/main_navigation.dart';
@@ -35,6 +36,10 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const MainNavigation(),
+
+      routes: {
+        '/my-matches': (context) => const MyMatchScreen(),
+      },
     );
   }
 }

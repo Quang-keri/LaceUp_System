@@ -315,7 +315,7 @@ export default function CourtScheduleTimeline({
                           break;
                         case "MATCH_FULL":
                           dynamicClasses =
-                            "border-r border-gray-300 bg-[#9156F1]";
+                            "border-r border-gray-300 bg-[#ea580c]";
                           break;
                         case "MATCH_PENDING":
                           dynamicClasses =

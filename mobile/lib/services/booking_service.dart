@@ -118,6 +118,17 @@ class BookingService {
       );
     }
   }
+
+  Future<dynamic> cancelBooking(String bookingId) async {
+    try {
+      final response = await apiClient.put('/bookings/$bookingId/cancel');
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data?['message'] ?? 'Không thể hủy đặt sân',
+      );
+    }
+  }
 }
 
 final bookingService = BookingService();

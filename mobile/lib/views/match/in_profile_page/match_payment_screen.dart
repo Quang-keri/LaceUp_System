@@ -34,12 +34,36 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
   MatchResponse? matchDetail;
   String? _registrationId;
   double _amountDue = 0;
-  dynamic _paymentResult; // Biến hứng dữ liệu từ Backend
+  dynamic _paymentResult;
+
+  // Các biến lưu trữ thông tin hiển thị như Web
+  int _playerCount = 1;
+  String _userName = '';
+  String _phoneNumber = '';
+  String _matchTime = '';
 
   @override
   void initState() {
     super.initState();
     _loadPaymentIntent();
+  }
+
+  String _formatDateTime(dynamic timeData) {
+    if (timeData == null) return '--:--';
+    if (timeData is List && timeData.length >= 5) {
+      final h = timeData[3].toString().padLeft(2, '0');
+      final m = timeData[4].toString().padLeft(2, '0');
+      final d = timeData[2].toString().padLeft(2, '0');
+      final mo = timeData[1].toString().padLeft(2, '0');
+      final y = timeData[0].toString();
+      return '$h:$m - $d/$mo/$y';
+    }
+    try {
+      final date = DateTime.parse(timeData.toString());
+      return DateFormat('HH:mm - dd/MM/yyyy').format(date);
+    } catch (e) {
+      return timeData.toString();
+    }
   }
 
   Future<void> _loadPaymentIntent() async {
@@ -53,7 +77,13 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
       }
 
       final authProvider = context.read<AuthProvider>();
-      final myUserId = authProvider.user?['userId'];
+      final userMap = authProvider.user;
+      final myUserId = userMap?['userId'];
+
+      // Lấy thông tin user (Người đặt kèo)
+      _userName = userMap?['userName'] ?? 'Người chơi';
+      _phoneNumber =
+          userMap?['phoneNumber'] ?? userMap?['phone'] ?? 'Chưa cập nhật';
 
       final myRegistration = matchDetail!.participants.firstWhere(
         (p) => p.userId == myUserId,
@@ -64,6 +94,15 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
 
       _registrationId = myRegistration.registrationId;
       _amountDue = (myRegistration.amountDue ?? 0).toDouble();
+
+      // Cố gắng lấy số lượng người đăng ký (nếu có trong model, fallback về 1)
+      try {
+        _playerCount = (myRegistration as dynamic).playerCount ?? 1;
+      } catch (_) {
+        _playerCount = 1;
+      }
+
+      _matchTime = _formatDateTime(matchDetail!.startTime);
 
       if (_registrationId == null) {
         throw Exception("Không tìm thấy mã đăng ký (registrationId) của bạn.");
@@ -94,7 +133,6 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
     }
   }
 
-  // --- ĐỌC DỮ LIỆU ĐÃ ĐƯỢC XỬ LÝ TỪ BACKEND ---
   String get bankName =>
       _paymentResult?['bankName']?.toString() ?? 'Chưa cấu hình ngân hàng';
 
@@ -146,7 +184,6 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
         ),
       );
 
-      // Quay về trang danh sách My Matches
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const MyMatchScreen()),
@@ -173,7 +210,7 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (isLoading || matchDetail == null) {
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(backgroundColor: primaryColor, elevation: 0),
@@ -183,139 +220,216 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
 
     final totalStr = NumberFormat.currency(
       locale: 'vi_VN',
-      symbol: 'VNĐ',
+      symbol: 'đ',
     ).format(_amountDue);
+    final courtName = matchDetail!.hasCourt
+        ? (matchDetail!.courtName)
+        : 'Tự thỏa thuận';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text(
           'Thanh toán ghép kèo',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 16 + MediaQuery.of(context).padding.bottom,
-        ),
-        color: Colors.white,
-        child: ElevatedButton(
-          onPressed: isUploading ? null : _uploadProof,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: confirmColor,
-            minimumSize: const Size(double.infinity, 52),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: isUploading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text(
-                  'Xác nhận đã tải ảnh chuyển khoản',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-        ),
-      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _cardDecoration(),
+          // 1. THÔNG TIN NGƯỜI ĐẶT KÈO
+          _buildCard(
+            title: 'Thông tin người đặt kèo',
+            child: Column(
+              children: [
+                _buildSimpleRow('Tên người chơi', _userName),
+                const SizedBox(height: 8),
+                _buildSimpleRow('Số điện thoại', _phoneNumber),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 2. CHI TIẾT TRẬN ĐẤU VÃNG LAI
+          _buildCard(
+            title: 'Chi tiết trận đấu vãng lai',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Thông tin chuyển khoản',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Text(
+                  'MÔN THỂ THAO: ${matchDetail!.categoryName.toUpperCase()}',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text(
+                      'Mã phòng: ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      matchDetail!.roomCode ?? 'TRỐNG',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 16,
+                      color: Colors.black87,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Thời gian đấu: $_matchTime',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
+                      color: Colors.black87,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Cơ sở / Tên sân: $courtName',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 3. TÓM TẮT THANH TOÁN
+          _buildCard(
+            title: 'Tóm tắt thanh toán',
+            child: Column(
+              children: [
+                _buildSimpleRow(
+                  'Số người đăng ký hộ:',
+                  '$_playerCount người',
+                  valueBold: true,
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Tổng chi phí góp sân:',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    Text(
+                      totalStr,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 4. THÔNG TIN CHUYỂN KHOẢN (VietQR)
+          _buildCard(
+            title: 'Thông tin chuyển khoản',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
                 _infoRow('Ngân hàng', bankName),
                 _infoRow('Số tài khoản', accountNumber, enableCopy: true),
                 _infoRow('Chủ tài khoản', accountName, enableCopy: true),
                 _infoRow('Số tiền', totalStr),
                 _infoRow('Nội dung', transferContent, enableCopy: true),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _cardDecoration(),
-            child: Column(
-              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                ),
                 const Text(
                   'Quét mã VietQR',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 if (vietQrUrl.isNotEmpty)
-                  Image.network(
-                    vietQrUrl,
-                    height: 260,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return const SizedBox(
-                        height: 260,
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      debugPrint('LỖI TẢI QR: $error');
-                      return const SizedBox(
-                        height: 120,
-                        child: Center(
-                          child: Text(
-                            'Không tải được mã QR',
-                            style: TextStyle(color: Colors.red),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade200),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Image.network(
+                      vietQrUrl,
+                      height: 240,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const SizedBox(
+                          height: 240,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox(
+                            height: 120,
+                            child: Center(
+                              child: Text(
+                                'Không tải được mã QR',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                    ),
                   )
                 else
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      'Owner chưa cấu hình tài khoản ngân hàng',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  const Text(
+                    'Owner chưa cấu hình tài khoản ngân hàng',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: _cardDecoration(),
+
+          // 5. UPLOAD ẢNH CHUYỂN KHOẢN
+          _buildCard(
+            title: 'Ảnh chuyển khoản',
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Ảnh chuyển khoản',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 12),
                 if (selectedImage != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -335,19 +449,33 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
                   )
                 else
                   Container(
-                    height: 180,
+                    height: 140,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade50,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                        style: BorderStyle.solid,
+                      ),
                     ),
-                    child: Text(
-                      'Chưa chọn ảnh',
-                      style: TextStyle(color: Colors.grey.shade600),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.cloud_upload_outlined,
+                          size: 40,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Chưa chọn ảnh',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ],
                     ),
                   ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -355,11 +483,14 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
                     icon: Icon(Icons.image, color: primaryColor),
                     label: Text(
                       'Chọn ảnh từ thư viện',
-                      style: TextStyle(color: primaryColor),
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: primaryColor),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -374,15 +505,53 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
     );
   }
 
-  BoxDecoration _cardDecoration() {
-    return BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.04),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
+  // --- HÀM HỖ TRỢ XÂY DỰNG UI ---
+
+  Widget _buildCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSimpleRow(String label, String value, {bool valueBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.black54, fontSize: 14),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: valueBold ? FontWeight.bold : FontWeight.w500,
+            fontSize: 14,
+            color: Colors.black87,
+          ),
         ),
       ],
     );
@@ -390,12 +559,12 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
 
   Widget _infoRow(String label, String value, {bool enableCopy = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 110,
+            width: 100,
             child: Text(
               label,
               style: const TextStyle(color: Colors.black54, fontSize: 13),
@@ -404,7 +573,11 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
           Expanded(
             child: Text(
               value.isEmpty ? 'Chưa có' : value,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.black87,
+              ),
             ),
           ),
           if (enableCopy && value.isNotEmpty)
@@ -425,6 +598,54 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: 16 + MediaQuery.of(context).padding.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: isUploading ? null : _uploadProof,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: confirmColor,
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: isUploading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                'Xác nhận đã tải ảnh chuyển khoản',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
       ),
     );
   }

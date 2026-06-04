@@ -149,7 +149,7 @@ export default function VnPayReturnPage() {
 
           {state.mode === "BOOKED" && state.isMatch && (
             <Button
-              style={{ color: "white", background: "#1890ff" }}
+              style={{ color: "white", background: "#9156F1" }}
               size="large"
               onClick={() => navigate(`/my-matches`)}
             >

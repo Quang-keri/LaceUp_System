@@ -12,9 +12,13 @@ class MatchService {
     return MatchResponse.fromJson(res.data['result']);
   }
 
-  Future<void> joinMatch(String matchId) async {
+  Future<dynamic> joinMatch(String matchId, [int playerCount = 1]) async {
     try {
-      await apiClient.post('/matches/$matchId/join');
+      final res = await apiClient.post(
+        '$_baseUrl/$matchId/join',
+        data: {'playerCount': playerCount},
+      );
+      return res.data['result'];
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         throw Exception('Bạn chưa đăng nhập hoặc phiên đã hết hạn!');

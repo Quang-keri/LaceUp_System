@@ -26,18 +26,31 @@ public interface BookingService {
             int page,
             int size
     );
+
     List<BookingIntentResponse> getMyBookingIntents();
+
     BookingResponse ownerConfirmManualBooking(UUID intentId);
+
     void ownerRejectManualBooking(UUID intentId);
-    String  uploadIntentPaymentProof(UUID bookingIntentId, MultipartFile image);
+
+    String uploadIntentPaymentProof(UUID bookingIntentId, MultipartFile image);
+
     BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request);
+
     BookingResponse createOwnerBooking(OwnerBookingRequest request);
+
     void addExtraServices(UUID bookingId, AddExtraServicesRequest request);
+
     CheckAvailabilityResponse checkAvailability(SlotRequest request);
+
     BookingIntentResponse createBookingIntent(BookingRequest request);
+
     BookingIntentResponse getBookingIntentById(UUID bookingIntentId);
+
     BookingResponse confirmBooking(UUID bookingIntentId, Payment payment);
+
     BookingResponse getBookingById(UUID bookingId);
+
     PageResponse<BookingResponse> getAllBookings(
             BookingStatus bookingStatus,
             String keyword,
@@ -46,6 +59,7 @@ public interface BookingService {
             int page,
             int size
     );
+
     PageResponse<BookingResponse> getBookingsRentalId(UUID rentalId, BookingStatus bookingStatus, String keyword, LocalDate from, LocalDate to, int page, int size);
 
     PageResponse<BookingResponse> getMyBookings(BookingStatus bookingStatus, String keyword, LocalDate from, LocalDate to, int page, int size);

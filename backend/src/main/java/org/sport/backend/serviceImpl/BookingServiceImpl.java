@@ -75,6 +75,7 @@ public class BookingServiceImpl implements BookingService {
         return bookingIntentRepository
                 .findByBookerPhone(currentUser.getPhone())
                 .stream()
+                .filter(intent -> intent.getStatus() != BookingIntentStatus.CONFIRMED)
                 .map(intent -> {
 
                     List<IntentSlotResponse> slotResponses =
