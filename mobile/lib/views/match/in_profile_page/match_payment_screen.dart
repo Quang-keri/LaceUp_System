@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,7 +9,6 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/match_service.dart';
 import '../../../services/payment_service.dart';
 import '../../../utils/error_utils.dart';
-import 'my_match_screen.dart';
 
 class MatchPaymentScreen extends StatefulWidget {
   final String matchId;
@@ -29,14 +25,14 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
 
   bool isLoading = true;
   bool isUploading = false;
-  File? selectedImage;
+  XFile? selectedImage;
+  Uint8List? selectedImageBytes;
 
   MatchResponse? matchDetail;
   String? _registrationId;
   double _amountDue = 0;
   dynamic _paymentResult;
 
-  // Các biến lưu trữ thông tin hiển thị như Web
   int _playerCount = 1;
   String _userName = '';
   String _phoneNumber = '';
@@ -80,7 +76,6 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
       final userMap = authProvider.user;
       final myUserId = userMap?['userId'];
 
-      // Lấy thông tin user (Người đặt kèo)
       _userName = userMap?['userName'] ?? 'Người chơi';
       _phoneNumber =
           userMap?['phoneNumber'] ?? userMap?['phone'] ?? 'Chưa cập nhật';
@@ -95,7 +90,6 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
       _registrationId = myRegistration.registrationId;
       _amountDue = (myRegistration.amountDue ?? 0).toDouble();
 
-      // Cố gắng lấy số lượng người đăng ký (nếu có trong model, fallback về 1)
       try {
         _playerCount = (myRegistration as dynamic).playerCount ?? 1;
       } catch (_) {
@@ -149,51 +143,74 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
   String get vietQrUrl => _paymentResult?['vietQrUrl']?.toString() ?? '';
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
+    try {
+      final picker = ImagePicker();
 
-    if (picked == null) return;
-    setState(() => selectedImage = File(picked.path));
+      final XFile? pickedImage = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+
+      if (pickedImage == null) return;
+
+      final Uint8List bytes = await pickedImage.readAsBytes();
+
+      if (bytes.isEmpty) {
+        throw Exception('Ảnh đã chọn không có dữ liệu');
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        selectedImage = pickedImage;
+        selectedImageBytes = bytes;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      _showTopMessage(
+        'Không thể chọn ảnh: ${getErrorMessage(e)}',
+        isError: true,
+      );
+    }
   }
 
   Future<void> _uploadProof() async {
-    if (selectedImage == null) {
+    if (selectedImage == null || selectedImageBytes == null) {
       _showTopMessage('Vui lòng chọn ảnh chuyển khoản', isError: true);
       return;
     }
 
-    if (_registrationId == null) return;
+    if (selectedImageBytes!.isEmpty) {
+      _showTopMessage('Ảnh đã chọn không hợp lệ', isError: true);
+      return;
+    }
+
+    if (_registrationId == null || _registrationId!.isEmpty) {
+      _showTopMessage('Không tìm thấy mã đăng ký trận đấu', isError: true);
+      return;
+    }
 
     setState(() => isUploading = true);
 
     try {
       await paymentService.uploadMatchPaymentProof(
         registrationId: _registrationId!,
-        imagePath: selectedImage!.path,
+        imageBytes: selectedImageBytes!,
+        fileName: selectedImage!.name,
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tải ảnh thành công, vui lòng chờ duyệt kết quả'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MyMatchScreen()),
-        (route) => false,
-      );
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
+
       _showTopMessage(getErrorMessage(e), isError: true);
     } finally {
-      if (mounted) setState(() => isUploading = false);
+      if (mounted) {
+        setState(() => isUploading = false);
+      }
     }
   }
 
@@ -230,7 +247,7 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text(
-          'Thanh toán ghép kèo',
+          'Thanh toán ghép trận',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         backgroundColor: primaryColor,
@@ -242,9 +259,8 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 1. THÔNG TIN NGƯỜI ĐẶT KÈO
           _buildCard(
-            title: 'Thông tin người đặt kèo',
+            title: 'Thông tin người tạo trận',
             child: Column(
               children: [
                 _buildSimpleRow('Tên người chơi', _userName),
@@ -430,22 +446,15 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
             title: 'Ảnh chuyển khoản',
             child: Column(
               children: [
-                if (selectedImage != null)
+                if (selectedImageBytes != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: kIsWeb
-                        ? Image.network(
-                            selectedImage!.path,
-                            height: 220,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.file(
-                            selectedImage!,
-                            height: 220,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                    child: Image.memory(
+                      selectedImageBytes!,
+                      height: 220,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
                   )
                 else
                   Container(

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:mobile/views/match/in_profile_page/my_match_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
-import 'package:mobile/widgets/main_navigation.dart';
 import 'package:mobile/providers/auth_provider.dart';
+import 'package:mobile/views/match/in_profile_page/my_match_screen.dart';
+import 'package:mobile/widgets/main_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,10 +32,28 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'LaceUp',
       debugShowCheckedModeBanner: false,
+
+      // Ngôn ngữ mặc định của ứng dụng
+      locale: const Locale('vi', 'VN'),
+
+      supportedLocales: const [
+        Locale('vi', 'VN'),
+        Locale('en', 'US'),
+      ],
+
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF9156F1),
+        ),
         useMaterial3: true,
       ),
+
       home: const MainNavigation(),
 
       routes: {

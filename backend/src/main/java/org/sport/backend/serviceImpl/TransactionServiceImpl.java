@@ -1,5 +1,7 @@
 package org.sport.backend.serviceImpl;
 
+import lombok.RequiredArgsConstructor;
+import org.sport.backend.constant.MoneyFlow;
 import org.sport.backend.constant.TransactionStatus;
 import org.sport.backend.constant.TransactionType;
 import org.sport.backend.dto.base.PageResponse;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import lombok.RequiredArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -47,6 +48,7 @@ public class TransactionServiceImpl implements TransactionService {
                 TransactionSpecification.filterTransactions(
                         keyword,
                         type,
+                        MoneyFlow.OWNER_COLLECTED,
                         startDate,
                         endDate
                 );
@@ -75,22 +77,26 @@ public class TransactionServiceImpl implements TransactionService {
             int size,
             TransactionType type
     ) {
-        Page<Transaction> transactionPage;
+        Specification<Transaction> spec =
+                TransactionSpecification.filterTransactions(
+                        null,
+                        type,
+                        MoneyFlow.OWNER_COLLECTED,
+                        null,
+                        null
+                );
 
-        if (type != null) {
-            transactionPage = transactionRepository.findByOwner_UserIdAndType(
-                    ownerId,
-                    type,
-                    PageRequest.of(page - 1, size)
-            );
-        } else {
-            transactionPage = transactionRepository.findByOwner_UserId(
-                    ownerId,
-                    PageRequest.of(page - 1, size)
-            );
-        }
+        spec = spec.and((root, query, cb) ->
+                cb.equal(root.get("owner").get("userId"), ownerId)
+        );
 
-        List<TransactionResponse> responses = transactionPage.getContent().stream()
+        Page<Transaction> transactionPage = transactionRepository.findAll(
+                spec,
+                PageRequest.of(page - 1, size)
+        );
+
+        List<TransactionResponse> responses = transactionPage.getContent()
+                .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
 
@@ -98,11 +104,30 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public PageResponse<TransactionResponse> getTransactions(int page, int size, String keyword, TransactionType type, LocalDateTime startDate, LocalDateTime endDate) {
-        Specification<Transaction> spec = TransactionSpecification.filterTransactions(keyword, type, startDate, endDate);
-        Page<Transaction> transactionPage = transactionRepository.findAll(spec, PageRequest.of(page - 1, size));
+    public PageResponse<TransactionResponse> getTransactions(
+            int page,
+            int size,
+            String keyword,
+            TransactionType type,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
+        Specification<Transaction> spec =
+                TransactionSpecification.filterTransactions(
+                        keyword,
+                        type,
+                        MoneyFlow.ADMIN_COLLECTED,
+                        startDate,
+                        endDate
+                );
 
-        List<TransactionResponse> responses = transactionPage.getContent().stream()
+        Page<Transaction> transactionPage = transactionRepository.findAll(
+                spec,
+                PageRequest.of(page - 1, size)
+        );
+
+        List<TransactionResponse> responses = transactionPage.getContent()
+                .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
 
@@ -110,13 +135,17 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public TransactionResponse createTransaction(TransactionRequest request) {
+    public TransactionResponse createTransaction(
+            TransactionRequest request
+    ) {
         RentalArea rentalArea = null;
         User owner = null;
+
         if (request.getType() != TransactionType.INCOME
                 && request.getType() != TransactionType.EXPENSE) {
             throw new RuntimeException("Owner chỉ được tạo giao dịch thu hoặc chi");
         }
+
         if (request.getRentalAreaId() != null) {
             rentalArea = rentalAreaRepository.findById(request.getRentalAreaId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy khu sân"));
@@ -136,13 +165,16 @@ public class TransactionServiceImpl implements TransactionService {
                 .category(request.getCategory())
                 .rentalArea(rentalArea)
                 .owner(owner)
+                .moneyFlow(MoneyFlow.OWNER_COLLECTED)
                 .build();
 
         return mapToResponse(transactionRepository.save(transaction));
     }
 
     @Override
-    public TransactionResponse updateTransaction(UUID id, TransactionRequest request) {
+    public TransactionResponse updateTransaction(
+            UUID id, TransactionRequest request
+    ) {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch"));
 
@@ -150,21 +182,42 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setAmount(request.getAmount());
         transaction.setDescription(request.getDescription());
 
-
         return mapToResponse(transactionRepository.save(transaction));
     }
 
     @Override
-    public TransactionSummaryResponse getRentalAreaTransactionSummary(UUID rentalAreaId, LocalDate startDate, LocalDate endDate) {
+    public TransactionSummaryResponse getRentalAreaTransactionSummary(
+            UUID rentalAreaId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        LocalDate safeStartDate = startDate != null
+                ? startDate : LocalDate.of(2000, 1, 1);
 
-        LocalDate safeStartDate = (startDate != null) ? startDate : LocalDate.of(2000, 1, 1);
-        LocalDate safeEndDate = (endDate != null) ? endDate : LocalDate.of(2099, 12, 31);
+        LocalDate safeEndDate = endDate != null
+                ? endDate : LocalDate.of(2099, 12, 31);
 
-        BigDecimal totalIncome = transactionRepository.sumTotalIncomeByRentalArea(rentalAreaId, safeStartDate, safeEndDate);
-        BigDecimal totalExpense = transactionRepository.sumTotalExpenseByRentalArea(rentalAreaId, safeStartDate, safeEndDate);
-        BigDecimal systemTransferred = transactionRepository.sumSystemTransferredByRentalArea(rentalAreaId, safeStartDate, safeEndDate);
+        BigDecimal totalIncome = transactionRepository.sumTotalIncomeByRentalArea(
+                rentalAreaId,
+                safeStartDate,
+                safeEndDate
+        );
 
-        BigDecimal netProfit = totalIncome.subtract(totalExpense);
+        BigDecimal totalExpense = transactionRepository.sumTotalExpenseByRentalArea(
+                rentalAreaId,
+                safeStartDate,
+                safeEndDate
+        );
+
+        BigDecimal systemTransferred = transactionRepository.sumSystemTransferredByRentalArea(
+                rentalAreaId,
+                safeStartDate,
+                safeEndDate
+        );
+
+        BigDecimal netProfit = totalIncome
+                .add(systemTransferred)
+                .subtract(totalExpense);
 
         return TransactionSummaryResponse.builder()
                 .totalIncome(totalIncome)
@@ -185,6 +238,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .paymentMethod(entity.getPaymentMethod())
                 .status(entity.getStatus())
                 .category(entity.getCategory())
+                .moneyFlow(entity.getMoneyFlow())
 
                 .bookingId(entity.getBooking() != null
                         ? entity.getBooking().getBookingId()

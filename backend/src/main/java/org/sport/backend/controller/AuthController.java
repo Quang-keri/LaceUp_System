@@ -47,7 +47,8 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> loginGoogle(
             @Valid @RequestBody LoginGoogleRequest request
     ) {
-        LoginGoogleResponse googleInfo = authGoogleService.authenticate(request.getCode());
+        LoginGoogleResponse googleInfo =
+                authGoogleService.authenticate(request.getCode());
 
         LoginResponse tokens = authService.loginWithGoogle(
                 googleInfo.getEmail(),

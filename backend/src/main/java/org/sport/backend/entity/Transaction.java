@@ -6,10 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.*;
-import org.sport.backend.constant.PaymentMethod;
-import org.sport.backend.constant.TransactionStatus;
-import org.sport.backend.constant.TransactionType;
-import org.sport.backend.constant.TransactionCategory;
+import org.sport.backend.constant.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -46,6 +43,10 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private TransactionStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "money_flow")
+    private MoneyFlow moneyFlow;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;

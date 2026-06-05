@@ -9,13 +9,16 @@ import org.sport.backend.dto.request.match.MatchCheckoutRequest;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.service.PaymentService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/payments")
@@ -72,7 +75,8 @@ public class PaymentController {
             @RequestParam String status
     ) {
         try {
-            CheckoutResponse response = paymentService.handleCheckoutResult(orderCode, status);
+            CheckoutResponse response =
+                    paymentService.handleCheckoutResult(orderCode, status);
             return ApiResponse.<CheckoutResponse>builder()
                     .code(200)
                     .message("Handle payment result successfully")
@@ -88,7 +92,8 @@ public class PaymentController {
         try {
 
             Map<String, String> fields = new HashMap<>();
-            for (Enumeration<String> params = request.getParameterNames(); params.hasMoreElements();) {
+            for (Enumeration<String> params =
+                 request.getParameterNames(); params.hasMoreElements(); ) {
                 String fieldName = params.nextElement();
                 String fieldValue = request.getParameter(fieldName);
                 if (fieldValue != null && !fieldValue.isEmpty()) {
@@ -118,17 +123,21 @@ public class PaymentController {
             return ApiResponse.success(
                     201,
                     "Tạo link thanh toán ghép trận thành công",
-                    paymentService.checkoutMatchJoin(request.getRegistrationId(), request.getPaymentMethod())
+                    paymentService.checkoutMatchJoin(
+                            request.getRegistrationId(),
+                            request.getPaymentMethod())
             );
         } catch (Exception e) {
             return ApiResponse.error(500, e.getMessage());
         }
     }
 
-    @PostMapping(value = "/match/upload-proof", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(
+            value = "/match/upload-proof",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> uploadMatchPaymentProof(
-            @RequestParam("registrationId") java.util.UUID registrationId,
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+            @RequestParam("registrationId") UUID registrationId,
+            @RequestParam("file") MultipartFile file) {
 
         paymentService.uploadMatchPaymentProof(registrationId, file);
 

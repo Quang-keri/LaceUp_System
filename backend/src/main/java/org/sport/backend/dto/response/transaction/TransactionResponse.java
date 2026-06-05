@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.transaction;
 
 import lombok.Builder;
 import lombok.Data;
+import org.sport.backend.constant.MoneyFlow;
 import org.sport.backend.constant.PaymentMethod;
 import org.sport.backend.constant.TransactionCategory;
 import org.sport.backend.constant.TransactionStatus;
@@ -24,6 +25,7 @@ public class TransactionResponse {
 
     private TransactionStatus status;
     private TransactionCategory category;
+    private MoneyFlow moneyFlow;
 
     private UUID bookingId;
 

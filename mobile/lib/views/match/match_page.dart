@@ -450,7 +450,7 @@ class _MatchPageState extends State<MatchPage> {
               ),
             ),
             Text(
-              'Tìm đồng đội giao lưu hoặc tham gia kèo',
+              'Tìm đồng đội giao lưu hoặc tham gia trận đấu',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],

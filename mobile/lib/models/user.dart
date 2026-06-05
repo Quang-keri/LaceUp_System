@@ -9,10 +9,14 @@ extension GenderExtension on Gender {
 Gender? _parseGender(String? value) {
   if (value == null) return null;
   switch (value.toUpperCase()) {
-    case 'MALE': return Gender.MALE;
-    case 'FEMALE': return Gender.FEMALE;
-    case 'OTHER': return Gender.OTHER;
-    default: return null;
+    case 'MALE':
+      return Gender.MALE;
+    case 'FEMALE':
+      return Gender.FEMALE;
+    case 'OTHER':
+      return Gender.OTHER;
+    default:
+      return null;
   }
 }
 
@@ -64,6 +68,7 @@ class UserResponse {
   final String updatedAt;
   final bool active;
   final List<String>? permissions;
+
   // Tạm để dynamic, nếu bạn có file permission_model.dart thì thay bằng List<PermissionResponse>
   final List<dynamic>? extraPermissions;
   final bool? isDepositConfirmed;
@@ -74,6 +79,7 @@ class UserResponse {
   final double? amountDue;
   final bool? isPaid;
   final int? playerCount;
+  final bool? isCancelled;
 
   final BankAccountResponse? bankAccount;
 
@@ -100,6 +106,7 @@ class UserResponse {
     this.isPaid,
     this.playerCount,
     this.bankAccount,
+    this.isCancelled,
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
@@ -123,14 +130,15 @@ class UserResponse {
       teamNumber: json['teamNumber'],
       categoryRanks: json['categoryRanks'] != null
           ? (json['categoryRanks'] as List)
-          .map((i) => CategoryRankResponse.fromJson(i))
-          .toList()
+                .map((i) => CategoryRankResponse.fromJson(i))
+                .toList()
           : null,
 
       registrationId: json['registrationId']?.toString(),
       amountDue: double.tryParse(json['amountDue']?.toString() ?? '0'),
       isPaid: json['isPaid'] as bool?,
       playerCount: int.tryParse(json['playerCount']?.toString() ?? '1'),
+      isCancelled: json['isCancelled'] as bool? ?? false,
       bankAccount: json['bankAccount'] != null
           ? BankAccountResponse.fromJson(json['bankAccount'])
           : null,
@@ -167,8 +175,8 @@ class UserDashboardResponse {
       winRate: (json['winRate'] ?? 0).toDouble(),
       categoryRanks: json['categoryRanks'] != null
           ? (json['categoryRanks'] as List)
-          .map((i) => CategoryRankResponse.fromJson(i))
-          .toList()
+                .map((i) => CategoryRankResponse.fromJson(i))
+                .toList()
           : [],
     );
   }
@@ -221,12 +229,7 @@ class UpdateUserRequest {
   final Gender? gender;
   final String? dateOfBirth;
 
-  UpdateUserRequest({
-    this.userName,
-    this.phone,
-    this.gender,
-    this.dateOfBirth,
-  });
+  UpdateUserRequest({this.userName, this.phone, this.gender, this.dateOfBirth});
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};

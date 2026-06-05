@@ -74,6 +74,8 @@ import PendingTransferBookingPage from "../page/owner/booking/ConfirmBookingApp/
 import MatchPaymentPage from "../page/customer/profile-page/my-match/MatchPaymentPage.tsx";
 import RefundManagement from "../page/admin/refund-page/RefundManagement.tsx";
 import MatchPaymentApprovalPage from "../page/owner/match/MatchPaymentApprovalPage.tsx";
+import ResetPassword from "../page/customer/login-page/ResetPassword.tsx";
+import ForgotPassword from "../page/customer/login-page/ForgotPassword.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -101,6 +103,8 @@ export const router = createBrowserRouter([
       },
       { path: "home", element: <SportsBookingLanding /> },
       { path: "login", element: <LoginPage /> },
+      { path: "forgot-password", element: <ForgotPassword /> },
+      { path: "reset-password", element: <ResetPassword /> },
       { path: "news", element: <UserNewsPage /> },
       { path: "news/:id", element: <UserNewsDetail /> },
       { path: "/register", element: <RegisterPage /> },

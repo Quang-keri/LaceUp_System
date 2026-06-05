@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../models/match.dart';
 import '../../../services/match_service.dart';
@@ -9,11 +10,6 @@ import 'match_payment_screen.dart';
 
 const Color kAppOrange = Colors.orange;
 const Color kAppPurple = Colors.purple;
-const LinearGradient kAppGradient = LinearGradient(
-  colors: [kAppOrange, kAppPurple],
-  begin: Alignment.centerLeft,
-  end: Alignment.centerRight,
-);
 
 class MyMatchScreen extends StatefulWidget {
   const MyMatchScreen({Key? key}) : super(key: key);
@@ -28,6 +24,9 @@ class _MyMatchScreenState extends State<MyMatchScreen>
   List<MatchResponse> matches = [];
   late TabController _tabController;
 
+  final Set<String> _leftMatchIds = {};
+  final Set<String> _waitingApprovalMatchIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -35,26 +34,143 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     _fetchMyMatches();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchMyMatches() async {
-    setState(() => isLoading = true);
+    if (mounted) {
+      setState(() => isLoading = true);
+    }
+
     try {
       final res = await matchService.getMyMatches(1, 50);
+
+      if (!mounted) return;
+
       setState(() {
         matches = res.data;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Lỗi tải dữ liệu: $e')));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi tải dữ liệu: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
+  }
+
+  Future<void> _openPaymentScreen(MatchResponse match) async {
+    final bool? uploaded = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MatchPaymentScreen(matchId: match.matchId),
+      ),
+    );
+
+    if (!mounted || uploaded != true) return;
+
+    setState(() {
+      _waitingApprovalMatchIds.add(match.matchId);
+    });
+
+    await _fetchMyMatches();
+
+    if (!mounted) return;
+
+    // Đợi frame hiện tại render xong rồi mới hiển thị SnackBar.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showPaymentProofSuccess();
+      }
+    });
+  }
+
+  void _showPaymentProofSuccess() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+        duration: const Duration(seconds: 4),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFECFDF3),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF86EFAC)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF16A34A),
+                size: 26,
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Đã gửi ảnh chuyển khoản',
+                      style: TextStyle(
+                        color: Color(0xFF166534),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Ảnh đang chờ chủ sân kiểm tra và xác nhận.',
+                      style: TextStyle(
+                        color: Color(0xFF15803D),
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _handleLeaveMatch(String matchId) async {
     try {
       await matchService.leaveMatch(matchId);
       if (!mounted) return;
+
+      setState(() {
+        _leftMatchIds.add(matchId);
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đã rút lui khỏi trận đấu thành công!'),
@@ -64,9 +180,30 @@ class _MyMatchScreenState extends State<MyMatchScreen>
       _fetchMyMatches();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
-      );
+
+      String errorMessage = 'Có lỗi xảy ra';
+      if (e is DioException && e.response?.data != null) {
+        errorMessage = e.response?.data['message'] ?? e.message;
+      } else {
+        errorMessage = e.toString();
+      }
+
+      if (errorMessage.contains('đã rời') ||
+          errorMessage.contains('chưa tham gia')) {
+        setState(() {
+          _leftMatchIds.add(matchId);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bạn đã rời trận đấu này rồi!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -149,7 +286,25 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     }
   }
 
-  Widget _buildStatusTag(String status) {
+  Widget _buildStatusTag(String status, bool hasLeft) {
+    if (hasLeft) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          "Đã rút lui",
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
     Color bgColor;
     Color textColor;
     String text;
@@ -197,7 +352,7 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(6),
@@ -206,7 +361,7 @@ class _MyMatchScreenState extends State<MyMatchScreen>
         text,
         style: TextStyle(
           color: textColor,
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -241,7 +396,7 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(6),
@@ -250,14 +405,14 @@ class _MyMatchScreenState extends State<MyMatchScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: textColor),
-            const SizedBox(width: 4),
+            Icon(icon, size: 10, color: textColor),
+            const SizedBox(width: 3),
           ],
           Text(
             text,
             style: TextStyle(
               color: textColor,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -266,33 +421,158 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     );
   }
 
+  Widget _buildCompactActionButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required Color foregroundColor,
+    Color? backgroundColor,
+    Color? borderColor,
+    bool filled = false,
+  }) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(9),
+    );
+
+    final labelWidget = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      softWrap: false,
+      style: const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        height: 1,
+      ),
+    );
+
+    if (filled) {
+      return SizedBox(
+        height: 34,
+        child: ElevatedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 14),
+          label: labelWidget,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: backgroundColor ?? foregroundColor,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey.shade300,
+            disabledForegroundColor: Colors.white,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            shape: shape,
+            visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 34,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 14),
+        label: labelWidget,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: foregroundColor,
+          backgroundColor: backgroundColor ?? Colors.white,
+          side: BorderSide(color: borderColor ?? foregroundColor, width: 1.1),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          shape: shape,
+          visualDensity: const VisualDensity(horizontal: -2, vertical: -3),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactStatus({
+    required String label,
+    required IconData icon,
+    required Color foregroundColor,
+    required Color backgroundColor,
+    required Color borderColor,
+  }) {
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: borderColor, width: 1.1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foregroundColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(
+              color: foregroundColor,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMatchCard(MatchResponse match) {
-    // 1. Tìm thông tin của user hiện tại trong danh sách participants
     final authProvider = context.read<AuthProvider>();
     final myUserId = authProvider.user?['userId'];
 
-    var myInfo = match.participants
+    var rawInfo = match.participants
         .where((p) => p.userId == myUserId)
         .firstOrNull;
 
-    // 2. Kiểm tra cờ thanh toán
-    bool needsPayment = false;
-    if (myInfo != null) {
-      needsPayment = (myInfo.amountDue ?? 0) > 0 && myInfo.isPaid != true;
-    }
+    bool hasLeft =
+        (rawInfo?.isCancelled == true) || _leftMatchIds.contains(match.matchId);
+
+    var myInfo = hasLeft ? null : rawInfo;
+
+    final bool isPaid = myInfo?.isPaid == true;
+
+    final bool isWaitingApproval =
+        myInfo != null &&
+        !isPaid &&
+        _waitingApprovalMatchIds.contains(match.matchId);
+
+    final bool needsPayment =
+        myInfo != null &&
+        (myInfo.amountDue ?? 0) > 0 &&
+        !isPaid &&
+        !isWaitingApproval;
+
+    // Định dạng dùng chung cho Nút bấm để nó nhỏ gọn lại
+    final smallButtonStyle = ElevatedButton.styleFrom(
+      minimumSize: const Size(0, 36),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+    );
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      // Nhỏ margin lại
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0), // Padding bên trong cũng thu lại
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
@@ -300,141 +580,133 @@ class _MyMatchScreenState extends State<MyMatchScreen>
                       ? match.title
                       : 'Giao lưu ${match.categoryName}',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15, // Chữ nhỏ lại xíu
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                _buildStatusTag(match.status),
+                _buildStatusTag(match.status, hasLeft),
                 _buildMatchTypeTag(match),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            // Giảm khoảng cách
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 16, color: kAppOrange),
-                const SizedBox(width: 6),
+                const Icon(Icons.calendar_today, size: 14, color: kAppOrange),
+                const SizedBox(width: 4),
                 Text(
                   _formatDate(match.startTime),
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
-                const SizedBox(width: 16),
-                const Icon(Icons.location_on, size: 16, color: kAppPurple),
-                const SizedBox(width: 6),
+                const SizedBox(width: 12),
+                const Icon(Icons.location_on, size: 14, color: kAppPurple),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     match.courtName.isNotEmpty
                         ? match.courtName
                         : "Tự thỏa thuận",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
-            // Dãy nút hành động
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nút Rút lui
-                if (['OPEN', 'PENDING', 'READY'].contains(match.status))
-                  OutlinedButton(
+                if (myInfo != null &&
+                    ['OPEN', 'PENDING', 'READY'].contains(match.status))
+                  _buildCompactActionButton(
+                    label: 'Rút lui',
+                    icon: Icons.logout_rounded,
                     onPressed: () => _showLeaveConfirmDialog(match.matchId),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Rút lui'),
+                    foregroundColor: const Color(0xFFEF4444),
+                    borderColor: const Color(0xFFEF4444),
+                    backgroundColor: Colors.white,
                   ),
 
-                // Nút Thanh toán
-                if (needsPayment &&
-                    !['COMPLETED', 'CANCELLED'].contains(match.status))
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              MatchPaymentScreen(matchId: match.matchId),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kAppOrange,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Thanh toán ngay',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                if (myInfo != null &&
+                    ['OPEN', 'PENDING', 'READY'].contains(match.status))
+                  const SizedBox(width: 8),
 
-                // Nút Chức năng chính tuỳ trạng thái
-                if (match.status == 'WAITING_RESULT_APPROVAL')
-                  ElevatedButton(
-                    onPressed: () => _openApproveDialog(match),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kAppOrange,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (isWaitingApproval)
+                          _buildCompactStatus(
+                            label: 'Chờ duyệt',
+                            icon: Icons.hourglass_top_rounded,
+                            foregroundColor: const Color(0xFFEA580C),
+                            backgroundColor: const Color(0xFFFFF7ED),
+                            borderColor: const Color(0xFFFDBA74),
+                          ),
+
+                        if (isPaid)
+                          _buildCompactStatus(
+                            label: 'Đã TT',
+                            icon: Icons.check_circle_rounded,
+                            foregroundColor: const Color(0xFF15803D),
+                            backgroundColor: const Color(0xFFECFDF3),
+                            borderColor: const Color(0xFF86EFAC),
+                          ),
+
+                        if (needsPayment &&
+                            !['COMPLETED', 'CANCELLED'].contains(match.status))
+                          _buildCompactActionButton(
+                            label: 'Thanh toán',
+                            icon: Icons.account_balance_wallet_rounded,
+                            onPressed: () => _openPaymentScreen(match),
+                            foregroundColor: kAppOrange,
+                            backgroundColor: kAppOrange,
+                            filled: true,
+                          ),
+
+                        if (match.status == 'WAITING_RESULT_APPROVAL')
+                          _buildCompactActionButton(
+                            label: 'Xử lý KQ',
+                            icon: Icons.fact_check_rounded,
+                            onPressed: () => _openApproveDialog(match),
+                            foregroundColor: kAppOrange,
+                            backgroundColor: kAppOrange,
+                            filled: true,
+                          )
+                        else if ([
+                              'READY',
+                              'PLAYING',
+                              'DISPUTED',
+                            ].contains(match.status) &&
+                            !needsPayment &&
+                            !hasLeft)
+                          _buildCompactActionButton(
+                            label: 'Đội hình / KQ',
+                            icon: Icons.groups_rounded,
+                            onPressed: () => _openDetailBottomSheet(match),
+                            foregroundColor: kAppPurple,
+                            borderColor: kAppPurple,
+                            backgroundColor: Colors.white,
+                          )
+                        else
+                          _buildCompactActionButton(
+                            label: 'Chi tiết',
+                            icon: Icons.visibility_outlined,
+                            onPressed: () => _openDetailBottomSheet(match),
+                            foregroundColor: const Color(0xFF374151),
+                            borderColor: const Color(0xFFD1D5DB),
+                            backgroundColor: Colors.white,
+                          ),
+                      ],
                     ),
-                    child: const Text(
-                      'Xử lý kết quả',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  )
-                else if ([
-                      'READY',
-                      'PLAYING',
-                      'DISPUTED',
-                    ].contains(match.status) &&
-                    !needsPayment)
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: kAppGradient,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ElevatedButton(
-                      onPressed: () => _openDetailBottomSheet(match),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Đội hình / Báo KQ',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  )
-                else
-                  ElevatedButton(
-                    onPressed: () => _openDetailBottomSheet(match),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade200,
-                      foregroundColor: Colors.black87,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Xem chi tiết'),
                   ),
+                ),
               ],
             ),
           ],
@@ -443,8 +715,30 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     );
   }
 
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final myUserId = context.read<AuthProvider>().user?['userId'];
+
     final activeStatuses = [
       'OPEN',
       'READY',
@@ -452,18 +746,33 @@ class _MyMatchScreenState extends State<MyMatchScreen>
       'WAITING_RESULT_APPROVAL',
       'DISPUTED',
     ];
-    final activeMatches = matches
-        .where((m) => activeStatuses.contains(m.status))
-        .toList();
-    final historyMatches = matches
-        .where((m) => ['COMPLETED', 'CANCELLED'].contains(m.status))
-        .toList();
+
+    List<MatchResponse> activeMatches = [];
+    List<MatchResponse> historyMatches = [];
+
+    for (var m in matches) {
+      var rawInfo = m.participants
+          .where((p) => p.userId == myUserId)
+          .firstOrNull;
+
+      bool hasLeft =
+          (rawInfo?.isCancelled == true) || _leftMatchIds.contains(m.matchId);
+
+      if (hasLeft || ['COMPLETED', 'CANCELLED'].contains(m.status)) {
+        historyMatches.add(m);
+      } else if (activeStatuses.contains(m.status)) {
+        activeMatches.add(m);
+      }
+    }
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      // Thêm nền xám nhạt để card nổi bật hơn
       appBar: AppBar(
+        automaticallyImplyLeading: true,
         title: const Text(
           'Trận đấu của tôi',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -481,16 +790,28 @@ class _MyMatchScreenState extends State<MyMatchScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                ListView.builder(
-                  itemCount: activeMatches.length,
-                  itemBuilder: (context, index) =>
-                      _buildMatchCard(activeMatches[index]),
-                ),
-                ListView.builder(
-                  itemCount: historyMatches.length,
-                  itemBuilder: (context, index) =>
-                      _buildMatchCard(historyMatches[index]),
-                ),
+                activeMatches.isEmpty
+                    ? _buildEmptyState(
+                        "Không có trận đấu nào đang diễn ra",
+                        Icons.sports_tennis,
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(top: 8, bottom: 20),
+                        itemCount: activeMatches.length,
+                        itemBuilder: (context, index) =>
+                            _buildMatchCard(activeMatches[index]),
+                      ),
+                historyMatches.isEmpty
+                    ? _buildEmptyState(
+                        "Không có dữ liệu lịch sử",
+                        Icons.history,
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(top: 8, bottom: 20),
+                        itemCount: historyMatches.length,
+                        itemBuilder: (context, index) =>
+                            _buildMatchCard(historyMatches[index]),
+                      ),
               ],
             ),
     );

@@ -3,7 +3,7 @@ import { Layout, ConfigProvider, theme as antTheme } from "antd";
 import { Outlet } from "react-router-dom";
 import OwnerHeader from "../../components/owner/Header";
 import { useAuth } from "../../context/AuthContext";
-import ChatBubble from "../../page/customer/chat/ChatBubble";
+// import ChatBubble from "../../page/customer/chat/ChatBubble";
 
 const { Content } = Layout;
 const THEME_KEY = "adminTheme";
@@ -34,7 +34,6 @@ export default function OwnerLayout() {
       }}
     >
       <Layout className="h-screen overflow-hidden flex flex-row">
-
         <Layout className="flex flex-col flex-1 min-w-0 transition-all duration-200">
           <OwnerHeader
             collapsed={collapsed}
@@ -55,7 +54,7 @@ export default function OwnerLayout() {
         </Layout>
       </Layout>
 
-      <ChatBubble />
+      {/* <ChatBubble /> */}
     </ConfigProvider>
   );
 }

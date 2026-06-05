@@ -9,8 +9,17 @@ import {
   message,
   Modal,
   InputNumber,
+  Tooltip,
 } from "antd";
-import { Calendar, Clock, Users, Trophy, Flame, Smile } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Users,
+  Trophy,
+  Flame,
+  Smile,
+  Crown,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { MatchResponse } from "../../../types/match.ts";
 import matchService from "../../../service/match/matchService.ts";
@@ -32,7 +41,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Các state quản lý Modal chọn số lượng người
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [playerCount, setPlayerCount] = useState<number>(1);
   const [isJoining, setIsJoining] = useState(false);
@@ -58,11 +66,12 @@ const MatchCard: React.FC<MatchCardProps> = ({
   const isValidPrice = (price: any) =>
     price != null && price !== "" && !isNaN(Number(price));
 
-  // -------- LOGIC TÍNH TÓAN SỐ NGƯỜI TỐI ĐA --------
-  // Số người 1 team (Giả sử chia làm 2 team)
   const maxTeamSize = Math.max(1, Math.floor((match.maxPlayers || 2) / 2));
-  // Số lượng tối đa được chọn = Min của (Số người 1 team) và (Số slot còn trống)
   const maxAllowed = Math.min(maxTeamSize, match.remainingSlots);
+
+  const unitPrice = isValidPrice(match.courtPrice)
+    ? Math.round(Number(match.courtPrice) / (match.maxPlayers || 1))
+    : null;
 
   // Mở popup chọn số lượng
   const handleOpenPlayerCountModal = (e: React.MouseEvent) => {
@@ -121,7 +130,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
       return (
         <Button
           type="primary"
-          onClick={handleOpenPlayerCountModal} // Sửa ở đây
+          onClick={handleOpenPlayerCountModal}
           className="rounded-xl font-semibold text-sm shadow-sm"
           style={{ backgroundColor: "#9156F1", borderColor: "#9156F1" }}
         >
@@ -215,6 +224,10 @@ const MatchCard: React.FC<MatchCardProps> = ({
           <h3 className="text-xl font-bold text-purple-600 pr-4 line-clamp-2 mt-1">
             {match.categoryName}
           </h3>
+          <div className="text-sm font-semibold text-slate-500 mb-2 flex items-center gap-1">
+            <span className="text-slate-400">Sân:</span>
+            {match.courtName || "Sân không xác định"}
+          </div>
           <div className="space-y-2 mb-2 text-slate-600">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -235,7 +248,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
             <div className="flex items-center gap-1.5 text-slate-600">
               <Users size={14} />
               <span>
-                {match.currentPlayers}/{match.maxPlayers} người
+                Giá: {match.currentPlayers}/{match.maxPlayers} người
               </span>
             </div>
             <span className="text-emerald-600">
@@ -254,34 +267,33 @@ const MatchCard: React.FC<MatchCardProps> = ({
           />
         </div>
 
-        <div className="bg-slate-50/80 border-t border-slate-100 p-3 mt-auto flex justify-between items-center">
-          <div>
-            {isValidPrice(match.courtPrice) ? (
+        <div className="bg-slate-50/80 border-t border-slate-100 p-3 mt-auto flex justify-between items-end">
+          <div className="flex flex-col gap-1">
+            {unitPrice !== null ? (
               <Text strong className="text-slate-800 text-base block">
-                {Number(match.courtPrice).toLocaleString()}đ
+                {unitPrice.toLocaleString("vi-VN")}đ{" "}
+                <span className="text-xs text-slate-500 font-normal">
+                  / người
+                </span>
               </Text>
             ) : (
               <Text className="font-medium text-slate-500 text-sm block">
                 Sân tự thỏa thuận
               </Text>
             )}
-            <Text
-              className="text-[12px] text-slate-500 font-medium mt-0.5 cursor-pointer hover:text-purple-600 hover:underline transition-colors block"
-              onClick={(e) => {
-                e.stopPropagation();
-                const hostUser = match.participants?.find(
-                  (p: any) => p.userName === match.hostName,
-                );
-                const hostId = (match as any).hostId || hostUser?.userId;
-                if (hostId) navigate(`/player/${hostId}`);
-                else message.info("Không tìm thấy thông tin hồ sơ của Host!");
-              }}
-            >
-              Host:{" "}
-              <span className="text-purple-600 font-semibold">
-                {match.hostName}
-              </span>
-            </Text>
+
+            {/* ĐÃ FIX: Thêm hiển thị Chủ Phòng (Host) */}
+            {match.host && (
+              <Tooltip
+                title={`SĐT: ${match.host.phone || "Chưa cập nhật"}`}
+                placement="bottomLeft"
+              >
+                <div className="flex items-center gap-1 text-xs text-orange-600 font-medium cursor-help">
+                  <Crown size={12} className="text-orange-500" />
+                  <span>Host: {match.host.userName}</span>
+                </div>
+              </Tooltip>
+            )}
           </div>
           <Space>{renderActionButton()}</Space>
         </div>
@@ -302,7 +314,6 @@ const MatchCard: React.FC<MatchCardProps> = ({
           cancelText="Hủy"
           centered
           width={400}
-          // Đổi màu nút Xác nhận mặc định của Antd sang màu Cam
           okButtonProps={{
             style: { backgroundColor: "#f97316", borderColor: "#f97316" },
             className: "font-semibold shadow-sm hover:opacity-90",

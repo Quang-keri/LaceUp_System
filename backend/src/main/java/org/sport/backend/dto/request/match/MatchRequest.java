@@ -24,7 +24,7 @@ public class MatchRequest {
     private RecurringType recurringType;
     private DayOfWeek dayOfWeek;
     private LocalDate endDate;
-
+    private Integer playerCount;
     private MatchType matchType;
     private Integer minRank;
     private Integer maxRank;

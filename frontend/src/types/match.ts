@@ -34,8 +34,7 @@ export interface MatchResponse {
   remainingSlots: number;
   price: number;
   status: string;
-  hostName: string;
-  hostRating: number;
+  host: UserResponse;
   level: string;
   hasCourt: boolean;
   participants: UserResponse[];
