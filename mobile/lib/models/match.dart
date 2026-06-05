@@ -20,6 +20,7 @@ class MatchRequest {
   final int? minRank;
   final int? maxRank;
   final String? note;
+  final int? playerCount;
 
   MatchRequest({
     this.courtId,
@@ -39,6 +40,7 @@ class MatchRequest {
     this.minRank,
     this.maxRank,
     this.note,
+    this.playerCount
   });
 
   Map<String, dynamic> toJson() {
@@ -60,6 +62,7 @@ class MatchRequest {
       'minRank': minRank,
       'maxRank': maxRank,
       'note': note,
+      'playerCount': playerCount ?? 1,
     };
   }
 }
@@ -120,6 +123,7 @@ class MatchResponse {
   final int? minRank;
   final int? maxRank;
   final bool isFull;
+  final bool? isCancelled;
   final List<MatchReportResponse>? reports;
 
   MatchResponse({
@@ -152,6 +156,7 @@ class MatchResponse {
     this.minRank,
     this.maxRank,
     required this.isFull,
+    this.isCancelled,
     this.reports,
   });
 

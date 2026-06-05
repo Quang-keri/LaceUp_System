@@ -111,9 +111,9 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
   }
 
   RentalAreaResponse _mergeScheduleToRentalArea(
-      RentalAreaResponse area,
-      List<dynamic> scheduleCopies,
-      ) {
+    RentalAreaResponse area,
+    List<dynamic> scheduleCopies,
+  ) {
     final newCourts = (area.courts ?? []).map((court) {
       final newCopies = court.courtCopies.map((copy) {
         final matched = scheduleCopies.cast<dynamic>().where((s) {
@@ -157,9 +157,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => LoginScreen(
-            onLoginSuccess: openForm,
-          ),
+          builder: (context) => LoginScreen(onLoginSuccess: openForm),
         ),
       );
       return;
@@ -171,6 +169,27 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final totalPrice = calculateTotalPrice(selectedSlots);
+
+    String buttonText = '';
+
+    if (isMatchMode && currentMatchConfig != null) {
+      final maxPlayers = currentMatchConfig!.maxPlayers > 0
+          ? currentMatchConfig!.maxPlayers
+          : 1;
+
+      final hostPlayerCount = currentMatchConfig!.playerCount > 0
+          ? currentMatchConfig!.playerCount
+          : 1;
+
+      final pricePerPerson = (totalPrice / maxPlayers).round();
+      final totalHostPrice = pricePerPerson * hostPlayerCount;
+
+      buttonText =
+      'Tạo Ghép Kèo • ${NumberFormat.decimalPattern('vi_VN').format(totalHostPrice)} đ / $hostPlayerCount người';
+    } else {
+      buttonText =
+      'Đặt sân (${selectedSlots.length}) • ${NumberFormat.decimalPattern('vi_VN').format(totalPrice)} đ';
+    }
 
     if (loading) {
       return Scaffold(
@@ -208,42 +227,40 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       ),
       bottomNavigationBar: (_activeTabIndex == 0 && selectedSlots.isNotEmpty)
           ? Container(
-        // SỬA DÒNG PADDING NÀY:
-        // Thêm MediaQuery.of(context).padding.bottom để tự động chừa chỗ cho thanh Home
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 16 + MediaQuery.of(context).padding.bottom,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 10,
-              offset: Offset(0, -2),
-            ),
-          ],
-        ),
-        child: ElevatedButton(
-          onPressed: _goToBookingForm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: selectedColor,
-            minimumSize: const Size(double.infinity, 54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: Text(
-            'Đặt sân (${selectedSlots.length}) • ${NumberFormat.decimalPattern('vi_VN').format(totalPrice)} đ',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      )
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: 16 + MediaQuery.of(context).padding.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: _goToBookingForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: selectedColor,
+                  minimumSize: const Size(double.infinity, 54),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  buttonText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            )
           : null,
       body: SafeArea(
         child: Column(
@@ -339,15 +356,18 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
                 maxPlayers: 10,
                 minPlayersToStart: 5,
                 note: '',
+                playerCount: 1,
               );
             });
           },
           onMatchConfigChanged: (config) {
-            currentMatchConfig = config;
+            setState(() {
+              currentMatchConfig = config;
+            });
           },
         );
       case 1:
-        return  CourtInfoTab(
+        return CourtInfoTab(
           rentalArea: rentalArea,
           activeCourt: activeCourt,
           onCourtSelected: (court) {
@@ -370,6 +390,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         return const SizedBox();
     }
   }
+
   void _showTopMessage(String message, {bool isError = false}) {
     final overlay = Overlay.of(context);
 
@@ -381,10 +402,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         child: Material(
           color: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: isError ? Colors.red : Colors.orange,
               borderRadius: BorderRadius.circular(12),

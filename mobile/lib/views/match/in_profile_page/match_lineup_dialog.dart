@@ -80,6 +80,10 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
       listen: false,
     ).user?['userId']?.toString();
 
+    // Check quyền: User hiện tại đã đóng tiền chưa?
+    final myInfo = widget.match.participants.where((p) => p.userId == myUserId).firstOrNull;
+    final bool hasUnpaidFee = myInfo != null && (myInfo.amountDue ?? 0) > 0 && myInfo.isPaid != true;
+
     final team1 = widget.match.participants
         .where((p) => teamAssignments[p.userId] == 1)
         .toList();
@@ -103,14 +107,18 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
               "Bảng điểm & Đội hình",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+
+            // ĐÃ FIX: Thông báo nhắc thanh toán ngay trên đầu nếu nợ tiền
             if (isEditable)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  "Chạm vào người chơi để loại khỏi đội",
+                  hasUnpaidFee
+                      ? "Bạn phải thanh toán mới được chọn đội."
+                      : "Chạm vào tên của BẠN để chuyển/rời khỏi đội",
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey,
+                    color: hasUnpaidFee ? Colors.red : Colors.grey,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -127,6 +135,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                     Colors.orange,
                     myUserId,
                     true,
+                    hasUnpaidFee,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -137,6 +146,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                     Colors.purple,
                     myUserId,
                     false,
+                    hasUnpaidFee,
                   ),
                 ),
               ],
@@ -159,87 +169,114 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                 Column(
                   children: unassigned
                       .map(
-                        (p) => Padding(
+                          (p) {
+                        bool isMe = p.userId == myUserId;
+
+                        return Padding(
                           padding: const EdgeInsets.only(bottom: 8.0),
                           child: Row(
                             children: [
                               CircleAvatar(
                                 radius: 12,
-                                backgroundColor: Colors.grey.shade200,
+                                backgroundColor: isMe ? Colors.purple.shade100 : Colors.grey.shade200,
                                 child: Text(
                                   p.userName.isNotEmpty
                                       ? p.userName[0].toUpperCase()
                                       : 'U',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: Colors.grey.shade700,
+                                    color: isMe ? Colors.purple : Colors.grey.shade700,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(
-                                  p.userName,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        p.userName,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                                          color: isMe ? Colors.purple : Colors.black87,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (isMe) _buildMeBadge(Colors.purple),
+                                  ],
                                 ),
                               ),
-                              InkWell(
-                                onTap: () => setState(
-                                  () => teamAssignments[p.userId] = 1,
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
+
+                              // ĐÃ FIX LOGIC CHỌN ĐỘI:
+                              // Chỉ hiện nút bấm NẾU người đó là MÌNH, VÀ mình ĐÃ ĐÓNG TIỀN (hoặc không cần đóng tiền)
+                              if (isMe && !hasUnpaidFee) ...[
+                                InkWell(
+                                  onTap: () => setState(
+                                        () => teamAssignments[p.userId] = 1,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    "Vào Đội 1",
-                                    style: TextStyle(
-                                      color: Colors.orange,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      "Vào Đội 1",
+                                      style: TextStyle(
+                                        color: Colors.orange,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              InkWell(
-                                onTap: () => setState(
-                                  () => teamAssignments[p.userId] = 2,
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () => setState(
+                                        () => teamAssignments[p.userId] = 2,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.purple.shade50,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    "Vào Đội 2",
-                                    style: TextStyle(
-                                      color: Colors.purple,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.purple.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      "Vào Đội 2",
+                                      style: TextStyle(
+                                        color: Colors.purple,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ] else if (isMe && hasUnpaidFee) ...[
+                                const Text(
+                                  "(Hãy thanh toán)",
+                                  style: TextStyle(color: Colors.red, fontSize: 10, fontStyle: FontStyle.italic),
+                                )
+                              ] else ...[
+                                const Text(
+                                  "Chưa chọn",
+                                  style: TextStyle(color: Colors.grey, fontSize: 10, fontStyle: FontStyle.italic),
+                                )
+                              ]
                             ],
                           ),
-                        ),
-                      )
+                        );
+                      }
+                  )
                       .toList(),
                 )
               else
@@ -249,16 +286,16 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                   children: unassigned
                       .map(
                         (p) => Chip(
-                          backgroundColor: Colors.grey.shade100,
-                          label: Text(
-                            p.userName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                      backgroundColor: Colors.grey.shade100,
+                      label: Text(
+                        p.userName,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
-                      )
+                      ),
+                    ),
+                  )
                       .toList(),
                 ),
             ],
@@ -274,7 +311,8 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
-                if (isEditable) ...[
+                // ĐÃ FIX: Chỉ hiện nút "Lưu đội hình" nếu user đã đóng tiền xong
+                if (isEditable && !hasUnpaidFee) ...[
                   const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: isSaving ? null : _handleSaveTeam,
@@ -285,14 +323,14 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                     ),
                     child: isSaving
                         ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                         : const Text(
-                            "Lưu đội hình",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                      "Lưu đội hình",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ],
@@ -304,12 +342,13 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
   }
 
   Widget _buildTeamColumn(
-    String teamName,
-    List<dynamic> players,
-    Color color,
-    String? myUserId,
-    bool isLeft,
-  ) {
+      String teamName,
+      List<dynamic> players,
+      Color color,
+      String? myUserId,
+      bool isLeft,
+      bool hasUnpaidFee,
+      ) {
     bool isWinner = false;
     if (widget.matchResultData != null) {
       int teamNum = isLeft ? 1 : 2;
@@ -343,7 +382,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
         ),
         Divider(color: color.withOpacity(0.3), height: 16, thickness: 1),
         ...players.map(
-          (p) => _buildPlayerItem(p, p.userId == myUserId, color, isLeft),
+              (p) => _buildPlayerItem(p, p.userId == myUserId, color, isLeft, hasUnpaidFee),
         ),
       ],
     );
@@ -368,11 +407,12 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
   }
 
   Widget _buildPlayerItem(
-    dynamic player,
-    bool isMe,
-    Color teamColor,
-    bool isLeft,
-  ) {
+      dynamic player,
+      bool isMe,
+      Color teamColor,
+      bool isLeft,
+      bool hasUnpaidFee,
+      ) {
     final avatarWidget = CircleAvatar(
       radius: 14,
       backgroundColor: isMe ? teamColor.withOpacity(0.2) : Colors.grey.shade200,
@@ -416,7 +456,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
           ),
           const SizedBox(height: 2),
           Text(
-            "Rank: 3025",
+            "Rank: ${player.categoryRanks != null && player.categoryRanks.isNotEmpty ? player.categoryRanks[0].rankPoint : '0'}",
             style: TextStyle(fontSize: 9, color: Colors.grey.shade500),
           ),
         ],
@@ -440,7 +480,8 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
       ),
     );
 
-    if (isEditable) {
+    // ĐÃ FIX: Chỉ khi là "Mình" và không nợ tiền thì mới click gỡ được bản thân ra khỏi Đội
+    if (isEditable && isMe && !hasUnpaidFee) {
       return InkWell(
         onTap: () => setState(() => teamAssignments.remove(player.userId)),
         borderRadius: BorderRadius.circular(8),

@@ -14,7 +14,6 @@ import '../../../services/match_service.dart';
 import '../area_detail/payment_proof_screen.dart';
 import 'match_config_widget.dart';
 
-
 class BookingFormScreen extends StatefulWidget {
   final DateTime selectedDate;
   final List<SelectedBookingSlot> selectedSlots;
@@ -137,7 +136,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       final bookingId = result['bookingIntentId']?.toString();
 
       final totalPriceFromBe =
-          double.tryParse(result['previewPrice']?.toString() ?? '') ?? totalPrice;
+          double.tryParse(result['previewPrice']?.toString() ?? '') ??
+          totalPrice;
 
       if (bookingId == null || bookingId.isEmpty) {
         throw Exception('API chưa trả về bookingId / bookingIntentId');
@@ -157,7 +157,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           ),
         ),
       );
-    }catch (e) {
+    } catch (e) {
       if (!mounted) return;
 
       final message = getErrorMessage(e);
@@ -191,33 +191,100 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         note: widget.matchConfig!.note.isEmpty
             ? _noteController.text
             : widget.matchConfig!.note,
+        playerCount: widget.matchConfig!.playerCount,
       );
 
       await matchService.createMatch(payload);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tạo kèo thành công!'),
-          backgroundColor: Colors.green,
-        ),
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Column(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 48),
+                SizedBox(height: 12),
+                Text(
+                  'Tạo kèo thành công!',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            content: const Text(
+              'Đã đặt kèo thành công!\nHãy đến trang Trận đấu của tôi để thanh toán nhé.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.5,
+                color: Colors.black87,
+              ),
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: confirmColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(dContext).pop();
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/my-matches',
+                      (route) => route.isFirst,
+                    );
+                  },
+                  child: const Text(
+                    'Đến Trận đấu của tôi',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       );
-
-      Navigator.pop(context);
-    }  catch (e) {
+    } catch (e) {
       if (!mounted) return;
 
       final message = getErrorMessage(e);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _getMatchTypeName(String type) {
+    switch (type) {
+      case 'BET':
+        return 'Chia Kèo (Đội thua phạt)';
+      case 'RANKED':
+        return 'Đánh Rank (Tích điểm)';
+      case 'NORMAL':
+      default:
+        return 'Giao lưu (Chơi vui vẻ)';
     }
   }
 
@@ -334,40 +401,92 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                           ],
                         ),
                       ),
-                      Text(
-                        NumberFormat.currency(
-                          locale: 'vi_VN',
-                          symbol: 'đ',
-                        ).format(price),
-                        style: const TextStyle(
-                          color: Color(0xFFEA580C),
-                          fontWeight: FontWeight.bold,
+                      // Nếu đang tạo ghép kèo thì ẩn cái giá nhỏ xíu của từng khung giờ đi cho đỡ rối mắt (Vì ghép kèo ăn đồng chia đủ)
+                      if (!widget.isMatchMode)
+                        Text(
+                          NumberFormat.currency(
+                            locale: 'vi_VN',
+                            symbol: 'đ',
+                          ).format(price),
+                          style: const TextStyle(
+                            color: Color(0xFFEA580C),
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 );
               }),
 
-              const Divider(height: 32),
+              // KHỐI THÔNG TIN TRẬN ĐẤU DÀNH CHO GHÉP KÈO
+              if (widget.isMatchMode && widget.matchConfig != null) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Thông tin trận đấu (Ghép kèo)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: primaryColor.withOpacity(0.2)),
+                    color: const Color(0xFFF9F5FF),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildMatchInfoRow(
+                        'Thể thức',
+                        _getMatchTypeName(widget.matchConfig!.matchType),
+                        isHighlight: true,
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 10),
+                        child: Divider(height: 1, color: Colors.black12),
+                      ),
+                      _buildMatchInfoRow(
+                        'Tổng số người',
+                        '${widget.matchConfig!.maxPlayers} người',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMatchInfoRow(
+                        'Số người / Team',
+                        '${widget.matchConfig!.minPlayersToStart} người',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMatchInfoRow(
+                        'Bạn tham gia',
+                        '${widget.matchConfig!.playerCount} người',
+                        isOrange: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Tổng tiền',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                  ),
-                  Text(
-                    totalStr,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 22,
-                      color: primaryColor,
+              if (!widget.isMatchMode) ...[
+                const Divider(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Tổng tiền',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    Text(
+                      totalStr,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
 
               const SizedBox(height: 24),
 
@@ -390,20 +509,20 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
                           : Text(
-                        actionBtnText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                              actionBtnText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -412,6 +531,39 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMatchInfoRow(
+    String label,
+    String value, {
+    bool isHighlight = false,
+    bool isOrange = false,
+  }) {
+    Color valueColor = Colors.black87;
+    if (isHighlight) valueColor = primaryColor;
+    if (isOrange) valueColor = confirmColor;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ],
     );
   }
 

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../models/match.dart';
 import '../../../models/match_result.dart';
 import '../../../services/match_result_service.dart';
@@ -6,6 +10,7 @@ import '../../../services/match_service.dart';
 import 'match_lineup_dialog.dart';
 import 'submit_result_dialog.dart';
 import 'report_dialog.dart';
+import 'match_payment_screen.dart';
 
 class MatchDetailBottomSheet extends StatefulWidget {
   final MatchResponse match;
@@ -63,9 +68,29 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
-      );
+
+      String errorMessage = 'Có lỗi xảy ra';
+      if (e is DioException && e.response?.data != null) {
+        errorMessage = e.response?.data['message'] ?? e.message;
+      } else {
+        errorMessage = e.toString();
+      }
+
+      if (errorMessage.contains('đã rời') ||
+          errorMessage.contains('chưa tham gia')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bạn đã rời trận đấu này rồi!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        widget.onSuccess();
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -137,6 +162,19 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
     );
   }
 
+  String _formatTimeRange(String start, String end) {
+    try {
+      final DateTime dtStart = DateTime.parse(start);
+      final DateTime dtEnd = DateTime.parse(end);
+      final String date = DateFormat('dd/MM/yyyy').format(dtStart);
+      final String sTime = DateFormat('HH:mm').format(dtStart);
+      final String eTime = DateFormat('HH:mm').format(dtEnd);
+      return "$sTime - $eTime,  $date";
+    } catch (e) {
+      return start;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isCompleted = widget.match.status == 'COMPLETED';
@@ -167,7 +205,7 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
             const SizedBox(height: 16),
           ],
 
-          _buildInfoCard(),
+          _buildInfoCard(context),
           const SizedBox(height: 20),
 
           SizedBox(
@@ -208,7 +246,21 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(BuildContext context) {
+    final myUserId = context.read<AuthProvider>().user?['userId'];
+    var myInfo = widget.match.participants
+        .where((p) => p.userId == myUserId)
+        .firstOrNull;
+
+    double amountToPay = myInfo?.amountDue ?? 0.0;
+    bool isPaid = myInfo?.isPaid ?? false;
+
+    String addressStr = "Chưa có địa chỉ chi tiết";
+    if (widget.match.address != null) {
+      addressStr =
+          "${widget.match.address!.street ?? ''}, ${widget.match.address!.ward ?? ''}";
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -219,48 +271,113 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.match.categoryName.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.match.categoryName.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+              if (widget.match.roomCode != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    "Mã: ${widget.match.roomCode}",
+                    style: TextStyle(
+                      color: Colors.orange.shade800,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
           ),
+          const SizedBox(height: 4),
           Text(
             widget.match.title.isNotEmpty
                 ? widget.match.title
                 : "Giao lưu ${widget.match.categoryName}",
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
+
+          if (widget.match.note != null && widget.match.note!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                "Ghi chú: ${widget.match.note}",
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+
           const SizedBox(height: 16),
           _buildInfoRow(
             Icons.access_time,
-            "Thời gian bắt đầu",
-            widget.match.startTime,
+            "Thời gian",
+            _formatTimeRange(widget.match.startTime, widget.match.endTime),
           ),
           const SizedBox(height: 12),
           _buildInfoRow(
             Icons.location_on_outlined,
             widget.match.courtName,
-            widget.match.address != null
-                ? "${widget.match.address!.street}, ${widget.match.address!.ward}"
-                : "Chưa có địa chỉ",
+            addressStr,
           ),
-          const Divider(height: 30),
+          const SizedBox(height: 12),
+          _buildInfoRow(
+            Icons.group_outlined,
+            "Số lượng tham gia",
+            "${widget.match.currentPlayers} / ${widget.match.maxPlayers} người",
+          ),
+
+          const Divider(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "Giá sân tham khảo:",
-                style: TextStyle(color: Colors.grey),
-              ),
-              Text(
-                "${widget.match.courtPrice} đ",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                "Số tiền bạn phải trả:",
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    NumberFormat.currency(
+                      locale: 'vi_VN',
+                      symbol: 'đ',
+                    ).format(amountToPay),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: isPaid ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                  if (isPaid)
+                    const Text(
+                      "(Đã thanh toán)",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
@@ -331,74 +448,129 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
   }
 
   Widget _buildBottomActions(BuildContext context) {
+    final myUserId = context.read<AuthProvider>().user?['userId'];
+    var myInfo = widget.match.participants
+        .where((p) => p.userId == myUserId)
+        .firstOrNull;
+    bool isParticipant = myInfo != null && myInfo.isCancelled != true;
+
+    bool needsPayment = false;
+    if (myInfo != null) {
+      needsPayment = (myInfo.amountDue ?? 0) > 0 && myInfo.isPaid != true;
+    }
+
     bool isCompleted = widget.match.status == 'COMPLETED';
     bool isNeedSubmit = [
       'READY',
       'PLAYING',
       'DISPUTED',
     ].contains(widget.match.status);
-    bool canLeave = ['OPEN', 'PENDING', 'READY'].contains(widget.match.status);
+    bool canLeave =
+        isParticipant &&
+        ['OPEN', 'PENDING', 'READY'].contains(widget.match.status);
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Nút Báo cáo
-        TextButton.icon(
-          onPressed: _openReportDialog,
-          icon: const Icon(Icons.flag_outlined, color: Colors.red),
-          label: const Text("Báo cáo", style: TextStyle(color: Colors.red)),
-        ),
-
-        // Nút Rút lui (Chỉ hiện khi chưa bắt đầu)
-        if (canLeave) ...[
-          const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: _showLeaveConfirmDialog,
-            icon: const Icon(Icons.exit_to_app, color: Colors.orange),
-            label: const Text(
-              "Rút lui",
-              style: TextStyle(color: Colors.orange),
-            ),
-          ),
-        ],
-
-        const Spacer(),
-
-        // Cụm nút bên phải
-        if (!isCompleted &&
-            widget.match.status != 'CANCELLED' &&
-            isNeedSubmit) ...[
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Colors.orange, Colors.purple],
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ElevatedButton(
-              onPressed: _openSubmitDialog,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-              ),
-              child: const Text(
-                'Báo KQ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+        if (needsPayment &&
+            !['COMPLETED', 'CANCELLED'].contains(widget.match.status))
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      MatchPaymentScreen(matchId: widget.match.matchId),
                 ),
+              ).then((_) => widget.onSuccess());
+            },
+            icon: const Icon(Icons.payment, size: 20),
+            label: const Text(
+              'Thanh toán ngay',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
-          ),
-        ] else ...[
+          )
+        else if (!isCompleted &&
+            widget.match.status != 'CANCELLED' &&
+            isNeedSubmit)
+          ElevatedButton.icon(
+            onPressed: _openSubmitDialog,
+            icon: const Icon(Icons.check_circle_outline, size: 20),
+            label: const Text(
+              'Báo Kết Quả',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          )
+        else
           OutlinedButton(
             onPressed: () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
               foregroundColor: Colors.grey.shade700,
               side: BorderSide(color: Colors.grey.shade300),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text("Đóng"),
+            child: const Text(
+              "Đóng",
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
           ),
-        ],
+
+        const SizedBox(height: 12),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: _openReportDialog,
+              icon: const Icon(
+                Icons.flag_outlined,
+                color: Colors.red,
+                size: 18,
+              ),
+              label: const Text(
+                "Báo cáo vi phạm",
+                style: TextStyle(color: Colors.red, fontSize: 13),
+              ),
+            ),
+            if (canLeave) ...[
+              const SizedBox(width: 12),
+              Container(width: 1, height: 14, color: Colors.grey.shade300),
+              const SizedBox(width: 12),
+              TextButton.icon(
+                onPressed: _showLeaveConfirmDialog,
+                icon: const Icon(
+                  Icons.exit_to_app,
+                  color: Colors.orange,
+                  size: 18,
+                ),
+                label: const Text(
+                  "Rút lui",
+                  style: TextStyle(color: Colors.orange, fontSize: 13),
+                ),
+              ),
+            ],
+          ],
+        ),
       ],
     );
   }

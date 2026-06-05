@@ -178,7 +178,11 @@ public class MatchServiceImpl implements MatchService {
         }
 
         if (currentUser.getRole().getRoleName().equals("RENTER")) {
-            joinMatch(savedMatch.getMatchId(), 1);
+            int initialPlayers = (request.getPlayerCount() != null && request.getPlayerCount() > 0)
+                    ? request.getPlayerCount()
+                    : 1;
+
+            joinMatch(savedMatch.getMatchId(), initialPlayers);
         }
 
         return matchMapper.toResponse(savedMatch);

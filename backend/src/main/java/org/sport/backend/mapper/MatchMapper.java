@@ -2,10 +2,13 @@ package org.sport.backend.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.bank.BankAccountResponse;
+import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.match.MatchReportResponse;
 import org.sport.backend.dto.response.match.MatchResponse;
 import org.sport.backend.dto.response.user.UserResponse;
+import org.sport.backend.entity.Address;
 import org.sport.backend.entity.CourtPrice;
 import org.sport.backend.entity.Match;
 
@@ -46,6 +49,13 @@ public interface MatchMapper {
                 .matchId(match.getMatchId())
                 .roomCode(match.getRoomCode())
                 .courtName(match.getCourt() != null ? match.getCourt().getCourtName() : "Sân tự thỏa thuận")
+                .address(
+                        match.getCourt() != null
+                                && match.getCourt().getRentalArea() != null
+                                && match.getCourt().getRentalArea().getAddress() != null
+                                ? toAddressResponse(match.getCourt().getRentalArea().getAddress())
+                                : null
+                )
                 .categoryName(match.getCategory() != null ? match.getCategory().getCategoryName() : "Chưa xác định")
                 .startTime(match.getStartTime())
                 .endTime(match.getEndTime())
@@ -120,5 +130,21 @@ public interface MatchMapper {
                 .max(Comparator.comparing(CourtPrice::getPriority, Comparator.nullsFirst(Integer::compareTo)));
 
         return bestPrice.map(courtPrice -> courtPrice.getPricePerHour().toString()).orElse("Chưa cập nhật");
+    }
+
+    default AddressResponse toAddressResponse(Address address) {
+        if (address == null) {
+            return null;
+        }
+
+        return AddressResponse.builder()
+                .street(address.getStreet())
+                .ward(address.getWard())
+                .city(address.getCity() == null ? null :
+                        CityResponse.builder()
+                                .cityId(address.getCity().getCityId())
+                                .cityName(address.getCity().getCityName())
+                                .build())
+                .build();
     }
 }

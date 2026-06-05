@@ -51,16 +51,75 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
     try {
       await matchService.joinMatch(widget.match.matchId, _playerCount);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tham gia trận thành công!'),
-            backgroundColor: Colors.green,
-          ),
-        );
         widget.onSuccess();
 
-        Navigator.pop(context);
-        Navigator.pushNamed(context, '/my-matches');
+        // ĐÃ FIX: Thay SnackBar bằng Dialog Pop-up cực đẹp
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext dContext) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Column(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 48),
+                  SizedBox(height: 12),
+                  Text(
+                    'Thành công!',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              content: const Text(
+                'Bạn đã tham gia trận đấu thành công.\nHãy thanh toán hoặc chờ chủ phòng phân đội nhé.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.5,
+                  color: Colors.black87,
+                ),
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(dContext).pop(); // Đóng popup thành công
+                      Navigator.of(context).pop(); // Đóng dialog JoinMatch
+                      Navigator.pushNamed(
+                        context,
+                        '/my-matches',
+                      ); // Chuyển sang My Matches
+                    },
+                    child: const Text(
+                      'Đến Trận đấu của tôi',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -374,8 +433,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final player = widget.match.participants[index];
-                    final playerCount =
-                        player.playerCount ?? 1;
+                    final playerCount = player.playerCount ?? 1;
 
                     return ListTile(
                       leading: CircleAvatar(

@@ -699,14 +699,10 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                   ),
                                 ),
                               ),
-                              // Dùng Stack để ép text nằm đè lên vạch chia (Border)
                               child: Stack(
-                                clipBehavior: Clip.none, // Quan trọng: Cho phép chữ tràn ra ngoài viền Container
+                                clipBehavior: Clip.none,
                                 children: [
-                                  // 1. Mốc giờ bắt đầu nằm ở vạch bên TRÁI
                                   Positioned(
-                                    // Ô đầu tiên nhích vào trong 4px để không bị lẹm vào cột Tên Sân.
-                                    // Các ô tiếp theo dịch sang trái -16px để chữ (rộng khoảng 32px) nằm ngay chính giữa vạch kẻ.
                                     left: idx == 0 ? 4 : -16,
                                     top: 0,
                                     bottom: 0,
