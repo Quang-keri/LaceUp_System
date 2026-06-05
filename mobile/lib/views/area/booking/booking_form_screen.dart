@@ -211,7 +211,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 Icon(Icons.check_circle, color: Colors.green, size: 48),
                 SizedBox(height: 12),
                 Text(
-                  'Tạo kèo thành công!',
+                  'Tạo trận thành công!',
                   style: TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -296,11 +296,11 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     ).format(totalPrice);
 
     final screenTitle = widget.isMatchMode
-        ? 'Xác nhận tạo kèo'
+        ? 'Xác nhận tạo trận'
         : 'Xác nhận đặt sân';
 
     final actionBtnText = widget.isMatchMode
-        ? 'Xác nhận tạo kèo'
+        ? 'Xác nhận tạo trận'
         : 'Đặt lịch và chuyển khoản';
 
     return Scaffold(

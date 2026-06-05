@@ -11,6 +11,7 @@ import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Address;
 import org.sport.backend.entity.CourtPrice;
 import org.sport.backend.entity.Match;
+import org.sport.backend.entity.User;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -30,19 +31,35 @@ public interface MatchMapper {
 
         UserResponse hostResponse = null;
         if (match.getHost() != null) {
-            hostResponse = userMapper.toUserResponse(match.getHost());
+            hostResponse = UserResponse.builder()
+                    .userId(match.getHost().getUserId())
+                    .userName(match.getHost().getUserName())
+                    .phone(match.getHost().getPhone())
+                    .build();
+        }
 
-            if (match.getHost().getBankAccount() != null) {
-                var bank = match.getHost().getBankAccount();
-                hostResponse.setBankAccount(BankAccountResponse.builder()
-                        .bankAccountId(bank.getBankAccountId())
-                        .bankName(bank.getBankName())
-                        .accountNumber(bank.getAccountNumber())
-                        .accountHolderName(bank.getAccountHolderName())
-                        .branchName(bank.getBranchName())
-                        .qrCode(bank.getQrCode())
-                        .build());
+        UserResponse ownerCourtResponse = null;
+        if (match.getCourt() != null && match.getCourt().getRentalArea() != null && match.getCourt().getRentalArea().getOwner() != null) {
+            User owner = match.getCourt().getRentalArea().getOwner();
+
+            BankAccountResponse bankAccountResponse = null;
+            if (owner.getBankAccount() != null) {
+                bankAccountResponse = BankAccountResponse.builder()
+                        .bankAccountId(owner.getBankAccount().getBankAccountId())
+                        .bankName(owner.getBankAccount().getBankName())
+                        .accountNumber(owner.getBankAccount().getAccountNumber())
+                        .accountHolderName(owner.getBankAccount().getAccountHolderName())
+                        .branchName(owner.getBankAccount().getBranchName())
+                        .qrCode(owner.getBankAccount().getQrCode())
+                        .build();
             }
+
+            ownerCourtResponse = UserResponse.builder()
+                    .userId(owner.getUserId())
+                    .userName(owner.getUserName())
+                    .phone(owner.getPhone())
+                    .bankAccount(bankAccountResponse)
+                    .build();
         }
 
         return MatchResponse.builder()
@@ -73,6 +90,7 @@ public interface MatchMapper {
                 .note(match.getNote())
 
                 .host(hostResponse)
+                .ownerCourt(ownerCourtResponse) // Gán OwnerCourt vào Response
 
                 .reports(match.getReports() == null ? Collections.emptyList() :
                         match.getReports().stream()

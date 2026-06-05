@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { UserResponse } from "../types/user.ts";
 import userService from "../service/userService.ts";
-import { tokenService } from "../service/tokenService.ts";
-import websocketService from "../service/websocketService";
+// import { tokenService } from "../service/tokenService.ts";
+// import websocketService from "../service/websocketService";
 
 interface AuthContextType {
   user: UserResponse | null;
@@ -21,21 +21,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<UserResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    if (user && user.userId) {
-      const token = tokenService.getAccessToken();
-      const wsUrl = import.meta.env.VITE_WS_URL;
-      console.log("Đường dẫn WS thực tế đang gọi là:", wsUrl);
-
-      if (!websocketService.isConnected()) {
-        websocketService.connect(wsUrl, token);
-      }
-    } else {
-      if (websocketService.isConnected()) {
-        websocketService.disconnect();
-      }
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user && user.userId) {
+  //     const token = tokenService.getAccessToken();
+  //     const wsUrl = import.meta.env.VITE_WS_URL;
+  //     console.log("Đường dẫn WS thực tế đang gọi là:", wsUrl);
+  //
+  //     if (!websocketService.isConnected()) {
+  //       websocketService.connect(wsUrl, token);
+  //     }
+  //   } else {
+  //     if (websocketService.isConnected()) {
+  //       websocketService.disconnect();
+  //     }
+  //   }
+  // }, [user]);
 
   const fetchCurrentUser = async () => {
     const token = localStorage.getItem("accessToken");
@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("refreshToken");
 
     // Ngắt đường truyền ngay lập tức bằng hàm thủ công cho an toàn
-    websocketService.disconnect();
+    // websocketService.disconnect();
 
     setUser(null);
   };

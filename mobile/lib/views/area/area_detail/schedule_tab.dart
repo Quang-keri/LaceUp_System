@@ -182,7 +182,6 @@ class _ScheduleTabState extends State<ScheduleTab> {
 
       widget.onActiveCourtChanged(court);
       widget.onSelectedSlotsChanged(newBlocks);
-
     } else {
       final otherCopies = currentSlots
           .where((item) => item.courtCopyId != copy.courtCopyId)
@@ -193,7 +192,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
           .toList();
 
       final clickedInsideIndex = myBlocks.indexWhere(
-            (b) => idx >= b.startIndex && idx <= b.endIndex,
+        (b) => idx >= b.startIndex && idx <= b.endIndex,
       );
 
       if (clickedInsideIndex != -1) {
@@ -241,9 +240,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
         } else {
           final last = merged.last;
           if (last.endIndex + 1 == block.startIndex) {
-            merged[merged.length - 1] = last.copyWith(
-              endIndex: block.endIndex,
-            );
+            merged[merged.length - 1] = last.copyWith(endIndex: block.endIndex);
           } else {
             merged.add(block);
           }
@@ -302,15 +299,44 @@ class _ScheduleTabState extends State<ScheduleTab> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    final now = DateTime.now();
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: widget.selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
+      locale: const Locale('vi', 'VN'),
+
+      initialDate: widget.selectedDate.isBefore(now)
+          ? now
+          : widget.selectedDate,
+
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 30)),
+
+      helpText: 'Chọn ngày',
+      cancelText: 'Hủy',
+      confirmText: 'Xác nhận',
+
+      fieldLabelText: 'Nhập ngày',
+      fieldHintText: 'dd/mm/yyyy',
+      errorFormatText: 'Định dạng ngày không hợp lệ',
+      errorInvalidText: 'Ngày không nằm trong phạm vi cho phép',
+
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: primaryColor),
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              onSurface: const Color(0xFF111827),
+            ),
+            datePickerTheme: DatePickerThemeData(
+              headerBackgroundColor: Colors.white,
+              headerForegroundColor: const Color(0xFF111827),
+              todayBorder: BorderSide(color: primaryColor, width: 1.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
           ),
           child: child!,
         );
@@ -327,10 +353,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
 
     for (final court in widget.rentalArea?.courts ?? []) {
       for (final copy in court.courtCopies) {
-        rows.add({
-          'court': court,
-          'copy': copy,
-        });
+        rows.add({'court': court, 'copy': copy});
       }
     }
 
@@ -489,6 +512,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
       ),
     );
   }
+
   Widget _buildBookingNotice() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -496,37 +520,29 @@ class _ScheduleTabState extends State<ScheduleTab> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFF7ED),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFFDBA74),
-        ),
+        border: Border.all(color: const Color(0xFFFDBA74)),
       ),
       child: RichText(
         text: const TextSpan(
-          style: TextStyle(
-            fontSize: 13,
-            height: 1.6,
-            color: Color(0xFFEA580C),
-          ),
+          style: TextStyle(fontSize: 13, height: 1.6, color: Color(0xFFEA580C)),
           children: [
             TextSpan(
               text: '* Lưu ý: ',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             TextSpan(
               text:
-              'Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây.\n'
+                  'Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây.\n'
                   'Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử đặt sân và nhận thông báo ưu đãi từ chúng tôi.\n'
                   'Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.\n'
                   'Chức năng ghép trận cần chọn sân để ra cấu hình trận đấu',
-
             ),
           ],
         ),
       ),
     );
   }
+
   Widget _buildLegendItem(Color color, String label, {Color? borderColor}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -724,7 +740,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                       bottom: 0,
                                       child: Center(
                                         child: Text(
-                                          widget.rentalArea?.closeTime?.substring(0, 5) ?? '22:00',
+                                          widget.rentalArea?.closeTime
+                                                  ?.substring(0, 5) ??
+                                              '22:00',
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
@@ -759,8 +777,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
                               ].contains(slotStatus);
 
                               final activeBlock = myBlocks.where((b) {
-                                return idx >= b.startIndex &&
-                                    idx <= b.endIndex;
+                                return idx >= b.startIndex && idx <= b.endIndex;
                               }).toList();
 
                               final isSelected = activeBlock.isNotEmpty;
@@ -795,18 +812,16 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                   ),
                                   left: idx == block.startIndex
                                       ? BorderSide(
-                                    color: selectedColor,
-                                    width: 2,
-                                  )
+                                          color: selectedColor,
+                                          width: 2,
+                                        )
                                       : BorderSide.none,
                                   right: idx == block.endIndex
                                       ? BorderSide(
-                                    color: selectedColor,
-                                    width: 2,
-                                  )
-                                      : BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
+                                          color: selectedColor,
+                                          width: 2,
+                                        )
+                                      : BorderSide(color: Colors.grey.shade300),
                                 );
                               }
 
@@ -814,10 +829,10 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                 onTap: isBlocked
                                     ? null
                                     : () => _toggleSlot(
-                                  court: court,
-                                  copy: copy,
-                                  idx: idx,
-                                ),
+                                        court: court,
+                                        copy: copy,
+                                        idx: idx,
+                                      ),
                                 child: Container(
                                   width: cellWidth,
                                   height: cellHeight,

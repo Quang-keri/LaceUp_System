@@ -9,8 +9,17 @@ import {
   message,
   Modal,
   InputNumber,
+  Tooltip,
 } from "antd";
-import { Calendar, Clock, Users, Trophy, Flame, Smile } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Users,
+  Trophy,
+  Flame,
+  Smile,
+  Crown,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { MatchResponse } from "../../../types/match.ts";
 import matchService from "../../../service/match/matchService.ts";
@@ -258,8 +267,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
           />
         </div>
 
-        <div className="bg-slate-50/80 border-t border-slate-100 p-3 mt-auto flex justify-between items-center">
-          <div>
+        <div className="bg-slate-50/80 border-t border-slate-100 p-3 mt-auto flex justify-between items-end">
+          <div className="flex flex-col gap-1">
             {unitPrice !== null ? (
               <Text strong className="text-slate-800 text-base block">
                 {unitPrice.toLocaleString("vi-VN")}đ{" "}
@@ -271,6 +280,19 @@ const MatchCard: React.FC<MatchCardProps> = ({
               <Text className="font-medium text-slate-500 text-sm block">
                 Sân tự thỏa thuận
               </Text>
+            )}
+
+            {/* ĐÃ FIX: Thêm hiển thị Chủ Phòng (Host) */}
+            {match.host && (
+              <Tooltip
+                title={`SĐT: ${match.host.phone || "Chưa cập nhật"}`}
+                placement="bottomLeft"
+              >
+                <div className="flex items-center gap-1 text-xs text-orange-600 font-medium cursor-help">
+                  <Crown size={12} className="text-orange-500" />
+                  <span>Host: {match.host.userName}</span>
+                </div>
+              </Tooltip>
             )}
           </div>
           <Space>{renderActionButton()}</Space>

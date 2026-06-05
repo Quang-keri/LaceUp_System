@@ -85,6 +85,7 @@ public class MatchServiceImpl implements MatchService {
                 .minPlayersToStart(request.getMinPlayersToStart())
                 .currentPlayers(0)
                 .status(MatchStatus.OPEN)
+                .host(currentUser)
                 .isRecurring(request.isRecurring())
                 .recurringType(request.getRecurringType())
                 .dayOfWeek(request.getDayOfWeek())
@@ -125,7 +126,6 @@ public class MatchServiceImpl implements MatchService {
 
             matchBuilder.court(court);
             assert area != null;
-            matchBuilder.host(area.getOwner());
             matchBuilder.category(court.getCategory());
         } else {
             if (request.getCategoryId() == null) {

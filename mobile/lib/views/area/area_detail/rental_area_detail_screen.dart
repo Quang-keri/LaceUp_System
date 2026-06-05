@@ -185,7 +185,7 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       final totalHostPrice = pricePerPerson * hostPlayerCount;
 
       buttonText =
-      'Tạo Ghép Kèo • ${NumberFormat.decimalPattern('vi_VN').format(totalHostPrice)} đ / $hostPlayerCount người';
+      'Tạo Ghép Trận • ${NumberFormat.decimalPattern('vi_VN').format(totalHostPrice)} đ / $hostPlayerCount người';
     } else {
       buttonText =
       'Đặt sân (${selectedSlots.length}) • ${NumberFormat.decimalPattern('vi_VN').format(totalPrice)} đ';

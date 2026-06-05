@@ -26,6 +26,7 @@ public class MatchResponse {
     private Integer remainingSlots;
     private String status;
     private UserResponse host;
+    private UserResponse ownerCourt;
     private boolean isFull;
     private boolean hasCourt;
     private List<UserResponse> participants;

@@ -173,6 +173,16 @@ const LoginPage: React.FC = () => {
             </button>
           </div>
 
+          <div className="flex justify-end -mt-2">
+            <button
+              type="button"
+              onClick={() => navigate("/forgot-password")}
+              className="text-sm text-[#9156F1] font-medium hover:underline"
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
+
           {errorMessage && (
             <div className="text-red-500 text-sm px-1 font-medium">
               {errorMessage}

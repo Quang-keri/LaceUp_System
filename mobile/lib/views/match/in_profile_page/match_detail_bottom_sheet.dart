@@ -94,7 +94,93 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
     }
   }
 
+  bool _hasCompleteTeamAssignment() {
+    final activeParticipants = widget.match.participants
+        .where((p) => p.isCancelled != true)
+        .toList();
+
+    if (activeParticipants.isEmpty) {
+      return false;
+    }
+
+    final bool allPlayersHaveTeam = activeParticipants.every(
+      (p) => p.teamNumber == 1 || p.teamNumber == 2,
+    );
+
+    final bool hasTeam1 = activeParticipants.any((p) => p.teamNumber == 1);
+    final bool hasTeam2 = activeParticipants.any((p) => p.teamNumber == 2);
+
+    return allPlayersHaveTeam && hasTeam1 && hasTeam2;
+  }
+
+  void _showTeamAssignmentRequiredMessage() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+        duration: const Duration(seconds: 4),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFFDBA74)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.groups_rounded, color: Color(0xFFEA580C), size: 26),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Chưa thể báo kết quả',
+                      style: TextStyle(
+                        color: Color(0xFF9A3412),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Host cần chia đầy đủ người chơi vào Đội 1 và Đội 2 trước.',
+                      style: TextStyle(
+                        color: Color(0xFFC2410C),
+                        fontSize: 13,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openSubmitDialog() {
+    if (!_hasCompleteTeamAssignment()) {
+      _showTeamAssignmentRequiredMessage();
+      return;
+    }
+
     Navigator.pop(context);
     showDialog(
       context: context,
@@ -460,6 +546,7 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
     }
 
     bool isCompleted = widget.match.status == 'COMPLETED';
+    final bool hasCompleteTeams = _hasCompleteTeamAssignment();
     bool isNeedSubmit = [
       'READY',
       'PLAYING',
@@ -494,6 +581,27 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          )
+        else if (!isCompleted &&
+            widget.match.status != 'CANCELLED' &&
+            isNeedSubmit &&
+            !hasCompleteTeams)
+          OutlinedButton.icon(
+            onPressed: _showTeamAssignmentRequiredMessage,
+            icon: const Icon(Icons.groups_rounded, size: 20),
+            label: const Text(
+              'Host chưa chia đội',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              foregroundColor: const Color(0xFFEA580C),
+              side: const BorderSide(color: Color(0xFFFDBA74)),
+              backgroundColor: const Color(0xFFFFF7ED),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),

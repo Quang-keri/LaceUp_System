@@ -212,7 +212,7 @@ export default function RefundManagement() {
         title={
           <Space>
             <Title level={4} style={{ margin: 0 }}>
-              Quản lý hoàn tiền
+              Quản lý hoàn tiền Trận đấu
             </Title>
           </Space>
         }
