@@ -223,7 +223,13 @@ export default function SportsBookingLanding() {
   return (
     <div
       ref={containerRef}
-      className="landing-page relative text-white overflow-x-hidden"
+      className="landing-page relative text-white"
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        height: "auto",
+        overflowX: "clip",
+      }}
     >
       <div className="fish-wrapper fixed inset-0 pointer-events-none z-50 overflow-hidden perspective-[100rem]">
         <div ref={fishRef} className="fish absolute top-0 left-0 w-32 h-32">

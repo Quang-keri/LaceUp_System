@@ -88,7 +88,9 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
     {
       key: "/owner/service-items",
       icon: <InboxOutlined />,
-      label: "Hàng hóa & Dịch vụ",
+
+      
+      label: <Link to="/owner/service-items">Hàng hóa & Dịch vụ</Link>,
     },
     {
       key: "/owner/matches",

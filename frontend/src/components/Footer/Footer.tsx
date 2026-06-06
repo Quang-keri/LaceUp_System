@@ -49,19 +49,10 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-gray-300">
               <li>
                 <Link
-                  to="/info/policies"
+                  to="/legal/terms-and-privacy"
                   className="hover:text-[#cf9c5d] transition"
                 >
-                  Nguyên tắc cộng đồng
-                </Link>
-              </li>
-
-              <li>
-                <Link
-                  to="/info/terms"
-                  className="hover:text-[#cf9c5d] transition"
-                >
-                  Điều khoản dịch vụ
+                  Điều khoản dịch vụ và Chính sách
                 </Link>
               </li>
 

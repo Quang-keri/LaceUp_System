@@ -56,10 +56,7 @@ import RentalAreaManagement from "../page/admin/owner-management/RentalAreaManag
 import NewsPage from "../page/admin/news/NewsPage.tsx";
 import UserNewsPage from "../page/customer/news/UserNewsPage.tsx";
 import UserNewsDetail from "../page/customer/news/UserNewsDetail.tsx";
-import PolicyLayout from "../layouts/PolicyLayout.tsx";
-import AboutPage from "../components/Footer/AboutPage.tsx";
-import PoliciesPage from "../components/Footer/PoliciesPage.tsx";
-import TermsPage from "../components/Footer/TermsPage.tsx";
+
 import AmenityManagement from "../page/admin/amenities/AmenityManagement.tsx";
 import TransactionManager from "../page/owner/transaction/TransactionManager.tsx";
 import OwnerSettlementHistory from "../page/owner/settlement/OwnerSettlementHistory.tsx";
@@ -76,6 +73,7 @@ import RefundManagement from "../page/admin/refund-page/RefundManagement.tsx";
 import MatchPaymentApprovalPage from "../page/owner/match/MatchPaymentApprovalPage.tsx";
 import ResetPassword from "../page/customer/login-page/ResetPassword.tsx";
 import ForgotPassword from "../page/customer/login-page/ForgotPassword.tsx";
+import PoliciesAndTermsPage from "../components/Footer/PoliciesAndTermsPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -278,22 +276,7 @@ export const router = createBrowserRouter([
     element: <NotFound />,
   },
   {
-    path: "/info",
-    element: <PolicyLayout />,
-
-    children: [
-      {
-        path: "about-us",
-        element: <AboutPage />,
-      },
-      {
-        path: "policies",
-        element: <PoliciesPage />,
-      },
-      {
-        path: "terms",
-        element: <TermsPage />,
-      },
-    ],
+    path: "/legal/terms-and-privacy",
+    element: <PoliciesAndTermsPage />,
   },
 ]);
