@@ -11,4 +11,8 @@ import java.util.UUID;
 @Repository
 public interface ReputationLogRepository extends JpaRepository<ReputationLog, Long> {
 
-    Page<ReputationLog> findByUser_UserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);}
+    Page<ReputationLog> findByUser_UserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+
+    void deleteAllByUser_UserId(UUID userId);
+}

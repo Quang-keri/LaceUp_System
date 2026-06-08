@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import authService from "../../../service/authService";
 import { useNavigate, useLocation } from "react-router-dom";
 import { message } from "antd";
@@ -31,12 +31,24 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { refreshProfile } = useAuth();
-
+  const { refreshProfile, isAuthenticated, isLoading: authLoading } = useAuth();
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate("/home", { replace: true });
+    }
+  }, [authLoading, isAuthenticated, navigate]);
   const [showPassword, setShowPassword] = useState(false);
 
   const from = location.state?.from || "/home";
-
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F3FF]">
+        <div className="text-[#9156F1] font-medium">
+          Đang kiểm tra đăng nhập...
+        </div>
+      </div>
+    );
+  }
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 

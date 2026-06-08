@@ -31,7 +31,7 @@ public class Conversation extends BaseEntity {
     @JoinColumn(name = "user2", referencedColumnName = "user_id")
     User user2;
 
-    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "conversation",  fetch = FetchType.LAZY)
     List<Message> messages;
 
 }

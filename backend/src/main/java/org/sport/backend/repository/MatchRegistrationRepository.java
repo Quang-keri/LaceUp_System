@@ -1,5 +1,6 @@
 package org.sport.backend.repository;
 
+import org.sport.backend.constant.MatchStatus;
 import org.sport.backend.entity.Match;
 import org.sport.backend.entity.MatchRegistration;
 import org.sport.backend.entity.User;
@@ -7,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,4 +28,10 @@ public interface MatchRegistrationRepository extends JpaRepository<MatchRegistra
     @Query("SELECT r FROM MatchRegistration r WHERE r.match = :match AND r.user = :user AND (r.isCancelled = false OR r.isCancelled IS NULL)")
     Optional<MatchRegistration> findActiveByMatchAndUser(@Param("match") Match match, @Param("user") User user);
 
+    boolean existsByUser_UserIdAndMatch_StatusIn(
+            UUID userId,
+            Collection<MatchStatus> statuses
+    );
+
+    List<MatchRegistration> findAllByUser_UserId(UUID userId);
 }

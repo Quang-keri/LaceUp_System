@@ -269,7 +269,7 @@ const RegisterPage: React.FC = () => {
                 Đồng ý với{" "}
               </label>
               <Link
-                to="/info/policies"
+                to="/legal/terms-and-privacy"
                 className="text-[#9156F1] font-medium hover:underline cursor-pointer"
               >
                 chính sách của chúng tôi

@@ -1,5 +1,6 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile/views/area/area_list_screen.dart';
 import 'package:mobile/views/map/map_screen.dart';
 import 'package:mobile/views/match/match_page.dart';
@@ -7,6 +8,8 @@ import 'package:mobile/views/news/news_screen.dart';
 import 'package:mobile/views/profile/profile_screen.dart';
 
 import 'chatbot_bubble.dart';
+
+const Color _primaryColor = Color(0xFF9156F1);
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -28,40 +31,58 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+    final bottomSafeArea = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      extendBody: true,
-
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: bottomSafeArea + 85),
-        child: const ChatbotBubble(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: _primaryColor,
+        systemNavigationBarDividerColor: _primaryColor,
+        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarContrastEnforced: false,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-
-      bottomNavigationBar: Container(
-        color: Colors.transparent,
-        child: SafeArea(
-          bottom: true,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: CurvedNavigationBar(
+      child: Scaffold(
+        extendBody: true,
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: _pages,
+        ),
+        floatingActionButton: Padding(
+          padding: EdgeInsets.only(
+            bottom: bottomSafeArea + 76,
+          ),
+          child: const ChatbotBubble(),
+        ),
+        floatingActionButtonLocation:
+        FloatingActionButtonLocation.endFloat,
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CurvedNavigationBar(
               index: _selectedIndex,
               backgroundColor: Colors.transparent,
-              color: const Color(0xFF9156F1),
-              buttonBackgroundColor: const Color(0xFF9156F1),
-              height: 75,
-              animationDuration: const Duration(milliseconds: 250),
+              color: _primaryColor,
+              buttonBackgroundColor: _primaryColor,
+              height: 68,
+              animationDuration:
+              const Duration(milliseconds: 250),
               letIndexChange: (index) => true,
               onTap: (index) {
+                if (_selectedIndex == index) {
+                  return;
+                }
+
                 setState(() {
                   _selectedIndex = index;
                 });
               },
               items: [
-                const Icon(Icons.home_rounded, size: 26, color: Colors.white),
+                const Icon(
+                  Icons.home_rounded,
+                  size: 26,
+                  color: Colors.white,
+                ),
                 const Icon(
                   Icons.location_on_rounded,
                   size: 26,
@@ -85,7 +106,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     child: Icon(
                       Icons.groups_rounded,
                       size: 28,
-                      color: Color(0xFF9156F1),
+                      color: _primaryColor,
                     ),
                   ),
                 ),
@@ -94,10 +115,21 @@ class _MainNavigationState extends State<MainNavigation> {
                   size: 26,
                   color: Colors.white,
                 ),
-                const Icon(Icons.person_rounded, size: 26, color: Colors.white),
+                const Icon(
+                  Icons.person_rounded,
+                  size: 26,
+                  color: Colors.white,
+                ),
               ],
             ),
-          ),
+
+
+            if (bottomSafeArea > 0)
+              Container(
+                height: bottomSafeArea,
+                // color: _primaryColor,
+              ),
+          ],
         ),
       ),
     );

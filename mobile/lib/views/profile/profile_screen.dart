@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/services/account_deletion_service.dart';
 import 'package:provider/provider.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -13,6 +14,7 @@ import 'package:mobile/views/profile/terms/terms_policy_screen.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/main_navigation.dart';
 import '../match/in_profile_page/my_match_screen.dart';
+import 'delete_account/delete_account_flow.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -42,9 +44,7 @@ class ProfileScreen extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const MyMatchScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const MyMatchScreen()),
           );
         },
       ),
@@ -54,9 +54,7 @@ class ProfileScreen extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const BookingHistoryScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
           );
         },
       ),
@@ -97,9 +95,7 @@ class ProfileScreen extends StatelessWidget {
         onTap: () async {
           final bool? updated = await Navigator.push<bool>(
             context,
-            MaterialPageRoute(
-              builder: (_) => const ProfileEditPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const ProfileEditPage()),
           );
 
           if (updated == true && context.mounted) {
@@ -140,9 +136,7 @@ class ProfileScreen extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const TermsPolicyScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const TermsPolicyScreen()),
           );
         },
       ),
@@ -150,22 +144,30 @@ class ProfileScreen extends StatelessWidget {
         title: 'Đăng xuất',
         icon: Icons.logout_rounded,
         onTap: () async {
-          await handleLogout(
-            context: context,
-            authProvider: authProvider,
-          );
+          await handleLogout(context: context, authProvider: authProvider);
         },
       ),
       ProfileMenuItemData(
         title: 'Xóa tài khoản',
         icon: Icons.delete_forever_outlined,
         isDanger: true,
-        isComingSoon: true,
-        onTap: () {
-          showComingSoon(
+        isComingSoon: false,
+        onTap: () async {
+          final authProvider = context.read<AuthProvider>();
+
+          if (!authProvider.isLoggedIn) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Vui lòng đăng nhập để xóa tài khoản'),
+              ),
+            );
+
+            return;
+          }
+
+          await openDeleteAccountFlow(
             context,
-            message: 'Chức năng xóa tài khoản đang được phát triển',
-            isDanger: true,
+            service: AccountDeletionService(),
           );
         },
       ),
@@ -176,19 +178,17 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: authProvider.loading
             ? const Center(
-          child: CircularProgressIndicator(
-            color: primaryPurple,
-          ),
-        )
+                child: CircularProgressIndicator(color: primaryPurple),
+              )
             : isLoggedIn
             ? _buildLoggedInContent(
-          context: context,
-          authProvider: authProvider,
-          currentUser: currentUser,
-          activityItems: activityItems,
-          accountItems: accountItems,
-          systemItems: systemItems,
-        )
+                context: context,
+                authProvider: authProvider,
+                currentUser: currentUser,
+                activityItems: activityItems,
+                accountItems: accountItems,
+                systemItems: systemItems,
+              )
             : _buildGuestContent(context),
       ),
     );
@@ -203,14 +203,8 @@ class ProfileScreen extends StatelessWidget {
     required List<ProfileMenuItemData> systemItems,
   }) {
     return SingleChildScrollView(
-      keyboardDismissBehavior:
-      ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(
-        16,
-        18,
-        16,
-        120,
-      ),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -250,13 +244,11 @@ class ProfileScreen extends StatelessWidget {
     required AuthProvider authProvider,
     required Map<String, dynamic>? currentUser,
   }) {
-    final String userName =
-    authProvider.userName?.trim().isNotEmpty == true
+    final String userName = authProvider.userName?.trim().isNotEmpty == true
         ? authProvider.userName!.trim()
         : 'Người dùng LaceUp';
 
-    final String email =
-        currentUser?['email']?.toString() ?? '';
+    final String email = currentUser?['email']?.toString() ?? '';
 
     final String initials = _getInitials(userName);
 
@@ -265,10 +257,7 @@ class ProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            primaryPurple,
-            darkPurple,
-          ],
+          colors: [primaryPurple, darkPurple],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -389,12 +378,7 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildGuestContent(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        18,
-        24,
-        18,
-        120,
-      ),
+      padding: const EdgeInsets.fromLTRB(18, 24, 18, 120),
       child: Column(
         children: [
           Container(
@@ -403,9 +387,7 @@ class ProfileScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: lightPurple,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: primaryPurple.withOpacity(0.25),
-              ),
+              border: Border.all(color: primaryPurple.withOpacity(0.25)),
             ),
             child: Column(
               children: [
@@ -456,11 +438,9 @@ class ProfileScreen extends StatelessWidget {
             height: 54,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const LoginScreen(),
-                  ),
-                );
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryPurple,
@@ -472,10 +452,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: const Text(
                 'Đăng nhập',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -488,27 +465,19 @@ class ProfileScreen extends StatelessWidget {
             child: OutlinedButton(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const RegisterScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
                 );
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: primaryPurple,
-                side: const BorderSide(
-                  color: primaryPurple,
-                  width: 1.5,
-                ),
+                side: const BorderSide(color: primaryPurple, width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: const Text(
                 'Đăng ký tài khoản',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -587,11 +556,7 @@ class ProfileSection extends StatelessWidget {
                 color: ProfileScreen.lightPurple,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                icon,
-                color: ProfileScreen.primaryPurple,
-                size: 19,
-              ),
+              child: Icon(icon, color: ProfileScreen.primaryPurple, size: 19),
             ),
 
             const SizedBox(width: 10),
@@ -614,9 +579,7 @@ class ProfileSection extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFFEDE9F2),
-            ),
+            border: Border.all(color: const Color(0xFFEDE9F2)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.035),
@@ -666,20 +629,11 @@ class ProfileMenuTile extends StatelessWidget {
         splashColor: itemColor.withOpacity(0.08),
         highlightColor: itemColor.withOpacity(0.04),
         child: Container(
-          constraints: const BoxConstraints(
-            minHeight: 72,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          constraints: const BoxConstraints(minHeight: 72),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             border: showDivider
-                ? const Border(
-              bottom: BorderSide(
-                color: Color(0xFFEDE9F2),
-              ),
-            )
+                ? const Border(bottom: BorderSide(color: Color(0xFFEDE9F2)))
                 : null,
           ),
           child: Row(
@@ -691,11 +645,7 @@ class ProfileMenuTile extends StatelessWidget {
                   color: itemColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(
-                  item.icon,
-                  color: itemColor,
-                  size: 23,
-                ),
+                child: Icon(item.icon, color: itemColor, size: 23),
               ),
 
               const SizedBox(width: 13),
@@ -732,8 +682,7 @@ class ProfileMenuTile extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: item.isDanger
-                                  ? ProfileScreen.dangerColor
-                                  .withOpacity(0.1)
+                                  ? ProfileScreen.dangerColor.withOpacity(0.1)
                                   : ProfileScreen.lightPurple,
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -758,9 +707,8 @@ class ProfileMenuTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: item.isDanger
-                              ? ProfileScreen.dangerColor
-                              .withOpacity(0.72)
-                              :  AppColors.orange,
+                              ? ProfileScreen.dangerColor.withOpacity(0.72)
+                              : AppColors.orange,
                           fontSize: 11.5,
                           height: 1.3,
                         ),
@@ -798,16 +746,12 @@ Future<void> handleLogout({
 
     showTopSnackBar(
       Overlay.of(context),
-      const CustomSnackBar.success(
-        message: 'Đăng xuất thành công',
-      ),
+      const CustomSnackBar.success(message: 'Đăng xuất thành công'),
     );
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => const MainNavigation(),
-      ),
-          (route) => false,
+      MaterialPageRoute(builder: (_) => const MainNavigation()),
+      (route) => false,
     );
   } catch (e) {
     if (!context.mounted) return;
@@ -815,19 +759,17 @@ Future<void> handleLogout({
     showTopSnackBar(
       Overlay.of(context),
       CustomSnackBar.error(
-        message: e
-            .toString()
-            .replaceFirst('Exception: ', ''),
+        message: e.toString().replaceFirst('Exception: ', ''),
       ),
     );
   }
 }
 
 void showComingSoon(
-    BuildContext context, {
-      String message = 'Chức năng đang được phát triển',
-      bool isDanger = false,
-    }) {
+  BuildContext context, {
+  String message = 'Chức năng đang được phát triển',
+  bool isDanger = false,
+}) {
   showTopSnackBar(
     Overlay.of(context),
     isDanger

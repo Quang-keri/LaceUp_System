@@ -1,5 +1,6 @@
 package org.sport.backend.config;
 
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class DataInitializer implements CommandLineRunner {
     private final WardRepository wardRepository;
     private final  NewsRepository newsRepository;
     private final ReviewRepository reviewRepository;
+    private final BankAccountRepository bankAccountRepository;
 
     @Override
     @Transactional
@@ -64,6 +66,7 @@ public class DataInitializer implements CommandLineRunner {
                 .collect(Collectors.toMap(Permission::getPermissionName, p -> p));
 
         if (roleRepository.count() == 0) seedRoles(permMap);
+        ensureDeletedRole();
 
         Role adminRole = roleRepository.findByRoleName("ADMIN").orElse(null);
         Role ownerRole = roleRepository.findByRoleName("OWNER").orElse(null);
@@ -85,11 +88,11 @@ public class DataInitializer implements CommandLineRunner {
 
             users.add(User.builder().userName("Admin main").email("admin@gmail.com").passwordHash(commonPass).gender("Male").phone("0901000011").dateOfBirth(LocalDate.of(1990, 5, 15)).provider(AuthProvider.LOCAL).role(adminRole).createdAt(LocalDateTime.now().minusYears(5)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
-            users.add(User.builder().userName("Owner main").email("owner@gmail.com").passwordHash(commonPass).gender("Male").phone("0911000011").dateOfBirth(LocalDate.of(1985, 8, 20)).provider(AuthProvider.LOCAL).role(ownerRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
+            users.add(User.builder().userName("Dương Xuân Sơn").email("owner@gmail.com").passwordHash(commonPass).gender("Male").phone("0911000011").dateOfBirth(LocalDate.of(1985, 8, 20)).provider(AuthProvider.LOCAL).role(ownerRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
             users.add(User.builder().userName("Staff main").email("staff@gmail.com").passwordHash(commonPass).gender("Male").phone("0921000011").dateOfBirth(LocalDate.of(1995, 12, 1)).provider(AuthProvider.LOCAL).role(staffRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
-            users.add(User.builder().userName("Renter main").email("renter@gmail.com").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
+            users.add(User.builder().userName("Ngô Anh Kiệt").email("renter@gmail.com").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
 
             for (int i = 1; i <= 4; i++)
@@ -169,6 +172,8 @@ public class DataInitializer implements CommandLineRunner {
             userAchievementRepository.saveAll(achievementList);
         }
 
+        seedBankAccountsAndDeletionTestUsers(ownerRole, renterRole);
+
         if (courtRepository.count() == 0) seedCourtData(courtImagesList.subList(0, 2));
         if (postRepository.count() == 0) seedPostData();
         if (itemGroupRepository.count() == 0) {
@@ -182,6 +187,190 @@ public class DataInitializer implements CommandLineRunner {
             seedReviews();
         }
 
+    }
+
+    private void ensureDeletedRole() {
+        if (roleRepository.findByRoleName("DELETED").isPresent()) {
+            return;
+        }
+
+        Role deletedRole = Role.builder()
+                .roleName("DELETED")
+                .description("Tài khoản đã được xóa và ẩn danh")
+                .active(false)
+                .permissions(new HashSet<>())
+                .build();
+
+        roleRepository.save(deletedRole);
+    }
+
+    private void seedBankAccountsAndDeletionTestUsers(
+            Role ownerRole,
+            Role renterRole
+    ) {
+        String commonPass = passwordEncoder.encode("123456");
+
+        User sonOwner = userRepository.findByEmail("owner@gmail.com")
+                .orElseGet(() -> userRepository.save(
+                        buildSeedUser(
+                                "Dương Xuân Sơn",
+                                "owner@gmail.com",
+                                "0911000011",
+                                commonPass,
+                                ownerRole
+                        )
+                ));
+
+        sonOwner.setUserName("Dương Xuân Sơn");
+        sonOwner.setRole(ownerRole);
+        sonOwner.setActive(true);
+        userRepository.save(sonOwner);
+
+        User kietRenter = userRepository.findByEmail("renter@gmail.com")
+                .orElseGet(() -> userRepository.save(
+                        buildSeedUser(
+                                "Ngô Anh Kiệt",
+                                "renter@gmail.com",
+                                "0931000011",
+                                commonPass,
+                                renterRole
+                        )
+                ));
+
+        kietRenter.setUserName("Ngô Anh Kiệt");
+        kietRenter.setRole(renterRole);
+        kietRenter.setActive(true);
+        userRepository.save(kietRenter);
+
+        ensureBankAccount(
+                sonOwner,
+                "TPBank",
+                "07711338101",
+                "DUONG XUAN SON",
+                "970423"
+        );
+
+        ensureBankAccount(
+                kietRenter,
+                "MB Bank",
+                "0933484531",
+                "NGO ANH KIET",
+                "970422"
+        );
+
+        ensureDeletionTestUser(
+                "Test Xóa App",
+                "delete.app@gmail.com",
+                "0909000001",
+                commonPass,
+                renterRole
+        );
+
+        ensureDeletionTestUser(
+                "Test Xóa Web",
+                "delete.web@gmail.com",
+                "0909000002",
+                commonPass,
+                renterRole
+        );
+
+        ensureDeletionTestUser(
+                "Test Xóa Owner",
+                "delete.owner@gmail.com",
+                "0909000003",
+                commonPass,
+                ownerRole
+        );
+    }
+
+    private void ensureDeletionTestUser(
+            String userName,
+            String email,
+            String phone,
+            String encodedPassword,
+            Role role
+    ) {
+        if (userRepository.existsByEmail(email)) {
+            return;
+        }
+
+        userRepository.save(
+                buildSeedUser(
+                        userName,
+                        email,
+                        phone,
+                        encodedPassword,
+                        role
+                )
+        );
+    }
+
+    private User buildSeedUser(
+            String userName,
+            String email,
+            String phone,
+            String encodedPassword,
+            Role role
+    ) {
+        return User.builder()
+                .userName(userName)
+                .email(email)
+                .passwordHash(encodedPassword)
+                .gender("Male")
+                .phone(phone)
+                .dateOfBirth(LocalDate.of(2000, 1, 1))
+                .provider(AuthProvider.LOCAL)
+                .role(role)
+                .active(true)
+                .createdAt(LocalDateTime.now())
+                .creditScore(100)
+                .memberTier(MemberTier.BRONZE)
+                .totalMatches(0)
+                .totalSpent(BigDecimal.ZERO)
+                .accountDeletionStatus(AccountDeletionStatus.NONE)
+                .build();
+    }
+
+    private void ensureBankAccount(
+            User user,
+            String bankName,
+            String accountNumber,
+            String accountHolderName,
+            String bankBin
+    ) {
+        Optional<BankAccount> existingAccount = bankAccountRepository
+                .findAll()
+                .stream()
+                .filter(account ->
+                        account.getUser() != null
+                                && Objects.equals(
+                                account.getUser().getUserId(),
+                                user.getUserId()
+                        )
+                )
+                .findFirst();
+
+        BankAccount bankAccount = existingAccount.orElseGet(
+                () -> BankAccount.builder()
+                        .user(user)
+                        .build()
+        );
+
+        bankAccount.setUser(user);
+        bankAccount.setBankName(bankName);
+        bankAccount.setAccountNumber(accountNumber);
+        bankAccount.setAccountHolderName(accountHolderName);
+        bankAccount.setBankBin(bankBin);
+        bankAccount.setIsVerified(true);
+        bankAccount.setVerificationCode(null);
+        bankAccount.setBranchName(null);
+        bankAccount.setQrCode(null);
+
+        BankAccount savedBankAccount =
+                bankAccountRepository.save(bankAccount);
+
+        user.setBankAccount(savedBankAccount);
+        userRepository.save(user);
     }
 
     private void seedReviews() {

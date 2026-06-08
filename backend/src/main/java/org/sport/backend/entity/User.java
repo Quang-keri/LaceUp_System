@@ -3,12 +3,14 @@ package org.sport.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.*;
+import org.sport.backend.constant.AccountDeletionStatus;
 import org.sport.backend.constant.MemberTier;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.AuthProvider;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,6 +50,7 @@ public class User extends BaseEntity {
 
     @Column(name = "phone_number", length = 20)
     private String phone;
+
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
@@ -110,4 +113,22 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReputationLog> reputationLogs;
 
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "account_deletion_status",
+            nullable = false,
+            length = 30
+    )
+    private AccountDeletionStatus accountDeletionStatus = AccountDeletionStatus.NONE;
+
+    @Column(name = "deletion_requested_at")
+    private LocalDateTime deletionRequestedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deletion_reason", length = 500)
+    private String deletionReason;
 }

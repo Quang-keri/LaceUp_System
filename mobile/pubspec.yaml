@@ -41,5 +41,5 @@ flutter:
 
   assets:
     - .env
-    - assets/logo.png
+    - assets/logo_lace_up.png
 

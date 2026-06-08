@@ -7,11 +7,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.user.CreateUserRequest;
+import org.sport.backend.dto.request.user.DeleteAccountRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserStatusRequest;
+import org.sport.backend.dto.response.user.DeleteAccountResponse;
 import org.sport.backend.dto.response.user.ReputationLogResponse;
 import org.sport.backend.dto.response.user.UserDashboardResponse;
 import org.sport.backend.dto.response.user.UserResponse;
+import org.sport.backend.entity.User;
+import org.sport.backend.serviceImpl.AccountDeletionServiceImpl;
 import org.sport.backend.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +33,24 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final AccountDeletionServiceImpl accountDeletionService;
+    @PostMapping("/me/account-deletion")
+    public ResponseEntity<DeleteAccountResponse> requestDeletion(
+            @Valid @RequestBody DeleteAccountRequest request
+    ) {
 
+
+        User user = userService.getCurrentUserEntity();
+
+
+        DeleteAccountResponse response =
+                accountDeletionService.requestDeletion(
+                        user.getUserId(),
+                        request
+                );
+
+        return ResponseEntity.ok(response);
+    }
     @GetMapping("/my-info")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserResponse>> getMyInfo() {

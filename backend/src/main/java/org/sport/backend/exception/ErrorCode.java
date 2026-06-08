@@ -10,7 +10,7 @@ public enum ErrorCode {
     // Authentication
     LOGIN_FAILED(
             1000,
-            "Email hoặc mật khẩu không đúng",
+            "Thông tin đăng nhập bạn cung cấp không chính xác",
             HttpStatus.BAD_REQUEST
     ),
     UNAUTHENTICATED(
