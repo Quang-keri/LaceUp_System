@@ -2,82 +2,66 @@
   box-sizing: border-box;
 }
 
-.landing-body {
-  .content {
-    position: relative;
-    z-index: 1;
-    padding-bottom: 100vh;
-  }
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
 
-  section {
-    height: 100vh;
-    width: 100%;
-    margin-top: 100vh;
-
-    &:nth-child(4n),
-    &:nth-child(4n - 1) {
-      --col: 3;
-    }
-  }
-
-  .section__content {
-    width: 100%;
-    position: fixed;
-    top: 0;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 1rem;
-
-    @media (min-width: 50rem) {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 25rem));
-      gap: 2rem;
-      padding: 3rem;
-
-      > * {
-        grid-column: var(--col, 1);
-        opacity: 0;
-      }
-    }
-  }
-  background: linear-gradient(
-    to bottom,
-    rgba(99, 167, 191, 1),
-    rgba(94, 86, 179, 1),
-    rgba(72, 139, 163, 1),
-    rgba(79, 124, 179, 1),
-    rgba(52, 115, 140, 1),
-    rgba(48, 92, 145, 1),
-    rgba(39, 82, 145, 1),
-    rgba(19, 58, 110, 1),
-    rgba(10, 50, 80, 1),
-    rgba(40, 41, 100, 1),
-    rgba(14, 52, 94, 1),
-    rgb(4, 7, 135)
-  );
-  max-width: 100vw;
-  min-height: 100vh;
+body.landing-body {
+  width: 100%;
+  min-height: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
   overflow-x: hidden;
+  overflow-y: auto;
   color: white;
   position: relative;
-  margin: 0;
+  background: #f8f5ff;
 
+  /* Tắt lớp phủ tối khiến toàn bộ trang bị xám */
   &::after {
-    position: fixed;
-    content: "";
-    pointer-events: none;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background: radial-gradient(
-      circle at center,
-      transparent,
-      rgba(0, 0, 0, 0.5)
-    );
+    display: none;
   }
+}
+
+.landing-page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow-x: clip;
+  overflow-y: visible;
+  isolation: isolate;
+
+  background: radial-gradient(
+      circle at 50% 16%,
+      rgb(239, 226, 237) 0%,
+      rgba(255, 255, 255, 0.94) 22%,
+      rgba(250, 246, 255, 0.78) 44%,
+      transparent 68%
+    ),
+    linear-gradient(
+      180deg,
+      #fdfbff 0%,
+      #f8f3ff 30%,
+      #f1e9ff 58%,
+      #e6d8ff 78%,
+      #d8c2ff 100%
+    );
+}
+
+body.landing-body footer {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .rays {
@@ -85,27 +69,28 @@
   --c: rgba(255, 251, 227, 0.2);
   --size: max(60vh, 80rem);
   --mask: radial-gradient(circle at center, black, transparent 50%);
+
   position: fixed;
   pointer-events: none;
   top: calc(var(--size) * -0.55);
   left: 50%;
   width: var(--size);
   height: var(--size);
-  pointer-events: none;
 
   > div {
     width: 100%;
     height: 100%;
     border-radius: 50%;
+
     background: repeating-conic-gradient(
       var(--c),
       var(--c) var(--r),
       transparent var(--r),
       transparent calc(var(--r) * 2)
     );
+
     -webkit-mask-image: var(--mask);
     mask-image: var(--mask);
-    // animation: raysRotate 120000ms linear infinite;
   }
 }
 
@@ -113,6 +98,7 @@
   50% {
     transform: rotate(180deg) scale(1.5);
   }
+
   100% {
     transform: rotate(360deg) scale(1);
   }
@@ -120,18 +106,25 @@
 
 .fish-wrapper {
   --mask: linear-gradient(180deg, rgba(0, 0, 0, 1), transparent);
+
   width: 100%;
   height: 100vh;
+
   position: fixed;
   top: 0;
   left: 0;
+
   perspective: 100rem;
   perspective-origin: center center;
   transform-style: preserve-3d;
+
   pointer-events: none;
+  overflow: hidden;
+
   -webkit-mask-image: var(--mask);
   mask-image: var(--mask);
-  z-index: 2;
+
+  z-index: 40;
 }
 
 .fish {
@@ -140,9 +133,11 @@
   --l: 100%;
   --c: hsla(250deg, 50%, var(--l), var(--o, 0.6));
   --size: 10rem;
+
   position: relative;
   width: var(--size);
   height: var(--size);
+
   transform-style: preserve-3d;
   transform-origin: center;
 
@@ -154,9 +149,9 @@
 
 .fish__skeleton {
   --clip: polygon(0 var(--bodyW), 45% 0, 55% 0, 100% var(--bodyW), 50% 100%);
+
   position: absolute;
-  width: 100%;
-  height: 100%;
+
   background: repeating-linear-gradient(
       0deg,
       var(--c),
@@ -172,21 +167,29 @@
       var(--c) calc((var(--bodyW) / 2) + 0.1rem),
       transparent 0
     );
+
   top: calc(var(--bodyW) / 4);
   left: calc(var(--bodyW) * 0.75);
+
   width: var(--bodyW);
   height: calc(var(--bodyW) * 4);
+
   -webkit-clip-path: var(--clip);
   clip-path: var(--clip);
+
   opacity: 0;
+
   transform: translate3d(0, 0, calc(var(--bodyW) / -2)) rotate(90deg);
+
   transform-origin: center center;
 }
 
 .fish__inner {
   --a: 9.5deg;
+
   width: calc(var(--bodyW) * 1.5);
   height: var(--size);
+
   transform-style: preserve-3d;
   transform: rotate(90deg);
 }
@@ -194,35 +197,46 @@
 .fish__body {
   --l: 75%;
   --c: hsla(250deg, 50%, var(--l), var(--o, 0.6));
+
   position: absolute;
   top: var(--bodyW);
   left: 0;
+
   width: var(--bodyW);
   height: calc(3 * var(--bodyW));
+
   background: var(--c);
+
   clip-path: polygon(0 0, 100% 0, 50% 100%);
+
   transform: translateZ(calc(var(--bodyW) / -2)) rotateX(var(--a));
+
   transform-origin: center top;
 
   &:nth-child(2) {
     --i: 2;
     --l: 75%;
+
     transform: translateZ(calc(var(--bodyW) / 2)) rotateX(calc(var(--a) * -1));
   }
 
   &:nth-child(3) {
     --i: 3;
     --l: 95%;
+
     transform: rotateY(90deg) translate3d(calc(var(--bodyW) / -2), 0, 0)
       rotateX(var(--a));
+
     transform-origin: left top;
   }
 
   &:nth-child(4) {
     --i: 4;
     --l: 50%;
+
     transform: rotateY(90deg) translate3d(calc(var(--bodyW) / 2), 0, 0)
       rotateX(calc(var(--a) * -1));
+
     transform-origin: right top;
   }
 }
@@ -231,34 +245,45 @@
   --a: 23.5deg;
   --l: 85%;
   --c: hsla(250deg, 50%, var(--l), var(--o, 0.6));
+
   position: absolute;
   top: 0;
   left: 0;
+
   width: var(--bodyW);
   height: var(--bodyW);
+
   background: var(--c);
+
   clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+
   transform: translateZ(calc(var(--bodyW) / 2)) rotateX(var(--a));
+
   transform-origin: center bottom;
 
   &--2 {
     --i: 2;
     --l: 80%;
+
     transform: translateZ(calc(var(--bodyW) / -2)) rotateX(calc(var(--a) * -1));
   }
 
   &--3 {
     --i: 3;
     --l: 90%;
+
     transform: rotateY(90deg) translate3d(calc(var(--bodyW) / -2), 0, 0)
       rotateX(calc(var(--a) * -1));
+
     transform-origin: left bottom;
   }
 
   &--4 {
     --l: 55%;
+
     transform: rotateY(90deg) translate3d(calc(var(--bodyW) / 2), 0, 0)
       rotateX(var(--a));
+
     transform-origin: right bottom;
   }
 }
@@ -267,12 +292,16 @@
   --o: 0.9;
   --l: 90%;
   --c: hsla(250deg, 50%, var(--l), var(--o, 0.6));
-  width: var(--bodyW);
-  height: var(--bodyW);
-  background-color: var(--c);
+
   position: absolute;
   left: 0;
   bottom: var(--bodyW);
+
+  width: var(--bodyW);
+  height: var(--bodyW);
+
+  background-color: var(--c);
+
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 
@@ -280,12 +309,16 @@
   --o: 0.9;
   --l: 95%;
   --c: hsla(250deg, 50%, var(--l), var(--o, 0.6));
-  width: var(--bodyW);
-  height: var(--bodyW);
-  background-color: var(--c);
+
   position: absolute;
   left: 0;
   bottom: 0;
+
+  width: var(--bodyW);
+  height: var(--bodyW);
+
+  background-color: var(--c);
+
   clip-path: polygon(
     0 0,
     100% 0,
@@ -297,27 +330,37 @@
     10% 100%,
     0 70%
   );
+
   transform-origin: top center;
   transform: rotateX(-45deg);
+
   animation: tail 1000ms infinite alternate;
 }
 
 .fish__fin {
-  width: calc(var(--bodyW) / 8 * 3);
-  height: var(--bodyW);
-  background-color: var(--c);
   position: absolute;
+
   top: calc(var(--bodyW) * 1.5);
   left: calc(var(--bodyW) / 8 * 3);
+
+  width: calc(var(--bodyW) / 8 * 3);
+  height: var(--bodyW);
+
+  background-color: var(--c);
+
   clip-path: polygon(50% 0, 100% 30%, 100% 60%, 50% 100%, 0 60%, 0 30%);
+
   transform-origin: top center;
+
   transform: translateZ(calc(var(--bodyW) / 2)) rotateY(0deg) rotateX(5deg)
     rotate(10deg);
+
   animation: fin 1500ms infinite alternate linear;
 
   &--2 {
     transform: translateZ(calc(var(--bodyW) / -2)) rotateY(0deg) rotateX(-5deg)
       rotate(10deg);
+
     animation: fin2 1500ms infinite alternate linear;
   }
 }
@@ -342,12 +385,15 @@
   }
 }
 
-/* Lights */
+/* Ánh sáng */
+
 .lights {
   position: fixed;
   pointer-events: none;
+
   top: 0;
   left: 0;
+
   width: 100%;
   height: 100vh;
 }
@@ -359,10 +405,11 @@
 
 .lights__light {
   --size: 0.35rem;
+
+  position: absolute;
   width: var(--size);
   height: var(--size);
-  position: absolute;
-  background: rgba(255, 255, 255, 1);
+  background: rgb(226, 226, 226);
   border-radius: 100%;
   top: 10%;
   left: 25%;
@@ -422,7 +469,6 @@
   position: fixed;
   top: 0;
   left: 5rem;
-  // transform-style: preserve-3d;
   transform-origin: center;
   transform: translate3d(10rem, 5rem, 0) rotateX(20deg) rotateY(0deg);
 }
@@ -459,12 +505,12 @@
 }
 
 .indicator {
-  text-align: center;
   position: fixed;
   bottom: 1rem;
   left: 50%;
-  transform: translate3d(-50%, 0, 0);
+  text-align: center;
   font-size: 1.2rem;
+  transform: translate3d(-50%, 0, 0);
 
   span {
     display: block;
@@ -480,8 +526,10 @@
     transform: translate3d(0, 0.5rem, 0);
   }
 }
+
 .fish__label {
   position: absolute;
+
   top: calc(var(--bodyW) * 2);
   left: 50%;
 
@@ -500,6 +548,5 @@
 
   white-space: nowrap;
   pointer-events: none;
-
   backface-visibility: visible;
 }
