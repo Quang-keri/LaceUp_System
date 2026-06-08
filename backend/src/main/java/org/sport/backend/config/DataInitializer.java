@@ -259,24 +259,24 @@ public class DataInitializer implements CommandLineRunner {
         );
 
         ensureDeletionTestUser(
-                "Test Xóa App",
-                "delete.app@gmail.com",
+                "Tester 1",
+                "tester1app@gmail.com",
                 "0909000001",
                 commonPass,
                 renterRole
         );
 
         ensureDeletionTestUser(
-                "Test Xóa Web",
-                "delete.web@gmail.com",
+                "Tester 2 web",
+                "tester2web@gmail.com",
                 "0909000002",
                 commonPass,
                 renterRole
         );
 
         ensureDeletionTestUser(
-                "Test Xóa Owner",
-                "delete.owner@gmail.com",
+                "Tester 3 owner",
+                "tester3owner@gmail.com",
                 "0909000003",
                 commonPass,
                 ownerRole
