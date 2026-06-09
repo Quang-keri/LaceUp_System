@@ -12,4 +12,6 @@ public interface BankAccountRepository extends JpaRepository<BankAccount, UUID> 
 
     Optional<BankAccount> findByUser_UserId(UUID userId);
 
+    void deleteByUser_UserId(UUID userId);
+
 }

@@ -14,4 +14,6 @@ public interface UserCategoryRankRepository extends JpaRepository<UserCategoryRa
     Optional<UserCategoryRank> findByUser_UserIdAndCategory_CategoryId(UUID userId, Integer categoryId);
 
     List<UserCategoryRank> findByUser_UserId(UUID userId);
+
+    void deleteAllByUser_UserId(UUID userId);
 }

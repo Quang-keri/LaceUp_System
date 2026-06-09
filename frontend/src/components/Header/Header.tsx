@@ -28,27 +28,29 @@ const { useBreakpoint } = Grid;
 const AppHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const screens = useBreakpoint();
   const isMobile = screens.md === false;
-
-  const [token, setToken] = useState(localStorage.getItem("accessToken"));
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem("accessToken"));
+  const handleLogout = () => {
+    logout();
+
+    setDrawerVisible(false);
+
+    message.success("Đã đăng xuất thành công!");
+
+    navigate("/login", {
+      replace: true,
+    });
+  };
 
   useEffect(() => {
     setToken(localStorage.getItem("accessToken"));
   }, [location]);
 
   const isLoggedIn = !!token;
-
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    setToken(null);
-    message.success("Đã đăng xuất thành công!");
-    navigate("/");
-  };
 
   const navItems = [
     { key: "/home", label: "Trang chủ" },
@@ -58,7 +60,7 @@ const AppHeader = () => {
     { key: "/news", label: "Tin tức" },
   ];
 
-  const userMenuItems = isLoggedIn
+  const userMenuItems = isAuthenticated
     ? [
         {
           key: "/dashboard",
@@ -118,19 +120,19 @@ const AppHeader = () => {
       }}
     >
       <ConfigProvider
-  theme={{
-    token: {
-      colorPrimary: "#9156F1",
-    },
-    components: {
-      Menu: {
-        itemSelectedColor: "#9156F1",
-        itemHoverColor: "#9156F1",
-        horizontalItemSelectedColor: "#9156F1",
-      },
-    },
-  }}
->
+        theme={{
+          token: {
+            colorPrimary: "#9156F1",
+          },
+          components: {
+            Menu: {
+              itemSelectedColor: "#9156F1",
+              itemHoverColor: "#9156F1",
+              horizontalItemSelectedColor: "#9156F1",
+            },
+          },
+        }}
+      >
         <Header
           style={{
             background: "#ffffff",
@@ -208,7 +210,7 @@ const AppHeader = () => {
               height: "100%",
             }}
           >
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <Dropdown
                 menu={{ items: userMenuItems }}
                 trigger={["click"]}

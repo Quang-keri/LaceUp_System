@@ -9,10 +9,7 @@ import lombok.experimental.SuperBuilder;
 import org.sport.backend.dto.base.BaseEntity;
 import org.sport.backend.constant.ResultStatus;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "match_results")
@@ -37,19 +34,38 @@ public class MatchResult extends BaseEntity {
     private Integer winningTeamNumber;
 
     @ElementCollection
-    private List<UUID> winnerIds;
+    @CollectionTable(
+            name = "match_result_winners",
+            joinColumns = @JoinColumn(name = "result_id")
+    )
+    @Column(name = "user_id")
+    private List<UUID> winnerIds = new ArrayList<>();
 
     @ElementCollection
-    private List<UUID> loserIds;
+    @CollectionTable(
+            name = "match_result_losers",
+            joinColumns = @JoinColumn(name = "result_id")
+    )
+    @Column(name = "user_id")
+    private List<UUID> loserIds = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     private ResultStatus status;
 
     @ElementCollection
-    private List<UUID> absentUserIds;
+    @CollectionTable(
+            name = "match_result_absent_users",
+            joinColumns = @JoinColumn(name = "result_id")
+    )
+    @Column(name = "user_id")
+    private List<UUID> absentUserIds = new ArrayList<>();
+
 
     @ElementCollection
-    @CollectionTable(name = "match_result_rank_changes", joinColumns = @JoinColumn(name = "result_id"))
+    @CollectionTable(
+            name = "match_result_rank_changes",
+            joinColumns = @JoinColumn(name = "result_id")
+    )
     @MapKeyColumn(name = "user_id")
     @Column(name = "point_change")
     private Map<UUID, Integer> rankChanges = new HashMap<>();

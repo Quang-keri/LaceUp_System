@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -75,4 +76,13 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     Page<Payment> findByPaymentStatus(PaymentStatus status, Pageable pageable);
 
     List<Payment> findAllByMatchRegistration(MatchRegistration reg);
+
+    boolean existsByUser_UserIdAndPaymentStatusIn(
+            UUID userId,
+            Collection<PaymentStatus> statuses
+    );
+
+    List<Payment> findAllByUser_UserId(UUID userId);
+
+    List<Payment> findAllByBookingIntent_User_UserId(UUID userId);
 }

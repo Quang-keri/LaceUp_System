@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
@@ -14,4 +15,5 @@ public interface RefreshTokenRepository extends MongoRepository<RefreshToken, St
     void deleteByEmail(String email);
 
     void deleteByExpiresAtBefore(Instant now);
+    void deleteAllByEmail(String email);
 }

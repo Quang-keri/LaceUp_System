@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,4 +68,18 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             LocalDateTime endTime
     );
 
+
+    boolean existsByHost_UserIdAndStatusIn(
+            UUID userId,
+            Collection<MatchStatus> statuses
+    );
+
+    List<Match> findAllByHost_UserId(UUID userId);
+
+   boolean existsByCourt_RentalArea_Owner_UserIdAndStatusIn(
+            UUID ownerId,
+            Collection<MatchStatus> statuses
+    );
+
+     List<Match> findAllByCourt_RentalArea_Owner_UserId(UUID ownerId);
 }
