@@ -38,7 +38,7 @@ public class EmailServiceImpl implements EmailService {
     public void sendResetPasswordEmail(String toEmail, String resetUrl) {
         try {
 
-            String subject = "Yêu cầu đặt lại mật khẩu - Rent Room App";
+            String subject = "Yêu cầu đặt lại mật khẩu - Lace Up";
             String text = "Chào bạn,\n\n"
                     + "Bạn vừa yêu cầu đặt lại mật khẩu. Vui lòng nhấn vào link bên dưới để tiếp tục:\n\n"
                     + resetUrl + "\n\n"

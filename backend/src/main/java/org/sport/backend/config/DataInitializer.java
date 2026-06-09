@@ -207,7 +207,7 @@ public class DataInitializer implements CommandLineRunner {
 
         ensureDeletionTestUser(
                 "Tester 3 owner",
-                "tester3owner@gmail.com",
+                "se184616phamdangquang@gmail.com",
                 "0909000003",
                 commonPass,
                 ownerRole

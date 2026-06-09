@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.user.CreateUserRequest;
-import org.sport.backend.dto.request.user.DeleteAccountRequest;
 import org.sport.backend.dto.request.user.UpdateUserRequest;
 import org.sport.backend.dto.request.user.UpdateUserStatusRequest;
 import org.sport.backend.dto.response.user.DeleteAccountResponse;
@@ -36,17 +35,14 @@ public class UserController {
     private final AccountDeletionServiceImpl accountDeletionService;
     @PostMapping("/me/account-deletion")
     public ResponseEntity<DeleteAccountResponse> requestDeletion(
-            @Valid @RequestBody DeleteAccountRequest request
+
     ) {
-
-
         User user = userService.getCurrentUserEntity();
 
 
         DeleteAccountResponse response =
                 accountDeletionService.requestDeletion(
-                        user.getUserId(),
-                        request
+                        user.getUserId()
                 );
 
         return ResponseEntity.ok(response);
