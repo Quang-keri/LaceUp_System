@@ -18,10 +18,14 @@ import {
   TrophyOutlined,
   BarChartOutlined,
   BankOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+
 import { useAuth } from "../../context/AuthContext.tsx";
 import userService from "../../service/userService.ts";
+import DeleteAccountModal from "../../components/user/DeleteAccountModal.tsx";
+
 import type {
   UserDashboardResponse,
   CategoryRankResponse,
@@ -44,6 +48,8 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
   const [localDashboardData, setLocalDashboardData] =
     useState<UserDashboardResponse | null>(null);
 
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+
   useEffect(() => {
     if (dashboardData !== undefined) {
       setLocalDashboardData(dashboardData);
@@ -51,15 +57,24 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
       userService
         .getUserDashboard(user.userId)
         .then((res) => {
-          if (res.result) setLocalDashboardData(res.result);
+          if (res.result) {
+            setLocalDashboardData(res.result);
+          }
         })
-        .catch((e) => console.error("Lỗi lấy dữ liệu sidebar:", e));
+        .catch((e) => {
+          console.error("Lỗi lấy dữ liệu sidebar:", e);
+        });
     }
   }, [dashboardData, user?.userId]);
 
   const handleLogout = () => {
     logout();
-    navigate("/");
+    navigate("/home", { replace: true });
+  };
+
+  const handleAccountDeleted = () => {
+    logout();
+    navigate("/home", { replace: true });
   };
 
   const handleMenuClick = (key: string) => {
@@ -69,30 +84,47 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
       case "0":
         navigate("/dashboard");
         break;
+
       case "1":
         navigate("/profile");
         break;
+
       case "2":
         navigate("/my-matches");
         break;
+
       case "8":
         navigate("/my-ranks");
         break;
+
       case "7":
         navigate("/achievements");
         break;
+
       case "3":
         navigate("/booking-history");
         break;
+
       case "6":
         navigate("/bank-account");
         break;
+
       case "4":
         message.info("Cài đặt chưa được phát triển");
         break;
+
       case "5":
         message.info("Bảo mật tài khoản chưa được phát triển");
         break;
+
+      case "9":
+        setDeleteAccountOpen(true);
+        break;
+
+      case "logout":
+        handleLogout();
+        break;
+
       default:
         break;
     }
@@ -100,47 +132,68 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
 
   const getRankInfo = (points: number = 0, backendDisplayRank?: string) => {
     if (points >= 3000) {
-      if (backendDisplayRank === "Thách Đấu")
-        return { name: "Thách Đấu", color: "red", image: "/challenger.png" };
-      if (backendDisplayRank === "Đại Cao Thủ")
+      if (backendDisplayRank === "Thách Đấu") {
+        return {
+          name: "Thách Đấu",
+          color: "red",
+          image: "/challenger.png",
+        };
+      }
+
+      if (backendDisplayRank === "Đại Cao Thủ") {
         return {
           name: "Đại Cao Thủ",
           color: "magenta",
           image: "/grand-master.png",
         };
-      return { name: "Cao Thủ", color: "purple", image: "/master.png" };
+      }
+
+      return {
+        name: "Cao Thủ",
+        color: "purple",
+        image: "/master.png",
+      };
     }
 
-    if (points >= 2500)
+    if (points >= 2500) {
       return {
         name: `Kim Cương ${5 - Math.floor((points % 500) / 100)}`,
         color: "blue",
         image: "/diamond.png",
       };
-    if (points >= 2000)
+    }
+
+    if (points >= 2000) {
       return {
         name: `Bạch Kim ${5 - Math.floor((points % 500) / 100)}`,
         color: "cyan",
         image: "/platinum.png",
       };
-    if (points >= 1500)
+    }
+
+    if (points >= 1500) {
       return {
         name: `Vàng ${5 - Math.floor((points % 500) / 100)}`,
         color: "gold",
         image: "/gold.png",
       };
-    if (points >= 1000)
+    }
+
+    if (points >= 1000) {
       return {
         name: `Bạc ${5 - Math.floor((points % 500) / 100)}`,
         color: "gray",
         image: "/silver.png",
       };
-    if (points >= 500)
+    }
+
+    if (points >= 500) {
       return {
         name: `Đồng ${5 - Math.floor((points % 500) / 100)}`,
         color: "orange",
         image: "/bronze.png",
       };
+    }
 
     return {
       name: `Sắt ${5 - Math.floor(points / 100)}`,
@@ -149,14 +202,31 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
     };
   };
 
+  const rawUser = user as any;
+
+  const authProvider = String(
+    rawUser?.provider ?? rawUser?.authProvider ?? "LOCAL",
+  ).toUpperCase();
+
+  const role = String(
+    typeof rawUser?.role === "object"
+      ? rawUser?.role?.roleName ?? ""
+      : rawUser?.role ?? rawUser?.roleName ?? "",
+  ).toUpperCase();
+
   const categoryRanks: CategoryRankResponse[] =
     localDashboardData?.categoryRanks || [];
+
   const highestRank =
     categoryRanks.length > 0
       ? categoryRanks.reduce((max, current) =>
           max.rankPoint > current.rankPoint ? max : current,
         )
-      : { rankPoint: 0, displayRank: "Sắt 5", categoryName: "Chưa phân hạng" };
+      : {
+          rankPoint: 0,
+          displayRank: "Sắt 5",
+          categoryName: "Chưa phân hạng",
+        };
 
   const mainRankInfo = getRankInfo(
     highestRank.rankPoint,
@@ -164,110 +234,180 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
   );
 
   const menuItems = [
-    { key: "0", icon: <DashboardOutlined />, label: "Bảng điều khiển" },
-    { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
-    { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
-    { key: "8", icon: <BarChartOutlined />, label: "Xếp hạng của tôi" },
-    { key: "7", icon: <TrophyOutlined />, label: "Thành tựu" },
-    { key: "3", icon: <HistoryOutlined />, label: "Lịch sử đặt sân" },
-
-    { key: "6", icon: <BankOutlined />, label: "Tài khoản ngân hàng" },
-    { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
+    {
+      key: "0",
+      icon: <DashboardOutlined />,
+      label: "Bảng điều khiển",
+    },
+    {
+      key: "1",
+      icon: <UserOutlined />,
+      label: "Thông tin cá nhân",
+    },
+    {
+      key: "2",
+      icon: <HistoryOutlined />,
+      label: "Trận đấu của tôi",
+    },
+    {
+      key: "8",
+      icon: <BarChartOutlined />,
+      label: "Xếp hạng của tôi",
+    },
+    {
+      key: "7",
+      icon: <TrophyOutlined />,
+      label: "Thành tựu",
+    },
+    {
+      key: "3",
+      icon: <HistoryOutlined />,
+      label: "Lịch sử đặt sân",
+    },
+    {
+      key: "6",
+      icon: <BankOutlined />,
+      label: "Tài khoản ngân hàng",
+    },
+    {
+      key: "4",
+      icon: <SettingOutlined />,
+      label: "Cài đặt",
+    },
     {
       key: "5",
       icon: <SafetyCertificateOutlined />,
       label: "Bảo mật tài khoản",
     },
     {
+      key: "9",
+      icon: <DeleteOutlined />,
+      label: "Xóa tài khoản",
+      danger: true,
+    },
+    {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Đăng xuất",
       danger: true,
-      onClick: handleLogout,
     },
   ];
 
   return (
-    <Card
-      style={{ borderRadius: "12px", textAlign: "center", padding: "8px" }}
-      bordered={false}
-    >
-      <Title level={4} style={{ margin: "8px 0 0 0" }}>
-        {user ? `${user.userName}` : "N/A"}
-      </Title>
-
-      <div
+    <>
+      <Card
         style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "10px",
-          marginTop: "24px",
+          borderRadius: "12px",
+          textAlign: "center",
+          padding: "8px",
         }}
+        bordered={false}
       >
-        <img
-          src={mainRankInfo.image}
-          alt={mainRankInfo.name}
-          style={{ width: "120px", height: "120px", objectFit: "contain" }}
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
+        <Title level={4} style={{ margin: "8px 0 0 0" }}>
+          {user ? user.userName : "N/A"}
+        </Title>
 
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "4px",
+            gap: "10px",
+            marginTop: "24px",
           }}
         >
-          <Text strong style={{ fontSize: "18px", color: "#475569" }}>
-            {mainRankInfo.name}
-          </Text>
-          <Text type="secondary" style={{ fontSize: "13px" }}>
-            Môn thi đấu tốt nhất:{" "}
-            <span style={{ fontWeight: 600, color: "#9156F1" }}>
-              {highestRank.categoryName || "Chưa có"}
-            </span>
-          </Text>
-          <Tag
-            color={mainRankInfo.color}
+          <img
+            src={mainRankInfo.image}
+            alt={mainRankInfo.name}
             style={{
-              margin: "8px 0 0 0",
-              padding: "4px 16px",
-              fontSize: "14px",
-              borderRadius: "12px",
-              fontWeight: "bold",
+              width: "120px",
+              height: "120px",
+              objectFit: "contain",
+            }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "4px",
             }}
           >
-            {highestRank.rankPoint} Đ
-          </Tag>
+            <Text
+              strong
+              style={{
+                fontSize: "18px",
+                color: "#475569",
+              }}
+            >
+              {mainRankInfo.name}
+            </Text>
+
+            <Text type="secondary" style={{ fontSize: "13px" }}>
+              Môn thi đấu tốt nhất:{" "}
+              <span
+                style={{
+                  fontWeight: 600,
+                  color: "#9156F1",
+                }}
+              >
+                {highestRank.categoryName || "Chưa có"}
+              </span>
+            </Text>
+
+            <Tag
+              color={mainRankInfo.color}
+              style={{
+                margin: "8px 0 0 0",
+                padding: "4px 16px",
+                fontSize: "14px",
+                borderRadius: "12px",
+                fontWeight: "bold",
+              }}
+            >
+              {highestRank.rankPoint} Đ
+            </Tag>
+          </div>
         </div>
-      </div>
 
-      <Divider style={{ margin: "24px 0 16px 0" }} />
+        <Divider style={{ margin: "24px 0 16px 0" }} />
 
-      <ConfigProvider
-        theme={{
-          components: {
-            Menu: {
-              itemSelectedColor: "#9156F1",
-              itemSelectedBg: "#f3e8ff",
-              itemHoverColor: "#9156F1",
+        <ConfigProvider
+          theme={{
+            components: {
+              Menu: {
+                itemSelectedColor: "#9156F1",
+                itemSelectedBg: "#f3e8ff",
+                itemHoverColor: "#9156F1",
+              },
             },
-          },
-        }}
-      >
-        <Menu
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          onClick={(e) => handleMenuClick(e.key)}
-          style={{ borderRight: "none", textAlign: "left" }}
-        />
-      </ConfigProvider>
-    </Card>
+          }}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            items={menuItems}
+            onClick={(e) => handleMenuClick(e.key)}
+            style={{
+              borderRight: "none",
+              textAlign: "left",
+            }}
+          />
+        </ConfigProvider>
+      </Card>
+
+      <DeleteAccountModal
+        open={deleteAccountOpen}
+        authProvider={authProvider}
+        role={role}
+        onClose={() => setDeleteAccountOpen(false)}
+        onDeleted={handleAccountDeleted}
+      />
+    </>
   );
 };
 
