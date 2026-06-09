@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -97,4 +98,18 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
                                           org.sport.backend.constant.BookingStatus.BOOKED)
            \s""")
     BigDecimal sumInitialPaidAmountByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
+
+    boolean existsByRenter_UserIdAndBookingStatusIn(
+            UUID userId,
+            Collection<BookingStatus> statuses
+    );
+
+    boolean existsByRenter_UserIdAndDisputeFlagTrue(UUID userId);
+
+    List<Booking> findAllByRenter_UserId(UUID userId);
+
+    boolean existsByRentalArea_Owner_UserIdAndBookingStatusIn(
+            UUID ownerId,
+            Collection<BookingStatus> statuses
+    );
 }

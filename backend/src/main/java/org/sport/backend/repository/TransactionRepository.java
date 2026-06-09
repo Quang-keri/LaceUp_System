@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -113,4 +114,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     Optional<Transaction> findByReferenceId(String referenceId);
 
+
+    List<Transaction>  findAllByOwner_UserId(UUID ownerId);
 }

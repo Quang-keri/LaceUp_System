@@ -12,5 +12,7 @@ import java.util.UUID;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
     Page<Notification> findAllByRecipient(User recipient, Pageable pageable);
+
+    void deleteAllByRecipient_UserId(UUID userId);
 }
 

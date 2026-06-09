@@ -39,20 +39,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchCurrentUser = async () => {
     const token = localStorage.getItem("accessToken");
+
     if (!token) {
       setUser(null);
       setIsLoading(false);
       return;
     }
+
     setIsLoading(true);
+
     try {
       const response: any = await userService.getMyInfo();
-      const actualData = response.data ? response.data : response;
+
+      const actualData = response?.data ?? response;
+
       if (actualData?.result) {
         setUser(actualData.result);
+      } else {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        setUser(null);
       }
     } catch (error) {
-      console.error("Fetch user thất bại...");
+      console.error("Fetch user thất bại:", error);
+
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Ngắt đường truyền ngay lập tức bằng hàm thủ công cho an toàn
     // websocketService.disconnect();
-
+    setIsLoading(false);
     setUser(null);
   };
 

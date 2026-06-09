@@ -16,4 +16,6 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
     Optional<Role> findByRoleName(@NotNull(message = "ROLE_REQUIRED") String roleName);
 
     boolean existsByRoleName(@NotBlank(message = "ROLE_NAME_REQUIRED") String roleName);
+
+    Optional<Role> findByRoleNameIgnoreCase(String roleName);
 }
