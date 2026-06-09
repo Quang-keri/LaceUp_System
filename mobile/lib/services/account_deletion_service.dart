@@ -1,131 +1,89 @@
 import 'package:dio/dio.dart';
-
-import '../config/api_client.dart';
-import '../models/account_deletion.dart';
+import 'package:mobile/config/api_client.dart';
+import 'package:mobile/models/account_deletion.dart';
 
 class AccountDeletionService {
-  Future<DeleteAccountResponse> requestAccountDeletion({
-    String? password,
-    String? reason,
-  }) async {
+
+  final String endpoint;
+
+  const AccountDeletionService({
+    this.endpoint = '/users/me/account-deletion',
+  });
+
+  Future<DeleteAccountResponse> requestAccountDeletion() async {
     try {
-      final normalizedPassword = password?.trim();
-      final normalizedReason = reason?.trim();
+      final response = await apiClient.post(endpoint);
 
-      final response = await apiClient.post(
-        '/users/me/account-deletion',
-        data: {
-          'password': normalizedPassword == null ||
-              normalizedPassword.isEmpty
-              ? null
-              : normalizedPassword,
-          'reason':
-          normalizedReason == null || normalizedReason.isEmpty
-              ? null
-              : normalizedReason,
-          'confirmation': 'XOA',
-        },
-      );
+      final Map<String, dynamic> responseMap =
+      _toStringDynamicMap(response.data);
 
-      final dynamic rawData = response.data;
+      final dynamic rawResult = responseMap['result'];
 
-      if (rawData is! Map) {
+      final Map<String, dynamic> resultMap = rawResult is Map
+          ? Map<String, dynamic>.from(rawResult)
+          : responseMap;
+
+      if (resultMap['status'] == null) {
         throw const AccountDeletionException(
-          'Dữ liệu phản hồi từ hệ thống không hợp lệ',
+          'Phản hồi xóa tài khoản không hợp lệ.',
         );
       }
 
-      final responseMap =
-      Map<String, dynamic>.from(rawData);
-
-      /*
-       * Hỗ trợ response dạng ApiResponse:
-       *
-       * {
-       *   "code": 200,
-       *   "message": "...",
-       *   "result": {
-       *      "status": "COMPLETED",
-       *      "message": "...",
-       *      "blockers": []
-       *   }
-       * }
-       *
-       * Và response trả trực tiếp:
-       *
-       * {
-       *   "status": "COMPLETED",
-       *   "message": "...",
-       *   "blockers": []
-       * }
-       */
-      final dynamic rawResult = responseMap['result'];
-
-      final Map<String, dynamic> result;
-
-      if (rawResult is Map) {
-        result = Map<String, dynamic>.from(rawResult);
-      } else {
-        result = responseMap;
-      }
-
-      return DeleteAccountResponse.fromJson(result);
+      return DeleteAccountResponse.fromJson(resultMap);
+    } on AccountDeletionException {
+      rethrow;
     } on DioException catch (error) {
       throw AccountDeletionException(
         _extractErrorMessage(error),
       );
-    } on AccountDeletionException {
-      rethrow;
-    } catch (error) {
+    } catch (_) {
       throw const AccountDeletionException(
-        'Đã xảy ra lỗi khi xử lý yêu cầu xóa tài khoản',
+        'Không thể gửi yêu cầu xóa tài khoản. Vui lòng thử lại.',
       );
     }
   }
 
+  Map<String, dynamic> _toStringDynamicMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+
+    throw const AccountDeletionException(
+      'Máy chủ trả về dữ liệu không hợp lệ.',
+    );
+  }
+
   String _extractErrorMessage(DioException error) {
-    final dynamic data = error.response?.data;
+    final dynamic responseData = error.response?.data;
 
-    if (data is Map) {
-      final map = Map<String, dynamic>.from(data);
+    if (responseData is Map) {
+      final Map<String, dynamic> data =
+      Map<String, dynamic>.from(responseData);
 
-      final backendMessage =
-      map['message']?.toString().trim();
+      final dynamic rawResult = data['result'];
 
-      if (backendMessage != null &&
-          backendMessage.isNotEmpty) {
-        return backendMessage;
-      }
+      final dynamic message =
+          data['message'] ??
+              data['error'] ??
+              data['desc'] ??
+              (rawResult is Map ? rawResult['message'] : null);
 
-      final dynamic result = map['result'];
-
-      if (result is Map) {
-        final resultMap =
-        Map<String, dynamic>.from(result);
-
-        for (final value in resultMap.values) {
-          final message = value?.toString().trim();
-
-          if (message != null && message.isNotEmpty) {
-            return message;
-          }
-        }
+      if (message != null && message.toString().trim().isNotEmpty) {
+        return message.toString().trim();
       }
     }
 
-    switch (error.response?.statusCode) {
-      case 400:
-        return 'Thông tin xác nhận không hợp lệ.';
-      case 401:
-        return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
-      case 403:
-        return 'Bạn không có quyền thực hiện chức năng này.';
-      case 404:
-        return 'Không tìm thấy tài khoản.';
-      case 409:
-        return 'Tài khoản đang được xử lý hoặc đã được xóa.';
-      case 500:
-        return 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.';
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Kết nối quá thời gian. Vui lòng thử lại.';
+      case DioExceptionType.connectionError:
+        return 'Không thể kết nối đến máy chủ.';
       default:
         return 'Không thể gửi yêu cầu xóa tài khoản. Vui lòng thử lại.';
     }
