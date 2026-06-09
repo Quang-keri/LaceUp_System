@@ -1,0 +1,208 @@
+import { Button, InputNumber, Spin, message } from "antd";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+
+import bookingService from "../../../../service/bookingService";
+
+interface OwnerSharedBookingPanelProps {
+  selectedSlot: any;
+  submitting?: boolean;
+  onBook: (maxParticipants: number) => void | Promise<void>;
+  onCancel: () => void;
+}
+
+const ROUND_UNIT = 1_000;
+
+export default function OwnerSharedBookingPanel({
+  selectedSlot,
+  submitting = false,
+  onBook,
+  onCancel,
+}: OwnerSharedBookingPanelProps) {
+  const [maxParticipants, setMaxParticipants] = useState<number>(10);
+
+  const [basePrice, setBasePrice] = useState<number>(0);
+
+  const [loadingPrice, setLoadingPrice] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!selectedSlot) {
+      setBasePrice(0);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchPrice = async () => {
+      try {
+        setLoadingPrice(true);
+
+        const payload = {
+          slots: [
+            {
+              courtCopyId: selectedSlot.courtCopyId,
+              startTime: `${selectedSlot.date}T${selectedSlot.startTime}:00`,
+              endTime: `${selectedSlot.date}T${selectedSlot.endTime}:00`,
+            },
+          ],
+        };
+
+        const response = await bookingService.previewOwnerBookingPrice(payload);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const price = Number(response?.result ?? 0);
+
+        setBasePrice(Number.isFinite(price) ? price : 0);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setBasePrice(0);
+
+        message.error("Không thể tính giá gốc của sân. Vui lòng thử lại!");
+      } finally {
+        if (isMounted) {
+          setLoadingPrice(false);
+        }
+      }
+    };
+
+    fetchPrice();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedSlot]);
+
+  const ticketPrice =
+    maxParticipants > 0
+      ? Math.ceil(basePrice / maxParticipants / ROUND_UNIT) * ROUND_UNIT
+      : 0;
+
+  const estimatedRevenue = maxParticipants * ticketPrice;
+
+  const selectedDate = selectedSlot?.date
+    ? dayjs(selectedSlot.date).format("DD/MM/YYYY")
+    : "--/--/----";
+
+  return (
+    <Spin spinning={loadingPrice}>
+      <div className="flex flex-col gap-5">
+        <div className="rounded-lg border border-gray-200 bg-white p-3">
+          <p className="m-0 text-sm font-semibold text-gray-900">
+            Mở kèo gom khách lẻ
+          </p>
+
+          <p className="mb-0 mt-1 text-xs leading-5 text-gray-500">
+            Giá vé được tính bằng giá sân chia đều cho số người và làm tròn lên
+            1.000đ.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <p className="m-0 font-bold text-gray-800">
+            {selectedSlot?.courtName || "Tên sân"}
+
+            {selectedSlot?.courtCode && (
+              <span className="ml-1 text-gray-600">
+                - {selectedSlot.courtCode}
+              </span>
+            )}
+          </p>
+
+          <p className="mb-0 mt-1 text-sm text-gray-500">
+            {selectedDate} • {selectedSlot?.startTime || "--:--"} -{" "}
+            {selectedSlot?.endTime || "--:--"}
+          </p>
+        </div>
+
+        <div>
+          <span className="mb-2 block text-sm font-medium text-gray-700">
+            Số người tối đa:
+          </span>
+
+          <InputNumber
+            min={2}
+            max={50}
+            value={maxParticipants}
+            onChange={(value) => setMaxParticipants(Number(value ?? 10))}
+            size="large"
+            style={{
+              width: "100%",
+            }}
+          />
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="mb-3 flex items-center justify-between text-sm text-gray-500">
+            <span>Giá gốc sân:</span>
+
+            <span className="font-medium text-gray-800">
+              {basePrice.toLocaleString("vi-VN")} đ
+            </span>
+          </div>
+
+          <div className="mb-3 flex items-center justify-between text-sm text-gray-500">
+            <span>Số người tối đa:</span>
+
+            <span className="font-medium text-gray-800">
+              {maxParticipants} người
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between border-y border-gray-200 py-3">
+            <span className="font-bold text-gray-700">Giá một vé:</span>
+
+            <span className="text-lg font-bold text-gray-900">
+              {ticketPrice.toLocaleString("vi-VN")} đ/vé
+            </span>
+          </div>
+
+          <div className="mt-4 flex items-end justify-between">
+            <span className="text-sm font-bold text-gray-700">
+              Dự kiến thu nếu đầy:
+            </span>
+
+            <div className="text-right">
+              <span className="text-2xl font-extrabold text-gray-900">
+                {estimatedRevenue.toLocaleString("vi-VN")}
+              </span>
+
+              <span className="ml-1 font-medium text-gray-500">đ</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 border-t border-gray-200 pt-4">
+          <Button
+            size="large"
+            onClick={onCancel}
+            disabled={submitting}
+            className="flex-1"
+          >
+            Hủy bỏ
+          </Button>
+
+          <Button
+            type="primary"
+            size="large"
+            loading={submitting}
+            disabled={loadingPrice || basePrice <= 0 || maxParticipants < 2}
+            onClick={() => onBook(maxParticipants)}
+            className="flex-1 font-semibold"
+            style={{
+              backgroundColor: "#262626",
+              borderColor: "#262626",
+            }}
+          >
+            Đăng kèo lên ứng dụng
+          </Button>
+        </div>
+      </div>
+    </Spin>
+  );
+}

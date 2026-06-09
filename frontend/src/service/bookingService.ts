@@ -1,6 +1,11 @@
 import api from "../config/axios";
-import type {BookingListResponse, BookingResponse} from "../types/booking";
-import type {ApiResponse} from "../types/ApiResponse";
+import type {
+  BookingListResponse,
+  BookingParticipantResponse,
+  BookingResponse,
+  CreateBookingIntentPayload,
+} from "../types/booking";
+import type { ApiResponse } from "../types/ApiResponse";
 
 class BookingService {
   async getPendingTransferBookings(rentalId: string, page = 1, size = 10) {
@@ -11,19 +16,57 @@ class BookingService {
         size,
       },
     });
+    return res.data;
+  }
 
+  async getMyBookingIntents() {
+    const res = await api.get(`/bookings/intent/my-intents`);
     return res.data;
   }
 
   async ownerConfirmBooking(intentId: string) {
     const res = await api.post(`/bookings/intent/${intentId}/owner-confirm`);
-
     return res.data;
   }
+
   async ownerRejectBooking(intentId: string) {
     const res = await api.post(`/bookings/intent/${intentId}/owner-reject`);
     return res.data;
   }
+
+  async uploadIntentPaymentProof(intentId: string, imageFile: File) {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    const res = await api.post(
+      `/bookings/intent/${intentId}/payment-proof`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
+    return res.data;
+  }
+
+  async createBooking(data: CreateBookingIntentPayload) {
+    const payload = {
+      userId: data.userId,
+      userName: data.userName,
+      userPhone: data.userPhone,
+      note: data.note || "",
+      slotRequests: data.slotRequests,
+    };
+
+    const res = await api.post("/bookings/intent", payload);
+
+    return res.data;
+  }
+
+  async getBookingIntent(bookingIntentId: string) {
+    const res = await api.get(`/bookings/intent/${bookingIntentId}`);
+    return res.data.result;
+  }
+
   async previewOwnerBookingPrice(payload: {
     slots: { courtCopyId: string; startTime: string; endTime: string }[];
   }) {
@@ -38,15 +81,21 @@ class BookingService {
     customerName: string;
     phone: string;
     note: string;
-    totalPrice: number;
     paidAmount: number;
     paymentMethod: string;
-    slots: { courtCopyId: string; startTime: string; endTime: string }[];
+    bookingType?: "PRIVATE" | "SHARED";
+    maxParticipants?: number;
+    slots: {
+      courtCopyId: string;
+      startTime: string;
+      endTime: string;
+    }[];
   }) {
     const response = await api.post<ApiResponse<BookingResponse>>(
       "/bookings/owner",
       payload,
     );
+
     return response.data;
   }
 
@@ -70,61 +119,19 @@ class BookingService {
     return response.data;
   }
 
-  async createBooking(data: any) {
-    const res = await api.post("/bookings/intent", data);
-    return res.data;
-  }
-
-  async getBookingIntent(bookingIntentId: string) {
-    const res = await api.get(`/bookings/intent/${bookingIntentId}`);
-    return res.data.result;
-  }
-
-  async getBookingsByRentalArea(
-    rentalAreaId: string,
-    page: number = 1,
-    size: number = 10,
-    status?: string,
-    searchKeyword?: string,
-    from?: string,
-    to?: string,
-  ) {
-    const params = new URLSearchParams();
-
-    params.append("rentalId", rentalAreaId);
-    params.append("page", page.toString());
-    params.append("size", size.toString());
-    params.append("keyword", searchKeyword || "");
-
-    if (status) params.append("bookingStatus", status);
-    if (from) params.append("from", from);
-    if (to) params.append("to", to);
-
-    const response = await api.get<ApiResponse<BookingListResponse>>(
-      `/bookings/my-rentals?${params.toString()}`,
-    );
-
+  async checkAvailability(payload: {
+    courtId: string;
+    startTime: string;
+    endTime: string;
+    quantity: number;
+  }) {
+    const response = await api.post("/bookings/check-availability", payload);
     return response.data;
   }
 
-  async getMyBookings(
-    status?: string,
-    searchKeyword?: string,
-    from?: string,
-    to?: string,
-    page: number = 1,
-    size: number = 10,
-  ) {
-    const params = new URLSearchParams();
-    params.append("page", page.toString());
-    params.append("size", size.toString());
-    params.append("keyword", searchKeyword || "");
-    params.append("bookingStatus", status || "");
-    params.append("from", from || "");
-    params.append("to", to || "");
-
-    const response = await api.get<ApiResponse<BookingListResponse>>(
-      `/bookings/my-bookings?${params.toString()}`,
+  async getBookingById(bookingId: string) {
+    const response = await api.get<ApiResponse<BookingResponse>>(
+      `/bookings/${bookingId}`,
     );
     return response.data;
   }
@@ -137,17 +144,11 @@ class BookingService {
     return response.data;
   }
 
-  async getBookingById(bookingId: string) {
-    const response = await api.get<ApiResponse<BookingResponse>>(
-      `/bookings/${bookingId}`,
+  async cancelBooking(bookingId: string) {
+    const response = await api.put<ApiResponse<void>>(
+      `/bookings/${bookingId}/cancel`,
     );
     return response.data;
-  }
-
-  async downloadInvoice(bookingId: string) {
-    return await api.get(`/bookings/${bookingId}/invoice/download`, {
-      responseType: "blob",
-    });
   }
 
   async collectRemainingPayment(bookingId: string) {
@@ -157,9 +158,55 @@ class BookingService {
     return response.data;
   }
 
-  async cancelBooking(bookingId: string) {
-    const response = await api.put<ApiResponse<void>>(
-      `/bookings/${bookingId}/cancel`,
+  async getBookingsByRentalArea(
+    rentalAreaId: string,
+    page: number = 1,
+    size: number = 10,
+    status?: string,
+    bookingType?: string,
+    searchKeyword?: string,
+    from?: string,
+    to?: string,
+  ) {
+    const params = new URLSearchParams();
+
+    params.append("rentalId", rentalAreaId);
+    params.append("page", page.toString());
+    params.append("size", size.toString());
+    params.append("keyword", searchKeyword || "");
+
+    if (status) params.append("bookingStatus", status);
+    if (bookingType) params.append("bookingType", bookingType);
+    if (from) params.append("from", from);
+    if (to) params.append("to", to);
+
+    const response = await api.get<ApiResponse<BookingListResponse>>(
+      `/bookings/my-rentals?${params.toString()}`,
+    );
+    return response.data;
+  }
+
+  async getMyBookings(
+    status?: string,
+    bookingType?: string,
+    searchKeyword?: string,
+    from?: string,
+    to?: string,
+    page: number = 1,
+    size: number = 10,
+  ) {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("size", size.toString());
+    params.append("keyword", searchKeyword || "");
+
+    if (status) params.append("bookingStatus", status);
+    if (bookingType) params.append("bookingType", bookingType);
+    if (from) params.append("from", from);
+    if (to) params.append("to", to);
+
+    const response = await api.get<ApiResponse<BookingListResponse>>(
+      `/bookings/my-bookings?${params.toString()}`,
     );
     return response.data;
   }
@@ -168,6 +215,7 @@ class BookingService {
     page: number = 1,
     size: number = 10,
     status?: string,
+    bookingType?: string,
     keyword?: string,
     from?: string,
     to?: string,
@@ -178,6 +226,7 @@ class BookingService {
     params.append("size", size.toString());
 
     if (status) params.append("bookingStatus", status);
+    if (bookingType) params.append("bookingType", bookingType);
     if (keyword) params.append("keyword", keyword);
     if (from) params.append("from", from);
     if (to) params.append("to", to);
@@ -185,23 +234,80 @@ class BookingService {
     const response = await api.get<ApiResponse<BookingListResponse>>(
       `/bookings?${params.toString()}`,
     );
+    return response.data;
+  }
+
+  async joinSharedBooking(bookingId: string, quantity: number) {
+    const response = await api.post(`/bookings/shared/${bookingId}/join`, {
+      quantity,
+    });
 
     return response.data;
   }
 
-  async checkAvailability(payload: {
-    courtId: string;
-    startTime: string;
-    endTime: string;
-    quantity: number;
-  }) {
-    const response = await api.post("/bookings/check-availability", payload);
+  async getTicketParticipant(participantId: string) {
+    const response = await api.get<ApiResponse<BookingParticipantResponse>>(
+      `/bookings/shared/ticket/${participantId}`,
+    );
+
     return response.data;
+  }
+
+  async uploadTicketPaymentProof(participantId: string, imageFile: File) {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    const res = await api.post(
+      `/bookings/shared/ticket/${participantId}/payment-proof`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
+    return res.data;
+  }
+
+  async getPendingSharedTickets(
+    rentalAreaId: string,
+    page = 1,
+    size = 10,
+    from?: string,
+    to?: string,
+  ) {
+    const res = await api.get("/bookings/shared/owner/pending-tickets", {
+      params: {
+        rentalAreaId,
+        page,
+        size,
+        ...(from ? { from } : {}),
+        ...(to ? { to } : {}),
+      },
+    });
+
+    return res.data;
+  }
+
+  async confirmSharedTicket(participantId: string, isApproved: boolean) {
+    const res = await api.put(
+      `/bookings/shared/ticket/${participantId}/confirm`,
+      null,
+      {
+        params: { isApproved },
+      },
+    );
+    return res.data;
+  }
+
+  async downloadInvoice(bookingId: string) {
+    return await api.get(`/bookings/${bookingId}/invoice/download`, {
+      responseType: "blob",
+    });
   }
 
   async exportBookingsExcel(params: {
     rentalId?: string;
     bookingStatus?: string;
+    bookingType?: string;
     keyword?: string;
     from?: string;
     to?: string;

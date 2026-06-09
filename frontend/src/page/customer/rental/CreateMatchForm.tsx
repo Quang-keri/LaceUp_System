@@ -304,7 +304,7 @@ export default function CreateMatchForm({
     <div className="animate-in fade-in duration-300">
       <div className="mb-3 p-3 bg-[#f3e8ff]/50 rounded-lg border border-[#e9d5ff]">
         <p className="text-sm text-purple-900 font-semibold">
-          Sân áp dụng cho trận ghép kèo
+          Sân áp dụng cho trận ghép
         </p>
       </div>
 
@@ -542,7 +542,7 @@ export default function CreateMatchForm({
               : "!bg-[#9156F1] !border-[#9156F1] !text-white hover:!bg-[#7c3aed] hover:!border-[#7c3aed]"
           }`}
         >
-          Tạo trận ghép kèo
+          Tạo trận
         </Button>
       </Form>
     </div>

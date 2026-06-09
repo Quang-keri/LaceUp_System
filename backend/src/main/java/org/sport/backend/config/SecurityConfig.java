@@ -83,6 +83,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/rental-areas/my-rentals").authenticated()
                         .requestMatchers(HttpMethod.GET, "/rental-areas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/courts/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/bookings/shared/*/public").permitAll()
                         .requestMatchers(HttpMethod.POST, "/bookings/intent").permitAll()
                         .requestMatchers(HttpMethod.POST, "/bookings/check-availability").permitAll()
                         .requestMatchers(HttpMethod.GET, "/bookings/intent/**").permitAll()

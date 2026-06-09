@@ -36,67 +36,60 @@ class _MainNavigationState extends State<MainNavigation> {
       body: IndexedStack(index: _selectedIndex, children: _pages),
 
       floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: bottomSafeArea + 85),
+        padding: EdgeInsets.only(bottom: bottomSafeArea + 50),
         child: const ChatbotBubble(),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
 
       bottomNavigationBar: Container(
         color: Colors.transparent,
         child: SafeArea(
           bottom: true,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: CurvedNavigationBar(
-              index: _selectedIndex,
-              backgroundColor: Colors.transparent,
-              color: const Color(0xFF9156F1),
-              buttonBackgroundColor: const Color(0xFF9156F1),
-              height: 75,
-              animationDuration: const Duration(milliseconds: 250),
-              letIndexChange: (index) => true,
-              onTap: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-              items: [
-                const Icon(Icons.home_rounded, size: 26, color: Colors.white),
-                const Icon(
-                  Icons.location_on_rounded,
-                  size: 26,
+          child: CurvedNavigationBar(
+            index: _selectedIndex,
+            backgroundColor: Colors.transparent,
+            color: const Color(0xFF9156F1),
+            buttonBackgroundColor: const Color(0xFF9156F1),
+            height: 75,
+            animationDuration: const Duration(milliseconds: 250),
+            letIndexChange: (index) => true,
+            onTap: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            items: [
+              const Icon(Icons.home_rounded, size: 26, color: Colors.white),
+              const Icon(
+                Icons.location_on_rounded,
+                size: 26,
+                color: Colors.white,
+              ),
+              Container(
+                height: 46,
+                width: 46,
+                decoration: BoxDecoration(
                   color: Colors.white,
-                ),
-                Container(
-                  height: 46,
-                  width: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.groups_rounded,
-                      size: 28,
-                      color: Color(0xFF9156F1),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.groups_rounded,
+                    size: 28,
+                    color: Color(0xFF9156F1),
                   ),
                 ),
-                const Icon(
-                  Icons.article_rounded,
-                  size: 26,
-                  color: Colors.white,
-                ),
-                const Icon(Icons.person_rounded, size: 26, color: Colors.white),
-              ],
-            ),
+              ),
+              const Icon(Icons.article_rounded, size: 26, color: Colors.white),
+              const Icon(Icons.person_rounded, size: 26, color: Colors.white),
+            ],
           ),
         ),
       ),

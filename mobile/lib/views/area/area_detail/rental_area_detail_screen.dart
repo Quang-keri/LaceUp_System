@@ -7,12 +7,14 @@ import 'package:provider/provider.dart';
 import '../../../models/court.dart';
 import '../../../models/rental_area.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../services/booking_service.dart';
 import '../../../services/court_service.dart';
 import '../../../services/rental_service.dart';
 
 import '../../login/login_screen.dart';
 import '../booking/booking_form_screen.dart';
 import '../booking/match_config_widget.dart';
+import '../booking/ticket_payment_proof_screen.dart';
 import 'court_info_tab.dart';
 import 'court_price_tabs.dart';
 import 'court_review_tabs.dart';
@@ -37,7 +39,12 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
   bool loading = true;
   String? error;
 
-  bool isMatchMode = false;
+  String bookingMode = 'booking';
+
+  Map<String, dynamic>? selectedJoinableSlot;
+
+  bool get isMatchMode => bookingMode == 'match';
+
   MatchConfigData? currentMatchConfig;
 
   DateTime selectedDate = DateTime.now();
@@ -108,6 +115,86 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
     setState(() {
       rentalArea = _mergeScheduleToRentalArea(rentalArea!, scheduleCopies);
     });
+  }
+
+  Future<void> _handleJoinShared(String bookingId, int quantity) async {
+    final authProvider = context.read<AuthProvider>();
+
+    if (!authProvider.isLoggedIn) {
+      _showTopMessage('Vui lòng đăng nhập để tham gia vãng lai!');
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(
+            onLoginSuccess: () {
+              _handleJoinShared(bookingId, quantity);
+            },
+          ),
+        ),
+      );
+
+      return;
+    }
+
+    try {
+      final response = await bookingService.joinSharedBooking(
+        bookingId,
+        quantity,
+      );
+
+      debugPrint('JOIN SHARED RESPONSE = $response');
+
+      Map<String, dynamic>? responseMap;
+
+      if (response is Map<String, dynamic>) {
+        responseMap = response;
+      } else if (response is Map) {
+        responseMap = Map<String, dynamic>.from(response);
+      }
+
+      final rawResult = responseMap?['result'] ?? responseMap;
+
+      Map<String, dynamic>? result;
+
+      if (rawResult is Map<String, dynamic>) {
+        result = rawResult;
+      } else if (rawResult is Map) {
+        result = Map<String, dynamic>.from(rawResult);
+      }
+
+      // Hỗ trợ một số tên field backend có thể trả về
+      final participantId =
+          result?['participantId']?.toString() ??
+          result?['bookingParticipantId']?.toString() ??
+          result?['ticketId']?.toString() ??
+          result?['id']?.toString();
+
+      if (participantId == null || participantId.isEmpty) {
+        throw Exception('Backend chưa trả participantId của vé vừa đăng ký.');
+      }
+
+      if (!mounted) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TicketPaymentProofScreen(
+            participantId: participantId,
+            joinResult: result,
+          ),
+        ),
+      );
+
+      await fetchSchedule();
+    } catch (error) {
+      if (!mounted) return;
+
+      _showTopMessage(
+        error.toString().replaceFirst('Exception: ', ''),
+        isError: true,
+      );
+    }
   }
 
   RentalAreaResponse _mergeScheduleToRentalArea(
@@ -185,10 +272,10 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       final totalHostPrice = pricePerPerson * hostPlayerCount;
 
       buttonText =
-      'Tạo Ghép Trận • ${NumberFormat.decimalPattern('vi_VN').format(totalHostPrice)} đ / $hostPlayerCount người';
+          'Tạo Ghép Trận • ${NumberFormat.decimalPattern('vi_VN').format(totalHostPrice)} đ / $hostPlayerCount người';
     } else {
       buttonText =
-      'Đặt sân (${selectedSlots.length}) • ${NumberFormat.decimalPattern('vi_VN').format(totalPrice)} đ';
+          'Đặt sân (${selectedSlots.length}) • ${NumberFormat.decimalPattern('vi_VN').format(totalPrice)} đ';
     }
 
     if (loading) {
@@ -225,7 +312,10 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      bottomNavigationBar: (_activeTabIndex == 0 && selectedSlots.isNotEmpty)
+      bottomNavigationBar:
+          (_activeTabIndex == 0 &&
+              bookingMode != 'shared' &&
+              selectedSlots.isNotEmpty)
           ? Container(
               padding: EdgeInsets.only(
                 left: 16,
@@ -329,7 +419,9 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           activeCourt: activeCourt,
           selectedDate: selectedDate,
           selectedSlots: selectedSlots,
-          isMatchMode: isMatchMode,
+          activeMode: bookingMode,
+          selectedJoinableSlot: selectedJoinableSlot,
+          onJoinShared: _handleJoinShared,
           onDateSelected: (date) async {
             setState(() {
               selectedDate = date;
@@ -347,17 +439,40 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           onActiveCourtChanged: (court) {
             setState(() => activeCourt = court);
           },
-          onModeChanged: (val) {
+          onModeChanged: (mode) {
             setState(() {
-              isMatchMode = val;
+              bookingMode = mode;
+
+              if (mode == 'shared') {
+                selectedSlots.clear();
+                return;
+              }
+
+              selectedJoinableSlot = null;
+
+              if (mode == 'match') {
+                currentMatchConfig ??= MatchConfigData(
+                  matchType: 'NORMAL',
+                  maxPlayers: 10,
+                  minPlayersToStart: 5,
+                  note: '',
+                  playerCount: 1,
+                );
+              }
+            });
+          },
+          onClickSharedSlot: (slot, court, copy) {
+            setState(() {
               selectedSlots.clear();
-              currentMatchConfig ??= MatchConfigData(
-                matchType: 'NORMAL',
-                maxPlayers: 10,
-                minPlayersToStart: 5,
-                note: '',
-                playerCount: 1,
-              );
+
+              selectedJoinableSlot = {
+                'slot': slot,
+                'court': court,
+                'copy': copy,
+              };
+
+              activeCourt = court;
+              bookingMode = 'shared';
             });
           },
           onMatchConfigChanged: (config) {

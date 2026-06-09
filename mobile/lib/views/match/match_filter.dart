@@ -144,7 +144,7 @@ class MatchFilter extends StatelessWidget {
                   typeFilter,
                   setTypeFilter,
                 ),
-                _buildFilterChip('Đánh kèo', 'BET', typeFilter, setTypeFilter),
+                // _buildFilterChip('Đánh kèo', 'BET', typeFilter, setTypeFilter),
                 _buildFilterChip(
                   'Đánh Rank',
                   'RANKED',

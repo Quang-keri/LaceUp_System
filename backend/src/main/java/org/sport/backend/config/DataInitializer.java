@@ -81,7 +81,6 @@ public class DataInitializer implements CommandLineRunner {
         if (userRepository.count() == 0) {
             String commonPass = passwordEncoder.encode("123456");
             List<User> users = new ArrayList<>();
-            Random random = new Random();
 
             users.add(User.builder().userName("Admin main").email("admin@gmail.com").passwordHash(commonPass).gender("Male").phone("0901000011").dateOfBirth(LocalDate.of(1990, 5, 15)).provider(AuthProvider.LOCAL).role(adminRole).createdAt(LocalDateTime.now().minusYears(5)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
@@ -99,74 +98,6 @@ public class DataInitializer implements CommandLineRunner {
             users.add(createDummyUser("Staff1", "staff1@gmail.com", commonPass, staffRole));
             users = userRepository.saveAll(users);
 
-            List<Category> allCategories = categoryRepository.findAll();
-            Category badminton = allCategories.stream().filter(c -> c.getCategoryName().equals("Sân cầu lông")).findFirst().orElseThrow();
-
-            List<UserCategoryRank> rankList = new ArrayList<>();
-            List<UserAchievement> achievementList = new ArrayList<>();
-
-            Map<String, Integer> initialRanks = Map.of(
-                    "admin@gmail.com", 3600,
-                    "owner@gmail.com", 1500,
-                    "staff@gmail.com", 800
-            );
-
-            for (User u : users) {
-                if (u.getEmail().equals("renter@gmail.com")) {
-                    int[] fakeScores = {3025, 2100, 750};
-                    int index = 0;
-
-                    for (Category cat : allCategories) {
-                        int rank = index < fakeScores.length ? fakeScores[index] : 1000;
-                        int totalMatches = 50 + random.nextInt(100);
-                        int totalWins = (int) (totalMatches * (0.4 + random.nextDouble() * 0.3));
-                        int maxStreak = totalWins > 0 ? random.nextInt(Math.min(10, totalWins)) + 1 : 0;
-
-                        rankList.add(UserCategoryRank.builder()
-                                .user(u)
-                                .category(cat)
-                                .rankPoint(rank)
-                                .totalMatches(totalMatches)
-                                .totalWins(totalWins)
-                                .currentWinStreak(random.nextInt(maxStreak + 1))
-                                .build());
-                        index++;
-                    }
-
-                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.FIRST_BLOOD).achievedAt(LocalDateTime.now().minusDays(100)).build());
-                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.ON_FIRE).achievedAt(LocalDateTime.now().minusDays(50)).build());
-                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.UNSTOPPABLE).achievedAt(LocalDateTime.now().minusDays(20)).build());
-                    achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.VETERAN).achievedAt(LocalDateTime.now().minusDays(10)).build());
-
-                } else {
-                    int rank = initialRanks.getOrDefault(u.getEmail(), random.nextInt(3500));
-                    int totalMatches = random.nextInt(150) + (rank / 25);
-                    int totalWins = (int) (totalMatches * (0.4 + random.nextDouble() * 0.25));
-                    int maxStreak = totalWins > 0 ? random.nextInt(Math.min(12, totalWins)) + 1 : 0;
-                    int currentStreak = maxStreak > 0 ? random.nextInt(maxStreak + 1) : 0;
-
-                    rankList.add(UserCategoryRank.builder()
-                            .user(u)
-                            .category(badminton)
-                            .rankPoint(rank)
-                            .totalMatches(totalMatches)
-                            .totalWins(totalWins)
-                            .currentWinStreak(currentStreak)
-                            .build());
-
-                    if (totalWins >= 1)
-                        achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.FIRST_BLOOD).achievedAt(LocalDateTime.now().minusDays(random.nextInt(100))).build());
-                    if (maxStreak >= 5)
-                        achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.ON_FIRE).achievedAt(LocalDateTime.now().minusDays(random.nextInt(50))).build());
-                    if (maxStreak >= 10)
-                        achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.UNSTOPPABLE).achievedAt(LocalDateTime.now().minusDays(random.nextInt(20))).build());
-                    if (totalMatches >= 100)
-                        achievementList.add(UserAchievement.builder().user(u).achievementType(AchievementType.VETERAN).achievedAt(LocalDateTime.now().minusDays(random.nextInt(10))).build());
-                }
-            }
-
-            userCategoryRankRepository.saveAll(rankList);
-            userAchievementRepository.saveAll(achievementList);
         }
 
         if (courtRepository.count() == 0) seedCourtData(courtImagesList.subList(0, 2));
@@ -188,7 +119,7 @@ public class DataInitializer implements CommandLineRunner {
         List<RentalArea> rentalAreas = rentalAreaRepository.findAll();
         if (rentalAreas.isEmpty()) return;
 
-        RentalArea area = rentalAreas.get(0);
+        RentalArea area = rentalAreas.getFirst();
 
         User renterMain = userRepository.findByEmail("renter@gmail.com").orElse(null);
         User renter1 = userRepository.findByEmail("renter1@gmail.com").orElse(null);

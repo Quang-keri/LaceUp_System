@@ -48,7 +48,6 @@ public class BookingIntent {
     @Enumerated(EnumType.STRING)
     private BookingIntentStatus status;
 
-
     @Column( name = "preview_price", precision = 19, scale = 2)
     private BigDecimal previewPrice;
 

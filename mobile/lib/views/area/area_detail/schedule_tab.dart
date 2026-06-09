@@ -5,6 +5,8 @@ import '../../../models/court.dart';
 import '../../../models/court_copy.dart';
 import '../../../models/rental_area.dart';
 import '../../../models/selected_booking_slot.dart';
+import '../../../models/slot.dart';
+import '../booking/join_shared_booking_panel.dart';
 import '../booking/match_config_widget.dart';
 
 class ScheduleTab extends StatefulWidget {
@@ -12,13 +14,27 @@ class ScheduleTab extends StatefulWidget {
   final CourtResponse? activeCourt;
   final DateTime selectedDate;
   final List<SelectedBookingSlot> selectedSlots;
-  final bool isMatchMode;
+  final String activeMode;
 
   final ValueChanged<DateTime> onDateSelected;
   final ValueChanged<List<SelectedBookingSlot>> onSelectedSlotsChanged;
   final ValueChanged<CourtResponse> onActiveCourtChanged;
-  final ValueChanged<bool> onModeChanged;
+  final ValueChanged<String> onModeChanged;
   final ValueChanged<MatchConfigData> onMatchConfigChanged;
+
+  final void Function(
+    dynamic slot,
+    CourtResponse court,
+    CourtCopyResponse copy,
+  )?
+  onClickSharedSlot;
+
+  final Map<String, dynamic>? selectedJoinableSlot;
+
+  final Future<void> Function(
+      String bookingId,
+      int quantity,
+      )? onJoinShared;
 
   const ScheduleTab({
     super.key,
@@ -26,12 +42,15 @@ class ScheduleTab extends StatefulWidget {
     required this.activeCourt,
     required this.selectedDate,
     required this.selectedSlots,
-    required this.isMatchMode,
+    required this.activeMode,
+    this.onClickSharedSlot,
     required this.onDateSelected,
     required this.onSelectedSlotsChanged,
     required this.onActiveCourtChanged,
     required this.onModeChanged,
     required this.onMatchConfigChanged,
+    this.selectedJoinableSlot,
+    this.onJoinShared,
   });
 
   @override
@@ -46,6 +65,8 @@ class _ScheduleTabState extends State<ScheduleTab> {
   double _scrollProgress = 0.0;
 
   late List<String> dynamicTimeSlots;
+
+  static bool _hideMatchGuide = false;
 
   @override
   void initState() {
@@ -86,29 +107,56 @@ class _ScheduleTabState extends State<ScheduleTab> {
     return int.parse(parts[0]) * 60 + int.parse(parts[1]);
   }
 
-  String? _getSlotStatus(CourtCopyResponse copy, String timeStr) {
+  SlotResponse? _getSlotAtTime(CourtCopyResponse copy, String timeStr) {
     final slotMinute = _timeToMinutes(timeStr);
     final slots = copy.slots ?? [];
 
-    for (var slot in slots) {
+    for (final slot in slots) {
       final start = DateTime.tryParse(slot.startTime ?? '');
       final end = DateTime.tryParse(slot.endTime ?? '');
 
-      if (start == null || end == null) continue;
+      if (start == null || end == null) {
+        continue;
+      }
 
-      if (start.year == widget.selectedDate.year &&
+      final isSameDay =
+          start.year == widget.selectedDate.year &&
           start.month == widget.selectedDate.month &&
-          start.day == widget.selectedDate.day) {
-        final startMin = start.hour * 60 + start.minute;
-        final endMin = end.hour * 60 + end.minute;
+          start.day == widget.selectedDate.day;
 
-        if (slotMinute >= startMin && slotMinute < endMin) {
-          return slot.slotStatus;
-        }
+      if (!isSameDay) {
+        continue;
+      }
+
+      final startMinute = start.hour * 60 + start.minute;
+      final endMinute = end.hour * 60 + end.minute;
+
+      if (slotMinute >= startMinute && slotMinute < endMinute) {
+        return slot;
       }
     }
 
     return null;
+  }
+
+  String _normalizeValue(dynamic value) {
+    return value?.toString().trim().toUpperCase() ?? '';
+  }
+
+  bool _isSharedOpen(SlotResponse? slot) {
+    if (slot == null) {
+      return false;
+    }
+
+    final slotStatus = _normalizeValue(slot.slotStatus);
+    final bookingType = _normalizeValue(slot.bookingType);
+
+    return slotStatus == 'SHARE' ||
+        slotStatus == 'SHARED_OPEN' ||
+        (bookingType == 'SHARED' &&
+            slotStatus != 'MATCH_FULL' &&
+            slotStatus != 'COMPLETED' &&
+            slotStatus != 'CANCELLED');
   }
 
   void _toggleSlot({
@@ -118,7 +166,11 @@ class _ScheduleTabState extends State<ScheduleTab> {
   }) {
     final currentSlots = [...widget.selectedSlots];
 
-    if (widget.isMatchMode) {
+    if (widget.activeMode == 'shared') {
+      widget.onModeChanged('booking');
+    }
+
+    if (widget.activeMode == 'match') {
       var myBlocks = currentSlots
           .where((item) => item.courtCopyId == copy.courtCopyId)
           .toList();
@@ -285,42 +337,20 @@ class _ScheduleTabState extends State<ScheduleTab> {
     super.dispose();
   }
 
-  void _scrollSchedule(double offset) {
-    if (!_scheduleScrollController.hasClients) return;
-    final target = (_scheduleScrollController.offset + offset).clamp(
-      0.0,
-      _scheduleScrollController.position.maxScrollExtent,
-    );
-    _scheduleScrollController.animateTo(
-      target,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  }
-
   Future<void> _selectDate(BuildContext context) async {
     final now = DateTime.now();
 
     final DateTime? picked = await showDatePicker(
       context: context,
       locale: const Locale('vi', 'VN'),
-
       initialDate: widget.selectedDate.isBefore(now)
           ? now
           : widget.selectedDate,
-
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: now.add(const Duration(days: 30)),
-
       helpText: 'Chọn ngày',
       cancelText: 'Hủy',
       confirmText: 'Xác nhận',
-
-      fieldLabelText: 'Nhập ngày',
-      fieldHintText: 'dd/mm/yyyy',
-      errorFormatText: 'Định dạng ngày không hợp lệ',
-      errorInvalidText: 'Ngày không nằm trong phạm vi cho phép',
-
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -348,15 +378,180 @@ class _ScheduleTabState extends State<ScheduleTab> {
     }
   }
 
+  void _showMatchGuideDialog() {
+    bool isChecked = _hideMatchGuide;
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.menu_book_rounded, color: primaryColor),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Hướng dẫn ghép trận',
+                    style: TextStyle(
+                      color: Color(0xFF9156F1),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '1. Chọn sân và khung giờ bạn muốn chơi.',
+                    style: TextStyle(height: 1.5),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '2. Thiết lập số người và thể thức ở bảng cấu hình bên dưới.',
+                    style: TextStyle(height: 1.5),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '3. Tạo trận để hệ thống bắt đầu tìm kiếm người chơi phù hợp.',
+                    style: TextStyle(height: 1.5),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '4. Chuyển sang trang "Trận đấu của tôi" để xem diễn biến. Khi đủ số lượng, bạn có thể chuyển khoản cho chủ trận (Owner).',
+                    style: TextStyle(height: 1.5),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '5. Trận đấu sẽ diễn ra khi chủ sân phê duyệt và bạn có thể bắt đầu chơi.',
+                    style: TextStyle(height: 1.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: isChecked,
+                          activeColor: primaryColor,
+                          onChanged: (val) {
+                            setDialogState(() => isChecked = val ?? false);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Không hiện lại thông báo này',
+                          style: TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    _hideMatchGuide = isChecked;
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Đã hiểu',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showNoticeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Color(0xFFEA580C)),
+              SizedBox(width: 8),
+              Text(
+                'Lưu ý đặt sân',
+                style: TextStyle(
+                  color: Color(0xFFEA580C),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '- Chọn vào khung giờ phù hợp với bạn trên biểu đồ sân.',
+                style: TextStyle(height: 1.5),
+              ),
+              Text(
+                '- Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử và nhận ưu đãi.',
+                style: TextStyle(height: 1.5),
+              ),
+              Text(
+                '- Hệ thống hiện KHÔNG hỗ trợ hoàn tiền, hãy kiểm tra kỹ trước khi thanh toán.',
+                style: TextStyle(height: 1.5),
+              ),
+              Text(
+                '- Chức năng "Ghép trận" yêu cầu bạn phải chọn sân trước để ra cấu hình trận.',
+                style: TextStyle(height: 1.5),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Đã hiểu',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   List<Map<String, dynamic>> _buildCourtCopyRows() {
     final rows = <Map<String, dynamic>>[];
-
     for (final court in widget.rentalArea?.courts ?? []) {
       for (final copy in court.courtCopies) {
         rows.add({'court': court, 'copy': copy});
       }
     }
-
     return rows;
   }
 
@@ -369,16 +564,29 @@ class _ScheduleTabState extends State<ScheduleTab> {
       children: [
         _buildDateSelector(context),
         _buildModeToggle(),
-        const SizedBox(height: 8),
+        _buildActionButtons(),
+        const SizedBox(height: 16),
         _buildLegends(),
         const SizedBox(height: 16),
-        _buildScrollHint(),
 
-        const SizedBox(height: 8),
         _buildTimelineMatrix(rows),
         const SizedBox(height: 16),
-        _buildBookingNotice(),
-        if (widget.isMatchMode)
+
+        if (widget.activeMode == 'shared')
+          JoinSharedBookingPanel(
+            slotInfo:
+            widget.selectedJoinableSlot?['slot']
+            as SlotResponse?,
+            court:
+            widget.selectedJoinableSlot?['court']
+            as CourtResponse?,
+            courtCopy:
+            widget.selectedJoinableSlot?['copy']
+            as CourtCopyResponse?,
+            onConfirmJoin: widget.onJoinShared,
+          ),
+
+        if (widget.activeMode == 'match')
           MatchConfigWidget(
             categoryName: widget.activeCourt?.categoryName ?? '',
             onChanged: widget.onMatchConfigChanged,
@@ -427,64 +635,33 @@ class _ScheduleTabState extends State<ScheduleTab> {
 
   Widget _buildModeToggle() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Container(
-        height: 48,
+        height: 50,
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
           children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => widget.onModeChanged(false),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: !widget.isMatchMode
-                        ? primaryColor
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Text(
-                    'Đặt sân',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: !widget.isMatchMode
-                          ? Colors.white
-                          : Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ),
+            _buildModeButton(
+              mode: 'booking',
+              title: 'Đặt sân',
+              icon: Icons.calendar_month_rounded,
+              activeColor: selectedColor,
             ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => widget.onModeChanged(true),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: widget.isMatchMode
-                        ? selectedColor
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Text(
-                    'Ghép kèo',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: widget.isMatchMode
-                          ? Colors.white
-                          : Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ),
+            _buildModeButton(
+              mode: 'shared',
+              title: 'Vãng lai',
+              icon: Icons.groups_rounded,
+              activeColor: const Color(0xFF14B8A6),
+            ),
+            _buildModeButton(
+              mode: 'match',
+              title: 'Tìm đối',
+              icon: Icons.sports_tennis_rounded,
+              activeColor: primaryColor,
             ),
           ],
         ),
@@ -492,51 +669,139 @@ class _ScheduleTabState extends State<ScheduleTab> {
     );
   }
 
-  Widget _buildLegends() {
+  Widget _buildModeButton({
+    required String mode,
+    required String title,
+    required IconData icon,
+    required Color activeColor,
+  }) {
+    final isActive = widget.activeMode == mode;
+
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          widget.onModeChanged(mode);
+
+          if (mode == 'match' && !_hideMatchGuide) {
+            _showMatchGuideDialog();
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            color: isActive ? activeColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: activeColor.withOpacity(0.22),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isActive ? Colors.white : Colors.grey.shade600,
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? Colors.white : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 8,
+      child: Row(
         children: [
-          _buildLegendItem(
-            Colors.white,
-            'Trống',
-            borderColor: Colors.grey.shade400,
+          Expanded(
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFEA580C),
+                backgroundColor: const Color(0xFFFFF7ED),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              icon: const Icon(Icons.warning_amber_rounded, size: 18),
+              label: const Text(
+                'Lưu ý',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              onPressed: _showNoticeDialog,
+            ),
           ),
-          _buildLegendItem(selectedColor, 'Đang chọn'),
-          _buildLegendItem(const Color(0xFFEA580C), 'Đã đặt'),
-          _buildLegendItem(Colors.orange.shade300, 'Trận chưa đủ'),
-          _buildLegendItem(Colors.grey.shade400, 'Khóa'),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: primaryColor,
+                backgroundColor: primaryColor.withOpacity(0.08),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              icon: const Icon(Icons.menu_book_rounded, size: 18),
+              label: const Text(
+                'HD Ghép trận',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              onPressed: _showMatchGuideDialog,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBookingNotice() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFDBA74)),
-      ),
-      child: RichText(
-        text: const TextSpan(
-          style: TextStyle(fontSize: 13, height: 1.6, color: Color(0xFFEA580C)),
+  Widget _buildLegends() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 10,
           children: [
-            TextSpan(
-              text: '* Lưu ý: ',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            _buildLegendItem(
+              Colors.white,
+              'Trống',
+              borderColor: Colors.grey.shade400,
             ),
-            TextSpan(
-              text:
-                  'Bạn hãy lựa chọn vào khung giờ phù hợp với mình nhất dưới các ô dưới đây.\n'
-                  'Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử đặt sân và nhận thông báo ưu đãi từ chúng tôi.\n'
-                  'Hệ thống chúng tôi hiện không hỗ trợ hoàn tiền, hãy chọn thời gian phù hợp.\n'
-                  'Chức năng ghép trận cần chọn sân để ra cấu hình trận đấu',
+            _buildLegendItem(selectedColor, 'Đang chọn'),
+            _buildLegendItem(
+              const Color(0xFF99F6E4),
+              'Đang mở vãng lai',
+              borderColor: const Color(0xFF14B8A6),
             ),
+            _buildLegendItem(const Color(0xFFEA580C), 'Đã đặt'),
+            _buildLegendItem(Colors.orange.shade300, 'Trận chưa đủ'),
+            _buildLegendItem(Colors.grey.shade400, 'Khóa'),
           ],
         ),
       ),
@@ -559,48 +824,6 @@ class _ScheduleTabState extends State<ScheduleTab> {
         const SizedBox(width: 6),
         Text(label, style: const TextStyle(fontSize: 12)),
       ],
-    );
-  }
-
-  Widget _buildScrollHint() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          Icon(Icons.swipe_outlined, size: 16, color: Colors.grey.shade500),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              'Vuốt ngang để chọn nhiều khung giờ',
-              style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ),
-          _scrollButton(Icons.chevron_left, () => _scrollSchedule(-220)),
-          const SizedBox(width: 8),
-          _scrollButton(Icons.chevron_right, () => _scrollSchedule(220)),
-        ],
-      ),
-    );
-  }
-
-  Widget _scrollButton(IconData icon, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF3E8FF),
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFE9D5FF)),
-        ),
-        child: Icon(icon, color: primaryColor, size: 22),
-      ),
     );
   }
 
@@ -732,7 +955,6 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                       ),
                                     ),
                                   ),
-
                                   if (idx == dynamicTimeSlots.length - 1)
                                     Positioned(
                                       right: 4,
@@ -768,13 +990,22 @@ class _ScheduleTabState extends State<ScheduleTab> {
                               final idx = e.key;
                               final time = e.value;
 
-                              final slotStatus = _getSlotStatus(copy, time);
+                              final slot = _getSlotAtTime(copy, time);
 
-                              final isBlocked = [
-                                'BOOKED',
-                                'MATCH_FULL',
-                                'LOCKED',
-                              ].contains(slotStatus);
+                              final slotStatus = _normalizeValue(
+                                slot?.slotStatus,
+                              );
+
+                              final isSharedOpen = _isSharedOpen(slot);
+
+                              final isBlocked =
+                                  !isSharedOpen &&
+                                  [
+                                    'BOOKED',
+                                    'MATCH_FULL',
+                                    'LOCKED',
+                                    'COMPLETED',
+                                  ].contains(slotStatus);
 
                               final activeBlock = myBlocks.where((b) {
                                 return idx >= b.startIndex && idx <= b.endIndex;
@@ -783,24 +1014,35 @@ class _ScheduleTabState extends State<ScheduleTab> {
                               final isSelected = activeBlock.isNotEmpty;
 
                               Color bgColor = Colors.white;
+
                               BoxBorder border = Border(
                                 bottom: BorderSide(color: Colors.grey.shade300),
                                 right: BorderSide(color: Colors.grey.shade300),
                               );
 
-                              if (slotStatus == 'BOOKED') {
+                              if (isSharedOpen) {
+                                bgColor = const Color(0xFF99F6E4);
+
+                                border = const Border(
+                                  top: BorderSide(color: Color(0xFF14B8A6)),
+                                  bottom: BorderSide(color: Color(0xFF14B8A6)),
+                                  right: BorderSide(color: Color(0xFF14B8A6)),
+                                );
+                              } else if (slotStatus == 'BOOKED') {
                                 bgColor = const Color(0xFFEA580C);
                               } else if (slotStatus == 'MATCH_FULL') {
-                                bgColor = primaryColor;
+                                bgColor = const Color(0xFFEA580C);
                               } else if (slotStatus == 'MATCH_PENDING') {
                                 bgColor = Colors.orange.shade300;
                               } else if (slotStatus == 'LOCKED') {
                                 bgColor = Colors.grey.shade400;
                               }
 
-                              if (isSelected) {
+                              if (isSelected && !isSharedOpen) {
                                 final block = activeBlock.first;
+
                                 bgColor = const Color(0xFFFFF7ED);
+
                                 border = Border(
                                   top: BorderSide(
                                     color: selectedColor,
@@ -828,18 +1070,54 @@ class _ScheduleTabState extends State<ScheduleTab> {
                               return InkWell(
                                 onTap: isBlocked
                                     ? null
-                                    : () => _toggleSlot(
-                                        court: court,
-                                        copy: copy,
-                                        idx: idx,
-                                      ),
-                                child: Container(
+                                    : () {
+                                        if (isSharedOpen) {
+                                          if (widget.onClickSharedSlot !=
+                                              null) {
+                                            widget.onClickSharedSlot!(
+                                              slot,
+                                              court,
+                                              copy,
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Đây là khung giờ vãng lai đang mở.',
+                                                ),
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          }
+
+                                          return;
+                                        }
+
+                                        _toggleSlot(
+                                          court: court,
+                                          copy: copy,
+                                          idx: idx,
+                                        );
+                                      },
+                                borderRadius: BorderRadius.circular(
+                                  isSharedOpen ? 4 : 0,
+                                ),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
                                   width: cellWidth,
                                   height: cellHeight,
                                   decoration: BoxDecoration(
                                     color: bgColor,
                                     border: border,
                                   ),
+                                  child: isSharedOpen
+                                      ? CustomPaint(
+                                          painter: _SharedSlotPatternPainter(),
+                                        )
+                                      : null,
                                 ),
                               );
                             }).toList(),
@@ -876,5 +1154,29 @@ class _ScheduleTabState extends State<ScheduleTab> {
         ],
       ),
     );
+  }
+}
+
+class _SharedSlotPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF14B8A6).withOpacity(0.18)
+      ..strokeWidth = 2;
+
+    const spacing = 10.0;
+
+    for (double startX = -size.height; startX < size.width; startX += spacing) {
+      canvas.drawLine(
+        Offset(startX, size.height),
+        Offset(startX + size.height, 0),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SharedSlotPatternPainter oldDelegate) {
+    return false;
   }
 }

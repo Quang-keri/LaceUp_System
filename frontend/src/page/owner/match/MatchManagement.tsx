@@ -201,7 +201,7 @@ const MatchManagement: React.FC = () => {
             Quản lý Trận đấu Vãng lai
           </Title>
           <Typography.Text type="secondary">
-            Quản lý, theo dõi các kèo ghép sân cộng đồng và xử lý tranh chấp
+            Quản lý, theo dõi các trận ghép sân cộng đồng và xử lý tranh chấp
           </Typography.Text>
         </div>
         <Space>

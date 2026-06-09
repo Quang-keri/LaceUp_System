@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.request.match.MatchCheckoutRequest;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
+import org.sport.backend.dto.request.payment.SharedTicketCheckoutRequest;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
 import org.sport.backend.service.PaymentService;
 import org.springframework.http.MediaType;
@@ -137,7 +138,8 @@ public class PaymentController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<?> uploadMatchPaymentProof(
             @RequestParam("registrationId") UUID registrationId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file
+    ) {
 
         paymentService.uploadMatchPaymentProof(registrationId, file);
 
@@ -152,8 +154,8 @@ public class PaymentController {
             @RequestParam(required = false, defaultValue = "PENDING") String status,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
-
+            @RequestParam(required = false) String endDate
+    ) {
         return ApiResponse.builder()
                 .code(200)
                 .message("Lấy danh sách thành công")
@@ -164,14 +166,29 @@ public class PaymentController {
     @PostMapping("/owner/confirm-match-payment/{paymentId}")
     public ApiResponse<?> confirmMatchPayment(
             @PathVariable java.util.UUID paymentId,
-            @RequestParam boolean isApproved) {
-
+            @RequestParam boolean isApproved
+    ) {
         paymentService.confirmMatchPayment(paymentId, isApproved);
 
         return ApiResponse.builder()
                 .code(200)
                 .message(isApproved ? "Đã duyệt thanh toán thành công" : "Đã từ chối thanh toán")
                 .build();
+    }
+
+    @PostMapping("/shared-ticket/checkout")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<CheckoutResponse> checkoutSharedTicket(
+            @Valid @RequestBody SharedTicketCheckoutRequest request
+    ) {
+        return ApiResponse.success(
+                200,
+                "Tạo thanh toán vé thành công",
+                paymentService.checkoutSharedTicket(
+                        request.getParticipantId(),
+                        request.getPaymentMethod()
+                )
+        );
     }
 
 }

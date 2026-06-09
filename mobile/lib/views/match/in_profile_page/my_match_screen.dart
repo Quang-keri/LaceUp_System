@@ -381,12 +381,12 @@ class _MyMatchScreenState extends State<MyMatchScreen>
         text = "Rank (${match.minRank ?? 0}-${match.maxRank ?? 0})";
         icon = Icons.emoji_events;
         break;
-      case 'BET':
-        bgColor = Colors.orange.shade50;
-        textColor = Colors.orange;
-        text = match.note?.isNotEmpty == true ? "Kèo: ${match.note}" : "Kèo";
-        icon = Icons.local_fire_department;
-        break;
+      // case 'BET':
+      //   bgColor = Colors.orange.shade50;
+      //   textColor = Colors.orange;
+      //   text = match.note?.isNotEmpty == true ? "Kèo: ${match.note}" : "Kèo";
+      //   icon = Icons.local_fire_department;
+      //   break;
       case 'NORMAL':
       default:
         bgColor = Colors.blue.shade50;

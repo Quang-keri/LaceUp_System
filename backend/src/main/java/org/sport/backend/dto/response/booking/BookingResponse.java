@@ -3,6 +3,7 @@ package org.sport.backend.dto.response.booking;
 import lombok.*;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.BookingType;
+import org.sport.backend.constant.PaymentStatus;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 
@@ -41,6 +42,14 @@ public class BookingResponse {
     private Boolean ownerPaid;
     private LocalDateTime ownerPaidAt;
     private BookingType bookingType;
+    private Integer maxParticipants;
+    private Integer currentParticipants;
+    private BigDecimal pricePerTicket;
+    private UUID participantId;
+    private Integer ticketQuantity;
+    private BigDecimal ticketAmount;
+    private PaymentStatus ticketPaymentStatus;
+    private String ticketPaymentProofUrl;
     private List<BookingResponse.BookingServiceResponse> extraServiceResponses;
     @Getter
     @Setter

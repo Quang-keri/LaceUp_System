@@ -10,6 +10,7 @@ import org.sport.backend.constant.BookingType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -96,5 +97,19 @@ public class Booking extends BaseEntity {
 
     @Column(name = "payment_proof_uploaded_at")
     private LocalDateTime paymentProofUploadedAt;
+
+    @Column(name = "max_participants")
+    private Integer maxParticipants;
+
+    @Column(name = "current_participants")
+    @Builder.Default
+    private Integer currentParticipants = 0;
+
+    @Column(name = "price_per_ticket", precision = 19, scale = 2)
+    private BigDecimal pricePerTicket;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BookingParticipant> participants = new ArrayList<>();
 
 }

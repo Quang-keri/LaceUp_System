@@ -76,6 +76,7 @@ import RefundManagement from "../page/admin/refund-page/RefundManagement.tsx";
 import MatchPaymentApprovalPage from "../page/owner/match/MatchPaymentApprovalPage.tsx";
 import ResetPassword from "../page/customer/login-page/ResetPassword.tsx";
 import ForgotPassword from "../page/customer/login-page/ForgotPassword.tsx";
+import TicketPaymentPage from "../page/customer/payment/TicketPaymentPage.tsx";
 
 const MyDashboardWrapper = () => {
   const { user, isLoading } = useAuth();
@@ -124,6 +125,8 @@ export const router = createBrowserRouter([
         element: <VnPayReturnPage />,
         handle: { breadcrumb: "Kết quả thanh toán VNPay" },
       },
+      { path: "payment-ticket/:participantId", element: <TicketPaymentPage /> },
+      { path: "payment/ticket-result", element: <BookingPaymentResultPage /> },
       { path: "player/:id", element: <PlayerPublicPage /> },
 
       {

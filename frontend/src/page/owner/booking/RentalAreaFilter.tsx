@@ -18,10 +18,12 @@ interface Props {
   buildings: RentalAreaResponse[];
   selectedBuildingId: string | null;
   filterStatus?: string;
+  filterType?: string;
   dateRange: [string, string] | null;
   loading?: boolean;
   onBuildingChange: (id: string) => void;
   onStatusChange: (status?: string) => void;
+  onTypeChange: (type?: string) => void;
   onSearch: (value: string) => void;
   onDateChange: (range: [string, string] | null) => void;
   onRefresh: () => void;
@@ -32,10 +34,12 @@ export default function RentalAreaFilter({
   buildings,
   selectedBuildingId,
   filterStatus,
+  filterType,
   dateRange,
   loading,
   onBuildingChange,
   onStatusChange,
+  onTypeChange,
   onSearch,
   onDateChange,
   onRefresh,
@@ -80,6 +84,24 @@ export default function RentalAreaFilter({
                 onDateChange(null);
               }
             }}
+          />
+        </div>
+
+        <div>
+          <Text strong style={{ display: "block", marginBottom: 4 }}>
+            Loại đặt sân
+          </Text>
+          <Select
+            placeholder="Tất cả loại"
+            allowClear
+            value={filterType}
+            onChange={onTypeChange}
+            style={{ width: "100%" }}
+            options={[
+              { label: "Đặt sân thường (Private)", value: "PRIVATE" },
+              { label: "Kèo Vãng lai (Shared)", value: "SHARED" },
+              { label: "Trận đấu (Match)", value: "MATCH" },
+            ]}
           />
         </div>
 

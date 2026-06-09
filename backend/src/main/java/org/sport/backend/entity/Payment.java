@@ -76,4 +76,8 @@ public class Payment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registration_id")
     private MatchRegistration matchRegistration;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_participant_id")
+    private BookingParticipant bookingParticipant;
 }

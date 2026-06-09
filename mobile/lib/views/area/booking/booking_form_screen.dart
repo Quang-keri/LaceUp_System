@@ -89,8 +89,12 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   }
 
   Future<void> _onSubmit() async {
-    if (_nameController.text.trim().isEmpty ||
-        _phoneController.text.trim().isEmpty) {
+    if (_nameController.text
+        .trim()
+        .isEmpty ||
+        _phoneController.text
+            .trim()
+            .isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng nhập tên và số điện thoại')),
       );
@@ -137,7 +141,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
       final totalPriceFromBe =
           double.tryParse(result['previewPrice']?.toString() ?? '') ??
-          totalPrice;
+              totalPrice;
 
       if (bookingId == null || bookingId.isEmpty) {
         throw Exception('API chưa trả về bookingId / bookingIntentId');
@@ -148,13 +152,14 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => PaymentProofScreen(
-            bookingId: bookingId!,
-            rentalArea: widget.rentalArea,
-            selectedSlots: widget.selectedSlots,
-            totalPrice: totalPriceFromBe,
-            bookingResult: result,
-          ),
+          builder: (_) =>
+              PaymentProofScreen(
+                bookingId: bookingId,
+                rentalArea: widget.rentalArea,
+                selectedSlots: widget.selectedSlots,
+                totalPrice: totalPriceFromBe,
+                bookingResult: result,
+              ),
         ),
       );
     } catch (e) {
@@ -222,7 +227,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               ],
             ),
             content: const Text(
-              'Đã đặt kèo thành công!\nHãy đến trang Trận đấu của tôi để thanh toán nhé.',
+              'Đã tạo trận đấu thành công!\nHãy đến trang Trận đấu của tôi để thanh toán nhé.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
@@ -246,7 +251,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     Navigator.of(dContext).pop();
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       '/my-matches',
-                      (route) => route.isFirst,
+                          (route) => route.isFirst,
                     );
                   },
                   child: const Text(
@@ -278,8 +283,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
   String _getMatchTypeName(String type) {
     switch (type) {
-      case 'BET':
-        return 'Chia Kèo (Đội thua phạt)';
       case 'RANKED':
         return 'Đánh Rank (Tích điểm)';
       case 'NORMAL':
@@ -337,18 +340,41 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 12),
-              _buildTextField(controller: _nameController, hintText: 'Họ tên'),
-              const SizedBox(height: 12),
-              _buildTextField(
-                controller: _phoneController,
-                hintText: 'Số điện thoại',
-                keyboardType: TextInputType.phone,
+
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _nameController,
+                      hintText: 'Họ tên',
+                      readOnly: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: _phoneController,
+                      hintText: 'Số điện thoại',
+                      keyboardType: TextInputType.phone,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
-              _buildTextField(
-                controller: _noteController,
-                hintText: 'Ghi chú thêm (nếu có)',
-                maxLines: 3,
+
+              Row(
+                children: [
+                  Expanded(
+                    flex: 8,
+                    child: _buildTextField(
+                      controller: _noteController,
+                      hintText: 'Ghi chú thêm (nếu có)',
+                      maxLines: 3,
+                    ),
+                  ),
+                  const Spacer(flex: 2),
+                ],
               ),
               const SizedBox(height: 24),
 
@@ -384,7 +410,9 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${DateFormat('dd/MM/yyyy').format(item.date)} • ${item.startTime} - ${item.endTime}',
+                              '${DateFormat('dd/MM/yyyy').format(
+                                  item.date)} • ${item.startTime} - ${item
+                                  .endTime}',
                               style: const TextStyle(
                                 color: Colors.black54,
                                 fontSize: 13,
@@ -401,7 +429,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                           ],
                         ),
                       ),
-                      // Nếu đang tạo ghép kèo thì ẩn cái giá nhỏ xíu của từng khung giờ đi cho đỡ rối mắt (Vì ghép kèo ăn đồng chia đủ)
                       if (!widget.isMatchMode)
                         Text(
                           NumberFormat.currency(
@@ -418,11 +445,10 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                 );
               }),
 
-              // KHỐI THÔNG TIN TRẬN ĐẤU DÀNH CHO GHÉP KÈO
               if (widget.isMatchMode && widget.matchConfig != null) ...[
                 const SizedBox(height: 16),
                 const Text(
-                  'Thông tin trận đấu (Ghép kèo)',
+                  'Thông tin trận đấu',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 const SizedBox(height: 12),
@@ -509,20 +535,20 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                           : Text(
-                              actionBtnText,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        actionBtnText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -534,12 +560,11 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     );
   }
 
-  Widget _buildMatchInfoRow(
-    String label,
-    String value, {
-    bool isHighlight = false,
-    bool isOrange = false,
-  }) {
+  Widget _buildMatchInfoRow(String label,
+      String value, {
+        bool isHighlight = false,
+        bool isOrange = false,
+      }) {
     Color valueColor = Colors.black87;
     if (isHighlight) valueColor = primaryColor;
     if (isOrange) valueColor = confirmColor;
@@ -567,18 +592,25 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     );
   }
 
+  // ĐÃ SỬA: Cập nhật hàm này để hỗ trợ trạng thái readOnly
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    bool readOnly = false,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      readOnly: readOnly,
+      style: TextStyle(color: readOnly ? Colors.black54 : Colors.black87),
       decoration: InputDecoration(
         hintText: hintText,
+        fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
+        // Đổi màu nền nếu readOnly
+        filled: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -589,7 +621,9 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor),
+          borderSide: BorderSide(
+            color: readOnly ? Colors.grey.shade300 : primaryColor,
+          ),
         ),
       ),
     );
@@ -599,35 +633,40 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     final overlay = Overlay.of(context);
 
     final overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top + 12,
-        left: 16,
-        right: 16,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: isError ? Colors.red : Colors.green,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+      builder: (context) =>
+          Positioned(
+            top: MediaQuery
+                .of(context)
+                .padding
+                .top + 12,
+            left: 16,
+            right: 16,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isError ? Colors.red : Colors.green,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Text(
-              message,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
     );
 
     overlay.insert(overlayEntry);

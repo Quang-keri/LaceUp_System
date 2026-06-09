@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.entity.Payment;
 import org.sport.backend.constant.PaymentMethod;
+import org.sport.backend.service.BookingIntentService;
 import org.sport.backend.service.BookingService;
 import org.sport.backend.service.MomoService;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ public class MomoPaymentController {
 
     private final MomoService momoService;
     private final BookingService bookingService;
+    private final BookingIntentService bookingIntentService;
 
     /**
      * 1. API App gọi lên để tạo link thanh toán dựa vào Booking Intent
@@ -33,10 +35,10 @@ public class MomoPaymentController {
         try {
             UUID bookingIntentId = UUID.fromString(request.get("bookingIntentId"));
 
-            BookingIntentResponse intentResponse = bookingService.getBookingIntentById(bookingIntentId);
-            long amount = intentResponse.getPreviewPrice().longValue(); // Lấy tổng tiền
+            BookingIntentResponse intentResponse = bookingIntentService.getBookingIntentById(bookingIntentId);
+            long amount = intentResponse.getPreviewPrice().longValue();
 
-            String orderInfo = "Thanh toan dat san LaceUP - ID: " + bookingIntentId.toString();
+            String orderInfo = "Thanh toan dat san LaceUP - ID: " + bookingIntentId;
 
             String payUrl = momoService.createMomoPayment(bookingIntentId.toString(), amount, orderInfo);
 

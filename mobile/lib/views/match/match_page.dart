@@ -499,7 +499,7 @@ class _MatchPageState extends State<MatchPage> {
                 ElevatedButton.icon(
                   onPressed: () {},
                   icon: const Icon(Icons.flash_on),
-                  label: const Text('Ghép Trận'),
+                  label: const Text('Tạo Trận'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF9156F1),
                     foregroundColor: Colors.white,
