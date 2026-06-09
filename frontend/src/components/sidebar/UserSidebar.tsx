@@ -275,11 +275,6 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
       label: "Cài đặt",
     },
     {
-      key: "5",
-      icon: <SafetyCertificateOutlined />,
-      label: "Bảo mật tài khoản",
-    },
-    {
       key: "9",
       icon: <DeleteOutlined />,
       label: "Xóa tài khoản",

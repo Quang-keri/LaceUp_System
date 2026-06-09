@@ -1,4 +1,4 @@
-import { FaFacebook, FaInstagram } from "react-icons/fa";
+import { FaFacebook, FaInstagram, FaTiktok } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 const Footer = () => {
@@ -88,17 +88,23 @@ const Footer = () => {
 
             <div className="flex items-center gap-4">
               <a
-                href="#"
+                href="https://www.facebook.com/share/p/1TYMzRmDYj/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook LaceUp"
                 className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center text-white text-lg hover:scale-110 hover:bg-blue-700 transition-all duration-300 shadow-lg"
               >
                 <FaFacebook />
               </a>
 
               <a
-                href="#"
-                className="w-11 h-11 rounded-xl bg-pink-500 flex items-center justify-center text-white text-lg hover:scale-110 hover:bg-pink-600 transition-all duration-300 shadow-lg"
+                href="https://www.tiktok.com/@wearelaceup?_r=1&_t=ZS-96xcbQjl8Eh"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="TikTok LaceUp"
+               className="w-11 h-11 rounded-xl bg-black flex items-center justify-center text-white text-lg hover:scale-110 hover:bg-gray-800 transition-all duration-300 shadow-lg"
               >
-                <FaInstagram />
+                <FaTiktok />
               </a>
             </div>
           </div>
