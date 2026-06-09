@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/services/account_deletion_service.dart';
+import 'package:mobile/views/profile/bank_account/user_bank_account_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -111,11 +112,12 @@ class ProfileScreen extends StatelessWidget {
       ProfileMenuItemData(
         title: 'Tài khoản ngân hàng',
         icon: Icons.account_balance_outlined,
-        isComingSoon: true,
+        isComingSoon: false,
         onTap: () {
-          showComingSoon(
-            context,
-            message: 'Chức năng tài khoản ngân hàng đang được phát triển',
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const UserBankAccountScreen(),
+            ),
           );
         },
       ),
