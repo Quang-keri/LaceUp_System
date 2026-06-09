@@ -55,6 +55,18 @@ class PaymentService {
     );
     return res.data;
   }
+
+  async checkoutSharedTicket(payload: {
+    participantId: string;
+    paymentMethod: "PAY_OS" | "VN_PAY" | "VIET_QR";
+  }) {
+    const response = await api.post(
+      "/payments/shared-ticket/checkout",
+      payload,
+    );
+
+    return response.data;
+  }
 }
 
 export default new PaymentService();

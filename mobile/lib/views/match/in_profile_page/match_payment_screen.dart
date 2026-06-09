@@ -271,7 +271,6 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 2. CHI TIẾT TRẬN ĐẤU VÃNG LAI
           _buildCard(
             title: 'Chi tiết trận đấu vãng lai',
             child: Column(
@@ -342,7 +341,6 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 3. TÓM TẮT THANH TOÁN
           _buildCard(
             title: 'Tóm tắt thanh toán',
             child: Column(
@@ -378,7 +376,6 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 4. THÔNG TIN CHUYỂN KHOẢN (VietQR)
           _buildCard(
             title: 'Thông tin chuyển khoản',
             child: Column(

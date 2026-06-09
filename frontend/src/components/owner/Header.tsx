@@ -50,7 +50,7 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
   const displayName = adminUser?.userName || "Admin Sân Cầu Lông";
 
   const userMenu: MenuProps["items"] = [
-    { key: "/dashboard", label: "Hồ sơ cá nhân" },
+    { key: "/profile", label: <Link to="/profile">Hồ sơ cá nhân</Link> },
     { key: "logout", label: "Đăng xuất", danger: true, onClick: onLogout },
   ];
 
@@ -88,8 +88,6 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
     {
       key: "/owner/service-items",
       icon: <InboxOutlined />,
-
-      
       label: <Link to="/owner/service-items">Hàng hóa & Dịch vụ</Link>,
     },
     {

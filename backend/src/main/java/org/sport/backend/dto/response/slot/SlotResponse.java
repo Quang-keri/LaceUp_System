@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.slot;
 
 import lombok.*;
 import net.minidev.json.annotate.JsonIgnore;
+import org.sport.backend.constant.BookingType;
 import org.sport.backend.constant.SlotStatus;
 import org.sport.backend.dto.response.booking.BookingShortResponse;
 import org.sport.backend.dto.response.courtCopy.CourtCopyResponse;

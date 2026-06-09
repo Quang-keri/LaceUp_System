@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, message, Modal, Col, Row } from "antd";
+import { Card, message, Modal, Col, Row, Button } from "antd";
 import rentalService from "../../../service/rental/rentalService";
 import bookingService from "../../../service/bookingService";
 import RentalAreaFilter from "./RentalAreaFilter";
@@ -9,19 +9,25 @@ import SlotEditorModal from "./SlotEditorModal";
 import BookingStatusUpdateModal from "./BookingStatusUpdateModal";
 import AddServiceModal from "./AddServiceModal";
 import BookingDetailPage from "./BookingDetailPage";
-
+import { useNavigate } from "react-router-dom";
+import { PlusOutlined } from "@ant-design/icons";
 
 export default function BookingManagementPage() {
+  const navigate = useNavigate();
   const [buildings, setBuildings] = useState<any[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(
     null,
   );
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string | undefined>();
-  const [keyword, setKeyword] = useState("");
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
 
+  // States cho các bộ lọc
+  const [filterStatus, setFilterStatus] = useState<string | undefined>();
+  const [filterType, setFilterType] = useState<string | undefined>();
+  const [keyword, setKeyword] = useState("");
+  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
+
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [slotEditOpen, setSlotEditOpen] = useState(false);
   const [statusUpdateOpen, setStatusUpdateOpen] = useState(false);
@@ -33,8 +39,6 @@ export default function BookingManagementPage() {
   const [selectedBookingIdForDetail, setSelectedBookingIdForDetail] = useState<
     string | null
   >(null);
-
-  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
 
   const [pagination, setPagination] = useState({
     current: 1,
@@ -60,6 +64,7 @@ export default function BookingManagementPage() {
     size = pagination.pageSize,
     searchKwd = keyword,
     status = filterStatus,
+    type = filterType,
     range = dateRange,
   ) => {
     if (!selectedBuildingId) return;
@@ -70,6 +75,7 @@ export default function BookingManagementPage() {
         page,
         size,
         status,
+        type,
         searchKwd,
         range?.[0],
         range?.[1],
@@ -93,10 +99,12 @@ export default function BookingManagementPage() {
       pagination.pageSize,
       keyword,
       filterStatus,
+      filterType,
+      dateRange,
     );
-
     message.success("Đã làm mới dữ liệu");
   };
+
   useEffect(() => {
     fetchBuildings();
   }, []);
@@ -229,6 +237,7 @@ export default function BookingManagementPage() {
       const params: any = {
         rentalId: selectedBuildingId,
         bookingStatus: filterStatus,
+        bookingType: filterType,
         keyword: keyword,
       };
 
@@ -266,26 +275,58 @@ export default function BookingManagementPage() {
     <div style={{ padding: "20px" }}>
       {viewMode === "table" ? (
         <Row gutter={24}>
-          {/* CỘT TRÁI: Bộ lọc & Nút bấm */}
           <Col xs={24} sm={24} md={8} lg={6} xl={5}>
             <RentalAreaFilter
               buildings={buildings}
               selectedBuildingId={selectedBuildingId}
               filterStatus={filterStatus}
+              filterType={filterType}
               dateRange={dateRange}
               loading={loading}
               onBuildingChange={(id: string) => setSelectedBuildingId(id)}
               onDateChange={(range: [string, string] | null) => {
                 setDateRange(range);
-                fetchBookings(1, pagination.pageSize, keyword, filterStatus, range);
+                fetchBookings(
+                  1,
+                  pagination.pageSize,
+                  keyword,
+                  filterStatus,
+                  filterType,
+                  range,
+                );
+              }}
+              onTypeChange={(type?: string) => {
+                setFilterType(type);
+                fetchBookings(
+                  1,
+                  pagination.pageSize,
+                  keyword,
+                  filterStatus,
+                  type,
+                  dateRange,
+                );
               }}
               onStatusChange={(status?: string) => {
                 setFilterStatus(status);
-                fetchBookings(1, pagination.pageSize, keyword, status, dateRange);
+                fetchBookings(
+                  1,
+                  pagination.pageSize,
+                  keyword,
+                  status,
+                  filterType,
+                  dateRange,
+                );
               }}
               onSearch={(value: string) => {
                 setKeyword(value);
-                fetchBookings(1, pagination.pageSize, value, filterStatus, dateRange);
+                fetchBookings(
+                  1,
+                  pagination.pageSize,
+                  value,
+                  filterStatus,
+                  filterType,
+                  dateRange,
+                );
               }}
               onRefresh={handleRefresh}
               onExport={handleExportExcel}
@@ -293,13 +334,32 @@ export default function BookingManagementPage() {
           </Col>
 
           <Col xs={24} sm={24} md={16} lg={18} xl={19}>
-            <Card title="Quản lý Đơn Đặt">
+            <Card
+              title="Quản lý Đơn Đặt"
+              extra={
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => navigate("/owner/bookings/calendar")}
+                  style={{ backgroundColor: "#ea580c", borderColor: "#ea580c" }}
+                >
+                  Tạo đơn đặt
+                </Button>
+              }
+            >
               <BookingTable
                 bookings={bookings}
                 loading={loading}
                 pagination={pagination}
                 onChange={(pageInfo: any) =>
-                  fetchBookings(pageInfo.current, pageInfo.pageSize, keyword, filterStatus, dateRange)
+                  fetchBookings(
+                    pageInfo.current,
+                    pageInfo.pageSize,
+                    keyword,
+                    filterStatus,
+                    filterType,
+                    dateRange,
+                  )
                 }
                 onViewDetail={handleViewDetail}
                 onEditSlot={handleEditSlot}
@@ -314,7 +374,6 @@ export default function BookingManagementPage() {
             </Card>
           </Col>
 
-          {/* Các Modal giữ nguyên bên dưới */}
           <BookingDetailModal
             open={detailOpen}
             booking={selectedBooking}
@@ -362,4 +421,4 @@ export default function BookingManagementPage() {
       )}
     </div>
   );
-} 
+}

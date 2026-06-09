@@ -1,7 +1,12 @@
 import { Table, Button, Tag, Dropdown } from "antd";
 import type { BookingResponse } from "../../../types/booking";
 import dayjs from "dayjs";
-import { MoreOutlined, ExportOutlined } from "@ant-design/icons";
+import {
+  MoreOutlined,
+  ExportOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
 
@@ -63,7 +68,7 @@ export default function BookingTable({
       },
     },
     {
-      title: "Mã đơn",
+      title: "Mã đơn & Loại",
       dataIndex: "bookingId",
       render: (id: string, record: BookingResponse) => (
         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -77,6 +82,24 @@ export default function BookingTable({
               onClick={() => navigate("/owner/matches")}
             >
               Ghép trận
+            </Tag>
+          )}
+          {record.bookingType === "SHARED" && (
+            <Tag
+              color="orange"
+              style={{ width: "max-content" }}
+              icon={<TeamOutlined />}
+            >
+              Trận vãng lai
+            </Tag>
+          )}
+          {record.bookingType === "PRIVATE" && (
+            <Tag
+              color="default"
+              style={{ width: "max-content" }}
+              icon={<UserOutlined />}
+            >
+              Cá nhân
             </Tag>
           )}
         </div>
@@ -167,7 +190,7 @@ export default function BookingTable({
       },
     },
     {
-      title: "Phương thức trả",
+      title: "Phương thức",
       dataIndex: "paymentMethod",
       render: (method: string) => (
         <Tag>{methodLabelMap[method] || method || "Không rõ"}</Tag>

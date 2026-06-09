@@ -6,5 +6,6 @@ public enum PaymentType {
     REMAINING,
     EXTRA,
     REFUND,
-    MATCH_JOIN
+    MATCH_JOIN,
+    SHARED_BOOKING
 }

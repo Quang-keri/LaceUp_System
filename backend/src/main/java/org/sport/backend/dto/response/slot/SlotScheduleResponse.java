@@ -1,6 +1,7 @@
 package org.sport.backend.dto.response.slot;
 
 import lombok.*;
+import org.sport.backend.constant.BookingType;
 import org.sport.backend.constant.SlotStatus;
 
 import java.math.BigDecimal;
@@ -20,4 +21,6 @@ public class SlotScheduleResponse {
     private LocalDateTime endTime;
     private BigDecimal price;
     private SlotStatus slotStatus;
+    private UUID bookingId;
+    private BookingType bookingType;
 }

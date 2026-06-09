@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import resourceTimeGridPlugin from "@fullcalendar/resource-timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -7,20 +7,29 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import viLocale from "@fullcalendar/core/locales/vi";
 import { useReactToPrint } from "react-to-print";
 import dayjs from "dayjs";
-import { Card, Modal, Button, message, Spin } from "antd";
+import { Button, Card, message, Modal, Select, Space, Spin } from "antd";
 
 import { ReceiptContent } from "./ReceiptContent";
 import { BookingModal } from "./BookingModal";
 import type { CourtCopyResponse } from "../../../types/court";
 import bookingService from "../../../service/bookingService";
 
+interface SlotCalendarProps {
+  courtCopies?: CourtCopyResponse[];
+  loading?: boolean;
+  onSlotClick?: (slot: any) => void;
+  rentalAreas?: any[];
+  courts?: any[];
+  onFilterChange?: (courtId: string) => void;
+}
+
 export default function SlotCalendar({
   courtCopies = [],
   loading = false,
-}: {
-  courtCopies?: CourtCopyResponse[];
-  loading?: boolean;
-}) {
+  onSlotClick,
+  courts = [],
+  onFilterChange,
+}: SlotCalendarProps) {
   const [events, setEvents] = useState<any[]>([]);
   const [selectedSlots, setSelectedSlots] = useState<any[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -49,62 +58,81 @@ export default function SlotCalendar({
   const formatCurrency = (value?: number | null) =>
     new Intl.NumberFormat("vi-VN").format(Number(value || 0));
 
-  const resources = courtCopies.map((c) => ({
-    id: c.courtCopyId,
-    title: c.courtCode,
+  const resources = courtCopies.map((courtCopy) => ({
+    id: courtCopy.courtCopyId,
+    title: courtCopy.courtCode,
   }));
 
   const bookedEvents = courtCopies.flatMap((courtCopy: any) =>
-    (courtCopy.slots || []).map((slot: any) => ({
-      id: slot.slotId,
-      resourceId: courtCopy.courtCopyId,
-      start: slot.startTime,
-      end: slot.endTime,
-      title: slot.bookingShortResponse?.userName || "Đã đặt",
-      backgroundColor: "#3ca0f2",
-      textColor: "#fff",
-      extendedProps: {
-        isBooked: true,
-        phone: slot.bookingShortResponse?.userPhone,
-        note: slot.bookingShortResponse?.note,
-        bookingId: slot.bookingShortResponse?.bookingId,
-      },
-    })),
+    (courtCopy.slots || []).map((slot: any) => {
+      const isSharedOpen =
+        slot.bookingShortResponse?.bookingType === "SHARED" &&
+        slot.slotStatus !== "MATCH_FULL" &&
+        slot.slotStatus !== "COMPLETED";
+
+      return {
+        id: slot.slotId,
+        resourceId: courtCopy.courtCopyId,
+        start: slot.startTime,
+        end: slot.endTime,
+
+        title: isSharedOpen
+          ? "Kèo vãng lai đang mở"
+          : slot.bookingShortResponse?.userName || "Đã đặt",
+
+        backgroundColor: isSharedOpen ? "#525252" : "#737373",
+        borderColor: isSharedOpen ? "#404040" : "#525252",
+        textColor: "#ffffff",
+
+        extendedProps: {
+          isBooked: true,
+          isSharedOpen,
+          phone: slot.bookingShortResponse?.userPhone,
+          note: slot.bookingShortResponse?.note,
+          bookingId: slot.bookingShortResponse?.bookingId,
+        },
+      };
+    }),
   );
 
   const removeSelectedSlot = (idToRemove: string) => {
-    setSelectedSlots((prev) => prev.filter((s) => s.id !== idToRemove));
+    setSelectedSlots((previousSlots) =>
+      previousSlots.filter((slot) => slot.id !== idToRemove),
+    );
   };
 
-  const buildSlotPayload = () => {
-    return selectedSlots.map((s) => ({
-      courtCopyId: s.courtId,
-      startTime: dayjs(s.startTime).format("YYYY-MM-DDTHH:mm:ss"),
-      endTime: dayjs(s.endTime).format("YYYY-MM-DDTHH:mm:ss"),
+  const buildSlotPayload = () =>
+    selectedSlots.map((slot) => ({
+      courtCopyId: slot.courtId,
+      startTime: dayjs(slot.startTime).format("YYYY-MM-DDTHH:mm:ss"),
+      endTime: dayjs(slot.endTime).format("YYYY-MM-DDTHH:mm:ss"),
     }));
-  };
 
   const fetchPreviewPrice = async () => {
     try {
       setPreviewLoading(true);
 
-      const res = await bookingService.previewOwnerBookingPrice({
+      const response = await bookingService.previewOwnerBookingPrice({
         slots: buildSlotPayload(),
       });
 
-      const totalPrice = Number(res.result || 0);
+      const totalPrice = Number(response.result || 0);
 
-      setFormState((prev) => ({
-        ...prev,
+      setFormState((previousState) => ({
+        ...previousState,
         totalPrice,
-        paidAmount: prev.paymentType === "FULL" ? totalPrice : prev.paidAmount,
+        paidAmount:
+          previousState.paymentType === "FULL"
+            ? totalPrice
+            : previousState.paidAmount,
       }));
 
       return true;
     } catch (error: any) {
       message.error(
-        error.response?.data?.message || "Không tính được tổng tiền",
+        error?.response?.data?.message || "Không tính được tổng tiền",
       );
+
       return false;
     } finally {
       setPreviewLoading(false);
@@ -117,10 +145,49 @@ export default function SlotCalendar({
       return;
     }
 
-    const ok = await fetchPreviewPrice();
-    if (ok) {
+    const success = await fetchPreviewPrice();
+
+    if (success) {
       setOpenModal(true);
     }
+  };
+
+  const handleOpenSharedModal = () => {
+    if (selectedSlots.length === 0) {
+      message.warning("Vui lòng quét chọn giờ trên lịch để tạo kèo vãng lai!");
+      return;
+    }
+
+    const uniqueCourts = new Set(selectedSlots.map((slot) => slot.courtId));
+
+    if (uniqueCourts.size > 1) {
+      message.warning(
+        "Kèo vãng lai chỉ được tạo trên một sân. Vui lòng bỏ chọn các sân khác.",
+      );
+      return;
+    }
+
+    const sortedSlots = [...selectedSlots].sort(
+      (firstSlot, secondSlot) =>
+        dayjs(firstSlot.startTime).valueOf() -
+        dayjs(secondSlot.startTime).valueOf(),
+    );
+
+    const firstSlot = sortedSlots[0];
+    const lastSlot = sortedSlots[sortedSlots.length - 1];
+
+    const slotInfo = {
+      courtCopyId: firstSlot.courtId,
+      courtCode: firstSlot.courtCode,
+      courtName: "Sân Thể Thao",
+      date: dayjs(firstSlot.startTime).format("YYYY-MM-DD"),
+      startTime: dayjs(firstSlot.startTime).format("HH:mm"),
+      endTime: dayjs(lastSlot.endTime).format("HH:mm"),
+    };
+
+    onSlotClick?.(slotInfo);
+
+    setSelectedSlots([]);
   };
 
   const handleCreateBooking = async () => {
@@ -150,18 +217,18 @@ export default function SlotCalendar({
         slots: buildSlotPayload(),
       };
 
-      const res = await bookingService.createOwnerBooking(payload);
+      const response = await bookingService.createOwnerBooking(payload);
 
-      if (res.code !== 200 && res.code !== 201) {
-        message.error(res.message || "Có lỗi xảy ra khi tạo lịch đặt.");
+      if (response.code !== 200 && response.code !== 201) {
+        message.error(response.message || "Có lỗi xảy ra khi tạo lịch đặt.");
         return;
       }
 
       message.success("Tạo lịch đặt thành công!");
 
       const bookingCode =
-        res.result?.bookingId?.substring(0, 8).toUpperCase() ||
-        "DP" + Math.floor(100000 + Math.random() * 900000);
+        response.result?.bookingId?.substring(0, 8).toUpperCase() ||
+        `DP${Math.floor(100000 + Math.random() * 900000)}`;
 
       setReceiptData({
         ...formState,
@@ -170,25 +237,28 @@ export default function SlotCalendar({
         slots: [...selectedSlots],
       });
 
-      const newEvents = selectedSlots.map((s) => ({
+      const newEvents = selectedSlots.map((slot) => ({
         id: Math.random().toString(),
-        resourceId: s.courtId,
-        start: s.startTime,
-        end: s.endTime,
+        resourceId: slot.courtId,
+        start: slot.startTime,
+        end: slot.endTime,
         title: formState.customerName,
-        backgroundColor: "#10b981",
-        borderColor: "#059669",
-        textColor: "#fff",
+
+        backgroundColor: "#525252",
+        borderColor: "#404040",
+        textColor: "#ffffff",
+
         extendedProps: {
           ...formState,
-          court: s.courtCode,
+          court: slot.courtCode,
           isBooked: true,
           phone: formState.phone,
           note: formState.note,
         },
       }));
 
-      setEvents((prev) => [...prev, ...newEvents]);
+      setEvents((previousEvents) => [...previousEvents, ...newEvents]);
+
       setOpenModal(false);
       setReceiptModal(true);
       setSelectedSlots([]);
@@ -204,14 +274,140 @@ export default function SlotCalendar({
       });
     } catch (error: any) {
       message.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi tạo lịch đặt.",
+        error?.response?.data?.message || "Có lỗi xảy ra khi tạo lịch đặt.",
       );
     }
   };
 
   return (
-    <Card bordered={false} className="rounded-2xl shadow-sm">
+    <Card
+      bordered
+      className="rounded-xl"
+      style={{
+        boxShadow: "none",
+        backgroundColor: "#ffffff",
+      }}
+    >
+      <div style={{ marginBottom: 16 }}>
+        <Space wrap>
+          <Select
+            style={{ width: 240 }}
+            placeholder="Chọn sân cụ thể"
+            defaultValue="ALL"
+            onChange={onFilterChange}
+            options={[
+              {
+                label: "Tất cả sân",
+                value: "ALL",
+              },
+              ...courts.map((court) => ({
+                label: court.courtName,
+                value: court.courtId,
+              })),
+            ]}
+          />
+        </Space>
+      </div>
+
       <Spin spinning={loading || previewLoading}>
+        <style>{`
+          .fc {
+            color: #262626;
+          }
+
+          .fc .fc-toolbar {
+            gap: 12px;
+          }
+
+          .fc .fc-toolbar-title {
+            color: #171717;
+            font-size: 24px;
+            font-weight: 600;
+          }
+
+          .fc .fc-button-primary {
+            background-color: #ffffff !important;
+            border-color: #d9d9d9 !important;
+            color: #262626 !important;
+            box-shadow: none !important;
+            font-weight: 500 !important;
+            text-transform: none !important;
+          }
+
+          .fc .fc-button-primary:hover {
+            background-color: #f5f5f5 !important;
+            border-color: #bfbfbf !important;
+            color: #171717 !important;
+          }
+
+          .fc .fc-button-primary:focus {
+            box-shadow: none !important;
+          }
+
+          .fc .fc-button-primary:not(:disabled).fc-button-active,
+          .fc .fc-button-primary:not(:disabled):active {
+            background-color: #e5e5e5 !important;
+            border-color: #a3a3a3 !important;
+            color: #171717 !important;
+            box-shadow: none !important;
+          }
+
+          .fc .fc-button-primary:disabled {
+            background-color: #f5f5f5 !important;
+            border-color: #e5e5e5 !important;
+            color: #a3a3a3 !important;
+            opacity: 1 !important;
+          }
+
+          .fc .fc-createBooking-button,
+          .fc .fc-createSharedBooking-button {
+            background-color: #ffffff !important;
+            border-color: #d9d9d9 !important;
+            color: #262626 !important;
+            font-weight: 600 !important;
+          }
+
+          .fc .fc-createBooking-button:hover,
+          .fc .fc-createSharedBooking-button:hover {
+            background-color: #f5f5f5 !important;
+            border-color: #bfbfbf !important;
+            color: #171717 !important;
+          }
+
+          .fc .fc-col-header-cell {
+            background-color: #fafafa;
+          }
+
+          .fc .fc-col-header-cell-cushion {
+            color: #262626;
+            font-weight: 600;
+          }
+
+          .fc .fc-timegrid-slot-label-cushion {
+            color: #525252;
+          }
+
+          .fc .fc-resource {
+            color: #262626;
+          }
+
+          .fc-theme-standard td,
+          .fc-theme-standard th,
+          .fc-theme-standard .fc-scrollgrid {
+            border-color: #e5e5e5;
+          }
+
+          .fc .fc-timegrid-now-indicator-line {
+            border-color: #525252;
+          }
+
+          .fc .fc-timegrid-now-indicator-arrow {
+            border-top-color: transparent;
+            border-bottom-color: transparent;
+            border-left-color: #525252;
+          }
+        `}</style>
+
         <FullCalendar
           plugins={[
             resourceTimeGridPlugin,
@@ -231,16 +427,21 @@ export default function SlotCalendar({
           events={[
             ...bookedEvents,
             ...events,
-            ...selectedSlots.map((s) => ({
-              id: s.id,
-              start: s.startTime,
-              end: s.endTime,
-              resourceId: s.courtId,
+
+            ...selectedSlots.map((slot) => ({
+              id: slot.id,
+              start: slot.startTime,
+              end: slot.endTime,
+              resourceId: slot.courtId,
               title: "Đang chọn",
-              backgroundColor: "#60a5fa",
-              borderColor: "#2563eb",
-              textColor: "#fff",
-              extendedProps: { isSelecting: true },
+
+              backgroundColor: "#d4d4d4",
+              borderColor: "#a3a3a3",
+              textColor: "#171717",
+
+              extendedProps: {
+                isSelecting: true,
+              },
             })),
           ]}
           selectable
@@ -254,36 +455,75 @@ export default function SlotCalendar({
             });
           }}
           select={(info) => {
+            let targetCourtId = info.resource?.id;
+            let targetCourtCode = info.resource?.title;
+
+            if (!targetCourtId) {
+              if (courtCopies.length === 1) {
+                targetCourtId = courtCopies[0].courtCopyId;
+
+                targetCourtCode = courtCopies[0].courtCode;
+              } else {
+                message.warning(
+                  "Vui lòng chọn cụ thể một sân ở bộ lọc bên trên để quét lịch theo tuần!",
+                );
+
+                info.view.calendar.unselect();
+                return;
+              }
+            }
+
             const slot = {
               id: Math.random().toString(36).substring(2, 9),
-              courtId: info.resource?.id,
-              courtCode: info.resource?.title,
+
+              courtId: targetCourtId,
+              courtCode: targetCourtCode,
+
               startTime: info.startStr,
               endTime: info.endStr,
+
               startDisplay: dayjs(info.start).format("DD/MM/YYYY HH:mm"),
+
               endDisplay: dayjs(info.end).format("HH:mm"),
             };
 
-            setSelectedSlots((prev) => [...prev, slot]);
+            setSelectedSlots((previousSlots) => [...previousSlots, slot]);
           }}
           eventClick={(info) => {
             if (info.event.extendedProps.isBooked) {
               Modal.info({
-                title: "Thông tin lịch đã đặt",
+                title: info.event.extendedProps.isSharedOpen
+                  ? "Thông tin kèo vãng lai"
+                  : "Thông tin lịch đã đặt",
+
                 content: (
                   <div>
+                    {info.event.extendedProps.isSharedOpen && (
+                      <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-2 text-gray-700">
+                        Kèo đang mở cho khách đăng ký trên ứng dụng.
+                      </div>
+                    )}
+
                     <p>
-                      <strong>Khách:</strong> {info.event.title}
+                      <strong>
+                        {info.event.extendedProps.isSharedOpen
+                          ? "Người tạo:"
+                          : "Khách:"}
+                      </strong>{" "}
+                      {info.event.title}
                     </p>
+
                     <p>
                       <strong>SĐT:</strong>{" "}
                       {info.event.extendedProps.phone || "-"}
                     </p>
+
                     <p>
                       <strong>Thời gian:</strong>{" "}
                       {dayjs(info.event.start).format("DD/MM/YYYY HH:mm")} -{" "}
                       {dayjs(info.event.end).format("HH:mm")}
                     </p>
+
                     <p>
                       <strong>Ghi chú:</strong>{" "}
                       {info.event.extendedProps.note || "-"}
@@ -291,6 +531,7 @@ export default function SlotCalendar({
                   </div>
                 ),
               });
+
               return;
             }
 
@@ -300,6 +541,7 @@ export default function SlotCalendar({
                 content: "Bạn có muốn bỏ chọn khung giờ này không?",
                 okText: "Đồng ý",
                 cancelText: "Hủy",
+
                 onOk: () => removeSelectedSlot(info.event.id),
               });
             }
@@ -309,6 +551,11 @@ export default function SlotCalendar({
               text: "Tạo lịch đặt",
               click: handleOpenBookingModal,
             },
+
+            createSharedBooking: {
+              text: "Tạo kèo vãng lai",
+              click: handleOpenSharedModal,
+            },
           }}
           buttonText={{
             today: "Hôm nay",
@@ -317,7 +564,7 @@ export default function SlotCalendar({
             day: "Ngày",
           }}
           headerToolbar={{
-            left: "prev,next today createBooking",
+            left: "prev,next today createBooking createSharedBooking",
             center: "title",
             right: "resourceTimeGridDay,timeGridWeek,dayGridMonth",
           }}
@@ -332,7 +579,9 @@ export default function SlotCalendar({
         setFormState={setFormState}
         selectedSlots={selectedSlots}
         onRemoveSlot={(index: number) => {
-          setSelectedSlots((prev) => prev.filter((_, i) => i !== index));
+          setSelectedSlots((previousSlots) =>
+            previousSlots.filter((_, slotIndex) => slotIndex !== index),
+          );
         }}
       />
 
@@ -342,7 +591,7 @@ export default function SlotCalendar({
         onCancel={() => setReceiptModal(false)}
         width={700}
         footer={[
-          <Button key="print" type="primary" onClick={handlePrint}>
+          <Button key="print" onClick={handlePrint}>
             In PDF
           </Button>,
         ]}

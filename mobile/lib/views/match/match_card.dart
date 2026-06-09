@@ -108,6 +108,10 @@ class MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Tính giá tiền trên 1 người
+    final int validMaxPlayers = match.maxPlayers > 0 ? match.maxPlayers : 1;
+    final double pricePerPerson = match.courtPrice / validMaxPlayers;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -128,16 +132,16 @@ class MatchCard extends StatelessWidget {
                     children: [
                       if (match.matchType == 'RANKED')
                         _buildTag(
-                          'Rank (${match.minRank}-${match.maxRank})',
+                          'Rank (${match.minRank ?? 0}-${match.maxRank ?? 0})',
                           Colors.purple,
                           Icons.emoji_events,
                         )
-                      else if (match.matchType == 'BET')
-                        _buildTag(
-                          'Kèo: ${match.note ?? 'Tự thỏa thuận'}',
-                          Colors.green,
-                          Icons.local_fire_department,
-                        )
+                      // else if (match.matchType == 'BET')
+                      //   _buildTag(
+                      //     'Kèo: ${match.note ?? 'Tự thỏa thuận'}',
+                      //     Colors.green,
+                      //     Icons.local_fire_department,
+                      //   )
                       else
                         _buildTag(
                           'Giao lưu',
@@ -154,8 +158,12 @@ class MatchCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // Tên Trận/Môn thể thao
                   Text(
-                    match.categoryName,
+                    match.title.isNotEmpty
+                        ? match.title
+                        : 'Giao lưu ${match.categoryName}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -164,7 +172,34 @@ class MatchCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 8),
+
+                  // ĐÃ THÊM: Tên Sân (Court Name)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          match.hasCourt
+                              ? match.courtName
+                              : 'Sân tự thỏa thuận',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
+
                   Row(
                     children: [
                       const Icon(
@@ -252,16 +287,20 @@ class MatchCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ĐÃ SỬA: Hiển thị Giá / Người
                       match.courtPrice > 0
                           ? Text(
-                              '${NumberFormat.currency(locale: 'vi_VN', symbol: '').format(match.courtPrice)}đ',
+                              '${NumberFormat.decimalPattern('vi_VN').format(pricePerPerson)}đ / người',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
+                                color: Color(
+                                  0xFFEA580C,
+                                ), // Chuyển sang màu cam LaceUp cho nổi bật giá tiền
                               ),
                             )
                           : const Text(
-                              'Sân tự thỏa thuận',
+                              'Phí tự thỏa thuận',
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.w500,
@@ -275,7 +314,7 @@ class MatchCard extends StatelessWidget {
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           Text(
-                            match.host!.userName,
+                            match.host?.userName ?? 'Ẩn danh',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,

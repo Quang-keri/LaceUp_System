@@ -19,7 +19,7 @@ import type { ApiErrorResponse } from "../../../types/ApiResponse";
 import type { RentalAreaResponse } from "../../../types/rental";
 
 export interface SelectedSlot {
-  courtCopyId: string;
+  courtCopyId: string | number;
   date: string;
   startTime: string;
   endTime: string;
@@ -40,6 +40,14 @@ export default function RentalAreaDetailPage() {
   const [selectedSlots, setSelectedSlots] = useState<SelectedSlot[]>([]);
   const [cartToSubmit, setCartToSubmit] = useState<SelectedSlot[]>([]);
   const [openModal, setOpenModal] = useState(false);
+
+  const [selectedJoinableSlot, setSelectedJoinableSlot] = useState<any>(null);
+
+  const [bookingIntentData, setBookingIntentData] = useState<{
+    bookingType: "PRIVATE" | "SHARED";
+    maxParticipants?: number;
+    hostSlots?: number;
+  }>({ bookingType: "PRIVATE" });
 
   const [viewTab, setViewTab] = useState("schedule");
   const [bookingMode, setBookingMode] = useState("booking");
@@ -68,7 +76,8 @@ export default function RentalAreaDetailPage() {
   useEffect(() => {
     setSelectedSlots([]);
     setCartToSubmit([]);
-  }, [selectedDate, bookingMode]);
+    setSelectedJoinableSlot(null);
+  }, [selectedDate]);
 
   useEffect(() => {
     if (data) {
@@ -79,16 +88,12 @@ export default function RentalAreaDetailPage() {
 
   const fetchDetail = async () => {
     if (!id) return;
-
     try {
       const res = await rentalService.getRentalAreaById(id);
-
       if (res.code === 200) {
         const result = res.result;
         const courts = result.courts || [];
-
         setData(result);
-
         if (courts.length > 0) {
           setActiveCourt(courts[0]);
         }
@@ -102,15 +107,12 @@ export default function RentalAreaDetailPage() {
 
   const fetchSchedule = async () => {
     if (!id || !data) return;
-
     try {
       const date = selectedDate.format("YYYY-MM-DD");
       const res = await rentalService.getRentalAreaSchedule(id, date);
-
       if (res.code === 200) {
         const scheduleCopies: CourtCopyResponse[] =
           res.result?.courtCopies || [];
-
         setData((prev) => {
           if (!prev) return prev;
           return {
@@ -135,7 +137,6 @@ export default function RentalAreaDetailPage() {
         const matched = scheduleCopies.find(
           (s) => s.courtCopyId === copy.courtCopyId,
         );
-
         return {
           ...copy,
           slots: matched?.slots || [],
@@ -144,7 +145,10 @@ export default function RentalAreaDetailPage() {
     }));
   };
 
-  const handleDirectBooking = () => {
+  const handleDirectBooking = (
+    type: "PRIVATE" | "SHARED",
+    extraData?: { maxParticipants?: number; hostSlots?: number },
+  ) => {
     if (selectedSlots.length === 0) {
       message.info("Vui lòng chọn ít nhất 1 sân và khung giờ");
       return;
@@ -154,9 +158,7 @@ export default function RentalAreaDetailPage() {
       message.warning(
         "Đăng nhập để có trải nghiệm tốt nhất khi đặt lịch sân",
         1,
-        () => {
-          navigate("/login");
-        },
+        () => navigate("/login"),
       );
       return;
     }
@@ -165,12 +167,16 @@ export default function RentalAreaDetailPage() {
       message.warning(
         "Vui lòng cập nhật số điện thoại trước khi đặt sân",
         2,
-        () => {
-          navigate("/profile");
-        },
+        () => navigate("/profile"),
       );
       return;
     }
+
+    setBookingIntentData({
+      bookingType: type,
+      maxParticipants: extraData?.maxParticipants,
+      hostSlots: extraData?.hostSlots,
+    });
 
     setCartToSubmit(selectedSlots);
     setOpenModal(true);
@@ -200,6 +206,9 @@ export default function RentalAreaDetailPage() {
       userName: userInfo.userName.trim(),
       userPhone: userInfo.userPhone.trim(),
       note: userInfo.note,
+      bookingType: bookingIntentData.bookingType,
+      maxParticipants: bookingIntentData.maxParticipants,
+      hostSlots: bookingIntentData.hostSlots,
       slotRequests,
     };
 
@@ -229,6 +238,33 @@ export default function RentalAreaDetailPage() {
     }
   };
 
+  const handleJoinShared = async (bookingId: string, quantity: number) => {
+    try {
+      const response = await bookingService.joinSharedBooking(
+        bookingId,
+        quantity,
+      );
+
+      if (response.code !== 200 && response.code !== 201) {
+        message.error(response.message || "Không thể tham gia trận vãng lai.");
+        return;
+      }
+
+      const participantId = response?.result?.participantId;
+
+      if (!participantId) {
+        message.error("Không tìm thấy thông tin vé vừa đăng ký.");
+        return;
+      }
+
+      navigate(`/payment-ticket/${participantId}`);
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || "Lỗi hệ thống khi vãng lai.",
+      );
+    }
+  };
+
   if (!data || !activeCourt) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8F9FA]">
@@ -244,6 +280,18 @@ export default function RentalAreaDetailPage() {
     viewTab === tabName
       ? "text-orange-300 border-b-2 border-orange-300 pb-1"
       : "hover:text-gray-200 pb-1 transition-colors";
+
+  const handleBookingModeChange = (tab: string) => {
+    setBookingMode(tab);
+
+    if (tab === "shared") {
+      setSelectedSlots([]);
+      setCartToSubmit([]);
+      return;
+    }
+
+    setSelectedJoinableSlot(null);
+  };
 
   return (
     <ConfigProvider
@@ -306,8 +354,23 @@ export default function RentalAreaDetailPage() {
                     setSelectedTime={setSelectedTime}
                     setSelectedDuration={setSelectedDuration}
                     selectedSlots={selectedSlots}
-                    setSelectedSlots={setSelectedSlots}
+                    setSelectedSlots={(slots: any) => {
+                      setSelectedSlots(slots);
+                      setSelectedJoinableSlot(null);
+                    }}
                     activeTab={bookingMode}
+                    setActiveTab={handleBookingModeChange}
+                    onClickSharedSlot={(slot: any, courtCopy: any) => {
+                      setSelectedSlots([]);
+                      setCartToSubmit([]);
+
+                      setSelectedJoinableSlot({
+                        ...slot,
+                        courtCopy,
+                      });
+
+                      setBookingMode("shared");
+                    }}
                   />
                 )}
 
@@ -342,7 +405,9 @@ export default function RentalAreaDetailPage() {
                 selectedSlots={selectedSlots}
                 priceRules={[]}
                 activeTab={bookingMode}
-                setActiveTab={setBookingMode}
+                setActiveTab={handleBookingModeChange}
+                selectedJoinableSlot={selectedJoinableSlot}
+                onJoinShared={handleJoinShared}
               />
             </Col>
           </Row>

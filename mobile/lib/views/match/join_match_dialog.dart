@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Đừng quên import intl để format ngày và giá tiền
 import '../../models/match.dart';
 import '../../services/match_service.dart';
 
@@ -23,17 +24,11 @@ class JoinMatchDialog extends StatefulWidget {
 
 class _JoinMatchDialogState extends State<JoinMatchDialog> {
   bool _isLoading = false;
-  Map<String, int> _teamAssignments = {};
   int _playerCount = 1;
 
   @override
   void initState() {
     super.initState();
-    for (var p in widget.match.participants) {
-      if (p.teamNumber != null) {
-        _teamAssignments[p.userId] = p.teamNumber!;
-      }
-    }
   }
 
   bool get isParticipant =>
@@ -46,6 +41,61 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
     return math.min(maxTeamSize, widget.match.remainingSlots);
   }
 
+  // --- HÀM HELPER FORMAT THỜI GIAN & NGÀY ---
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return DateFormat('dd/MM/yyyy').format(date);
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  String _formatTime(String timeStr) {
+    try {
+      if (timeStr.contains('T')) {
+        return timeStr.split('T')[1].substring(0, 5);
+      }
+      return timeStr.substring(0, 5);
+    } catch (e) {
+      return '--:--';
+    }
+  }
+
+  // --- HÀM TẠO TAG ---
+  Widget _buildTag(
+    String text,
+    Color color,
+    IconData? icon, {
+    bool isOutline = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isOutline ? Colors.transparent : color.withOpacity(0.1),
+        border: Border.all(color: isOutline ? color : Colors.transparent),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleJoin() async {
     setState(() => _isLoading = true);
     try {
@@ -53,7 +103,6 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
       if (mounted) {
         widget.onSuccess();
 
-        // ĐÃ FIX: Thay SnackBar bằng Dialog Pop-up cực đẹp
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -78,7 +127,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                 ],
               ),
               content: const Text(
-                'Bạn đã tham gia trận đấu thành công.\nHãy thanh toán hoặc chờ chủ phòng phân đội nhé.',
+                'Bạn đã tham gia trận đấu thành công.\nHãy thanh toán hoặc chờ chủ phòng duyệt nhé.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
@@ -99,12 +148,9 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.of(dContext).pop(); // Đóng popup thành công
-                      Navigator.of(context).pop(); // Đóng dialog JoinMatch
-                      Navigator.pushNamed(
-                        context,
-                        '/my-matches',
-                      ); // Chuyển sang My Matches
+                      Navigator.of(dContext).pop();
+                      Navigator.of(context).pop();
+                      Navigator.pushNamed(context, '/my-matches');
                     },
                     child: const Text(
                       'Đến Trận đấu của tôi',
@@ -132,126 +178,125 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
     }
   }
 
-  Future<void> _handleSaveTeams() async {
-    final team1 = _teamAssignments.entries
-        .where((e) => e.value == 1)
-        .map((e) => e.key)
-        .toList();
-    final team2 = _teamAssignments.entries
-        .where((e) => e.value == 2)
-        .map((e) => e.key)
-        .toList();
-
-    setState(() => _isLoading = true);
-    try {
-      await matchService.divideTeams(widget.match.matchId, team1, team2);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lưu đội hình thành công!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        widget.onSuccess();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   List<Widget> _buildFooterActions() {
     List<Widget> actions = [];
 
-    if (isHost && ['OPEN', 'CONFIRMED', 'FULL'].contains(widget.match.status)) {
-      actions.add(
-        ElevatedButton(
-          onPressed: _isLoading ? null : _handleSaveTeams,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.purple,
+    actions.add(
+      Expanded(
+        child: OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: _isLoading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text(
-                  'Lưu Đội Hình',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+          child: const Text('Đóng', style: TextStyle(color: Colors.grey)),
         ),
-      );
-    }
+      ),
+    );
+
+    actions.add(const SizedBox(width: 12));
 
     if (widget.match.status == "OPEN" ||
         (widget.match.status == "CONFIRMED" &&
             widget.match.remainingSlots > 0)) {
       if (isParticipant) {
         actions.add(
-          const ElevatedButton(onPressed: null, child: Text('Đã tham gia')),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: null,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Đã tham gia'),
+            ),
+          ),
         );
       } else {
         actions.add(
-          ElevatedButton(
-            onPressed: _isLoading ? null : _handleJoin,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _handleJoin,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-            ),
-            child: const Text(
-              'Xác nhận',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Xác nhận',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         );
       }
     } else if (widget.match.status == "WAITING_DEPOSIT") {
       actions.add(
-        const ElevatedButton(onPressed: null, child: Text('Chờ chốt cọc')),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Chờ chốt cọc'),
+          ),
+        ),
       );
     } else if (['FULL', 'CONFIRMED'].contains(widget.match.status)) {
       actions.add(
-        const ElevatedButton(onPressed: null, child: Text('Đã đủ người')),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: null,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Đã đủ người'),
+          ),
+        ),
       );
     }
 
-    actions.add(
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Đóng', style: TextStyle(color: Colors.grey)),
-      ),
-    );
-
-    return actions.reversed.toList();
+    return actions;
   }
 
   @override
   Widget build(BuildContext context) {
+    // Tính toán giá tiền
+    final int validMaxPlayers = widget.match.maxPlayers > 0
+        ? widget.match.maxPlayers
+        : 1;
+    final double pricePerPerson = widget.match.courtPrice / validMaxPlayers;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
         padding: const EdgeInsets.all(20),
-        constraints: const BoxConstraints(maxHeight: 650, maxWidth: 500),
+        constraints: const BoxConstraints(maxHeight: 700, maxWidth: 500),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,6 +311,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
             ),
             const SizedBox(height: 16),
 
+            // --- BOX CHI TIẾT TRẬN ĐẤU (ĐÃ BỔ SUNG ĐẦY ĐỦ DATA) ---
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -276,6 +322,40 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Thể thức & Mã Phòng
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (widget.match.matchType == 'RANKED')
+                        _buildTag(
+                          'Rank (${widget.match.minRank ?? 0}-${widget.match.maxRank ?? 0})',
+                          Colors.purple,
+                          Icons.emoji_events,
+                        )
+                      // else if (widget.match.matchType == 'BET')
+                      //   _buildTag(
+                      //     'Kèo: ${widget.match.note ?? 'Tự thỏa thuận'}',
+                      //     Colors.green,
+                      //     Icons.local_fire_department,
+                      //   )
+                      else
+                        _buildTag(
+                          'Giao lưu',
+                          Colors.blue,
+                          Icons.sentiment_satisfied,
+                        ),
+
+                      _buildTag(
+                        'MÃ: ${widget.match.roomCode ?? 'TRỐNG'}',
+                        Colors.orange,
+                        null,
+                        isOutline: true,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Tên trận đấu
                   Text(
                     widget.match.title.isNotEmpty
                         ? widget.match.title
@@ -286,12 +366,14 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                       color: Colors.purple.shade900,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+
+                  // Địa điểm
                   Row(
                     children: [
                       const Icon(
                         Icons.location_on,
-                        size: 18,
+                        size: 16,
                         color: Colors.orange,
                       ),
                       const SizedBox(width: 8),
@@ -299,9 +381,75 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                         child: Text(
                           widget.match.hasCourt
                               ? widget.match.courtName
-                              : 'Tự thỏa thuận',
+                              : 'Sân tự thỏa thuận',
                           style: const TextStyle(fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Ngày và Giờ
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _formatDate(widget.match.startTime),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_formatTime(widget.match.startTime)} - ${_formatTime(widget.match.endTime)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Giá tiền
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.payments_outlined,
+                        size: 16,
+                        color: Colors.green,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: widget.match.courtPrice > 0
+                            ? Text(
+                                '${NumberFormat.decimalPattern('vi_VN').format(pricePerPerson)}đ / người',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFEA580C),
+                                ),
+                              )
+                            : const Text(
+                                'Phí tự thỏa thuận',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                       ),
                     ],
                   ),
@@ -324,39 +472,42 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Số lượng tham gia:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    const Expanded(
+                      child: Text(
+                        'Số lượng tham gia:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline),
-                          color: Colors.orange,
-                          onPressed: _playerCount > 1
-                              ? () => setState(() => _playerCount--)
-                              : null,
-                        ),
-                        Text(
-                          '$_playerCount',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          color: Colors.orange,
-                          onPressed: _playerCount < maxAllowed
-                              ? () => setState(() => _playerCount++)
-                              : null,
-                        ),
-                      ],
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      color: Colors.orange,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: _playerCount > 1
+                          ? () => setState(() => _playerCount--)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '$_playerCount',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      color: Colors.orange,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: _playerCount < maxAllowed
+                          ? () => setState(() => _playerCount++)
+                          : null,
                     ),
                   ],
                 ),
@@ -390,36 +541,6 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                 ),
               ],
             ),
-
-            if (isHost)
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: 16,
-                      color: Colors.orange,
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Bạn là Chủ phòng. Hãy chia đội cho người chơi!',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             const SizedBox(height: 12),
 
             Expanded(
@@ -430,37 +551,55 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                 ),
                 child: ListView.separated(
                   itemCount: widget.match.participants.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final player = widget.match.participants[index];
                     final playerCount = player.playerCount ?? 1;
 
+                    String rankDisplay = '3000';
+                    if (player.categoryRanks != null &&
+                        player.categoryRanks!.isNotEmpty) {
+                      try {
+                        final matchedRank = player.categoryRanks!.firstWhere(
+                          (rank) =>
+                              rank.categoryName.toLowerCase() ==
+                              widget.match.categoryName.toLowerCase(),
+                        );
+                        rankDisplay = matchedRank.rankPoint.toInt().toString();
+                      } catch (e) {
+                        // Không tìm thấy category khớp, giữ nguyên 3000
+                      }
+                    }
+
                     return ListTile(
                       leading: CircleAvatar(
+                        radius: 18,
                         backgroundColor: Colors.purple,
                         child: Text(
                           player.userName[0].toUpperCase(),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
                       ),
                       title: Row(
                         children: [
-                          Expanded(
+                          Flexible(
                             child: Text(
                               player.userName +
                                   (playerCount > 1 ? ' (+$playerCount)' : ''),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (player.userName == widget.match.host?.userName)
                             Container(
-                              margin: const EdgeInsets.only(left: 4),
+                              margin: const EdgeInsets.only(left: 6),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
                                 vertical: 2,
@@ -480,58 +619,44 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                             ),
                         ],
                       ),
-                      trailing: isHost
-                          ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ChoiceChip(
-                                  label: const Text('Đội 1'),
-                                  selectedColor: Colors.purple.shade100,
-                                  selected:
-                                      _teamAssignments[player.userId] == 1,
-                                  onSelected: (val) => setState(
-                                    () => _teamAssignments[player.userId] = 1,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                ChoiceChip(
-                                  label: const Text('Đội 2'),
-                                  selectedColor: Colors.purple.shade100,
-                                  selected:
-                                      _teamAssignments[player.userId] == 2,
-                                  onSelected: (val) => setState(
-                                    () => _teamAssignments[player.userId] = 2,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : (player.teamNumber != null
-                                ? Text(
-                                    'Đội ${player.teamNumber}',
-                                    style: const TextStyle(
-                                      color: Colors.purple,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Chưa xếp đội',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  )),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.purple.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: Colors.orange,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              rankDisplay,
+                              style: TextStyle(
+                                color: Colors.purple.shade700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              children: _buildFooterActions(),
-            ),
+
+            Row(children: _buildFooterActions()),
           ],
         ),
       ),

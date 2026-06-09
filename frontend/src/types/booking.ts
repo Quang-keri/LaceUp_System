@@ -8,12 +8,31 @@ export const BookingStatus = {
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
 
 export const BookingTypes = {
-  ONLINE: "ONLINE",
-  OFFLINE: "OFFLINE",
+  PRIVATE: "PRIVATE",
+  SHARED: "SHARED",
   MATCH: "MATCH",
 } as const;
 
+export type TicketPaymentStatus =
+  | "PENDING"
+  | "SUCCESS"
+  | "FAILED"
+  | "CANCELLED"
+  | "REFUNDED";
+
 export type BookingTypes = (typeof BookingTypes)[keyof typeof BookingTypes];
+
+export interface CreateBookingIntentPayload {
+  userId?: string;
+  userName: string;
+  userPhone: string;
+  note?: string;
+  slotRequests: {
+    courtCopyId: string;
+    startTime: string;
+    endTime: string;
+  }[];
+}
 
 export interface BookingResponse {
   userName: string;
@@ -24,11 +43,13 @@ export interface BookingResponse {
   };
   slots: {
     slotId: string | number;
+    courtCopyId?: string;
     courtCode: string;
     courtName?: string;
     startTime: string;
     endTime: string;
     price: number;
+    slotStatus?: string;
   }[];
   bookingId: string;
   rentalAreaId: string;
@@ -43,6 +64,7 @@ export interface BookingResponse {
   bookingStatus: BookingStatus;
   bookingType: BookingTypes;
   notes?: string;
+  note?: string;
   createdAt?: string;
   updatedAt?: string;
   invoicePdfUrl?: string;
@@ -51,7 +73,13 @@ export interface BookingResponse {
   isFullyPaid?: boolean;
   extraServiceResponses?: BookingServiceResponse[];
   paymentMethod?: string;
-
+  maxParticipants?: number;
+  currentParticipants?: number;
+  pricePerTicket?: number;
+  participantId?: string;
+  ticketQuantity?: number;
+  ticketAmount?: number;
+  ticketPaymentStatus?: TicketPaymentStatus;
 }
 
 export interface BookingListResponse {
@@ -84,4 +112,17 @@ export interface BookingServiceResponse {
   serviceName: string;
   quantity: number;
   price: number;
+}
+
+export interface BookingParticipantResponse {
+  participantId: string;
+  bookingId: string;
+  userId: string;
+  userName: string;
+  userPhone?: string;
+  amountPaid: number;
+  paymentStatus: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED";
+  isHost: boolean;
+  paymentProofUrl?: string;
+  paymentProofUploadedAt?: string;
 }

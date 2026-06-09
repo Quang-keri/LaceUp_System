@@ -1,7 +1,7 @@
 package org.sport.backend.constant;
 
 public enum BookingType {
-    ONLINE,
-    OFFLINE,
-    MATCH
+    PRIVATE,
+    SHARED,
+    MATCH,
 }

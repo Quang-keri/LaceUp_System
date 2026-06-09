@@ -13,10 +13,27 @@ import bookingService from "../../../service/bookingService";
 import { useAuth } from "../../../context/AuthContext";
 import "./BookingHistoryPage.css";
 import BookingDetailDrawer from "./BookingDetailDrawer";
+import { useNavigate } from "react-router-dom";
+
+const ticketStatusColorMap: Record<string, string> = {
+  PENDING: "orange",
+  SUCCESS: "green",
+  FAILED: "red",
+  CANCELLED: "default",
+  REFUNDED: "blue",
+};
+
+const ticketStatusLabelMap: Record<string, string> = {
+  PENDING: "Chờ thanh toán",
+  SUCCESS: "Đã thanh toán",
+  FAILED: "Thanh toán lỗi",
+  CANCELLED: "Đã hủy",
+  REFUNDED: "Đã hoàn tiền",
+};
 
 const BookingHistoryPage: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
-
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
@@ -40,6 +57,7 @@ const BookingHistoryPage: React.FC = () => {
     try {
       const response = await bookingService.getMyBookings(
         status,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -113,6 +131,21 @@ const BookingHistoryPage: React.FC = () => {
       width: 100,
     },
     {
+      title: "Loại",
+      key: "bookingType",
+      render: (_: unknown, record: BookingResponse) => {
+        const isSharedTicket =
+          record.bookingType === "SHARED" && Boolean(record.participantId);
+
+        return isSharedTicket ? (
+          <Tag color="cyan">Vãng lai</Tag>
+        ) : (
+          <Tag color="purple">Đặt sân</Tag>
+        );
+      },
+      width: 100,
+    },
+    {
       title: "Sân bãi",
       key: "court",
       render: (_: unknown, record: BookingResponse) => (
@@ -147,41 +180,98 @@ const BookingHistoryPage: React.FC = () => {
     },
     {
       title: "Giá tiền",
-      dataIndex: "totalPrice",
-      key: "totalPrice",
-      render: (price?: number) => (
-        <span style={{ fontWeight: 600, color: "orange" }}>
-          {(price ?? 0).toLocaleString("vi-VN")}đ
-        </span>
-      ),
+      key: "price",
+      render: (_: unknown, record: BookingResponse) => {
+        const isSharedTicket =
+          record.bookingType === "SHARED" && Boolean(record.participantId);
+
+        const amount = isSharedTicket
+          ? Number(record.ticketAmount ?? 0)
+          : Number(record.totalPrice ?? 0);
+
+        return (
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontWeight: 600, color: "orange" }}>
+              {amount.toLocaleString("vi-VN")}đ
+            </div>
+
+            {isSharedTicket && (
+              <div style={{ fontSize: 11, color: "#888" }}>
+                {record.ticketQuantity ?? 1} vé
+              </div>
+            )}
+          </div>
+        );
+      },
       align: "right" as const,
       width: 120,
     },
     {
       title: "Trạng thái",
-      dataIndex: "bookingStatus",
-      key: "bookingStatus",
-      render: (status: BookingStatus) => (
-        <Tag color={statusColorMap[status]} icon={statusIconMap[status]}>
-          {statusLabelMap[status]}
-        </Tag>
-      ),
-      width: 130,
+      key: "status",
+      render: (_: unknown, record: BookingResponse) => {
+        const isSharedTicket =
+          record.bookingType === "SHARED" && Boolean(record.participantId);
+
+        if (isSharedTicket) {
+          const ticketStatus = record.ticketPaymentStatus ?? "PENDING";
+
+          return (
+            <Tag color={ticketStatusColorMap[ticketStatus]}>
+              {ticketStatusLabelMap[ticketStatus] ?? ticketStatus}
+            </Tag>
+          );
+        }
+
+        const status = record.bookingStatus;
+
+        return (
+          <Tag color={statusColorMap[status]} icon={statusIconMap[status]}>
+            {statusLabelMap[status] ?? status}
+          </Tag>
+        );
+      },
+      width: 140,
     },
     {
       title: "Thao tác",
       key: "action",
-      render: (_: unknown, record: BookingResponse) => (
-        <Button
-          size="small"
-          style={{ color: "#9156F1", border: "1px solid #9156F1" }}
-          ghost
-          onClick={() => handleViewDetail(record)}
-        >
-          Chi tiết
-        </Button>
-      ),
-      width: 100,
+      render: (_: unknown, record: BookingResponse) => {
+        const isPendingSharedTicket =
+          record.bookingType === "SHARED" &&
+          record.participantId &&
+          record.ticketPaymentStatus === "PENDING";
+
+        if (isPendingSharedTicket) {
+          return (
+            <Button
+              size="small"
+              type="primary"
+              onClick={() =>
+                navigate(`/payment-ticket/${record.participantId}`)
+              }
+              className="!bg-teal-500 !border-teal-500"
+            >
+              Thanh toán
+            </Button>
+          );
+        }
+
+        return (
+          <Button
+            size="small"
+            style={{
+              color: "#9156F1",
+              border: "1px solid #9156F1",
+            }}
+            ghost
+            onClick={() => handleViewDetail(record)}
+          >
+            Chi tiết
+          </Button>
+        );
+      },
+      width: 110,
     },
   ];
 
@@ -228,7 +318,9 @@ const BookingHistoryPage: React.FC = () => {
         bookingId={selectedBookingId}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        onRefresh={() => fetchBookings(pagination.current, pagination.pageSize, statusFilter)}
+        onRefresh={() =>
+          fetchBookings(pagination.current, pagination.pageSize, statusFilter)
+        }
       />
     </>
   );

@@ -217,12 +217,11 @@ export default function MatchPaymentApprovalPage() {
     <div className="p-6 bg-[#F8F9FA] min-h-screen">
       <div className="mb-6">
         <Title level={4} style={{ margin: 0 }}>
-          Quản lý thanh toán ghép kèo (VietQR)
+          Quản lý thanh toán ghép trận (VietQR)
         </Title>
       </div>
 
       <Row gutter={[24, 24]}>
-        {/* CỘT TRÁI: BỘ LỌC */}
         <Col xs={24} lg={6} xl={5}>
           <Card
             className="shadow-sm rounded-xl h-full"

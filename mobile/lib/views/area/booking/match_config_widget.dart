@@ -165,7 +165,7 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Cấu hình trận đấu (Ghép kèo)',
+            'Cấu hình trận đấu',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
           ),
           const SizedBox(height: 16),
@@ -217,10 +217,10 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
                           DropdownMenuItem(
                               value: 'NORMAL',
                               child: Text('Giao lưu', style: TextStyle(fontSize: 14))),
-                          DropdownMenuItem(
-                              value: 'BET',
-                              child: Text('Chia Kèo',
-                                  style: TextStyle(fontSize: 14, color: Color(0xFFEA580C)))),
+                          // DropdownMenuItem(
+                          //     value: 'BET',
+                          //     child: Text('Chia Kèo',
+                          //         style: TextStyle(fontSize: 14, color: Color(0xFFEA580C)))),
                           DropdownMenuItem(
                               value: 'RANKED',
                               child: Text('Đánh Rank',

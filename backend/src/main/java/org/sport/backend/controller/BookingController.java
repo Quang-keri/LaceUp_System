@@ -3,28 +3,27 @@ package org.sport.backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.sport.backend.constant.BookingIntentStatus;
-import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.constant.BookingStatus;
+import org.sport.backend.constant.BookingType;
+import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.base.PageResponse;
-import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.OwnerBookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
-import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
+import org.sport.backend.dto.response.booking.SharedBookingPublicResponse;
 import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
 import org.sport.backend.service.BookingService;
+import org.sport.backend.service.BookingQueryService;
 import org.sport.backend.service.ExcelService;
 import org.sport.backend.service.InvoiceService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,154 +33,72 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/bookings")
 @RequiredArgsConstructor
-@Tag(name = "10. Booking")
+@Tag(name = "10. Booking Core")
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BookingQueryService bookingQueryService;
     private final InvoiceService invoiceService;
     private final ExcelService excelService;
 
-    @GetMapping("/intent/rental/{rentalId}")
-    public ApiResponse<PageResponse<BookingIntentResponse>>
-    getRentalBookingIntents(
-            @PathVariable UUID rentalId,
-            @RequestParam BookingIntentStatus status,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-
-        return ApiResponse.success(
-                bookingService.getMyRentalBookingIntents(
-                        rentalId,
-                        status,
-                        page,
-                        size
-                )
-        );
-    }
-
-    @GetMapping("/intent/my-intents")
-    public ApiResponse<List<BookingIntentResponse>> getMyBookingIntents() {
-        return ApiResponse.<List<BookingIntentResponse>>builder()
-                .code(200)
-                .message("Lấy danh sách booking đang chờ xác nhận thành công")
-                .result(bookingService.getMyBookingIntents())
-                .build();
-    }
-
-    @PostMapping("/intent/{intentId}/owner-confirm")
-    public ApiResponse<BookingResponse> ownerConfirmManualBooking(
-            @PathVariable UUID intentId
-    ) {
-        return ApiResponse.success(
-                bookingService.ownerConfirmManualBooking(intentId)
-        );
-    }
-
-    @PostMapping("/intent/{intentId}/owner-reject")
-    public ApiResponse<Void> ownerRejectManualBooking(@PathVariable UUID intentId) {
-        bookingService.ownerRejectManualBooking(intentId);
-
-        return ApiResponse.<Void>builder()
-                .message("Đã từ chối yêu cầu đặt sân")
-                .build();
-    }
-
-    @PostMapping(
-            value = "/intent/{intentId}/payment-proof",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    )
-    public ApiResponse<String> uploadIntentPaymentProof(
-            @PathVariable UUID intentId,
-            @RequestParam("image") MultipartFile image
-    ) {
-        return ApiResponse.success(
-                bookingService.uploadIntentPaymentProof(intentId, image)
-        );
-    }
-
     @PostMapping("/preview-price")
     public ResponseEntity<?> previewOwnerBookingPrice(
-            @RequestBody OwnerBookingRequest request
-    ) {
+            @RequestBody OwnerBookingRequest request) {
         BigDecimal total = bookingService.previewOwnerBookingPrice(request);
-
-        return ResponseEntity.ok(
-                new ApiResponse<>(200, "Preview price successfully", total)
-        );
+        return ResponseEntity.ok(new ApiResponse<>(
+                200,
+                "Preview price successfully",
+                total));
     }
 
     @PostMapping("/owner")
     @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<BookingResponse> ownerCreateBooking(
-            @Valid @RequestBody OwnerBookingRequest request
-    ) {
+            @Valid @RequestBody OwnerBookingRequest request) {
         try {
             return ApiResponse.success(
                     201,
                     "Tạo lịch đặt sân cho khách thành công",
-                    bookingService.createOwnerBooking(request)
-            );
+                    bookingService.createOwnerBooking(request));
         } catch (Exception e) {
-            return ApiResponse.error(500, "Lỗi tạo lịch: " + e.getMessage());
+            return ApiResponse.error(
+                    500,
+                    "Lỗi tạo lịch: " + e.getMessage());
         }
     }
 
     @PostMapping("/{bookingId}/services")
-//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ResponseEntity<ApiResponse<Void>> addExtraServicesToBooking(
             @PathVariable UUID bookingId,
             @RequestBody AddExtraServicesRequest request) {
         try {
             bookingService.addExtraServices(bookingId, request);
-            return ResponseEntity.ok(ApiResponse.success(200, "Thêm dịch vụ thành công", null));
+            return ResponseEntity.ok(ApiResponse.success(
+                    200,
+                    "Thêm dịch vụ thành công",
+                    null));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
-                    ApiResponse.error(400, "Lỗi thêm dịch vụ: " + e.getMessage()));
+                    ApiResponse.error(
+                            400,
+                            "Lỗi thêm dịch vụ: " + e.getMessage()));
         }
     }
 
     @PostMapping("/check-availability")
-//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<CheckAvailabilityResponse> checkAvailability(
-            @RequestBody @Valid SlotRequest request
-    ) {
+            @RequestBody @Valid SlotRequest request) {
         return ApiResponse.success(
                 200,
                 "Check availability successfully",
                 bookingService.checkAvailability(request));
     }
 
-    @PostMapping("/intent")
-//    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
-    public ApiResponse<BookingIntentResponse> createIntent(
-            @Valid @RequestBody BookingRequest request
-    ) {
-        return ApiResponse.success(
-                200,
-                "Create booking intent successfully",
-                bookingService.createBookingIntent(request)
-        );
-    }
-
-    @GetMapping("/intent/{intentId}")
-    public ApiResponse<BookingIntentResponse> getBookingIntentById(
+    @PostMapping("/confirm/{intentId}")
+    public ApiResponse<BookingResponse> confirmBooking(
             @PathVariable UUID intentId) {
         return ApiResponse.success(
-                200,
-                "Get booking intent successfully",
-                bookingService.getBookingIntentById(intentId)
-        );
-    }
-
-    @PostMapping("/confirm/{intentId}")
-//    @PreAuthorize("hasAuthority('BOOK_ROOM')")
-    public ApiResponse<BookingResponse> confirmBooking(
-            @PathVariable UUID intentId
-    ) {
-        return ApiResponse.success(
-                bookingService.confirmBooking(intentId, null)
-        );
+                bookingService.confirmBooking(intentId, null));
     }
 
     @GetMapping("/{bookingId}")
@@ -192,10 +109,23 @@ public class BookingController {
             return ApiResponse.success(
                     200,
                     "Get booking by id successfully",
-                    bookingService.getBookingById(bookingId));
+                    bookingQueryService.getBookingById(bookingId));
         } catch (Exception e) {
-            return ApiResponse.error(500, e.getMessage());
+            return ApiResponse.error(
+                    500,
+                    e.getMessage());
         }
+    }
+
+    @GetMapping("/shared/{bookingId}/public")
+    public ApiResponse<SharedBookingPublicResponse> getPublicSharedBooking(
+            @PathVariable UUID bookingId
+    ) {
+        return ApiResponse.<SharedBookingPublicResponse>builder()
+                .code(200)
+                .message("Get public shared booking successfully")
+                .result(bookingQueryService.getPublicSharedBooking(bookingId))
+                .build();
     }
 
     @GetMapping(value = "/{bookingId}/invoice/view",
@@ -203,27 +133,19 @@ public class BookingController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> viewInvoice(@PathVariable UUID bookingId) {
         try {
-            var booking = bookingService.getBookingById(bookingId);
+            var booking = bookingQueryService.getBookingById(bookingId);
             StringBuilder html = new StringBuilder();
             html.append("<html><head><meta charset=\"utf-8\"><title>Invoice</title>");
             html.append("<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}</style>");
-            html.append("</head><body>");
-            html.append("<h2>Hóa đơn dịch vụ</h2>");
+            html.append("</head><body><h2>Hóa đơn dịch vụ</h2>");
             html.append("<p>Mã booking: ").append(booking.getBookingId()).append("</p>");
             html.append("<p>Khách hàng: ").append(booking.getUserName()).append(" - ").append(booking.getPhoneNumber()).append("</p>");
             html.append("<table><thead><tr><th>Sân</th><th>Giờ bắt đầu</th><th>Giờ kết thúc</th><th>Giá</th></tr></thead><tbody>");
-            booking.getSlots().forEach(s -> {
-                html.append("<tr>");
-                html.append("<td>").append(s.getCourtCode()).append("</td>");
-                html.append("<td>").append(s.getStartTime()).append("</td>");
-                html.append("<td>").append(s.getEndTime()).append("</td>");
-                html.append("<td>").append(s.getPrice() != null ? s.getPrice().toString() : "0").append("</td>");
-                html.append("</tr>");
-            });
-            html.append("</tbody></table>");
-            html.append("<p>Tổng: ").append(booking.getTotalPrice() != null ? booking.getTotalPrice() : "0").append("</p>");
-            html.append("</body></html>");
-
+            booking.getSlots().forEach(s -> html.append("<tr><td>").append(s.getCourtCode()).append("</td>")
+                    .append("<td>").append(s.getStartTime()).append("</td>")
+                    .append("<td>").append(s.getEndTime()).append("</td>")
+                    .append("<td>").append(s.getPrice() != null ? s.getPrice().toString() : "0").append("</td></tr>"));
+            html.append("</tbody></table><p>Tổng: ").append(booking.getTotalPrice() != null ? booking.getTotalPrice() : "0").append("</p></body></html>");
             return ResponseEntity.ok(html.toString());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error rendering invoice: " + e.getMessage());
@@ -233,22 +155,19 @@ public class BookingController {
     @GetMapping("/{bookingId}/invoice/download")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadInvoice(
-            @PathVariable UUID bookingId
-    ) {
-        var booking = bookingService.getBookingById(bookingId);
+            @PathVariable UUID bookingId) {
+        var booking = bookingQueryService.getBookingById(bookingId);
         byte[] pdf = invoiceService.generateInvoicePdf(booking);
-
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=invoice_" + bookingId + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=invoice_" + bookingId + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
 
     @PutMapping("/{bookingId}/collect-payment")
-//    @PreAuthorize("hasAuthority('MANAGE_FINANCE') or hasAuthority('MANAGE_BOOKING')")
     public ResponseEntity<ApiResponse<Void>> collectRemainingPayment(
-            @PathVariable UUID bookingId
-    ) {
+            @PathVariable UUID bookingId) {
         try {
             bookingService.collectRemainingPayment(bookingId);
             return ResponseEntity.ok(ApiResponse.success(
@@ -256,9 +175,9 @@ public class BookingController {
                     "Payment successfully",
                     null));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(
-                    ApiResponse.error(
-                            500, "Error when payment" + e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    500,
+                    "Error when payment" + e.getMessage()));
         }
     }
 
@@ -266,13 +185,10 @@ public class BookingController {
     @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
     public ApiResponse<PageResponse<BookingResponse>> getAllBooking(
             @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) BookingType bookingType,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate from,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate to,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate to,
             @RequestParam(defaultValue = "1", required = false) int page,
             @RequestParam(defaultValue = "10", required = false) int size
     ) {
@@ -280,13 +196,20 @@ public class BookingController {
             return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(200)
                     .message("Get all bookings successfully")
-                    .result(bookingService.getAllBookings(bookingStatus, keyword, from, to, page, size))
+                    .result(bookingQueryService
+                            .getAllBookings(
+                                    bookingStatus,
+                                    bookingType,
+                                    keyword,
+                                    from,
+                                    to,
+                                    page,
+                                    size))
                     .build();
         } catch (Exception e) {
-            e.getStackTrace();
             return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(500)
-                    .message("Api system have some problems " + e.getMessage())
+                    .message("Api problem: " + e.getMessage())
                     .build();
         }
     }
@@ -295,41 +218,29 @@ public class BookingController {
     @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<BookingResponse> updateBooking(
             @PathVariable UUID bookingId,
-            @Valid @RequestBody UpdateBookingRequest request
-    ) {
+            @Valid @RequestBody UpdateBookingRequest request) {
         try {
-            if (request.getSlots() != null && !request.getSlots().isEmpty()) {
-                for (int i = 0; i < request.getSlots().size(); i++) {
-                    var slot = request.getSlots().get(i);
-                }
-            }
-
             return ApiResponse.<BookingResponse>builder()
                     .code(200)
                     .message("Update booking successfully")
                     .result(bookingService.updateBooking(bookingId, request))
                     .build();
-
         } catch (Exception e) {
             return ApiResponse.<BookingResponse>builder()
                     .code(500)
-                    .message("Api system have some problems " + e.getMessage())
+                    .message("Api problem: " + e.getMessage())
                     .build();
         }
     }
 
     @GetMapping("/my-rentals")
-//    @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
     public ApiResponse<PageResponse<BookingResponse>> getMyRentals(
             @RequestParam UUID rentalId,
             @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) BookingType bookingType,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate from,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate to,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate to,
             @RequestParam(defaultValue = "1", required = false) int page,
             @RequestParam(defaultValue = "10", required = false) int size
     ) {
@@ -337,13 +248,20 @@ public class BookingController {
             return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(200)
                     .message("Get all bookings of rental successfully")
-                    .result(bookingService.getBookingsRentalId(rentalId, bookingStatus, keyword, from, to, page, size))
+                    .result(bookingQueryService
+                            .getBookingsRentalId(rentalId,
+                                    bookingStatus,
+                                    bookingType,
+                                    keyword,
+                                    from,
+                                    to,
+                                    page,
+                                    size))
                     .build();
         } catch (Exception e) {
-            e.getStackTrace();
             return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(500)
-                    .message("Api system have some problems " + e.getMessage())
+                    .message("Api problem: " + e.getMessage())
                     .build();
         }
     }
@@ -352,13 +270,10 @@ public class BookingController {
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<PageResponse<BookingResponse>> getMyBookings(
             @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) BookingType bookingType,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate from,
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDate to,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDate to,
             @RequestParam(defaultValue = "1", required = false) int page,
             @RequestParam(defaultValue = "10", required = false) int size
     ) {
@@ -366,13 +281,20 @@ public class BookingController {
             return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(200)
                     .message("Get all bookings of me successfully")
-                    .result(bookingService.getMyBookings(bookingStatus, keyword, from, to, page, size))
+                    .result(bookingQueryService
+                            .getMyBookings(
+                                    bookingStatus,
+                                    bookingType,
+                                    keyword,
+                                    from,
+                                    to,
+                                    page,
+                                    size))
                     .build();
         } catch (Exception e) {
-            e.getStackTrace();
             return ApiResponse.<PageResponse<BookingResponse>>builder()
                     .code(500)
-                    .message("Api system have some problems " + e.getMessage())
+                    .message("Api problem: " + e.getMessage())
                     .build();
         }
     }
@@ -381,6 +303,7 @@ public class BookingController {
     @PreAuthorize("hasAuthority('VIEW_BOOKINGS')")
     public ResponseEntity<byte[]> exportToExcel(
             @RequestParam(required = false) BookingStatus bookingStatus,
+            @RequestParam(required = false) BookingType bookingType,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
@@ -389,16 +312,35 @@ public class BookingController {
         try {
             List<BookingResponse> bookings;
             if (rentalId != null) {
-                bookings = bookingService.getBookingsRentalId(rentalId, bookingStatus, keyword, from, to, 1, Integer.MAX_VALUE).getData();
+                bookings =
+                        bookingQueryService.getBookingsRentalId(
+                                        rentalId,
+                                        bookingStatus,
+                                        bookingType,
+                                        keyword,
+                                        from,
+                                        to,
+                                        1,
+                                        Integer.MAX_VALUE)
+                                .getData();
             } else {
-                bookings = bookingService.getAllBookings(bookingStatus, keyword, from, to, 1, Integer.MAX_VALUE).getData();
+                bookings =
+                        bookingQueryService.getAllBookings(
+                                        bookingStatus,
+                                        bookingType,
+                                        keyword,
+                                        from,
+                                        to,
+                                        1,
+                                        Integer.MAX_VALUE)
+                                .getData();
             }
-
             byte[] excelContent = excelService.exportBookingsToExcel(bookings);
-
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=bookings_report.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=bookings_report.xlsx")
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(excelContent);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -408,24 +350,17 @@ public class BookingController {
     @PutMapping("/{bookingId}/cancel")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<BookingResponse>> cancelBooking(
-            @PathVariable UUID bookingId
-    ) {
+            @PathVariable UUID bookingId) {
         try {
             BookingResponse response = bookingService.cancelBookingByUser(bookingId);
-
-            return ResponseEntity.ok(
-                    ApiResponse.success(
-                            200,
-                            "Hủy booking thành công. Tiền cọc sẽ không được hoàn lại.",
-                            response
-                    )
-            );
+            return ResponseEntity.ok(ApiResponse.success(
+                    200,
+                    "Hủy booking thành công. Tiền cọc sẽ không được hoàn lại.",
+                    response));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(
-                    ApiResponse.error(400, e.getMessage())
-            );
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    400,
+                    e.getMessage()));
         }
     }
-
-
 }

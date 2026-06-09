@@ -23,6 +23,12 @@ public interface PaymentService {
     CheckoutResponse handleVnPayReturn(Map<String, String> queryParams);
 
     @Transactional
+    CheckoutResponse checkoutSharedTicket(
+            UUID participantId,
+            PaymentMethod method
+    );
+
+    @Transactional
     CheckoutResponse checkoutMatchJoin(UUID registrationId, PaymentMethod method);
 
     PageResponse<RefundResponse> getPendingRefunds(int page, int size);

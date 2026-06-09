@@ -8,6 +8,8 @@ class SlotResponse {
   final String? endTime;
   final double? price;
   final String? slotStatus;
+  final String? bookingType;
+  final String? bookingId;
   final BookingShortResponse? bookingShortResponse;
 
   SlotResponse({
@@ -18,6 +20,8 @@ class SlotResponse {
     this.endTime,
     this.price,
     this.slotStatus,
+    this.bookingType,
+    this.bookingId,
     this.bookingShortResponse,
   });
 
@@ -30,6 +34,8 @@ class SlotResponse {
       endTime: json['endTime']?.toString(),
       price: double.tryParse(json['price']?.toString() ?? ''),
       slotStatus: json['slotStatus']?.toString(),
+      bookingType: json['bookingType']?.toString(),
+      bookingId: json['bookingId']?.toString(),
       bookingShortResponse: json['bookingShortResponse'] != null
           ? BookingShortResponse.fromJson(json['bookingShortResponse'])
           : null,

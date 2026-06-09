@@ -46,7 +46,6 @@ public class RentalAreaController {
         );
     }
 
-
     @GetMapping("/{rentalAreaId}/services")
     public ResponseEntity<ApiResponse<List<ServiceItemResponse>>> getServicesByRentalArea(
             @PathVariable UUID rentalAreaId) {

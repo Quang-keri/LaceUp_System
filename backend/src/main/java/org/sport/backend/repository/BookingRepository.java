@@ -1,5 +1,6 @@
 package org.sport.backend.repository;
 
+import jakarta.persistence.LockModeType;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.entity.Booking;
 import org.sport.backend.entity.RentalArea;
@@ -7,6 +8,7 @@ import org.sport.backend.entity.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -52,13 +55,13 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
                                                  @Param("rentalAreaId") UUID rentalAreaId);
 
     @Query("""
-                SELECT COALESCE(SUM(b.totalPrice), 0)
-                FROM Booking b
-                WHERE b.rentalArea.rentalAreaId = :rentalAreaId
-                  AND b.startTime >= :startDate AND b.startTime < :endDate
-                  AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
-                                          org.sport.backend.constant.BookingStatus.BOOKED)
-           \s""")
+                 SELECT COALESCE(SUM(b.totalPrice), 0)
+                 FROM Booking b
+                 WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+                   AND b.startTime >= :startDate AND b.startTime < :endDate
+                   AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
+                                           org.sport.backend.constant.BookingStatus.BOOKED)
+            \s""")
     BigDecimal sumTotalAmountOfCompletedBookingsMonthly(
             @Param("rentalAreaId") UUID rentalAreaId,
             @Param("startDate") LocalDateTime startDate,
@@ -79,24 +82,24 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     );
 
     @Query("""
-                SELECT COALESCE(SUM(s.price), 0)
-                FROM Booking b
-                JOIN b.slots s
-                WHERE b.rentalArea.rentalAreaId = :rentalAreaId
-                  AND CAST(b.startTime AS date) = :date
-                  AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
-                                          org.sport.backend.constant.BookingStatus.BOOKED)
-           \s""")
+                 SELECT COALESCE(SUM(s.price), 0)
+                 FROM Booking b
+                 JOIN b.slots s
+                 WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+                   AND CAST(b.startTime AS date) = :date
+                   AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
+                                           org.sport.backend.constant.BookingStatus.BOOKED)
+            \s""")
     BigDecimal sumSlotRevenueByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
 
     @Query("""
-                SELECT COALESCE(SUM(b.depositAmount), 0)
-                FROM Booking b
-                WHERE b.rentalArea.rentalAreaId = :rentalAreaId
-                  AND CAST(b.startTime AS date) = :date
-                  AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
-                                          org.sport.backend.constant.BookingStatus.BOOKED)
-           \s""")
+                 SELECT COALESCE(SUM(b.depositAmount), 0)
+                 FROM Booking b
+                 WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+                   AND CAST(b.startTime AS date) = :date
+                   AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
+                                           org.sport.backend.constant.BookingStatus.BOOKED)
+            \s""")
     BigDecimal sumInitialPaidAmountByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
 
     boolean existsByRenter_UserIdAndBookingStatusIn(
@@ -111,5 +114,15 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     boolean existsByRentalArea_Owner_UserIdAndBookingStatusIn(
             UUID ownerId,
             Collection<BookingStatus> statuses
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+                SELECT b
+                FROM Booking b
+                WHERE b.bookingId = :bookingId
+            """)
+    Optional<Booking> findByIdForUpdate(
+            @Param("bookingId") UUID bookingId
     );
 }

@@ -796,6 +796,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                                                         .endTime(slot.getEndTime())
                                                         .price(slot.getPrice())
                                                         .slotStatus(slot.getSlotStatus())
+                                                        .bookingType(slot.getBooking() != null ? slot.getBooking().getBookingType() : null)
+                                                        .bookingId(slot.getBooking() != null ? slot.getBooking().getBookingId() : null)
                                                         .build()
                                                 )
                                                 .toList()

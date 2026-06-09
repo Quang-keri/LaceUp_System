@@ -1,45 +1,27 @@
 package org.sport.backend.serviceImpl;
 
 import lombok.RequiredArgsConstructor;
-import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.constant.*;
-import org.sport.backend.dto.internal.CloudinaryUploadResult;
-import org.sport.backend.dto.request.booking.BookingRequest;
 import org.sport.backend.dto.request.booking.OwnerBookingRequest;
 import org.sport.backend.dto.request.booking.UpdateBookingRequest;
 import org.sport.backend.dto.request.serviceItem.AddExtraServicesRequest;
 import org.sport.backend.dto.request.slot.SlotRequest;
 import org.sport.backend.dto.request.slot.UpdateSlotRequest;
-import org.sport.backend.dto.response.address.AddressResponse;
-import org.sport.backend.dto.response.booking.BookingIntentResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
-import org.sport.backend.dto.response.city.CityResponse;
-import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.slot.CheckAvailabilityResponse;
-import org.sport.backend.dto.response.slot.IntentSlotResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
-import org.sport.backend.mapper.AddressMapper;
 import org.sport.backend.mapper.BookingMapper;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.*;
-import org.sport.backend.specification.BookingSpecification;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
+import java.math.RoundingMode;
 import java.time.*;
 import java.util.*;
 
@@ -56,220 +38,14 @@ public class BookingServiceImpl implements BookingService {
     private final BookingServiceItemRepository bookingServiceItemRepository;
     private final ServiceItemRepository serviceItemRepository;
     private final TransactionRepository transactionRepository;
-    private final CourtPriceRepository courtPriceRepository;
     private final PaymentRepository paymentRepository;
     private final ReputationLogRepository reputationLogRepository;
 
     private final UserService userService;
     private final CourtCopyService courtCopyService;
-    private final CloudinaryService cloudinaryService;
+    private final CourtPriceService courtPriceService;
 
-    private final AddressMapper addressMapper;
     private final BookingMapper bookingMapper;
-    private final BankAccountRepository bankAccountRepository;
-
-    @Override
-    public List<BookingIntentResponse> getMyBookingIntents() {
-        var currentUser = userService.getCurrentUserEntity();
-
-        return bookingIntentRepository
-                .findByBookerPhone(currentUser.getPhone())
-                .stream()
-                .filter(intent -> intent.getStatus() != BookingIntentStatus.CONFIRMED)
-                .map(intent -> {
-
-                    List<IntentSlotResponse> slotResponses =
-                            intent.getSlots() == null
-                                    ? List.of()
-                                    : intent.getSlots()
-                                    .stream()
-                                    .map(slot -> IntentSlotResponse.builder()
-                                            .courtCopyId(
-                                                    slot.getCourtCopy() != null
-                                                            ? slot.getCourtCopy().getCourtCopyId()
-                                                            : null
-                                            )
-                                            .courtCode(
-                                                    slot.getCourtCopy() != null
-                                                            ? slot.getCourtCopy().getCourtCode()
-                                                            : null
-                                            )
-                                            .startTime(slot.getStartTime())
-                                            .endTime(slot.getEndTime())
-                                            .price(slot.getPrice())
-                                            .build())
-                                    .toList();
-
-                    return BookingIntentResponse.builder()
-                            .bookingIntentId(intent.getBookingIntentId())
-                            .bookerName(intent.getBookerName())
-                            .bookerPhone(intent.getBookerPhone())
-                            .title(intent.getTitle())
-                            .note(intent.getNote())
-                            .previewPrice(intent.getPreviewPrice())
-                            .startTime(intent.getStartTime())
-                            .endTime(intent.getEndTime())
-                            .expiresAt(intent.getExpiresAt())
-                            .status(intent.getStatus())
-                            .paymentProofUrl(intent.getPaymentProofUrl())
-                            .paymentProofUploadedAt(intent.getPaymentProofUploadedAt())
-                            .createdAt(intent.getCreatedAt())
-                            .rentalArea(intent.getRentalArea() != null
-                                    ? RentalAreaResponse.builder()
-                                    .rentalAreaId(intent.getRentalArea().getRentalAreaId())
-                                    .rentalAreaName(intent.getRentalArea().getRentalAreaName())
-                                    .address(
-                                            intent.getRentalArea().getAddress() != null
-                                                    ? AddressResponse.builder().street(intent.getRentalArea().getAddress().getStreet()).ward(intent.getRentalArea().getAddress().getWard()).city(CityResponse.builder().cityName(intent.getRentalArea().getAddress().getCity().getCityName()).build()).build()
-                                                    : null
-                                    )
-                                    .build()
-                                    : null
-                            )
-                            .slots(slotResponses)
-                            .build();
-
-                })
-                .toList();
-    }
-
-    @Override
-    public PageResponse<BookingIntentResponse> getMyRentalBookingIntents(
-            UUID rentalId,
-            BookingIntentStatus status,
-            int page,
-            int size
-    ) {
-
-        Pageable pageable = PageRequest.of(
-                page - 1,
-                size,
-                Sort.by(Sort.Order.desc("createdAt"))
-        );
-
-        Page<BookingIntent> intentPage =
-                bookingIntentRepository.findByRentalArea_RentalAreaIdAndStatus(
-                        rentalId,
-                        status,
-                        pageable
-                );
-
-        List<BookingIntentResponse> responses = intentPage.getContent()
-                .stream()
-                .map(intent -> {
-
-                    List<IntentSlotResponse> slotResponses =
-                            intent.getSlots() == null
-                                    ? List.of()
-                                    : intent.getSlots()
-                                    .stream()
-                                    .map(slot -> IntentSlotResponse.builder()
-                                            .courtCopyId(slot.getCourtCopy().getCourtCopyId())
-                                            .courtCode(slot.getCourtCopy().getCourtCode())
-                                            .startTime(slot.getStartTime())
-                                            .endTime(slot.getEndTime())
-                                            .price(slot.getPrice())
-                                            .build())
-                                    .toList();
-
-                    return BookingIntentResponse.builder()
-                            .bookingIntentId(intent.getBookingIntentId())
-                            .bookerName(intent.getBookerName())
-                            .bookerPhone(intent.getBookerPhone())
-                            .previewPrice(intent.getPreviewPrice())
-                            .startTime(intent.getStartTime())
-                            .endTime(intent.getEndTime())
-                            .expiresAt(intent.getExpiresAt())
-                            .status(intent.getStatus())
-                            .note(intent.getNote())
-
-                            .paymentProofUrl(intent.getPaymentProofUrl())
-                            .paymentProofUploadedAt(
-                                    intent.getPaymentProofUploadedAt()
-                            )
-
-                            .slots(slotResponses)
-                            .build();
-                })
-                .toList();
-
-        return PageResponse.<BookingIntentResponse>builder()
-                .currentPage(page)
-                .pageSize(size)
-                .totalPages(intentPage.getTotalPages())
-                .totalElements(intentPage.getTotalElements())
-                .data(responses)
-                .build();
-    }
-
-    @Override
-    @Transactional
-    public BookingResponse ownerConfirmManualBooking(UUID intentId) {
-        BookingIntent intent = bookingIntentRepository.findById(intentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đặt sân"));
-
-        if (intent.getStatus() != BookingIntentStatus.PENDING_OWNER_CONFIRM) {
-            throw new RuntimeException("Yêu cầu này chưa ở trạng thái chờ owner xác nhận");
-        }
-
-        if (intent.getPaymentProofUrl() == null || intent.getPaymentProofUrl().isBlank()) {
-            throw new RuntimeException("Chưa có ảnh chuyển khoản");
-        }
-
-        Payment payment = Payment.builder()
-                .amount(intent.getPreviewPrice())
-                .paymentMethod(PaymentMethod.BANK_TRANSFER)
-                .paymentStatus(PaymentStatus.SUCCESS)
-                .transactionDate(LocalDateTime.now())
-                .build();
-
-        return confirmBooking(intentId, payment);
-    }
-    @Override
-    @Transactional
-    public void ownerRejectManualBooking(UUID intentId) {
-        BookingIntent intent = bookingIntentRepository.findById(intentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đặt sân"));
-
-        if (intent.getStatus() != BookingIntentStatus.PENDING_OWNER_CONFIRM) {
-            throw new RuntimeException("Yêu cầu này chưa ở trạng thái chờ owner xác nhận");
-        }
-
-        intent.setStatus(BookingIntentStatus.REJECTED);
-        bookingIntentRepository.save(intent);
-    }
-    @Override
-    @Transactional
-    public String uploadIntentPaymentProof(UUID intentId, MultipartFile image) {
-        if (image == null || image.isEmpty()) {
-            throw new RuntimeException("Vui lòng chọn ảnh chuyển khoản");
-        }
-
-        BookingIntent intent = bookingIntentRepository.findById(intentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đặt sân"));
-
-        if (intent.getStatus() != BookingIntentStatus.ACTIVE
-                && intent.getStatus() != BookingIntentStatus.PENDING_OWNER_CONFIRM) {
-            throw new RuntimeException("Yêu cầu đặt sân không còn hiệu lực");
-        }
-
-        CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(
-                image,
-                "payment-proofs/"
-                        + intent.getRentalArea().getRentalAreaId()
-                        + "/"
-                        + intent.getBookingIntentId()
-        );
-
-        intent.setPaymentProofUrl(uploadResult.getUrl());
-        intent.setPaymentProofPublicId(uploadResult.getPublicId());
-        intent.setPaymentProofUploadedAt(LocalDateTime.now());
-        intent.setStatus(BookingIntentStatus.PENDING_OWNER_CONFIRM);
-
-        bookingIntentRepository.save(intent);
-
-        return uploadResult.getUrl();
-    }
 
     @Override
     public BigDecimal previewOwnerBookingPrice(OwnerBookingRequest request) {
@@ -283,7 +59,7 @@ public class BookingServiceImpl implements BookingService {
             CourtCopy courtCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sân"));
 
-            BigDecimal slotPrice = calculateSlotPrice(
+            BigDecimal slotPrice = courtPriceService.calculateSlotPrice(
                     courtCopy.getCourt().getCourtId(),
                     slotReq.getStartTime(),
                     slotReq.getEndTime()
@@ -298,11 +74,15 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse createOwnerBooking(OwnerBookingRequest request) {
+
+        BookingType type = request.getBookingType() != null ? request.getBookingType() : BookingType.PRIVATE;
+
         Booking booking = Booking.builder()
                 .bookerName(request.getCustomerName())
                 .bookerPhone(request.getPhone())
                 .note(request.getNote())
                 .bookingStatus(BookingStatus.BOOKED)
+                .bookingType(type)
                 .build();
 
         LocalDateTime earliest = null;
@@ -345,7 +125,7 @@ public class BookingServiceImpl implements BookingService {
                 );
             }
 
-            BigDecimal slotPrice = calculateSlotPrice(
+            BigDecimal slotPrice = courtPriceService.calculateSlotPrice(
                     courtCopy.getCourt().getCourtId(),
                     slotReq.getStartTime(),
                     slotReq.getEndTime()
@@ -353,11 +133,13 @@ public class BookingServiceImpl implements BookingService {
 
             calculatedTotalPrice = calculatedTotalPrice.add(slotPrice);
 
+            SlotStatus statusToSave = (type == BookingType.SHARED) ? SlotStatus.SHARE : SlotStatus.BOOKED;
+
             Slot slot = Slot.builder()
                     .startTime(slotReq.getStartTime())
                     .endTime(slotReq.getEndTime())
                     .price(slotPrice)
-                    .slotStatus(SlotStatus.BOOKED)
+                    .slotStatus(statusToSave)
                     .courtCopy(courtCopy)
                     .booking(booking)
                     .build();
@@ -394,6 +176,33 @@ public class BookingServiceImpl implements BookingService {
         booking.setTotalPrice(calculatedTotalPrice);
         booking.setDepositAmount(deposit);
         booking.setRemainingAmount(remaining);
+
+        if (type == BookingType.SHARED) {
+            Integer maxParticipants = request.getMaxParticipants();
+
+            if (maxParticipants == null || maxParticipants < 2) {
+                throw new RuntimeException(
+                        "Vãng lai phải có ít nhất 2 người tham gia"
+                );
+            }
+
+            BigDecimal roundUnit = new BigDecimal("1000");
+
+            BigDecimal basePricePerTicket = calculatedTotalPrice
+                    .divide(
+                            BigDecimal.valueOf(maxParticipants),
+                            2,
+                            RoundingMode.HALF_UP
+                    );
+
+            BigDecimal pricePerTicket = basePricePerTicket
+                    .divide(roundUnit, 0, RoundingMode.CEILING)
+                    .multiply(roundUnit);
+
+            booking.setMaxParticipants(maxParticipants);
+            booking.setCurrentParticipants(0);
+            booking.setPricePerTicket(pricePerTicket);
+        }
 
         if (remaining.compareTo(BigDecimal.ZERO) == 0) {
             booking.setBookingStatus(BookingStatus.COMPLETED);
@@ -444,37 +253,6 @@ public class BookingServiceImpl implements BookingService {
         }
 
         return bookingMapper.toBookingResponse(booking);
-    }
-
-    public BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime) {
-        LocalDate bookingDate = startTime.toLocalDate();
-        LocalTime start = startTime.toLocalTime();
-        LocalTime end = endTime.toLocalTime();
-
-        List<CourtPrice> prices = courtPriceRepository.findValidPricesForCourtAndDate(courtId, bookingDate);
-
-        BigDecimal totalPrice = BigDecimal.ZERO;
-        LocalTime currentTime = start;
-
-        while (currentTime.isBefore(end)) {
-            LocalTime finalCurrentTime = currentTime;
-            CourtPrice currentPriceBracket = prices.stream()
-                    .filter(p -> !finalCurrentTime.isBefore(p.getStartTime()) && finalCurrentTime.isBefore(p.getEndTime()))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy cấu hình giá cho khung giờ: " + finalCurrentTime));
-
-            LocalTime overlapEnd = end.isBefore(currentPriceBracket.getEndTime()) ? end : currentPriceBracket.getEndTime();
-
-            long minutes = Duration.between(currentTime, overlapEnd).toMinutes();
-            BigDecimal hoursDuration = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
-
-            BigDecimal segmentPrice = hoursDuration.multiply(currentPriceBracket.getPricePerHour());
-            totalPrice = totalPrice.add(segmentPrice);
-
-            currentTime = overlapEnd;
-        }
-
-        return totalPrice;
     }
 
     @Override
@@ -628,321 +406,6 @@ public class BookingServiceImpl implements BookingService {
         return new CheckAvailabilityResponse(true, "Sân khả dụng", availableCount);
     }
 
-    private String buildVietQrUrl(
-            String bankBin,
-            String accountNumber,
-            BigDecimal amount,
-            String addInfo,
-            String accountName
-    ) {
-        String encodedAddInfo = URLEncoder.encode(addInfo, StandardCharsets.UTF_8);
-        String encodedAccountName = URLEncoder.encode(accountName, StandardCharsets.UTF_8);
-
-        return "https://img.vietqr.io/image/"
-                + bankBin
-                + "-"
-                + accountNumber
-                + "-compact2.png"
-                + "?amount=" + amount.setScale(0, RoundingMode.HALF_UP)
-                + "&addInfo=" + encodedAddInfo
-                + "&accountName=" + encodedAccountName;
-    }
-
-    @Override
-    @Transactional
-    public BookingIntentResponse createBookingIntent(BookingRequest request) {
-
-        User user = userService.getCurrentUserEntity();
-
-        String currentPhone = user.getPhone();
-        if (currentPhone == null || currentPhone.trim().isEmpty()) {
-            user.setPhone(request.getUserPhone());
-            userRepository.save(user);
-        }
-
-        BookingIntent intent = BookingIntent.builder()
-                .user(user)
-                .bookerName(request.getUserName())
-                .bookerPhone(request.getUserPhone())
-                .status(BookingIntentStatus.ACTIVE)
-                .expiresAt(LocalDateTime.now().plusMinutes(5))
-                .note(request.getNote())
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        List<IntentSlot> intentSlots = new ArrayList<>();
-        BigDecimal totalPrice = BigDecimal.ZERO;
-        RentalArea rentalArea = null;
-
-        for (SlotRequest slotReq : request.getSlotRequests()) {
-
-            List<CourtCopy> selectedCopies = new ArrayList<>();
-
-
-            if (slotReq.getCourtCopyId() != null) {
-
-                CourtCopy copy = courtCopyRepository.findById(slotReq.getCourtCopyId())
-                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sân"));
-
-                if (copy.getCourtCopyStatus() != CourtCopyStatus.ACTIVE) {
-                    throw new RuntimeException("Sân con này hiện đang ngừng kinh doanh");
-                }
-
-                if (copy.getCourt().getCourtStatus() != CourtStatus.ACTIVE) {
-                    throw new RuntimeException("Sân này hiện đang ngừng kinh doanh");
-                }
-                if (copy.getCourt().getRentalArea().getStatus() != RentalAreaStatus.ACTIVE) {
-                    throw new RuntimeException("Tòa nhà này hiện đang ngừng kinh doanh");
-                }
-
-                List<Slot> conflicts = slotRepository.findConflictSlot(
-                        copy.getCourtCopyId(),
-                        slotReq.getStartTime(),
-                        slotReq.getEndTime()
-                );
-
-                if (!conflicts.isEmpty()) {
-                    throw new RuntimeException("Sân đã có lịch trong khung giờ này");
-                }
-
-                selectedCopies.add(copy);
-            } else if (slotReq.getCourtId() != null) {
-
-                int quantity = slotReq.getQuantity() == null ? 1 : slotReq.getQuantity();
-
-                List<CourtCopy> copies = courtCopyRepository
-                        .findByCourt_CourtIdAndCourtCopyStatus(slotReq.getCourtId(), CourtCopyStatus.ACTIVE);
-
-                if (copies.isEmpty()) {
-                    throw new RuntimeException("Không có sân khả dụng");
-                }
-
-                List<CourtCopy> availableCopies = copies.stream()
-                        .filter(copy -> {
-
-                            List<Slot> conflicts = slotRepository.findConflictSlot(
-                                    copy.getCourtCopyId(),
-                                    slotReq.getStartTime(),
-                                    slotReq.getEndTime()
-                            );
-
-                            return conflicts.isEmpty();
-
-                        })
-                        .limit(quantity)
-                        .toList();
-
-                if (availableCopies.size() < quantity) {
-                    throw new RuntimeException("Không đủ sân trống cho số lượng yêu cầu");
-                }
-
-                selectedCopies.addAll(availableCopies);
-
-            } else {
-                throw new RuntimeException("Phải cung cấp courtId hoặc courtCopyId");
-            }
-
-
-            for (CourtCopy courtCopy : selectedCopies) {
-
-                if (rentalArea == null) {
-                    rentalArea = courtCopy.getCourt().getRentalArea();
-                } else if (!rentalArea.getRentalAreaId()
-                        .equals(courtCopy.getCourt().getRentalArea().getRentalAreaId())) {
-                    throw new RuntimeException("Tất cả sân phải thuộc cùng một khu vực");
-                }
-
-
-                BigDecimal price = calculateSlotPrice(
-                        courtCopy.getCourt(),
-                        slotReq.getStartTime(),
-                        slotReq.getEndTime()
-                );
-
-                totalPrice = totalPrice.add(price);
-
-                IntentSlot intentSlot = IntentSlot.builder()
-                        .bookingIntent(intent)
-                        .courtCopy(courtCopy)
-                        .startTime(slotReq.getStartTime())
-                        .endTime(slotReq.getEndTime())
-                        .price(price)
-                        .build();
-
-                intentSlots.add(intentSlot);
-            }
-        }
-
-        LocalDateTime start = intentSlots.stream()
-                .map(IntentSlot::getStartTime)
-                .min(LocalDateTime::compareTo)
-                .orElse(null);
-
-        LocalDateTime end = intentSlots.stream()
-                .map(IntentSlot::getEndTime)
-                .max(LocalDateTime::compareTo)
-                .orElse(null);
-
-        intent.setStartTime(start);
-        intent.setEndTime(end);
-        intent.setSlots(intentSlots);
-        intent.setPreviewPrice(totalPrice);
-        intent.setRentalArea(rentalArea);
-
-        bookingIntentRepository.save(intent);
-
-        List<IntentSlotResponse> slotResponses = intentSlots.stream()
-                .map(slot -> IntentSlotResponse.builder()
-                        .courtCopyId(slot.getCourtCopy().getCourtCopyId())
-                        .courtCode(slot.getCourtCopy().getCourtCode())
-                        .startTime(slot.getStartTime())
-                        .endTime(slot.getEndTime())
-                        .price(slot.getPrice())
-                        .build())
-                .toList();
-        BankAccount bankAccount = bankAccountRepository
-                .findByUser_UserId(intent.getRentalArea().getOwner().getUserId())
-                .orElseThrow(() -> new RuntimeException("Owner chưa cấu hình tài khoản ngân hàng"));
-
-        String transferContent = "LACEUP " + intent.getBookingIntentId().toString().substring(0, 8);
-
-        String vietQrUrl = buildVietQrUrl(
-                bankAccount.getBankBin(),
-                bankAccount.getAccountNumber(),
-                intent.getPreviewPrice(),
-                transferContent,
-                bankAccount.getAccountHolderName()
-        );
-        System.err.println(vietQrUrl);
-        return BookingIntentResponse.builder()
-                .bookingIntentId(intent.getBookingIntentId())
-                .previewPrice(totalPrice)
-                .expiresAt(intent.getExpiresAt())
-                .status(intent.getStatus())
-                .slots(slotResponses)
-                .bankName(rentalArea != null && rentalArea.getOwner() != null ? rentalArea.getOwner().getBankAccount() != null ? rentalArea.getOwner().getBankAccount().getBankName() : null : null)
-                .accountNumber(rentalArea != null && rentalArea.getOwner() != null ? rentalArea.getOwner().getBankAccount() != null ? rentalArea.getOwner().getBankAccount().getAccountNumber() : null : null)
-                .accountName(rentalArea != null && rentalArea.getOwner() != null ? rentalArea.getOwner().getBankAccount() != null ? rentalArea.getOwner().getBankAccount().getAccountHolderName() : null : null)
-                .vietQrUrl(vietQrUrl)
-                .build();
-    }
-
-    private BigDecimal calculateSlotPrice(Court court, LocalDateTime start, LocalDateTime end) {
-
-        List<CourtPrice> rules = courtPriceRepository.findByCourtIdOrderByPriorityDesc(court.getCourtId());
-
-        if (rules.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal total = BigDecimal.ZERO;
-        LocalDateTime cursor = start;
-
-        while (cursor.isBefore(end)) {
-            LocalDateTime nextMinute = cursor.plusMinutes(1);
-
-            BigDecimal pricePerHour = pickBestRulePerHour(rules, cursor);
-
-            BigDecimal pricePerMinute = pricePerHour.divide(BigDecimal.valueOf(60), 10, RoundingMode.HALF_UP);
-            total = total.add(pricePerMinute);
-
-            cursor = nextMinute;
-        }
-
-        return total.setScale(0, RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal pickBestRulePerHour(List<CourtPrice> rules, LocalDateTime moment) {
-        LocalTime time = moment.toLocalTime();
-        LocalDate date = moment.toLocalDate();
-        DayOfWeek dow = date.getDayOfWeek();
-        boolean isWeekend = (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY);
-
-        for (CourtPrice cp : rules) {
-            if (!isTimeInRange(time, cp.getStartTime(), cp.getEndTime())) {
-                continue;
-            }
-
-            if (cp.getStartDate() != null && date.isBefore(cp.getStartDate())) continue;
-            if (cp.getEndDate() != null && date.isAfter(cp.getEndDate())) continue;
-
-            if (cp.getSpecificDate() != null && !cp.getSpecificDate().equals(date)) {
-                continue;
-            }
-
-            if (cp.getDayType() != null && cp.getDayType() != DayType.ALL) {
-                if (cp.getDayType() == DayType.WEEKDAY && isWeekend) continue;
-                if (cp.getDayType() == DayType.WEEKEND && !isWeekend) continue;
-            }
-
-            return cp.getPricePerHour();
-        }
-
-        return BigDecimal.ZERO;
-    }
-
-    private boolean isTimeInRange(LocalTime time, LocalTime start, LocalTime end) {
-        if (start == null || end == null) return true;
-
-        if (start.isBefore(end)) {
-            return !time.isBefore(start) && time.isBefore(end);
-        } else {
-            return !time.isBefore(start) || time.isBefore(end);
-        }
-    }
-
-    @Override
-    public BookingIntentResponse getBookingIntentById(UUID bookingIntentId) {
-
-        BookingIntent bookingIntent = bookingIntentRepository.findById(bookingIntentId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Không tìm thấy mã đặt lịch dự định với id " + bookingIntentId));
-
-        List<IntentSlotResponse> intentSlotResponses =
-                bookingIntent.getSlots().stream().map(intentSlot -> {
-
-                    CourtCopy courtCopy = intentSlot.getCourtCopy();
-
-                    return IntentSlotResponse.builder()
-                            .intentSlotId(intentSlot.getIntentSlotId())
-                            .courtCopyId(courtCopy.getCourtCopyId())
-                            .courtCode(courtCopy.getCourtCode())
-                            .startTime(intentSlot.getStartTime())
-                            .endTime(intentSlot.getEndTime())
-                            .price(intentSlot.getPrice())
-                            .build();
-
-                }).toList();
-
-        BigDecimal tax = BigDecimal.ZERO;
-
-        BigDecimal discount = BigDecimal.ZERO;
-
-        BigDecimal totalPrice = bookingIntent.getPreviewPrice()
-                .add(tax)
-                .subtract(discount);
-
-        return BookingIntentResponse.builder()
-                .bookingIntentId(bookingIntent.getBookingIntentId())
-                .previewPrice(bookingIntent.getPreviewPrice())
-                .tax(tax)
-                .discount(discount)
-                .totalAmount(totalPrice)
-                .status(bookingIntent.getStatus())
-                .expiresAt(bookingIntent.getExpiresAt())
-                .title(bookingIntent.getTitle())
-                .note(bookingIntent.getNote())
-                .bookerName(bookingIntent.getBookerName())
-                .bookerPhone(bookingIntent.getBookerPhone())
-                .startTime(bookingIntent.getStartTime())
-                .endTime(bookingIntent.getEndTime())
-                .slots(intentSlotResponses)
-                .bankName(bookingIntent.getRentalArea() != null && bookingIntent.getRentalArea().getOwner() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount().getBankName() : null : null)
-                .accountNumber(bookingIntent.getRentalArea() != null && bookingIntent.getRentalArea().getOwner() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount().getAccountNumber() : null : null)
-                .accountName(bookingIntent.getRentalArea() != null && bookingIntent.getRentalArea().getOwner() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount() != null ? bookingIntent.getRentalArea().getOwner().getBankAccount().getAccountHolderName() : null : null)
-                .build();
-    }
-
     @Override
     @Transactional
     public BookingResponse confirmBooking(UUID bookingIntentId, Payment payment) {
@@ -1049,183 +512,6 @@ public class BookingServiceImpl implements BookingService {
                 .build();
     }
 
-    @Override
-    public BookingResponse getBookingById(UUID bookingId) {
-
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
-        Optional<Payment> payment = paymentRepository
-                .findFirstByBookingOrderByTransactionDateDesc(booking);
-
-        String paymentMethod = null;
-        if (payment.isPresent()) {
-            paymentMethod = payment.get().getPaymentMethod().toString();
-        }
-        List<Slot> slots = booking.getSlots();
-
-        List<SlotResponse> slotResponses = slots.stream()
-                .map(slot -> SlotResponse.builder()
-                        .slotId(slot.getSlotId())
-                        .courtCopyId(slot.getCourtCopy().getCourtCopyId())
-                        .courtCode(slot.getCourtCopy().getCourtCode())
-                        .startTime(slot.getStartTime())
-                        .endTime(slot.getEndTime())
-                        .price(slot.getPrice())
-                        .slotStatus(slot.getSlotStatus())
-                        .build())
-                .toList();
-        List<BookingResponse.BookingServiceResponse> extraServiceResponses = bookingServiceItemRepository.findByBooking(booking)
-                .stream()
-                .map(bsi -> BookingResponse.BookingServiceResponse.builder()
-                        .serviceId(bsi.getServiceItem().getServiceItemId())
-                        .serviceName(bsi.getServiceItem().getServiceName())
-                        .quantity(bsi.getQuantity())
-                        .price(bsi.getPrice())
-                        .build())
-                .toList();
-        return BookingResponse.builder()
-                .bookingId(booking.getBookingId())
-                .totalPrice(booking.getTotalPrice())
-                .bookingStatus(booking.getBookingStatus())
-                .startTime(booking.getStartTime())
-                .endTime(booking.getEndTime())
-                .slots(slotResponses)
-                .createdAt(booking.getCreatedAt())
-                .userName(booking.getBookerName())
-                .phoneNumber(booking.getBookerPhone())
-                .note(booking.getNote())
-                .invoicePdfUrl(booking.getInvoiceUrl())
-                .rentalArea(
-                        RentalAreaResponse.builder()
-                                .rentalAreaId(booking.getRentalArea().getRentalAreaId())
-                                .rentalAreaName(booking.getRentalArea().getRentalAreaName())
-                                .address(addressMapper.toAddressResponse(booking.getRentalArea().getAddress()))
-                                .contactPhone(booking.getRentalArea().getContactPhone())
-                                .build()
-                )
-                .depositAmount(booking.getDepositAmount())
-                .remainingAmount(booking.getRemainingAmount())
-                .paymentMethod(paymentMethod)
-                .extraServiceResponses(extraServiceResponses)
-                .bookingType(booking.getBookingType())
-                .build();
-    }
-
-    @Override
-    public PageResponse<BookingResponse> getBookingsRentalId(
-            UUID rentalId,
-            BookingStatus bookingStatus,
-            String keyword,
-            LocalDate from,
-            LocalDate to,
-            int page,
-            int size
-    ) {
-
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(
-                Sort.Order.desc("updatedAt"),
-                Sort.Order.desc("createdAt")
-        ).descending());
-
-        Specification<Booking> spec = BookingSpecification.filterBooking(
-                rentalId,
-                null,
-                bookingStatus,
-                keyword,
-                from,
-                to
-        );
-
-        Page<Booking> bookingPage = bookingRepository.findAll(spec, pageable);
-
-        List<BookingResponse> responses = bookingPage.getContent()
-                .stream()
-                .map(bookingMapper::toBookingResponse)
-                .toList();
-
-        return PageResponse.<BookingResponse>builder()
-                .currentPage(page)
-                .pageSize(size)
-                .totalPages(bookingPage.getTotalPages())
-                .totalElements(bookingPage.getTotalElements())
-                .data(responses)
-                .build();
-    }
-
-    @Override
-    public PageResponse<BookingResponse> getMyBookings(
-            BookingStatus bookingStatus,
-            String keyword,
-            LocalDate from,
-            LocalDate to,
-            int page,
-            int size
-    ) {
-
-        UUID userId = userService.getCurrentUserEntity().getUserId();
-
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-
-        Specification<Booking> spec = BookingSpecification.filterBooking(
-                null,
-                userId,
-                bookingStatus,
-                keyword,
-                from,
-                to
-        );
-
-        Page<Booking> bookingPage = bookingRepository.findAll(spec, pageable);
-
-        List<BookingResponse> responses = bookingPage.getContent()
-                .stream()
-                .map(bookingMapper::toBookingResponse)
-                .toList();
-
-        return PageResponse.<BookingResponse>builder()
-                .currentPage(page)
-                .pageSize(size)
-                .totalPages(bookingPage.getTotalPages())
-                .totalElements(bookingPage.getTotalElements())
-                .data(responses)
-                .build();
-    }
-
-    @Override
-    public PageResponse<BookingResponse> getAllBookings(
-            BookingStatus bookingStatus,
-            String keyword,
-            LocalDate from,
-            LocalDate to,
-            int page,
-            int size
-    ) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdAt").descending());
-
-        Specification<Booking> spec = BookingSpecification.filterBooking(
-                null,
-                null,
-                bookingStatus,
-                keyword,
-                from,
-                to
-        );
-
-        Page<Booking> bookingPage = bookingRepository.findAll(spec, pageable);
-
-        List<BookingResponse> responses = bookingPage.getContent()
-                .stream()
-                .map(bookingMapper::toBookingResponse)
-                .toList();
-
-        return PageResponse.<BookingResponse>builder()
-                .currentPage(page)
-                .pageSize(size)
-                .totalPages(bookingPage.getTotalPages())
-                .totalElements(bookingPage.getTotalElements())
-                .data(responses)
-                .build();
-    }
 
     @Override
     @Transactional
