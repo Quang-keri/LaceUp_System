@@ -370,7 +370,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     child: _buildTextField(
                       controller: _noteController,
                       hintText: 'Ghi chú thêm (nếu có)',
-                      maxLines: 3,
+                      maxLines: 4,
                     ),
                   ),
                   const Spacer(flex: 2),
