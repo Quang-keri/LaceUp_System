@@ -108,6 +108,16 @@ public class Booking extends BaseEntity {
     @Column(name = "price_per_ticket", precision = 19, scale = 2)
     private BigDecimal pricePerTicket;
 
+    @Column(name = "min_participants")
+    private Integer minParticipants;
+
+    @Column(name = "minimum_check_completed", nullable = false)
+    @Builder.Default
+    private Boolean minimumCheckCompleted = false;
+
+    @Column(name = "minimum_checked_at")
+    private LocalDateTime minimumCheckedAt;
+
     @Builder.Default
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BookingParticipant> participants = new ArrayList<>();

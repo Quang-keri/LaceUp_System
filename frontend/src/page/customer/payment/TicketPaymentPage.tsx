@@ -499,16 +499,6 @@ export default function TicketPaymentPage() {
                       Cổng thanh toán VNPay
                     </Space>
                   </Radio>
-
-                  <Radio
-                    value="VIET_QR"
-                    className="font-semibold text-gray-700"
-                  >
-                    <Space>
-                      <QrcodeOutlined className="text-orange-500" />
-                      Chuyển khoản ngân hàng
-                    </Space>
-                  </Radio>
                 </Radio.Group>
               </div>
 

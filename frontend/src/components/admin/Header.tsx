@@ -19,7 +19,7 @@ import {
   DollarOutlined,
   SettingOutlined,
   StarOutlined,
-  PercentageOutlined,
+  // PercentageOutlined,
   ReadOutlined,
 } from "@ant-design/icons";
 import type { UserResponse } from "../../types/user.ts";
@@ -121,11 +121,11 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
         },
       ],
     },
-    {
-      key: "/admin/vouchers",
-      icon: <PercentageOutlined />,
-      label: <Link to="/admin/vouchers">Mã giảm giá</Link>,
-    },
+    // {
+    //   key: "/admin/vouchers",
+    //   icon: <PercentageOutlined />,
+    //   label: <Link to="/admin/vouchers">Mã giảm giá</Link>,
+    // },
     {
       key: "sub_finance",
       icon: <DollarOutlined />,
@@ -140,7 +140,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
           label: <Link to="/admin/commissions">Cấu hình hoa hồng</Link>,
         },
         {
-           key: "/admin/transactions",
+          key: "/admin/transactions",
           label: <Link to="/admin/transactions">Giao dịch</Link>,
         },
         {

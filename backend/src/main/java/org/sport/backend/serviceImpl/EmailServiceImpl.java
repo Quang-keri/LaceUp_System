@@ -17,8 +17,12 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Random;
 
 @Service
@@ -110,120 +114,120 @@ public class EmailServiceImpl implements EmailService {
         String subject = "Xác nhận đăng ký tài khoản LaceUp";
 
         String content = """
-             <!DOCTYPE html>
-             <html lang="vi">
-             <head>
-                 <meta charset="UTF-8">
-                 <style>
-                     .email-container {
-                         font-family: Arial, sans-serif;
-                         line-height: 1.6;
-                         color: #333;
-                         max-width: 600px;
-                         margin: 0 auto;
-                         padding: 24px;
-                         border: 1px solid #eee;
-                         border-radius: 12px;
-                         background-color: #ffffff;
-                     }
-
-                     .brand {
-                         color: #9156F1;
-                         font-weight: bold;
-                     }
-
-                     .otp-box {
-                         text-align: center;
-                         margin: 24px 0;
-                         padding: 18px;
-                         border-radius: 12px;
-                         background-color: #F4EEFF;
-                         border: 1px solid #D9C7FF;
-                     }
-
-                     .otp-label {
-                         font-size: 14px;
-                         color: #666;
-                         margin-bottom: 8px;
-                     }
-
-                     .otp-code {
-                         font-size: 34px;
-                         font-weight: bold;
-                         letter-spacing: 8px;
-                         color: #9156F1;
-                     }
-
-                     .btn-confirm {
-                         display: inline-block;
-                         padding: 15px 30px;
-                         margin: 20px 0;
-                         background-color: #9156F1;
-                         color: #ffffff !important;
-                         text-decoration: none;
-                         border-radius: 8px;
-                         font-weight: bold;
-                     }
-
-                     .note {
-                         background-color: #FFF7ED;
-                         border: 1px solid #FDBA74;
-                         color: #9A3412;
-                         padding: 12px;
-                         border-radius: 10px;
-                         font-size: 14px;
-                     }
-
-                     .footer {
-                         font-size: 12px;
-                         color: #888;
-                         margin-top: 30px;
-                         border-top: 1px solid #eee;
-                         padding-top: 10px;
-                     }
-                 </style>
-             </head>
-             <body>
-                 <div class="email-container">
-                     <h2>Xin chào, %s!</h2>
-
-                     <p>Cảm ơn bạn đã đăng ký tài khoản tại <span class="brand">LaceUp</span>.</p>
-
-                     <p>Bạn có thể xác thực tài khoản bằng một trong hai cách bên dưới:</p>
-
-                     <div class="otp-box">
-                         <div class="otp-label">Mã OTP dùng để xác thực trên ứng dụng LaceUp</div>
-                         <div class="otp-code">%s</div>
+                 <!DOCTYPE html>
+                 <html lang="vi">
+                 <head>
+                     <meta charset="UTF-8">
+                     <style>
+                         .email-container {
+                             font-family: Arial, sans-serif;
+                             line-height: 1.6;
+                             color: #333;
+                             max-width: 600px;
+                             margin: 0 auto;
+                             padding: 24px;
+                             border: 1px solid #eee;
+                             border-radius: 12px;
+                             background-color: #ffffff;
+                         }
+                
+                         .brand {
+                             color: #9156F1;
+                             font-weight: bold;
+                         }
+                
+                         .otp-box {
+                             text-align: center;
+                             margin: 24px 0;
+                             padding: 18px;
+                             border-radius: 12px;
+                             background-color: #F4EEFF;
+                             border: 1px solid #D9C7FF;
+                         }
+                
+                         .otp-label {
+                             font-size: 14px;
+                             color: #666;
+                             margin-bottom: 8px;
+                         }
+                
+                         .otp-code {
+                             font-size: 34px;
+                             font-weight: bold;
+                             letter-spacing: 8px;
+                             color: #9156F1;
+                         }
+                
+                         .btn-confirm {
+                             display: inline-block;
+                             padding: 15px 30px;
+                             margin: 20px 0;
+                             background-color: #9156F1;
+                             color: #ffffff !important;
+                             text-decoration: none;
+                             border-radius: 8px;
+                             font-weight: bold;
+                         }
+                
+                         .note {
+                             background-color: #FFF7ED;
+                             border: 1px solid #FDBA74;
+                             color: #9A3412;
+                             padding: 12px;
+                             border-radius: 10px;
+                             font-size: 14px;
+                         }
+                
+                         .footer {
+                             font-size: 12px;
+                             color: #888;
+                             margin-top: 30px;
+                             border-top: 1px solid #eee;
+                             padding-top: 10px;
+                         }
+                     </style>
+                 </head>
+                 <body>
+                     <div class="email-container">
+                         <h2>Xin chào, %s!</h2>
+                
+                         <p>Cảm ơn bạn đã đăng ký tài khoản tại <span class="brand">LaceUp</span>.</p>
+                
+                         <p>Bạn có thể xác thực tài khoản bằng một trong hai cách bên dưới:</p>
+                
+                         <div class="otp-box">
+                             <div class="otp-label">Mã OTP dùng để xác thực trên ứng dụng LaceUp</div>
+                             <div class="otp-code">%s</div>
+                         </div>
+                
+                         <p>
+                             Nếu bạn đang đăng ký trên <strong>ứng dụng mobile</strong>,
+                             hãy nhập mã OTP phía trên vào màn hình xác thực trong app.
+                         </p>
+                
+                         <div style="text-align: center;">
+                             <a href="%s" class="btn-confirm">XÁC NHẬN TRÊN WEB</a>
+                         </div>
+                
+                         <p>
+                             Nếu bạn đang đăng ký trên <strong>website</strong>,
+                             hãy bấm nút phía trên để hoàn tất đăng ký.
+                         </p>
+                
+                         <p>Nếu nút trên không hoạt động, bạn có thể copy và dán đường link này vào trình duyệt:</p>
+                
+                         <p style="word-break: break-all; color: #9156F1;">%s</p>
+                
+                         <div class="note">
+                             Lưu ý: Mã OTP và liên kết xác thực sẽ hết hạn sau <strong>5 phút</strong>.
+                             Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.
+                         </div>
+                
+                         <div class="footer">© 2026 LaceUp</div>
                      </div>
-
-                     <p>
-                         Nếu bạn đang đăng ký trên <strong>ứng dụng mobile</strong>,
-                         hãy nhập mã OTP phía trên vào màn hình xác thực trong app.
-                     </p>
-
-                     <div style="text-align: center;">
-                         <a href="%s" class="btn-confirm">XÁC NHẬN TRÊN WEB</a>
-                     </div>
-
-                     <p>
-                         Nếu bạn đang đăng ký trên <strong>website</strong>,
-                         hãy bấm nút phía trên để hoàn tất đăng ký.
-                     </p>
-
-                     <p>Nếu nút trên không hoạt động, bạn có thể copy và dán đường link này vào trình duyệt:</p>
-
-                     <p style="word-break: break-all; color: #9156F1;">%s</p>
-
-                     <div class="note">
-                         Lưu ý: Mã OTP và liên kết xác thực sẽ hết hạn sau <strong>5 phút</strong>.
-                         Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.
-                     </div>
-
-                     <div class="footer">© 2026 LaceUp</div>
-                 </div>
-             </body>
-             </html>
-            """.formatted(name, otp, confirmUrl, confirmUrl);
+                 </body>
+                 </html>
+                """.formatted(name, otp, confirmUrl, confirmUrl);
 
         sendEmail(toEmail, subject, content);
     }
@@ -315,5 +319,219 @@ public class EmailServiceImpl implements EmailService {
         }
 
 
+    }
+
+    @Async
+    @Override
+    public void sendRefundResultEmail(
+            String toEmail,
+            String userName,
+            BigDecimal amount,
+            String source,
+            String transactionCode,
+            boolean success,
+            String note
+    ) {
+        if (toEmail == null || toEmail.isBlank()) {
+            log.warn(
+                    "Không gửi được email hoàn tiền vì email bị trống. TransactionCode={}",
+                    transactionCode
+            );
+            return;
+        }
+
+        String safeName = HtmlUtils.htmlEscape(
+                userName != null && !userName.isBlank()
+                        ? userName
+                        : "bạn"
+        );
+
+        String safeSource = HtmlUtils.htmlEscape(
+                source != null ? source : "Giao dịch LaceUp"
+        );
+
+        String safeTransactionCode = HtmlUtils.htmlEscape(
+                transactionCode != null ? transactionCode : "N/A"
+        );
+
+        String safeNote = HtmlUtils.htmlEscape(
+                note != null && !note.isBlank()
+                        ? note
+                        : success
+                        ? "Khoản hoàn tiền đã được xử lý thành công."
+                        : "Khoản hoàn tiền chưa thể xử lý."
+        );
+
+        String formattedAmount = NumberFormat
+                .getNumberInstance(
+                        Locale.forLanguageTag("vi-VN")
+                )
+                .format(
+                        amount != null
+                                ? amount
+                                : BigDecimal.ZERO
+                ) + " đ";
+
+        String subject = success
+                ? "LaceUp - Hoàn tiền thành công"
+                : "LaceUp - Hoàn tiền chưa thành công";
+
+        String statusText = success
+                ? "HOÀN TIỀN THÀNH CÔNG"
+                : "HOÀN TIỀN CHƯA THÀNH CÔNG";
+
+        String color = success
+                ? "#16A34A"
+                : "#DC2626";
+
+        String background = success
+                ? "#F0FDF4"
+                : "#FEF2F2";
+
+        String extraMessage = success
+                ? """
+                <p style="margin-top:18px;">
+                    Vui lòng kiểm tra tài khoản ngân hàng nhận tiền.
+                    Nếu chưa nhận được tiền sau thời gian xử lý của ngân hàng,
+                    hãy liên hệ bộ phận hỗ trợ LaceUp.
+                </p>
+                """
+                : """
+                <p style="margin-top:18px;">
+                    Vui lòng kiểm tra lại thông tin tài khoản ngân hàng
+                    hoặc liên hệ bộ phận hỗ trợ LaceUp để được xử lý lại.
+                </p>
+                """;
+
+        String content = """
+                <!DOCTYPE html>
+                <html lang="vi">
+                <head>
+                    <meta charset="UTF-8">
+                </head>
+                
+                <body style="margin:0;background:#F5F5F5;padding:24px;">
+                    <div style="
+                        max-width:620px;
+                        margin:0 auto;
+                        background:#FFFFFF;
+                        border:1px solid #E5E7EB;
+                        border-radius:14px;
+                        padding:28px;
+                        font-family:Arial,sans-serif;
+                        color:#1F2937;
+                    ">
+                        <h2 style="margin-top:0;color:#9156F1;">
+                            LaceUp
+                        </h2>
+                
+                        <p>Xin chào <strong>%s</strong>,</p>
+                
+                        <div style="
+                            padding:14px;
+                            border-radius:10px;
+                            background:%s;
+                            color:%s;
+                            font-weight:700;
+                            text-align:center;
+                            margin:18px 0;
+                        ">
+                            %s
+                        </div>
+                
+                        <table style="
+                            width:100%%;
+                            border-collapse:collapse;
+                            margin:18px 0;
+                        ">
+                            <tr>
+                                <td style="padding:9px;border-bottom:1px solid #EEE;">
+                                    Nguồn giao dịch
+                                </td>
+                                <td style="
+                                    padding:9px;
+                                    border-bottom:1px solid #EEE;
+                                    text-align:right;
+                                    font-weight:600;
+                                ">
+                                    %s
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td style="padding:9px;border-bottom:1px solid #EEE;">
+                                    Mã giao dịch
+                                </td>
+                                <td style="
+                                    padding:9px;
+                                    border-bottom:1px solid #EEE;
+                                    text-align:right;
+                                    font-weight:600;
+                                ">
+                                    %s
+                                </td>
+                            </tr>
+                
+                            <tr>
+                                <td style="padding:9px;border-bottom:1px solid #EEE;">
+                                    Số tiền
+                                </td>
+                                <td style="
+                                    padding:9px;
+                                    border-bottom:1px solid #EEE;
+                                    text-align:right;
+                                    font-weight:700;
+                                    color:%s;
+                                ">
+                                    %s
+                                </td>
+                            </tr>
+                        </table>
+                
+                        <div style="
+                            background:#F9FAFB;
+                            border:1px solid #E5E7EB;
+                            border-radius:10px;
+                            padding:14px;
+                        ">
+                            <strong>Ghi chú từ LaceUp:</strong>
+                
+                            <p style="margin-bottom:0;line-height:1.6;">
+                                %s
+                            </p>
+                        </div>
+                
+                        %s
+                
+                        <p style="
+                            margin-top:26px;
+                            padding-top:16px;
+                            border-top:1px solid #EEE;
+                            font-size:12px;
+                            color:#6B7280;
+                        ">
+                            Đây là email tự động từ hệ thống LaceUp.
+                        </p>
+                    </div>
+                </body>
+                </html>
+                """.formatted(
+                safeName,
+                background,
+                color,
+                statusText,
+                safeSource,
+                safeTransactionCode,
+                color,
+                formattedAmount,
+                safeNote,
+                extraMessage
+        );
+
+        sendEmail(
+                toEmail,
+                subject,
+                content
+        );
     }
 }

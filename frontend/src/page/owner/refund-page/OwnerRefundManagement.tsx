@@ -8,6 +8,7 @@ import {
   Input,
   message,
   Modal,
+  Select,
   Space,
   Table,
   Tabs,
@@ -25,50 +26,65 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 
+import ownerRefundService from "../../../service/payment/ownerRefundService";
+import rentalAreaService from "../../../service/rental/rentalService";
 import type {
   RefundResponse,
   RefundSource,
   RefundStatus,
 } from "../../../types/payment";
-import refundService from "../../../service/payment/refundService";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
+type ActiveTab = "pending" | "history";
 type ProcessMode = "SUCCESS" | "FAILED";
 
+interface RentalAreaOption {
+  rentalAreaId: string;
+  rentalAreaName: string;
+}
+
 const sourceLabelMap: Record<RefundSource, string> = {
-  MATCH: "Ghép trận",
   BOOKING: "Đặt sân",
+  MATCH: "Ghép trận",
   SHARED_TICKET: "Vé vãng lai",
 };
 
 const sourceColorMap: Record<RefundSource, string> = {
-  MATCH: "purple",
   BOOKING: "blue",
+  MATCH: "purple",
   SHARED_TICKET: "cyan",
 };
 
-const refundStatusLabelMap: Record<RefundStatus, string> = {
+const statusLabelMap: Record<RefundStatus, string> = {
   REFUND_PENDING: "Chờ hoàn tiền",
   REFUND_FAILED: "Hoàn tiền thất bại",
   REFUNDED: "Đã hoàn tiền",
 };
 
-const refundStatusColorMap: Record<RefundStatus, string> = {
+const statusColorMap: Record<RefundStatus, string> = {
   REFUND_PENDING: "gold",
   REFUND_FAILED: "red",
   REFUNDED: "green",
 };
 
-const formatCurrency = (amount?: number) =>
-  `${Number(amount ?? 0).toLocaleString("vi-VN")} đ`;
+const formatCurrency = (value?: number | null) =>
+  `${Number(value ?? 0).toLocaleString("vi-VN")} đ`;
 
-export default function RefundManagement() {
+export default function OwnerRefundManagement() {
+  const [rentalAreas, setRentalAreas] = useState<RentalAreaOption[]>([]);
+
+  const [selectedRentalAreaId, setSelectedRentalAreaId] =
+    useState<string>("ALL");
+
   const [refunds, setRefunds] = useState<RefundResponse[]>([]);
 
+  const [activeTab, setActiveTab] = useState<ActiveTab>("pending");
+
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+
+  const [loadingRentalAreas, setLoadingRentalAreas] = useState(false);
 
   const [processModalOpen, setProcessModalOpen] = useState(false);
 
@@ -88,18 +104,39 @@ export default function RefundManagement() {
     total: 0,
   });
 
+  const loadRentalAreas = async () => {
+    try {
+      setLoadingRentalAreas(true);
+
+      const response = await rentalAreaService.getMyRentalAreas();
+
+      const data = response?.result?.data ?? response?.data?.result?.data ?? [];
+
+      setRentalAreas(data);
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || "Không thể tải danh sách sân",
+      );
+    } finally {
+      setLoadingRentalAreas(false);
+    }
+  };
+
   const fetchRefunds = async (
     page = 1,
     size = pagination.pageSize,
     tab = activeTab,
+    rentalAreaId = selectedRentalAreaId,
   ) => {
     try {
       setLoading(true);
 
+      const areaId = rentalAreaId === "ALL" ? undefined : rentalAreaId;
+
       const response =
         tab === "pending"
-          ? await refundService.getPendingRefunds(page, size)
-          : await refundService.getCompletedRefunds(page, size);
+          ? await ownerRefundService.getPendingRefunds(areaId, page, size)
+          : await ownerRefundService.getCompletedRefunds(areaId, page, size);
 
       if (response.code !== 200 || !response.result) {
         message.error(response.message || "Không thể tải danh sách hoàn tiền");
@@ -125,16 +162,20 @@ export default function RefundManagement() {
   };
 
   useEffect(() => {
-    void fetchRefunds(1, pagination.pageSize, activeTab);
+    void loadRentalAreas();
+  }, []);
+
+  useEffect(() => {
+    void fetchRefunds(1, pagination.pageSize, activeTab, selectedRentalAreaId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, selectedRentalAreaId]);
 
   const openProcessModal = (record: RefundResponse, mode: ProcessMode) => {
     setSelectedRefund(record);
     setProcessMode(mode);
 
     setRefundNote(
-      mode === "SUCCESS" ? "Đã chuyển khoản hoàn tiền thành công" : "",
+      mode === "SUCCESS" ? "Chủ sân đã chuyển khoản hoàn tiền thành công" : "",
     );
 
     setProcessModalOpen(true);
@@ -165,7 +206,7 @@ export default function RefundManagement() {
     try {
       setProcessing(true);
 
-      const response = await refundService.processManualRefund(
+      const response = await ownerRefundService.processRefund(
         selectedRefund.paymentId,
         {
           success: processMode === "SUCCESS",
@@ -180,7 +221,7 @@ export default function RefundManagement() {
 
       message.success(
         processMode === "SUCCESS"
-          ? "Đã xác nhận hoàn tiền thành công"
+          ? "Đã xác nhận chủ sân hoàn tiền thành công"
           : "Đã ghi nhận hoàn tiền thất bại",
       );
 
@@ -188,7 +229,12 @@ export default function RefundManagement() {
       setSelectedRefund(null);
       setRefundNote("");
 
-      await fetchRefunds(pagination.current, pagination.pageSize, activeTab);
+      await fetchRefunds(
+        pagination.current,
+        pagination.pageSize,
+        activeTab,
+        selectedRentalAreaId,
+      );
     } catch (error: any) {
       message.error(
         error?.response?.data?.message || "Không thể xử lý hoàn tiền",
@@ -221,7 +267,7 @@ export default function RefundManagement() {
           type="warning"
           showIcon
           message="Chưa có tài khoản nhận tiền"
-          style={{ maxWidth: 230 }}
+          style={{ maxWidth: 240 }}
         />
       );
     }
@@ -234,8 +280,8 @@ export default function RefundManagement() {
         <Text
           strong
           style={{
-            fontSize: 13,
             color: "#1677ff",
+            fontSize: 13,
           }}
         >
           <BankOutlined /> {record.bankName}
@@ -252,6 +298,7 @@ export default function RefundManagement() {
             width={100}
             src={record.qrCodeUrl}
             alt="QR hoàn tiền"
+            crossOrigin="anonymous"
             preview={{
               mask: (
                 <Space size={4}>
@@ -278,11 +325,11 @@ export default function RefundManagement() {
           <Button
             type="primary"
             icon={<CheckCircleOutlined />}
+            disabled={!record.bankName || !record.accountNumber}
             style={{
               backgroundColor: "#52c41a",
               borderColor: "#52c41a",
             }}
-            disabled={!record.bankName || !record.accountNumber}
             onClick={() => openProcessModal(record, "SUCCESS")}
           >
             Đã CK
@@ -341,6 +388,22 @@ export default function RefundManagement() {
       render: (_: unknown, record: RefundResponse) => renderCustomer(record),
     },
     {
+      title: "Sân",
+      key: "rentalArea",
+      width: 190,
+      render: (_: unknown, record: RefundResponse) => (
+        <Space direction="vertical" size={1}>
+          <Text strong>{record.rentalAreaName || "Chưa xác định"}</Text>
+
+          <Text type="secondary" style={{ fontSize: 11 }}>
+            {record.rentalAreaId
+              ? record.rentalAreaId.substring(0, 8).toUpperCase()
+              : "---"}
+          </Text>
+        </Space>
+      ),
+    },
+    {
       title: "Nguồn đơn",
       dataIndex: "source",
       key: "source",
@@ -355,8 +418,8 @@ export default function RefundManagement() {
       title: "Mã giao dịch",
       dataIndex: "referenceCode",
       key: "referenceCode",
-      width: 140,
-      render: (value?: string) => value || "---",
+      width: 145,
+      render: (value?: string | null) => value || "---",
     },
     {
       title: "Số tiền hoàn",
@@ -379,7 +442,7 @@ export default function RefundManagement() {
     {
       title: "Thông tin nhận tiền",
       key: "bankInformation",
-      width: 250,
+      width: 255,
       render: (_: unknown, record: RefundResponse) =>
         renderBankInformation(record),
     },
@@ -415,7 +478,7 @@ export default function RefundManagement() {
         className="shadow-md rounded-2xl"
         title={
           <Title level={4} style={{ margin: 0 }}>
-            Quản lý hoàn tiền
+            Hoàn tiền cho người chơi
           </Title>
         }
         extra={
@@ -423,34 +486,80 @@ export default function RefundManagement() {
             icon={<ReloadOutlined />}
             loading={loading}
             onClick={() =>
-              fetchRefunds(pagination.current, pagination.pageSize, activeTab)
+              fetchRefunds(
+                pagination.current,
+                pagination.pageSize,
+                activeTab,
+                selectedRentalAreaId,
+              )
             }
           >
             Làm mới
           </Button>
         }
       >
-        <Tabs
-          activeKey={activeTab}
-          onChange={(key) => {
-            setActiveTab(key as "pending" | "history");
-
-            setPagination((previous) => ({
-              ...previous,
-              current: 1,
-            }));
-          }}
-          items={[
-            {
-              key: "pending",
-              label: "Chờ xử lý",
-            },
-            {
-              key: "history",
-              label: "Lịch sử xử lý",
-            },
-          ]}
+        <Alert
+          type="info"
+          showIcon
+          message="Chủ sân chỉ xử lý các khoản hoàn tiền VietQR đã nhận trực tiếp"
+          description="Các khoản VNPay hoặc PayOS do quản trị viên xử lý và sẽ không xuất hiện tại đây."
+          style={{ marginBottom: 16 }}
         />
+
+        <Space
+          wrap
+          style={{
+            width: "100%",
+            justifyContent: "space-between",
+            marginBottom: 8,
+          }}
+        >
+          <Tabs
+            activeKey={activeTab}
+            onChange={(key) => {
+              setActiveTab(key as ActiveTab);
+
+              setPagination((previous) => ({
+                ...previous,
+                current: 1,
+              }));
+            }}
+            items={[
+              {
+                key: "pending",
+                label: "Chờ xử lý",
+              },
+              {
+                key: "history",
+                label: "Lịch sử xử lý",
+              },
+            ]}
+          />
+
+          <Select
+            value={selectedRentalAreaId}
+            loading={loadingRentalAreas}
+            style={{ width: 280 }}
+            onChange={(value) => {
+              setSelectedRentalAreaId(value);
+
+              setPagination((previous) => ({
+                ...previous,
+                current: 1,
+              }));
+            }}
+            options={[
+              {
+                value: "ALL",
+                label: "Tất cả sân",
+              },
+              ...rentalAreas.map((rentalArea) => ({
+                value: rentalArea.rentalAreaId,
+                label: rentalArea.rentalAreaName,
+              })),
+            ]}
+          />
+        </Space>
 
         <Table
           columns={columns}
@@ -458,9 +567,7 @@ export default function RefundManagement() {
           loading={loading}
           rowKey="paymentId"
           size="middle"
-          scroll={{
-            x: 1450,
-          }}
+          scroll={{ x: 1650 }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
@@ -470,13 +577,18 @@ export default function RefundManagement() {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} dòng`,
             onChange: (page, pageSize) => {
-              void fetchRefunds(page, pageSize, activeTab);
+              void fetchRefunds(
+                page,
+                pageSize,
+                activeTab,
+                selectedRentalAreaId,
+              );
             },
           }}
           locale={{
             emptyText:
               activeTab === "pending"
-                ? "Hiện không có yêu cầu hoàn tiền đang chờ xử lý."
+                ? "Không có yêu cầu hoàn tiền nào đang chờ chủ sân xử lý."
                 : "Chưa có lịch sử xử lý hoàn tiền.",
           }}
         />
@@ -485,7 +597,7 @@ export default function RefundManagement() {
       <Modal
         title={
           processMode === "SUCCESS"
-            ? "Xác nhận hoàn tiền thành công"
+            ? "Xác nhận đã hoàn tiền"
             : "Ghi nhận hoàn tiền thất bại"
         }
         open={processModalOpen}
@@ -496,7 +608,7 @@ export default function RefundManagement() {
           processMode === "SUCCESS" ? "Xác nhận đã chuyển" : "Xác nhận thất bại"
         }
         cancelText="Đóng"
-        width={560}
+        width={580}
         destroyOnClose
         okButtonProps={{
           danger: processMode === "FAILED",
@@ -518,6 +630,10 @@ export default function RefundManagement() {
 
               <Descriptions.Item label="Email">
                 {selectedRefund.email || "Chưa có email"}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Sân">
+                {selectedRefund.rentalAreaName || "Chưa xác định"}
               </Descriptions.Item>
 
               <Descriptions.Item label="Nguồn">
@@ -551,14 +667,14 @@ export default function RefundManagement() {
                 type="success"
                 showIcon
                 message="Xác nhận đã chuyển khoản"
-                description="Chỉ xác nhận sau khi tiền đã được chuyển thật vào tài khoản của khách."
+                description="Chỉ xác nhận sau khi tiền đã được chuyển thật vào tài khoản của người chơi."
               />
             ) : (
               <Alert
                 type="error"
                 showIcon
                 message="Hoàn tiền thất bại"
-                description="Lý do thất bại sẽ được lưu và gửi qua email cho khách hàng."
+                description="Lý do thất bại sẽ được lưu và gửi email cho người chơi."
               />
             )}
 
@@ -587,8 +703,8 @@ export default function RefundManagement() {
             </div>
 
             <Text type="secondary">
-              Sau khi xác nhận, backend sẽ lưu kết quả và gửi email thông báo
-              cho người thanh toán.
+              Backend sẽ kiểm tra khoản hoàn tiền có thuộc sân của tài khoản
+              owner hiện tại hay không trước khi xử lý.
             </Text>
           </Space>
         )}

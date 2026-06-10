@@ -1,22 +1,57 @@
 import api from "../../config/axios";
+import type { RefundResponse } from "../../types/payment";
+import type { ApiResponse } from "../../types/ApiResponse";
 
-const refundService = {
+export interface ProcessRefundPayload {
+  success: boolean;
+  note?: string;
+}
 
-  getPendingRefunds: (page: number, size: number) => {
-    return api.get(`/admin/refunds/pending`, {
-      params: { page, size },
-    });
-  },
+export interface RefundPageResponse {
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  totalElements: number;
+  data: RefundResponse[];
+}
 
-  getCompletedRefunds: (page: number, size: number) => {
-    return api.get(`/admin/refunds/completed`, {
-      params: { page, size },
-    });
-  },
+class RefundService {
+  async getPendingRefunds(page = 1, size = 10) {
+    const response = await api.get<ApiResponse<RefundPageResponse>>(
+      "/admin/refunds/pending",
+      {
+        params: {
+          page,
+          size,
+        },
+      },
+    );
 
-  confirmManualRefund: (paymentId: string) => {
-    return api.post(`/admin/refunds/${paymentId}/confirm`);
-  },
-};
+    return response.data;
+  }
 
-export default refundService;
+  async getCompletedRefunds(page = 1, size = 10) {
+    const response = await api.get<ApiResponse<RefundPageResponse>>(
+      "/admin/refunds/completed",
+      {
+        params: {
+          page,
+          size,
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  async processManualRefund(paymentId: string, payload: ProcessRefundPayload) {
+    const response = await api.put<ApiResponse<void>>(
+      `/admin/refunds/${paymentId}/process`,
+      payload,
+    );
+
+    return response.data;
+  }
+}
+
+export default new RefundService();

@@ -167,7 +167,8 @@ public class BookingController {
 
     @PutMapping("/{bookingId}/collect-payment")
     public ResponseEntity<ApiResponse<Void>> collectRemainingPayment(
-            @PathVariable UUID bookingId) {
+            @PathVariable UUID bookingId
+    ) {
         try {
             bookingService.collectRemainingPayment(bookingId);
             return ResponseEntity.ok(ApiResponse.success(

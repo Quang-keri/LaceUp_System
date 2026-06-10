@@ -130,38 +130,6 @@ public class CourtPriceServiceImpl implements CourtPriceService {
         return totalPrice.setScale(0, RoundingMode.HALF_UP);
     }
 
-    @Override
-    public BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime) {
-        LocalDate bookingDate = startTime.toLocalDate();
-        LocalTime start = startTime.toLocalTime();
-        LocalTime end = endTime.toLocalTime();
-
-        List<CourtPrice> prices = courtPriceRepository.findValidPricesForCourtAndDate(courtId, bookingDate);
-
-        BigDecimal totalPrice = BigDecimal.ZERO;
-        LocalTime currentTime = start;
-
-        while (currentTime.isBefore(end)) {
-            LocalTime finalCurrentTime = currentTime;
-            CourtPrice currentPriceBracket = prices.stream()
-                    .filter(p -> !finalCurrentTime.isBefore(p.getStartTime()) && finalCurrentTime.isBefore(p.getEndTime()))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy cấu hình giá cho khung giờ: " + finalCurrentTime));
-
-            LocalTime overlapEnd = end.isBefore(currentPriceBracket.getEndTime()) ? end : currentPriceBracket.getEndTime();
-
-            long minutes = Duration.between(currentTime, overlapEnd).toMinutes();
-            BigDecimal hoursDuration = BigDecimal.valueOf(minutes).divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
-
-            BigDecimal segmentPrice = hoursDuration.multiply(currentPriceBracket.getPricePerHour());
-            totalPrice = totalPrice.add(segmentPrice);
-
-            currentTime = overlapEnd;
-        }
-
-        return totalPrice;
-    }
-
     private BigDecimal findBestPrice(List<CourtPrice> prices, LocalDateTime moment) {
         LocalTime time = moment.toLocalTime();
         LocalDate date = moment.toLocalDate();

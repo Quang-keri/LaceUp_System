@@ -59,8 +59,8 @@ public class BookingServiceImpl implements BookingService {
             CourtCopy courtCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy sân"));
 
-            BigDecimal slotPrice = courtPriceService.calculateSlotPrice(
-                    courtCopy.getCourt().getCourtId(),
+            BigDecimal slotPrice = courtPriceService.calculatePrice(
+                    courtCopy,
                     slotReq.getStartTime(),
                     slotReq.getEndTime()
             );
@@ -73,9 +73,48 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse createOwnerBooking(OwnerBookingRequest request) {
+    public BookingResponse createOwnerBooking(
+            OwnerBookingRequest request
+    ) {
+        BookingType type =
+                request.getBookingType() != null
+                        ? request.getBookingType()
+                        : BookingType.PRIVATE;
 
-        BookingType type = request.getBookingType() != null ? request.getBookingType() : BookingType.PRIVATE;
+        Integer maxParticipants = null;
+        Integer minParticipants = null;
+
+        if (type == BookingType.SHARED) {
+            maxParticipants = request.getMaxParticipants();
+            minParticipants = request.getMinParticipants();
+
+            if (maxParticipants == null
+                    || maxParticipants < 2) {
+                throw new RuntimeException(
+                        "Số người tối đa của trận vãng lai phải từ 2 người"
+                );
+            }
+
+            if (minParticipants == null
+                    || minParticipants < 2) {
+                throw new RuntimeException(
+                        "Số người tối thiểu của trận vãng lai phải từ 2 người"
+                );
+            }
+
+            if (minParticipants > maxParticipants) {
+                throw new RuntimeException(
+                        "Số người tối thiểu không được lớn hơn số người tối đa"
+                );
+            }
+        }
+
+        if (request.getSlots() == null
+                || request.getSlots().isEmpty()) {
+            throw new RuntimeException(
+                    "Vui lòng chọn ít nhất một khung giờ"
+            );
+        }
 
         Booking booking = Booking.builder()
                 .bookerName(request.getCustomerName())
@@ -83,176 +122,375 @@ public class BookingServiceImpl implements BookingService {
                 .note(request.getNote())
                 .bookingStatus(BookingStatus.BOOKED)
                 .bookingType(type)
+
+                .maxParticipants(
+                        type == BookingType.SHARED
+                                ? maxParticipants
+                                : null
+                )
+                .minParticipants(
+                        type == BookingType.SHARED
+                                ? minParticipants
+                                : null
+                )
+                .currentParticipants(
+                        type == BookingType.SHARED
+                                ? 0
+                                : null
+                )
+                .minimumCheckCompleted(
+                        type == BookingType.SHARED
+                                ? false
+                                : null
+                )
+                .minimumCheckedAt(null)
                 .build();
+
+        try {
+            booking.setRenter(
+                    userService.getCurrentUserEntity()
+            );
+        } catch (Exception ignored) {
+            // Cho phép một số luồng owner tạo booking
+            // mà không bắt buộc renter.
+        }
+
+        booking = bookingRepository.save(booking);
 
         LocalDateTime earliest = null;
         LocalDateTime latest = null;
 
-        booking = bookingRepository.save(booking);
-
-        BigDecimal calculatedTotalPrice = BigDecimal.ZERO;
+        BigDecimal calculatedTotalPrice =
+                BigDecimal.ZERO;
 
         for (SlotRequest slotReq : request.getSlots()) {
-            CourtCopy courtCopy = courtCopyRepository.findById(slotReq.getCourtCopyId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sân với ID: " + slotReq.getCourtCopyId()));
 
-            if (booking.getRentalArea() == null
-                    && courtCopy.getCourt() != null
-                    && courtCopy.getCourt().getRentalArea() != null) {
-                booking.setRentalArea(courtCopy.getCourt().getRentalArea());
-            }
-
-            if (booking.getRenter() == null) {
-                try {
-                    booking.setRenter(userService.getCurrentUserEntity());
-                } catch (Exception ignored) {
-                }
-            }
-
-            List<Slot> conflicts = slotRepository.findConflictSlot(
-                    courtCopy.getCourtCopyId(),
-                    slotReq.getStartTime(),
-                    slotReq.getEndTime()
-            );
-
-            if (!conflicts.isEmpty()) {
+            if (slotReq.getCourtCopyId() == null) {
                 throw new RuntimeException(
-                        "Sân " + courtCopy.getCourtCode()
-                                + " đã bị đặt trong khung giờ "
-                                + slotReq.getStartTime().toLocalTime()
-                                + " - "
-                                + slotReq.getEndTime().toLocalTime()
+                        "Thiếu mã sân cần đặt"
                 );
             }
 
-            BigDecimal slotPrice = courtPriceService.calculateSlotPrice(
-                    courtCopy.getCourt().getCourtId(),
-                    slotReq.getStartTime(),
-                    slotReq.getEndTime()
-            );
+            if (slotReq.getStartTime() == null
+                    || slotReq.getEndTime() == null) {
+                throw new RuntimeException(
+                        "Thời gian bắt đầu và kết thúc không được để trống"
+                );
+            }
 
-            calculatedTotalPrice = calculatedTotalPrice.add(slotPrice);
+            if (!slotReq.getStartTime()
+                    .isBefore(slotReq.getEndTime())) {
+                throw new RuntimeException(
+                        "Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc"
+                );
+            }
 
-            SlotStatus statusToSave = (type == BookingType.SHARED) ? SlotStatus.SHARE : SlotStatus.BOOKED;
+            if (slotReq.getStartTime()
+                    .isBefore(LocalDateTime.now())) {
+                throw new RuntimeException(
+                        "Không thể tạo booking trong quá khứ"
+                );
+            }
+
+            CourtCopy courtCopy =
+                    courtCopyRepository
+                            .findById(
+                                    slotReq.getCourtCopyId()
+                            )
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Không tìm thấy sân với ID: "
+                                                    + slotReq.getCourtCopyId()
+                                    )
+                            );
+
+            if (courtCopy.getCourt() == null
+                    || courtCopy.getCourt()
+                    .getRentalArea() == null) {
+                throw new RuntimeException(
+                        "Sân chưa được liên kết với khu sân"
+                );
+            }
+
+            RentalArea slotRentalArea =
+                    courtCopy.getCourt()
+                            .getRentalArea();
+
+            if (booking.getRentalArea() == null) {
+                booking.setRentalArea(
+                        slotRentalArea
+                );
+            } else if (!booking.getRentalArea()
+                    .getRentalAreaId()
+                    .equals(
+                            slotRentalArea
+                                    .getRentalAreaId()
+                    )) {
+                throw new RuntimeException(
+                        "Các khung giờ phải thuộc cùng một khu sân"
+                );
+            }
+
+            List<Slot> conflicts =
+                    slotRepository.findConflictSlot(
+                            courtCopy.getCourtCopyId(),
+                            slotReq.getStartTime(),
+                            slotReq.getEndTime()
+                    );
+
+            if (!conflicts.isEmpty()) {
+                throw new RuntimeException(
+                        "Sân "
+                                + courtCopy.getCourtCode()
+                                + " đã bị đặt trong khung giờ "
+                                + slotReq.getStartTime()
+                                .toLocalTime()
+                                + " - "
+                                + slotReq.getEndTime()
+                                .toLocalTime()
+                );
+            }
+
+            BigDecimal slotPrice =
+                    courtPriceService.calculatePrice(
+                            courtCopy,
+                            slotReq.getStartTime(),
+                            slotReq.getEndTime()
+                    );
+
+            if (slotPrice == null
+                    || slotPrice.compareTo(
+                    BigDecimal.ZERO
+            ) < 0) {
+                throw new RuntimeException(
+                        "Giá khung giờ không hợp lệ"
+                );
+            }
+
+            calculatedTotalPrice =
+                    calculatedTotalPrice.add(
+                            slotPrice
+                    );
+
+            SlotStatus slotStatus =
+                    type == BookingType.SHARED
+                            ? SlotStatus.SHARE
+                            : SlotStatus.BOOKED;
 
             Slot slot = Slot.builder()
-                    .startTime(slotReq.getStartTime())
-                    .endTime(slotReq.getEndTime())
+                    .startTime(
+                            slotReq.getStartTime()
+                    )
+                    .endTime(
+                            slotReq.getEndTime()
+                    )
                     .price(slotPrice)
-                    .slotStatus(statusToSave)
+                    .slotStatus(slotStatus)
                     .courtCopy(courtCopy)
                     .booking(booking)
                     .build();
 
             slotRepository.save(slot);
 
-            if (earliest == null || slotReq.getStartTime().isBefore(earliest)) {
-                earliest = slotReq.getStartTime();
+            if (earliest == null
+                    || slotReq.getStartTime()
+                    .isBefore(earliest)) {
+                earliest =
+                        slotReq.getStartTime();
             }
 
-            if (latest == null || slotReq.getEndTime().isAfter(latest)) {
-                latest = slotReq.getEndTime();
+            if (latest == null
+                    || slotReq.getEndTime()
+                    .isAfter(latest)) {
+                latest =
+                        slotReq.getEndTime();
             }
         }
 
-        if (earliest != null) {
-            booking.setStartTime(earliest);
+        if (booking.getRentalArea() == null) {
+            throw new RuntimeException(
+                    "Không xác định được khu sân của booking"
+            );
         }
 
-        if (latest != null) {
-            booking.setEndTime(latest);
+        booking.setStartTime(earliest);
+        booking.setEndTime(latest);
+        booking.setTotalPrice(
+                calculatedTotalPrice
+        );
+
+        BigDecimal deposit;
+
+        if (type == BookingType.SHARED) {
+            deposit = BigDecimal.ZERO;
+        } else {
+            deposit =
+                    request.getPaidAmount() != null
+                            ? request.getPaidAmount()
+                            : BigDecimal.ZERO;
         }
 
-        BigDecimal deposit = request.getPaidAmount() != null
-                ? request.getPaidAmount()
-                : BigDecimal.ZERO;
-
-        if (deposit.compareTo(calculatedTotalPrice) > 0) {
-            throw new RuntimeException("Số tiền khách trả không được lớn hơn tổng tiền");
+        if (deposit.compareTo(
+                BigDecimal.ZERO
+        ) < 0) {
+            throw new RuntimeException(
+                    "Số tiền đã trả không được âm"
+            );
         }
 
-        BigDecimal remaining = calculatedTotalPrice.subtract(deposit);
+        if (deposit.compareTo(
+                calculatedTotalPrice
+        ) > 0) {
+            throw new RuntimeException(
+                    "Số tiền khách trả không được lớn hơn tổng tiền"
+            );
+        }
 
-        booking.setTotalPrice(calculatedTotalPrice);
+        BigDecimal remaining =
+                calculatedTotalPrice.subtract(
+                        deposit
+                );
+
         booking.setDepositAmount(deposit);
         booking.setRemainingAmount(remaining);
 
         if (type == BookingType.SHARED) {
-            Integer maxParticipants = request.getMaxParticipants();
+            BigDecimal roundUnit =
+                    new BigDecimal("1000");
 
-            if (maxParticipants == null || maxParticipants < 2) {
-                throw new RuntimeException(
-                        "Vãng lai phải có ít nhất 2 người tham gia"
-                );
-            }
-
-            BigDecimal roundUnit = new BigDecimal("1000");
-
-            BigDecimal basePricePerTicket = calculatedTotalPrice
-                    .divide(
-                            BigDecimal.valueOf(maxParticipants),
+            BigDecimal basePricePerTicket =
+                    calculatedTotalPrice.divide(
+                            BigDecimal.valueOf(
+                                    maxParticipants
+                            ),
                             2,
                             RoundingMode.HALF_UP
                     );
 
-            BigDecimal pricePerTicket = basePricePerTicket
-                    .divide(roundUnit, 0, RoundingMode.CEILING)
-                    .multiply(roundUnit);
+            BigDecimal pricePerTicket =
+                    basePricePerTicket
+                            .divide(
+                                    roundUnit,
+                                    0,
+                                    RoundingMode.CEILING
+                            )
+                            .multiply(roundUnit);
 
-            booking.setMaxParticipants(maxParticipants);
+            booking.setMaxParticipants(
+                    maxParticipants
+            );
+            booking.setMinParticipants(
+                    minParticipants
+            );
             booking.setCurrentParticipants(0);
-            booking.setPricePerTicket(pricePerTicket);
+            booking.setPricePerTicket(
+                    pricePerTicket
+            );
+            booking.setMinimumCheckCompleted(
+                    false
+            );
+            booking.setMinimumCheckedAt(null);
         }
 
-        if (remaining.compareTo(BigDecimal.ZERO) == 0) {
-            booking.setBookingStatus(BookingStatus.COMPLETED);
-        } else {
-            booking.setBookingStatus(BookingStatus.BOOKED);
-        }
+        booking.setBookingStatus(
+                BookingStatus.BOOKED
+        );
 
-        bookingRepository.save(booking);
+        booking =
+                bookingRepository.saveAndFlush(
+                        booking
+                );
 
-        if (deposit.compareTo(BigDecimal.ZERO) > 0) {
-            Payment payment = Payment.builder()
-                    .amount(deposit)
-                    .transactionDate(LocalDateTime.now())
-                    .paymentStatus(PaymentStatus.SUCCESS)
-                    .paymentType(
-                            deposit.compareTo(calculatedTotalPrice) >= 0
-                                    ? PaymentType.FULL
-                                    : PaymentType.DEPOSIT
-                    )
-                    .paymentMethod(request.getPaymentMethod())
-                    .booking(booking)
-                    .build();
+        if (type != BookingType.SHARED
+                && deposit.compareTo(
+                BigDecimal.ZERO
+        ) > 0) {
+
+            PaymentType paymentType =
+                    deposit.compareTo(
+                            calculatedTotalPrice
+                    ) >= 0
+                            ? PaymentType.FULL
+                            : PaymentType.DEPOSIT;
+
+            Payment payment =
+                    Payment.builder()
+                            .user(
+                                    booking.getRenter()
+                            )
+                            .amount(deposit)
+                            .transactionDate(
+                                    LocalDateTime.now()
+                            )
+                            .paymentStatus(
+                                    PaymentStatus.SUCCESS
+                            )
+                            .paymentType(paymentType)
+                            .paymentMethod(
+                                    request.getPaymentMethod()
+                            )
+                            .booking(booking)
+                            .build();
 
             paymentRepository.save(payment);
 
-            Transaction transaction = Transaction.builder()
-                    .type(TransactionType.INCOME)
-                    .amount(deposit)
-                    .booking(booking)
-                    .referenceId(String.valueOf(booking.getBookingId()))
-                    .rentalArea(booking.getRentalArea())
-                    .owner(booking.getRentalArea().getOwner())
-                    .paymentMethod(request.getPaymentMethod())
-                    .status(TransactionStatus.SUCCESS)
-                    .category(
-                            remaining.compareTo(BigDecimal.ZERO) == 0
-                                    ? TransactionCategory.BOOKING_FULL_PAYMENT
-                                    : TransactionCategory.BOOKING_DEPOSIT
-                    )
-                    .description(
-                            remaining.compareTo(BigDecimal.ZERO) == 0
-                                    ? "Thu đủ tiền khi tạo booking tại sân"
-                                    : "Thu tiền cọc khi tạo booking tại sân"
-                    )
-                    .build();
+            TransactionCategory category =
+                    remaining.compareTo(
+                            BigDecimal.ZERO
+                    ) == 0
+                            ? TransactionCategory
+                            .BOOKING_FULL_PAYMENT
+                            : TransactionCategory
+                            .BOOKING_DEPOSIT;
 
-            transactionRepository.save(transaction);
+            String description =
+                    remaining.compareTo(
+                            BigDecimal.ZERO
+                    ) == 0
+                            ? "Thu đủ tiền khi tạo booking tại sân"
+                            : "Thu tiền cọc khi tạo booking tại sân";
+
+            Transaction transaction =
+                    Transaction.builder()
+                            .type(
+                                    TransactionType.INCOME
+                            )
+                            .amount(deposit)
+                            .booking(booking)
+                            .referenceId(
+                                    booking.getBookingId()
+                                            .toString()
+                            )
+                            .rentalArea(
+                                    booking.getRentalArea()
+                            )
+                            .owner(
+                                    booking.getRentalArea()
+                                            .getOwner()
+                            )
+                            .paymentMethod(
+                                    request.getPaymentMethod()
+                            )
+                            .status(
+                                    TransactionStatus.SUCCESS
+                            )
+                            .category(category)
+                            .moneyFlow(
+                                    MoneyFlow.OWNER_COLLECTED
+                            )
+                            .description(description)
+                            .transactionDate(
+                                    LocalDateTime.now()
+                            )
+                            .build();
+
+            transactionRepository.save(
+                    transaction
+            );
         }
 
-        return bookingMapper.toBookingResponse(booking);
+        return bookingMapper
+                .toBookingResponse(booking);
     }
 
     @Override
@@ -335,6 +573,7 @@ public class BookingServiceImpl implements BookingService {
                 .type(TransactionType.INCOME)
                 .amount(amountToCollect)
                 .paymentMethod(PaymentMethod.BANK_TRANSFER)
+                .moneyFlow(MoneyFlow.OWNER_COLLECTED)
                 .status(TransactionStatus.SUCCESS)
                 .category(TransactionCategory.BOOKING_REMAINING_PAYMENT)
                 .description("Thu tiền mặt hoặc chuyển khoản tại sân phần còn thiếu (bao gồm sân và dịch vụ) cho đạt lịch " + booking.getBookingId())
@@ -422,6 +661,7 @@ public class BookingServiceImpl implements BookingService {
         BigDecimal remainingAmount = totalPrice.subtract(paidAmount);
         Booking booking = Booking.builder()
                 .bookingStatus(BookingStatus.BOOKED)
+                .bookingType(BookingType.PRIVATE)
                 .renter(intent.getUser() != null ? intent.getUser() : null)
                 .bookerName(intent.getBookerName())
                 .bookerPhone(intent.getBookerPhone())
@@ -491,6 +731,14 @@ public class BookingServiceImpl implements BookingService {
                                 ? TransactionCategory.BOOKING_FULL_PAYMENT
                                 : TransactionCategory.BOOKING_DEPOSIT
                 )
+                .moneyFlow(
+                        (payment.getPaymentMethod()
+                                == PaymentMethod.VN_PAY
+                                || payment.getPaymentMethod()
+                                == PaymentMethod.PAY_OS)
+                                ? MoneyFlow.ADMIN_COLLECTED
+                                : MoneyFlow.OWNER_COLLECTED
+                )
                 .description(
                         remainingAmount.compareTo(BigDecimal.ZERO) <= 0
                                 ? "User thanh toán đủ tiền khi đặt sân"
@@ -500,6 +748,7 @@ public class BookingServiceImpl implements BookingService {
 
         transactionRepository.save(transaction);
         bookingIntentRepository.save(intent);
+
         return BookingResponse.builder()
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice())
@@ -803,4 +1052,5 @@ public class BookingServiceImpl implements BookingService {
 
         return bookingMapper.toBookingResponse(savedBooking);
     }
+
 }

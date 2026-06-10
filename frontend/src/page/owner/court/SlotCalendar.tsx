@@ -7,7 +7,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import viLocale from "@fullcalendar/core/locales/vi";
 import { useReactToPrint } from "react-to-print";
 import dayjs from "dayjs";
-import { Button, Card, message, Modal, Select, Space, Spin } from "antd";
+import { Button, Card, message, Modal, Spin } from "antd";
 
 import { ReceiptContent } from "./ReceiptContent";
 import { BookingModal } from "./BookingModal";
@@ -190,6 +190,18 @@ export default function SlotCalendar({
     setSelectedSlots([]);
   };
 
+  const isTimeOverlap = (
+    firstStart: string | Date,
+    firstEnd: string | Date,
+    secondStart: string | Date,
+    secondEnd: string | Date,
+  ) => {
+    return (
+      dayjs(firstStart).isBefore(dayjs(secondEnd)) &&
+      dayjs(firstEnd).isAfter(dayjs(secondStart))
+    );
+  };
+
   const handleCreateBooking = async () => {
     try {
       if (!formState.customerName || !formState.phone) {
@@ -288,27 +300,6 @@ export default function SlotCalendar({
         backgroundColor: "#ffffff",
       }}
     >
-      <div style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <Select
-            style={{ width: 240 }}
-            placeholder="Chọn sân cụ thể"
-            defaultValue="ALL"
-            onChange={onFilterChange}
-            options={[
-              {
-                label: "Tất cả sân",
-                value: "ALL",
-              },
-              ...courts.map((court) => ({
-                label: court.courtName,
-                value: court.courtId,
-              })),
-            ]}
-          />
-        </Space>
-      </div>
-
       <Spin spinning={loading || previewLoading}>
         <style>{`
           .fc {
@@ -397,15 +388,39 @@ export default function SlotCalendar({
             border-color: #e5e5e5;
           }
 
-          .fc .fc-timegrid-now-indicator-line {
-            border-color: #525252;
-          }
+.fc .fc-timegrid-now-indicator-line,
+.fc .laceup-now-indicator-line {
+  left: 0 !important;
+  right: 0 !important;
+  width: auto !important;
 
-          .fc .fc-timegrid-now-indicator-arrow {
-            border-top-color: transparent;
-            border-bottom-color: transparent;
-            border-left-color: #525252;
-          }
+  border-top: 2px solid #ff4d4f !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+
+  z-index: 50 !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+}
+
+.fc .fc-timegrid-now-indicator-container {
+  overflow: visible !important;
+  z-index: 50 !important;
+  pointer-events: none !important;
+}
+
+.fc .fc-timegrid-now-indicator-arrow,
+.fc .laceup-now-indicator-axis {
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-left-color: #ff4d4f !important;
+
+  z-index: 51 !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+}
+
         `}</style>
 
         <FullCalendar
@@ -420,6 +435,12 @@ export default function SlotCalendar({
           initialView="resourceTimeGridDay"
           height="auto"
           nowIndicator
+          nowIndicatorSnap={false}
+          nowIndicatorClassNames={(argument) =>
+            argument.isAxis
+              ? ["laceup-now-indicator-axis"]
+              : ["laceup-now-indicator-line"]
+          }
           allDaySlot={false}
           slotMinTime="05:00:00"
           slotMaxTime="23:00:00"
@@ -446,13 +467,41 @@ export default function SlotCalendar({
           ]}
           selectable
           selectAllow={(selectInfo) => {
-            return !bookedEvents.some((event) => {
+            const targetCourtId = selectInfo.resource?.id;
+
+            if (!targetCourtId) {
+              return courtCopies.length === 1;
+            }
+
+            const overlapsBookedSlot = bookedEvents.some((event) => {
               return (
-                event.resourceId === selectInfo.resource?.id &&
-                dayjs(selectInfo.start).isBefore(dayjs(event.end)) &&
-                dayjs(selectInfo.end).isAfter(dayjs(event.start))
+                event.resourceId === targetCourtId &&
+                isTimeOverlap(
+                  selectInfo.start,
+                  selectInfo.end,
+                  event.start,
+                  event.end,
+                )
               );
             });
+
+            if (overlapsBookedSlot) {
+              return false;
+            }
+
+            const overlapsSelectedSlot = selectedSlots.some((slot) => {
+              return (
+                slot.courtId === targetCourtId &&
+                isTimeOverlap(
+                  selectInfo.start,
+                  selectInfo.end,
+                  slot.startTime,
+                  slot.endTime,
+                )
+              );
+            });
+
+            return !overlapsSelectedSlot;
           }}
           select={(info) => {
             let targetCourtId = info.resource?.id;
@@ -461,7 +510,6 @@ export default function SlotCalendar({
             if (!targetCourtId) {
               if (courtCopies.length === 1) {
                 targetCourtId = courtCopies[0].courtCopyId;
-
                 targetCourtCode = courtCopies[0].courtCode;
               } else {
                 message.warning(
@@ -473,14 +521,34 @@ export default function SlotCalendar({
               }
             }
 
+            const startTime = dayjs(info.start).format("YYYY-MM-DDTHH:mm:ss");
+
+            const endTime = dayjs(info.end).format("YYYY-MM-DDTHH:mm:ss");
+
+            const isDuplicateOrOverlap = selectedSlots.some((slot) => {
+              return (
+                slot.courtId === targetCourtId &&
+                isTimeOverlap(startTime, endTime, slot.startTime, slot.endTime)
+              );
+            });
+
+            if (isDuplicateOrOverlap) {
+              message.warning(
+                "Khung giờ này đã được chọn hoặc bị trùng với khung giờ đang chọn.",
+              );
+
+              info.view.calendar.unselect();
+              return;
+            }
+
             const slot = {
-              id: Math.random().toString(36).substring(2, 9),
+              id: `${targetCourtId}-${startTime}-${endTime}`,
 
               courtId: targetCourtId,
               courtCode: targetCourtCode,
 
-              startTime: info.startStr,
-              endTime: info.endStr,
+              startTime,
+              endTime,
 
               startDisplay: dayjs(info.start).format("DD/MM/YYYY HH:mm"),
 
@@ -488,6 +556,8 @@ export default function SlotCalendar({
             };
 
             setSelectedSlots((previousSlots) => [...previousSlots, slot]);
+
+            info.view.calendar.unselect();
           }}
           eventClick={(info) => {
             if (info.event.extendedProps.isBooked) {

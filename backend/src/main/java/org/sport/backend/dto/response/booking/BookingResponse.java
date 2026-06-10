@@ -33,6 +33,9 @@ public class BookingResponse {
     private String invoicePdfUrl;
     private String note;
     private String paymentMethod;
+    private String transactionCode;
+    private String courtName;
+    private String courtCode;
     private BigDecimal depositAmount;
     private BigDecimal remainingAmount;
     private BigDecimal commissionRate;
@@ -41,16 +44,29 @@ public class BookingResponse {
     private BigDecimal platformProfit;
     private Boolean ownerPaid;
     private LocalDateTime ownerPaidAt;
+
     private BookingType bookingType;
     private Integer maxParticipants;
     private Integer currentParticipants;
     private BigDecimal pricePerTicket;
+
     private UUID participantId;
     private Integer ticketQuantity;
     private BigDecimal ticketAmount;
     private PaymentStatus ticketPaymentStatus;
     private String ticketPaymentProofUrl;
-    private List<BookingResponse.BookingServiceResponse> extraServiceResponses;
+    private Boolean sharedTicketParticipant;
+    private Integer minParticipants;
+    private Boolean minimumCheckCompleted;
+    private LocalDateTime minimumCheckedAt;
+
+    private BigDecimal ticketCollectedAmount;
+    private Integer activeTicketQuantity;
+    private Integer cancelledNoRefundQuantity;
+    private BigDecimal cancelledNoRefundAmount;
+
+    private List<BookingServiceResponse> extraServiceResponses;
+
     @Getter
     @Setter
     @AllArgsConstructor
@@ -62,5 +78,4 @@ public class BookingResponse {
         private Integer quantity;
         private BigDecimal price;
     }
-
 }

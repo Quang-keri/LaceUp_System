@@ -85,6 +85,7 @@ class BookingService {
     paymentMethod: string;
     bookingType?: "PRIVATE" | "SHARED";
     maxParticipants?: number;
+    minParticipants?: number;
     slots: {
       courtCopyId: string;
       startTime: string;
@@ -242,6 +243,13 @@ class BookingService {
       quantity,
     });
 
+    return response.data;
+  }
+
+  async cancelSharedTicketByUser(participantId: string) {
+    const response = await api.put<ApiResponse<BookingParticipantResponse>>(
+      `/bookings/shared/ticket/${participantId}/cancel`,
+    );
     return response.data;
   }
 

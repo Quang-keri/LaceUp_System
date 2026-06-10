@@ -1,6 +1,5 @@
 package org.sport.backend.config;
 
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -473,6 +472,8 @@ public class DataInitializer implements CommandLineRunner {
                 Permission.builder().permissionName("MANAGE_PAYOUT").description("Xác nhận chuyển tiền/thanh toán cho chủ sân").build(),
                 Permission.builder().permissionName("VIEW_PAYOUT").description("Xem lịch sử nhận tiền của cơ sở").build(),
 
+                Permission.builder().permissionName("MANAGE_TRANSACTION").description("Quản lý giao dịch").build(),
+
                 Permission.builder().permissionName("MANAGE_COMMISSION").description("Thiết lập và quản lý cấu hình hoa hồng").build(),
                 Permission.builder().permissionName("VIEW_COMMISSION").description("Xem bảng cấu hình phần trăm hoa hồng").build(),
                 Permission.builder().permissionName("VIEW_REPORT").description("Xem bảng báo cáo").build()
@@ -520,7 +521,7 @@ public class DataInitializer implements CommandLineRunner {
                 "BOOK_ROOM", "CREATE_PAYMENT", "USE_CHAT", "EXTEND_SLOT",
                 "SWAP_SLOT", "CREATE_MATCH", "JOIN_MATCH",
                 "SUBMIT_MATCH_RESULT", "RESPOND_MATCH_RESULT", "CREATE_POST",
-                "UPDATE_POST", "DELETE_POST", "VIEW_COURTS"
+                "UPDATE_POST", "DELETE_POST", "VIEW_COURTS", "MANAGE_TRANSACTION"
         );
         Role renterRole = Role.builder()
                 .roleName("RENTER")

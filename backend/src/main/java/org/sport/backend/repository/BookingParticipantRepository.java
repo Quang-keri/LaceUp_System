@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -19,22 +20,19 @@ import java.util.UUID;
 public interface BookingParticipantRepository
         extends JpaRepository<BookingParticipant, UUID> {
 
-    boolean existsByBooking_BookingIdAndUser_UserId(
-            UUID bookingId,
-            UUID userId
-    );
+    List<BookingParticipant> findAllByBooking_BookingId(UUID bookingId);
 
     Optional<BookingParticipant>
-    findFirstByBooking_BookingIdAndUser_UserId(
+    findTopByBooking_BookingIdAndUser_UserIdOrderByCreatedAtDesc(
             UUID bookingId,
             UUID userId
     );
 
     @Query("""
-                SELECT COALESCE(SUM(bp.quantity), 0)
-                FROM BookingParticipant bp
-                WHERE bp.booking.bookingId = :bookingId
-                  AND bp.paymentStatus IN :statuses
+            SELECT COALESCE(SUM(bp.quantity), 0)
+            FROM BookingParticipant bp
+            WHERE bp.booking.bookingId = :bookingId
+              AND bp.paymentStatus IN :statuses
             """)
     Long sumQuantityByBookingIdAndStatuses(
             @Param("bookingId") UUID bookingId,
@@ -42,10 +40,23 @@ public interface BookingParticipantRepository
     );
 
     @Query("""
-                 SELECT bp FROM BookingParticipant bp\s
-                 WHERE bp.paymentStatus = :status\s
-                   AND bp.createdAt <= :expireTime
-            \s""")
+            SELECT COALESCE(SUM(bp.amountPaid), 0)
+            FROM BookingParticipant bp
+            WHERE bp.booking.bookingId = :bookingId
+              AND bp.paymentStatus IN :statuses
+              AND (bp.isHost = false OR bp.isHost IS NULL)
+            """)
+    BigDecimal sumAmountByBookingIdAndStatuses(
+            @Param("bookingId") UUID bookingId,
+            @Param("statuses") Collection<PaymentStatus> statuses
+    );
+
+    @Query("""
+            SELECT bp
+            FROM BookingParticipant bp
+            WHERE bp.paymentStatus = :status
+              AND bp.createdAt <= :expireTime
+            """)
     List<BookingParticipant> findPendingTicketsOlderThan(
             @Param("status") PaymentStatus status,
             @Param("expireTime") LocalDateTime expireTime
@@ -70,13 +81,11 @@ public interface BookingParticipantRepository
             """)
     Page<BookingParticipant> findPendingTicketsForOwner(
             @Param("rentalAreaId") UUID rentalAreaId,
-
             @Param("hasFrom") boolean hasFrom,
             @Param("fromTime") LocalDateTime fromTime,
-
             @Param("hasTo") boolean hasTo,
             @Param("toTimeExclusive") LocalDateTime toTimeExclusive,
-
             Pageable pageable
     );
+
 }

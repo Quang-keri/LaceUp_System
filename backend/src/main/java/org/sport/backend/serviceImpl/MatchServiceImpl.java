@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -235,11 +236,7 @@ public class MatchServiceImpl implements MatchService {
             }
         }
 
-        boolean alreadyJoined = registrationRepository.existsByMatchAndUser(match, currentUser);
-        if (alreadyJoined) {
-            throw new RuntimeException("Bạn đã tham gia trận này rồi");
-        }
-
+        // --- Tính toán chi phí trước khi xử lý đăng ký ---
         List<Slot> matchSlots = slotRepository.findByMatch(match);
         BigDecimal totalMatchPrice = BigDecimal.ZERO;
         if (matchSlots != null) {
@@ -254,18 +251,35 @@ public class MatchServiceImpl implements MatchService {
                 RoundingMode.HALF_UP);
         BigDecimal amountDue = unitPrice.multiply(BigDecimal.valueOf(playerCount));
 
-        MatchRegistration reg = MatchRegistration.builder()
-                .user(currentUser)
-                .match(match)
-                .playerCount(playerCount)
-                .amountDue(amountDue)
-                .isPaid(false)
-                .registeredAt(LocalDateTime.now())
-                .build();
+        Optional<MatchRegistration> existingReg = registrationRepository.findByMatchAndUser(match, currentUser);
+
+        MatchRegistration reg;
+        if (existingReg.isPresent()) {
+            reg = existingReg.get();
+
+            if (reg.getIsCancelled() == null || !reg.getIsCancelled()) {
+                throw new RuntimeException("Bạn đã tham gia trận này rồi");
+            }
+
+            reg.setIsCancelled(false);
+            reg.setPlayerCount(playerCount);
+            reg.setAmountDue(amountDue);
+            reg.setIsPaid(false);
+            reg.setRegisteredAt(LocalDateTime.now());
+            reg.setTeamNumber(null);
+        } else {
+            reg = MatchRegistration.builder()
+                    .user(currentUser)
+                    .match(match)
+                    .playerCount(playerCount)
+                    .amountDue(amountDue)
+                    .isPaid(false)
+                    .registeredAt(LocalDateTime.now())
+                    .build();
+        }
         registrationRepository.save(reg);
 
         match.setCurrentPlayers(match.getCurrentPlayers() + playerCount);
-
 
         if (match.getCurrentPlayers().equals(match.getMaxPlayers())) {
             match.setStatus(MatchStatus.READY);
@@ -612,12 +626,12 @@ public class MatchServiceImpl implements MatchService {
             currentUser.setCreditScore(Math.max(0, currentScore - 10));
             userRepository.save(currentUser);
 
-            ReputationLog log = ReputationLog.builder()
+            ReputationLog repLog = ReputationLog.builder()
                     .user(currentUser)
                     .pointsChanged(-10)
                     .reason("Rút lui khỏi trận ghép quá sát giờ thi đấu (dưới 24h)")
                     .build();
-            reputationLogRepository.save(log);
+            reputationLogRepository.save(repLog);
         }
 
         List<Payment> relatedPayments = paymentRepository.findAllByMatchRegistration(reg);
@@ -632,16 +646,53 @@ public class MatchServiceImpl implements MatchService {
         reg.setTeamNumber(null);
         registrationRepository.save(reg);
 
-        match.setCurrentPlayers(match.getCurrentPlayers() - reg.getPlayerCount());
+        int newPlayerCount = match.getCurrentPlayers() - reg.getPlayerCount();
+        match.setCurrentPlayers(Math.max(0, newPlayerCount));
 
-        if (match.getStatus() == MatchStatus.READY
+        if (match.getCurrentPlayers() == 0) {
+            match.setStatus(MatchStatus.CANCELLED);
+
+            if (match.getBooking() != null) {
+                Booking booking = match.getBooking();
+                booking.setBookingStatus(BookingStatus.CANCELLED);
+                bookingRepository.save(booking);
+                match.setBooking(null);
+            }
+
+            List<Slot> matchSlots = slotRepository.findByMatch(match);
+            if (matchSlots != null && !matchSlots.isEmpty()) {
+                for (Slot slot : matchSlots) {
+                    slot.setSlotStatus(SlotStatus.CANCELLED);
+                    slot.setBooking(null);
+                }
+                slotRepository.saveAll(matchSlots);
+            }
+
+        } else if (match.getStatus() == MatchStatus.READY
                 && match.getCurrentPlayers() < match.getMaxPlayers()) {
+
             match.setStatus(MatchStatus.OPEN);
+
+            List<Slot> matchSlots = slotRepository.findByMatch(match);
+            if (matchSlots != null && !matchSlots.isEmpty()) {
+                for (Slot slot : matchSlots) {
+                    slot.setSlotStatus(SlotStatus.MATCH_PENDING);
+                    slot.setBooking(null);
+                }
+                slotRepository.saveAll(matchSlots);
+            }
+
+            if (match.getBooking() != null) {
+                Booking tempBooking = match.getBooking();
+                match.setBooking(null);
+
+                bookingRepository.delete(tempBooking);
+            }
         }
 
         matchRepository.save(match);
-        log.info("User {} đã tự rút khỏi trận {}. Tiền vé không được hoàn lại.",
-                currentUser.getUserId(), matchId);
+        log.info("User {} đã tự rút khỏi trận {}. Trạng thái trận đấu hiện tại: {}. Tiền vé không được hoàn lại.",
+                currentUser.getUserId(), matchId, match.getStatus());
     }
 
     @Scheduled(cron = "0 */5 * * * *")

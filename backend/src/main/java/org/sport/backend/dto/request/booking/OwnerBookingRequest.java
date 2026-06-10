@@ -27,10 +27,12 @@ public class OwnerBookingRequest {
 
     private BookingType bookingType;
     private Integer maxParticipants;
+    private Integer minParticipants;
 
     @NotNull(message = "Phương thức thanh toán không được để trống")
     private PaymentMethod paymentMethod;
 
     @NotEmpty
     private List<SlotRequest> slots;
+
 }

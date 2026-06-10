@@ -20,6 +20,9 @@ public interface SharedBookingService {
     );
 
     @Transactional
+    BookingParticipantResponse cancelSharedTicketByUser(UUID participantId);
+
+    @Transactional
     BookingParticipantResponse uploadTicketPaymentProof(UUID participantId, MultipartFile image);
 
     @Transactional(readOnly = true)
@@ -33,6 +36,15 @@ public interface SharedBookingService {
 
     @Transactional
     void confirmSharedTicketPayment(UUID participantId, boolean isApproved);
+
+    @Transactional
+    boolean processMinimumParticipants(UUID bookingId);
+
+    @Transactional
+    boolean processMinimumParticipants(
+            UUID bookingId,
+            boolean force
+    );
 
     @Transactional
     void cancelSharedTicketBySystem(UUID participantId);

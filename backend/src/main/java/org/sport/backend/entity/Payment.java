@@ -20,27 +20,26 @@ import java.util.UUID;
 @SuperBuilder
 @Table(name = "payments")
 @Entity
-
 public class Payment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "payment_id")
-    UUID paymentId;
+    private UUID paymentId;
 
     @Column(name = "transaction_date", nullable = false)
-    LocalDateTime transactionDate;
+    private LocalDateTime transactionDate;
 
     @Column(name = "amount", precision = 19, scale = 2, nullable = false)
-    BigDecimal amount;
+    private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", length = 20)
-    PaymentMethod paymentMethod;
+    private PaymentMethod paymentMethod;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", length = 20)
-    PaymentStatus paymentStatus;
+    private PaymentStatus paymentStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_type")
@@ -48,7 +47,7 @@ public class Payment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    User user;
+    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id")
@@ -64,10 +63,10 @@ public class Payment extends BaseEntity {
     private String proof;
 
     @Column(name = "order_code", unique = true)
-    Long orderCode;
+    private Long orderCode;
 
     @Column(name = "payos_payment_link_id")
-    String payosPaymentLinkId;
+    private String payosPaymentLinkId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_intent_id")
@@ -80,4 +79,10 @@ public class Payment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_participant_id")
     private BookingParticipant bookingParticipant;
+
+    @Column(name = "refund_note", length = 1000)
+    private String refundNote;
+
+    @Column(name = "refund_processed_at")
+    private LocalDateTime refundProcessedAt;
 }

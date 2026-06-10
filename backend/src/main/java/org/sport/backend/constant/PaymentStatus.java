@@ -6,7 +6,9 @@ public enum PaymentStatus {
     BOOKED,
     COMPLETED,
     CANCELLED,
+    CANCELLED_NO_REFUND,
     FAILED,
     REFUND_PENDING,
-    REFUNDED
+    REFUND_FAILED,
+    REFUNDED,
 }

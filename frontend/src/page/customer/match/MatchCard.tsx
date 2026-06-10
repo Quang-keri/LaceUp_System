@@ -113,7 +113,7 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
   const renderActionButton = () => {
     const isParticipant = match.participants?.some(
-      (p: any) => p.userId === user?.userId,
+      (p: any) => p.userId === user?.userId && p.isCancelled === false,
     );
 
     if (

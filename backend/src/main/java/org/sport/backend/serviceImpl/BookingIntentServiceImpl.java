@@ -153,8 +153,8 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                 }
 
 
-                BigDecimal price = courtPriceService.calculateSlotPrice(
-                        courtCopy.getCourt().getCourtId(),
+                BigDecimal price = courtPriceService.calculatePrice(
+                        courtCopy,
                         slotReq.getStartTime(),
                         slotReq.getEndTime()
                 );

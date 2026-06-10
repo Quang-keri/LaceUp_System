@@ -71,6 +71,7 @@ export default function ManageSchedulePage() {
       const courtIdFromUrl = searchParams.get("courtId");
 
       if (courtIdFromUrl) {
+        setSelectedCourt(courtIdFromUrl);
         await loadOneCourtDetail(courtIdFromUrl);
         return;
       }
@@ -85,13 +86,18 @@ export default function ManageSchedulePage() {
   };
 
   const loadAllCourtDetails = async (courtList: CourtResponse[]) => {
-    const details = await Promise.all(
-      courtList.map((court) => courtService.getCourtById(court.courtId)),
-    );
+    try {
+      const details = await Promise.all(
+        courtList.map((court) => courtService.getCourtById(court.courtId)),
+      );
 
-    const allCopies = details.flatMap((res) => res.result?.courtCopies || []);
+      const allCopies = details.flatMap((res) => res.result?.courtCopies || []);
 
-    setCourtCopies(allCopies);
+      setCourtCopies(allCopies);
+    } catch {
+      setCourtCopies([]);
+      message.error("Không tải được lịch các sân");
+    }
   };
 
   const loadOneCourtDetail = async (courtId: string) => {
@@ -102,6 +108,7 @@ export default function ManageSchedulePage() {
 
       setCourtCopies(res.result?.courtCopies || []);
     } catch {
+      setCourtCopies([]);
       message.error("Không tải được lịch sân");
     } finally {
       setLoading(false);
@@ -113,9 +120,10 @@ export default function ManageSchedulePage() {
 
     if (value === "ALL") {
       await loadAllCourtDetails(courts);
-    } else {
-      await loadOneCourtDetail(value);
+      return;
     }
+
+    await loadOneCourtDetail(value);
   };
 
   const handleOpenShareBooking = (slotInfo: any) => {
@@ -132,9 +140,17 @@ export default function ManageSchedulePage() {
     setSlotToShare(null);
   };
 
-  const handleSubmitShareBooking = async (maxParticipants: number) => {
+  const handleSubmitShareBooking = async (
+    maxParticipants: number,
+    minParticipants: number,
+  ) => {
     if (!slotToShare) {
       message.warning("Vui lòng chọn khung giờ tạo kèo");
+      return;
+    }
+
+    if (minParticipants > maxParticipants) {
+      message.warning("Số người tối thiểu không được lớn hơn số người tối đa");
       return;
     }
 
@@ -148,7 +164,10 @@ export default function ManageSchedulePage() {
         paidAmount: 0,
         paymentMethod: "CASH",
         bookingType: "SHARED" as const,
+
         maxParticipants,
+        minParticipants,
+
         slots: [
           {
             courtCopyId: slotToShare.courtCopyId,
@@ -166,7 +185,7 @@ export default function ManageSchedulePage() {
       }
 
       message.success(
-        "Tạo kèo vãng lai thành công! Khách đã có thể đăng ký trên ứng dụng.",
+        "Tạo kèo vãng lai thành công! Người chơi đã có thể đăng ký.",
       );
 
       setShareModalVisible(false);
@@ -210,6 +229,7 @@ export default function ManageSchedulePage() {
               onChange={(value) => {
                 setSelectedArea(value);
                 setSelectedCourt("ALL");
+                setCourtCopies([]);
               }}
               options={rentalAreas.map((rentalArea) => ({
                 label: rentalArea.rentalAreaName,

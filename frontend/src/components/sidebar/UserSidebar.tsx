@@ -73,24 +73,24 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
         navigate("/profile");
         break;
       case "2":
-        navigate("/my-matches");
-        break;
-      case "8":
-        navigate("/my-ranks");
-        break;
-      case "7":
-        navigate("/achievements");
+        navigate("/bank-account");
         break;
       case "3":
         navigate("/booking-history");
         break;
-      case "6":
-        navigate("/bank-account");
-        break;
       case "4":
-        message.info("Cài đặt chưa được phát triển");
+        navigate("/my-matches");
         break;
       case "5":
+        navigate("/my-ranks");
+        break;
+      case "6":
+        navigate("/achievements");
+        break;
+      case "7":
+        message.info("Cài đặt chưa được phát triển");
+        break;
+      case "8":
         message.info("Bảo mật tài khoản chưa được phát triển");
         break;
       default:
@@ -166,15 +166,15 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
   const menuItems = [
     { key: "0", icon: <DashboardOutlined />, label: "Bảng điều khiển" },
     { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
-    { key: "2", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
-    { key: "8", icon: <BarChartOutlined />, label: "Xếp hạng của tôi" },
-    { key: "7", icon: <TrophyOutlined />, label: "Thành tựu" },
+    { key: "2", icon: <BankOutlined />, label: "Tài khoản ngân hàng" },
     { key: "3", icon: <HistoryOutlined />, label: "Lịch sử đặt sân" },
+    { key: "4", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
+    { key: "5", icon: <BarChartOutlined />, label: "Xếp hạng của tôi" },
+    { key: "6", icon: <TrophyOutlined />, label: "Thành tựu" },
 
-    { key: "6", icon: <BankOutlined />, label: "Tài khoản ngân hàng" },
-    { key: "4", icon: <SettingOutlined />, label: "Cài đặt" },
+    { key: "7", icon: <SettingOutlined />, label: "Cài đặt" },
     {
-      key: "5",
+      key: "8",
       icon: <SafetyCertificateOutlined />,
       label: "Bảo mật tài khoản",
     },

@@ -3,6 +3,8 @@ package org.sport.backend.service;
 import org.sport.backend.dto.request.user.CreateUserRequest;
 import org.springframework.scheduling.annotation.Async;
 
+import java.math.BigDecimal;
+
 public interface EmailService {
     void sendResetPasswordEmail(String toEmail, String resetUrl);
 
@@ -16,4 +18,15 @@ public interface EmailService {
     void deletePendingUser(String email);
 
     void sendEmailToReporter(String userName, String reporterEmail, String content);
+
+    @Async
+    void sendRefundResultEmail(
+            String toEmail,
+            String userName,
+            BigDecimal amount,
+            String source,
+            String referenceCode,
+            boolean success,
+            String note
+    );
 }

@@ -14,23 +14,25 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/admin/refunds")
+@RequestMapping("/owner/refunds")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('MANAGE_TRANSACTION')")
-public class AdminRefundController {
+@PreAuthorize("hasAuthority('MANAGE_BOOKING')")
+public class OwnerRefundController {
 
     private final RefundService refundService;
 
     @GetMapping("/pending")
     public ResponseEntity<ApiResponse<PageResponse<RefundResponse>>> getPendingRefunds(
+            @RequestParam(required = false) UUID rentalAreaId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         200,
-                        "Lấy danh sách admin cần hoàn thành công",
-                        refundService.getAdminPendingRefunds(
+                        "Lấy danh sách owner cần hoàn thành công",
+                        refundService.getOwnerPendingRefunds(
+                                rentalAreaId,
                                 page,
                                 size
                         )
@@ -40,14 +42,16 @@ public class AdminRefundController {
 
     @GetMapping("/completed")
     public ResponseEntity<ApiResponse<PageResponse<RefundResponse>>> getCompletedRefunds(
+            @RequestParam(required = false) UUID rentalAreaId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         200,
-                        "Lấy lịch sử admin xử lý hoàn tiền thành công",
-                        refundService.getAdminCompletedRefunds(
+                        "Lấy lịch sử owner hoàn tiền thành công",
+                        refundService.getOwnerCompletedRefunds(
+                                rentalAreaId,
                                 page,
                                 size
                         )
@@ -60,7 +64,7 @@ public class AdminRefundController {
             @PathVariable UUID paymentId,
             @Valid @RequestBody ProcessRefundRequest request
     ) {
-        refundService.processAdminRefund(
+        refundService.processOwnerRefund(
                 paymentId,
                 request
         );
@@ -69,8 +73,8 @@ public class AdminRefundController {
                 ApiResponse.success(
                         200,
                         Boolean.TRUE.equals(request.getSuccess())
-                                ? "Xác nhận admin đã hoàn tiền"
-                                : "Đã ghi nhận admin hoàn tiền thất bại",
+                                ? "Xác nhận chủ sân đã hoàn tiền"
+                                : "Đã ghi nhận chủ sân hoàn tiền thất bại",
                         null
                 )
         );

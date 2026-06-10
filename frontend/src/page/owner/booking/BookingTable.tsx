@@ -28,7 +28,9 @@ const methodLabelMap: Record<string, string> = {
   CASH: "Tiền mặt",
   PAY_OS: "PAY OS",
   VN_PAY: "VN Pay",
+  VIET_QR: "VietQR",
   BANKING: "Chuyển khoản",
+  BANK_TRANSFER: "Chuyển khoản",
 };
 
 interface Props {
@@ -61,7 +63,7 @@ export default function BookingTable({
     {
       title: "STT",
       key: "stt",
-      render: (_: any, __: any, index: number) => {
+      render: (_: unknown, __: unknown, index: number) => {
         const current = pagination?.current || 1;
         const pageSize = pagination?.pageSize || 10;
         return (current - 1) * pageSize + index + 1;
@@ -71,8 +73,8 @@ export default function BookingTable({
       title: "Mã đơn & Loại",
       dataIndex: "bookingId",
       render: (id: string, record: BookingResponse) => (
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          <span>{id ? id.substring(0, 8) + "..." : "---"}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span>{id ? `${id.substring(0, 8)}...` : "---"}</span>
 
           {record.bookingType === "MATCH" && (
             <Tag
@@ -84,6 +86,7 @@ export default function BookingTable({
               Ghép trận
             </Tag>
           )}
+
           {record.bookingType === "SHARED" && (
             <Tag
               color="orange"
@@ -93,6 +96,7 @@ export default function BookingTable({
               Trận vãng lai
             </Tag>
           )}
+
           {record.bookingType === "PRIVATE" && (
             <Tag
               color="default"
@@ -117,12 +121,10 @@ export default function BookingTable({
     },
     {
       title: "Khung Giờ",
-      render: (_: any, record: BookingResponse) => {
-        if (record.slots && record.slots.length > 0) {
+      render: (_: unknown, record: BookingResponse) => {
+        if (record.slots?.length > 0) {
           return (
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {record.slots.map((slot) => (
                 <div key={slot.slotId}>
                   {dayjs(slot.startTime).format("DD/MM/YYYY HH:mm")} -{" "}
@@ -132,6 +134,7 @@ export default function BookingTable({
             </div>
           );
         }
+
         return record.startTime && record.endTime
           ? `${dayjs(record.startTime).format("DD/MM/YYYY HH:mm")} - ${dayjs(
               record.endTime,
@@ -141,48 +144,106 @@ export default function BookingTable({
     },
     {
       title: "Thanh toán",
-      render: (_: any, record: BookingResponse) => {
-        const total = record.totalPrice || 0;
-        const deposit = record.depositAmount || 0;
-        const remaining = record.remainingAmount ?? total - deposit;
-        const paid = total - remaining;
-        const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+      render: (_: unknown, record: BookingResponse) => {
+        const isShared = record.bookingType === "SHARED";
+
+        const total = Number(record.totalPrice ?? 0);
+        const deposit = Number(record.depositAmount ?? 0);
+        const remaining = Number(
+          record.remainingAmount ?? Math.max(0, total - deposit),
+        );
+
+        const paid = isShared
+          ? Number(record.ticketCollectedAmount ?? 0)
+          : Math.max(0, total - remaining);
+
+        const cancelledQuantity = Number(record.cancelledNoRefundQuantity ?? 0);
+        const cancelledAmount = Number(record.cancelledNoRefundAmount ?? 0);
+        const activeTicketQuantity = Number(record.activeTicketQuantity ?? 0);
+
+        const rawPercent = total > 0 ? Math.round((paid / total) * 100) : 0;
+        const progressPercent = Math.min(100, Math.max(0, rawPercent));
+
+        const excessAmount = Math.max(0, paid - total);
+        const missingAmount = Math.max(0, total - paid);
 
         return (
-          <div style={{ minWidth: 180 }}>
+          <div style={{ minWidth: 220 }}>
             <div>
               <b>{paid.toLocaleString("vi-VN")}đ</b> /{" "}
               {total.toLocaleString("vi-VN")}đ
             </div>
+
             <div
               style={{
                 height: 6,
                 background: "#f0f0f0",
                 borderRadius: 4,
                 marginTop: 4,
+                overflow: "hidden",
               }}
             >
               <div
                 style={{
-                  width: `${percent}%`,
+                  width: `${progressPercent}%`,
                   height: "100%",
                   background:
-                    percent === 100
+                    progressPercent >= 100
                       ? "#52c41a"
-                      : percent > 0
+                      : progressPercent > 0
                       ? "#faad14"
                       : "#ff4d4f",
                   borderRadius: 4,
                 }}
               />
             </div>
-            <div style={{ fontSize: 12, marginTop: 4 }}>
-              {percent === 100 ? (
-                <Tag color="green">Đã thanh toán đủ</Tag>
-              ) : percent > 0 ? (
-                <Tag color="orange">Đã cọc {percent}%</Tag>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: 4,
+                marginTop: 4,
+              }}
+            >
+              {isShared && excessAmount > 0 ? (
+                <Tag color="green" style={{ marginInlineEnd: 0 }}>
+                  Đã thu vượt {excessAmount.toLocaleString("vi-VN")}đ
+                </Tag>
+              ) : paid >= total && total > 0 ? (
+                <Tag color="green" style={{ marginInlineEnd: 0 }}>
+                  {isShared ? "Đã thu đủ tiền vé" : "Đã thanh toán đủ"}
+                </Tag>
+              ) : paid > 0 ? (
+                <Tag color="orange" style={{ marginInlineEnd: 0 }}>
+                  {isShared
+                    ? `Đã thu vé (${rawPercent}%)`
+                    : `Đã cọc ${rawPercent}%`}
+                </Tag>
               ) : (
-                <Tag color="red">Chưa thanh toán</Tag>
+                <Tag color="red" style={{ marginInlineEnd: 0 }}>
+                  {isShared ? "Chưa bán được vé" : "Chưa thanh toán"}
+                </Tag>
+              )}
+
+              {isShared && activeTicketQuantity > 0 && (
+                <Tag color="blue" style={{ marginInlineEnd: 0 }}>
+                  Đang tham gia: {activeTicketQuantity} vé
+                </Tag>
+              )}
+
+              {isShared && cancelledQuantity > 0 && (
+                <Tag color="volcano" style={{ marginInlineEnd: 0 }}>
+                  {cancelledQuantity} vé hủy không hoàn:{" "}
+                  {cancelledAmount.toLocaleString("vi-VN")}đ
+                </Tag>
+              )}
+
+              {isShared && missingAmount > 0 && (
+                <span style={{ color: "#888", fontSize: 12 }}>
+                  Còn thiếu: {missingAmount.toLocaleString("vi-VN")}đ
+                </span>
               )}
             </div>
           </div>
@@ -207,10 +268,20 @@ export default function BookingTable({
     },
     {
       title: "Thao tác",
-      render: (_: any, record: BookingResponse) => {
-        const total = record.totalPrice || 0;
-        const deposit = record.depositAmount || 0;
-        const remaining = record.remainingAmount ?? total - deposit;
+      render: (_: unknown, record: BookingResponse) => {
+        const isShared = record.bookingType === "SHARED";
+        const total = Number(record.totalPrice ?? 0);
+        const deposit = Number(record.depositAmount ?? 0);
+
+        const normalRemaining = Number(
+          record.remainingAmount ?? Math.max(0, total - deposit),
+        );
+
+        const ticketCollected = Number(record.ticketCollectedAmount ?? 0);
+
+        const remaining = isShared
+          ? Math.max(0, total - ticketCollected)
+          : Math.max(0, normalRemaining);
 
         const items: MenuProps["items"] = [
           {
@@ -233,8 +304,12 @@ export default function BookingTable({
           },
           {
             key: "payment",
-            label: `Thanh toán nốt (${remaining.toLocaleString("vi-VN")}đ)`,
-            danger: true,
+            label:
+              remaining > 0
+                ? `Thanh toán nốt (${remaining.toLocaleString("vi-VN")}đ)`
+                : "Đã thu đủ",
+            danger: remaining > 0,
+            disabled: remaining <= 0,
             onClick: () => onCollectPayment(record),
           },
           {
@@ -267,7 +342,7 @@ export default function BookingTable({
       columns={columns}
       dataSource={bookings}
       loading={loading}
-      rowKey={(record) => record.bookingId || Math.random().toString()}
+      rowKey={(record) => record.bookingId}
       pagination={pagination}
       onChange={onChange}
       size="small"

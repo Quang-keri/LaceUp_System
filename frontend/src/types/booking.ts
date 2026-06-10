@@ -13,34 +13,33 @@ export const BookingTypes = {
   MATCH: "MATCH",
 } as const;
 
+export type BookingTypes = (typeof BookingTypes)[keyof typeof BookingTypes];
+
 export type TicketPaymentStatus =
   | "PENDING"
   | "SUCCESS"
+  | "BOOKED"
+  | "COMPLETED"
   | "FAILED"
   | "CANCELLED"
+  | "CANCELLED_NO_REFUND"
+  | "REFUND_PENDING"
+  | "REFUND_FAILED"
   | "REFUNDED";
-
-export type BookingTypes = (typeof BookingTypes)[keyof typeof BookingTypes];
 
 export interface CreateBookingIntentPayload {
   userId?: string;
   userName: string;
   userPhone: string;
   note?: string;
-  slotRequests: {
-    courtCopyId: string;
-    startTime: string;
-    endTime: string;
-  }[];
+  slotRequests: { courtCopyId: string; startTime: string; endTime: string }[];
 }
 
 export interface BookingResponse {
+  bookingId: string;
   userName: string;
   phoneNumber: string;
-  rentalArea: {
-    rentalAreaId: string;
-    rentalAreaName: string;
-  };
+  rentalArea: { rentalAreaId: string; rentalAreaName: string };
   slots: {
     slotId: string | number;
     courtCopyId?: string;
@@ -51,7 +50,6 @@ export interface BookingResponse {
     price: number;
     slotStatus?: string;
   }[];
-  bookingId: string;
   rentalAreaId: string;
   rentalAreaName: string;
   courtId: string;
@@ -74,12 +72,21 @@ export interface BookingResponse {
   extraServiceResponses?: BookingServiceResponse[];
   paymentMethod?: string;
   maxParticipants?: number;
+  minParticipants?: number;
   currentParticipants?: number;
   pricePerTicket?: number;
   participantId?: string;
   ticketQuantity?: number;
   ticketAmount?: number;
   ticketPaymentStatus?: TicketPaymentStatus;
+  ticketPaymentProofUrl?: string;
+  sharedTicketParticipant?: boolean;
+  ticketCollectedAmount?: number;
+  activeTicketQuantity?: number;
+  cancelledNoRefundQuantity?: number;
+  cancelledNoRefundAmount?: number;
+  minimumCheckCompleted?: boolean;
+  minimumCheckedAt?: string;
 }
 
 export interface BookingListResponse {
@@ -121,8 +128,10 @@ export interface BookingParticipantResponse {
   userName: string;
   userPhone?: string;
   amountPaid: number;
-  paymentStatus: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED";
+  paymentStatus: TicketPaymentStatus;
   isHost: boolean;
+  quantity?: number;
+  pricePerTicket?: number;
   paymentProofUrl?: string;
   paymentProofUploadedAt?: string;
 }
