@@ -105,7 +105,7 @@ const AutoMatchModal: React.FC<AutoMatchModalProps> = ({
               value="BET"
               className="flex-1 text-center rounded-lg font-bold"
             >
-              Đánh Kèo
+              Đánh đánh
             </Radio.Button>
             <Radio.Button
               value="RANKED"

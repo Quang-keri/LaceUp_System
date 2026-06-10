@@ -1,52 +1,233 @@
 import { useEffect, useState } from "react";
 import {
+  Button,
+  Col,
   Form,
   Input,
-  Button,
-  Select,
   message,
+  Modal,
   Row,
-  Col,
+  Select,
   Spin,
   Upload,
-  Modal,
 } from "antd";
 import { SaveOutlined, UploadOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd/es/upload/interface";
+
 import rentalService from "../../../service/rental/rentalService";
 import { locationService } from "../../../service/locationService";
 
 type Props = {
   open: boolean;
-  rentalAreaId: string | null;
+  buildingId: string | null;
   onClose: () => void;
   onSuccess: () => void;
 };
 
-export default function AdminRentalAreaEditModal({
+type Province = {
+  code: number;
+  name: string;
+};
+
+type Ward = {
+  code?: number;
+  name: string;
+};
+
+const toProvinceCode = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === "") {
+    return undefined;
+  }
+
+  const code = Number(value);
+  return Number.isFinite(code) ? code : undefined;
+};
+
+const normalizeLocationName = (value: unknown): string =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/^(tinh|thanh pho|tp\.?)[\s-]*/i, "")
+    .replace(/[^a-z0-9]/g, "");
+
+export default function BuildingEditModal({
   open,
-  rentalAreaId,
+  buildingId,
   onClose,
   onSuccess,
 }: Props) {
   const [form] = Form.useForm();
+  const selectedCityId = Form.useWatch("cityId", form);
 
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [wards, setWards] = useState<any[]>([]);
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+
+  const loadProvinces = async (): Promise<Province[]> => {
+    const data = await locationService.getProvinces();
+
+    // Ép toàn bộ code về number để Ant Design Select so sánh đúng value.
+    const normalizedData: Province[] = (data ?? [])
+      .map((item: any) => ({
+        code: Number(item.code),
+        name: item.name ?? item.cityName ?? "",
+      }))
+      .filter(
+        (item: Province) => Number.isFinite(item.code) && Boolean(item.name),
+      );
+
+    setProvinces(normalizedData);
+    return normalizedData;
+  };
+
+  const loadWards = async (provinceCode: number): Promise<Ward[]> => {
+    const data = await locationService.getWardsByProvince(provinceCode);
+    const normalizedData: Ward[] = (data ?? []).map((item: any) => ({
+      ...item,
+      name: item.name,
+    }));
+
+    setWards(normalizedData);
+    return normalizedData;
+  };
+
+  const findProvinceCode = (
+    data: any,
+    loadedProvinces: Province[],
+  ): number | undefined => {
+    const rawProvinceCode =
+      data.address?.city?.provinceCode ??
+      data.city?.provinceCode ??
+      data.provinceCode;
+
+    const provinceCode = toProvinceCode(rawProvinceCode);
+
+    if (
+      provinceCode !== undefined &&
+      loadedProvinces.some((province) => province.code === provinceCode)
+    ) {
+      return provinceCode;
+    }
+
+    // Một số response cũ dùng cityId chính là mã tỉnh/thành.
+    const possibleCodeFromCityId = toProvinceCode(
+      data.address?.city?.cityId ?? data.city?.cityId ?? data.cityId,
+    );
+
+    if (
+      possibleCodeFromCityId !== undefined &&
+      loadedProvinces.some(
+        (province) => province.code === possibleCodeFromCityId,
+      )
+    ) {
+      return possibleCodeFromCityId;
+    }
+
+    const cityName =
+      data.address?.city?.cityName ??
+      data.address?.cityName ??
+      data.city?.cityName ??
+      data.cityName;
+
+    const normalizedCityName = normalizeLocationName(cityName);
+    if (!normalizedCityName) return undefined;
+
+    return loadedProvinces.find((province) => {
+      const normalizedProvinceName = normalizeLocationName(province.name);
+
+      return (
+        normalizedProvinceName === normalizedCityName ||
+        normalizedProvinceName.includes(normalizedCityName) ||
+        normalizedCityName.includes(normalizedProvinceName)
+      );
+    })?.code;
+  };
+
+  const fetchRentalAreaDetail = async (
+    loadedProvinces: Province[],
+  ): Promise<void> => {
+    if (!buildingId) return;
+
+    const response: any = await rentalService.getRentalAreaById(buildingId);
+
+    // Hỗ trợ cả service trả res.data lẫn trả nguyên AxiosResponse.
+    const data =
+      response?.result ?? response?.data?.result ?? response?.data ?? response;
+
+    if (!data) {
+      throw new Error("Không tìm thấy dữ liệu tòa nhà");
+    }
+
+    const provinceCode = findProvinceCode(data, loadedProvinces);
+
+    if (provinceCode !== undefined) {
+      await loadWards(provinceCode);
+    } else {
+      setWards([]);
+    }
+
+    form.setFieldsValue({
+      rentalAreaName: data.rentalAreaName,
+      cityId: provinceCode,
+      ward: data.address?.ward,
+      street: data.address?.street,
+      status: data.status,
+      contactName: data.contactName,
+      contactPhone: data.contactPhone,
+      gmailLink: data.gmailLink ?? data.gmail,
+      facebookLink: data.facebookLink,
+    });
+
+    const oldImages: UploadFile[] = (data.images ?? []).map(
+      (img: any, index: number) => ({
+        uid: String(img.rentalAreaImageId ?? img.imageUrl ?? index),
+        name: `Image-${index + 1}`,
+        status: "done",
+        url: img.imageUrl,
+      }),
+    );
+
+    setFileList(oldImages);
+  };
 
   useEffect(() => {
-    const initData = async () => {
-      if (open && rentalAreaId) {
-        const provs = await loadProvinces();
-        await fetchRentalAreaDetail(provs);
+    let cancelled = false;
+
+    const initializeModal = async () => {
+      if (!open || !buildingId) return;
+
+      try {
+        setLoading(true);
+        form.resetFields();
+        setWards([]);
+        setFileList([]);
+
+        const loadedProvinces = await loadProvinces();
+        if (cancelled) return;
+
+        await fetchRentalAreaDetail(loadedProvinces);
+      } catch (error: any) {
+        if (!cancelled) {
+          message.error(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Không thể tải thông tin tòa nhà",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
-    initData();
-  }, [open, rentalAreaId]);
+    void initializeModal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, buildingId]);
 
   useEffect(() => {
     if (!open) {
@@ -56,132 +237,59 @@ export default function AdminRentalAreaEditModal({
       setLoading(false);
       setIsSubmitting(false);
     }
-  }, [open]);
+  }, [open, form]);
 
-  const loadProvinces = async () => {
-    const data = await locationService.getProvinces();
-    setProvinces(data || []);
-    return data || [];
-  };
+  const handleCityChange = async (rawProvinceCode: number | string) => {
+    const provinceCode = toProvinceCode(rawProvinceCode);
 
-  const loadWards = async (provinceCode: number) => {
-    if (!provinceCode) {
-      setWards([]);
-      return [];
-    }
-
-    const data = await locationService.getWardsByProvince(provinceCode);
-    setWards(data || []);
-    return data || [];
-  };
-
-  const findProvinceCode = (data: any, loadedProvinces: any[]) => {
-    const provinceCode =
-      data.address?.city?.provinceCode ||
-      data.city?.provinceCode ||
-      data.provinceCode;
-
-    if (provinceCode) return provinceCode;
-
-    const cityName =
-      data.address?.city?.cityName ||
-      data.address?.cityName ||
-      data.city?.cityName;
-
-    if (!cityName) return undefined;
-
-    const matchedProvince = loadedProvinces.find((p: any) => {
-      const provinceName = p.name || p.cityName;
-      return (
-        provinceName === cityName ||
-        provinceName?.includes(cityName) ||
-        cityName?.includes(provinceName)
-      );
-    });
-
-    return matchedProvince?.code;
-  };
-
-  const fetchRentalAreaDetail = async (loadedProvinces: any[]) => {
-    if (!rentalAreaId) return;
-
-    try {
-      setLoading(true);
-
-      const response = await rentalService.getRentalAreaById(rentalAreaId);
-      const data = response?.result;
-
-      if (!data) return;
-
-      const correctProvinceCode = findProvinceCode(data, loadedProvinces);
-
-      if (correctProvinceCode) {
-        await loadWards(correctProvinceCode);
-      }
-
-      form.setFieldsValue({
-        rentalAreaName: data.rentalAreaName,
-
-        cityId: correctProvinceCode,
-        ward: data.address?.ward,
-        street: data.address?.street,
-        status: data.status,
-        contactName: data.contactName,
-        contactPhone: data.contactPhone,
-        gmailLink: data.gmailLink || data.gmail,
-        facebookLink: data.facebookLink,
-      });
-
-      const oldImages: UploadFile[] =
-        data.images?.map((img: any, index: number) => ({
-          uid: String(img.rentalAreaImageId || img.imageUrl || index),
-          name: `Image-${index + 1}`,
-          status: "done",
-          url: img.imageUrl,
-        })) || [];
-
-      setFileList(oldImages);
-    } catch (error: any) {
-      message.error(
-        error?.response?.data?.message || "Không thể tải thông tin tòa nhà",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCityChange = async (provinceCode: number) => {
     form.setFieldsValue({ ward: undefined });
 
-    if (!provinceCode) {
+    if (provinceCode === undefined) {
       setWards([]);
       return;
     }
 
-    await loadWards(provinceCode);
+    try {
+      await loadWards(provinceCode);
+    } catch (error: any) {
+      setWards([]);
+      message.error(
+        error?.response?.data?.message || "Không thể tải danh sách phường/xã",
+      );
+    }
   };
 
   const handleSubmit = async () => {
-    if (!rentalAreaId) return;
+    if (!buildingId) return;
 
     try {
       const values = await form.validateFields();
-
       setIsSubmitting(true);
 
+      const provinceCode = toProvinceCode(values.cityId);
+      if (provinceCode === undefined) {
+        message.error("Mã tỉnh/thành phố không hợp lệ");
+        return;
+      }
+
+      const selectedProvince = provinces.find(
+        (province) => province.code === provinceCode,
+      );
+
       const newImages = fileList
-        .filter((file) => file.originFileObj)
+        .filter((file) => Boolean(file.originFileObj))
         .map((file) => file.originFileObj as File);
 
       await rentalService.updateRentalArea(
-        rentalAreaId,
+        buildingId,
         {
           rentalAreaName: values.rentalAreaName,
-          cityId: values.cityId,
+
+          cityId: provinceCode,
           address: {
             city: {
-              cityId: values.cityId,
-              cityName: provinces.find((p) => p.code === values.cityId)?.name || "",
+              cityId: provinceCode,
+              cityName: selectedProvince?.name ?? "",
             },
             street: values.street,
             ward: values.ward,
@@ -199,7 +307,10 @@ export default function AdminRentalAreaEditModal({
       onClose();
     } catch (error: any) {
       if (error?.errorFields) return;
-      message.error(error?.response?.data?.message || "Cập nhật thất bại");
+
+      message.error(
+        error?.response?.data?.message || error?.message || "Cập nhật thất bại",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -208,7 +319,7 @@ export default function AdminRentalAreaEditModal({
   return (
     <Modal
       open={open}
-      title="Admin cập nhật thông tin tòa nhà"
+      title="Cập nhật thông tin tòa nhà"
       width={1000}
       onCancel={onClose}
       destroyOnClose
@@ -221,6 +332,7 @@ export default function AdminRentalAreaEditModal({
           type="primary"
           icon={<SaveOutlined />}
           loading={isSubmitting}
+          disabled={loading}
           onClick={handleSubmit}
         >
           Lưu thay đổi
@@ -250,12 +362,13 @@ export default function AdminRentalAreaEditModal({
               >
                 <Select
                   showSearch
+                  allowClear
                   placeholder="Chọn tỉnh/thành phố"
                   onChange={handleCityChange}
                   optionFilterProp="label"
-                  options={provinces.map((item) => ({
-                    label: item.name,
-                    value: item.code,
+                  options={provinces.map((province) => ({
+                    label: province.name,
+                    value: province.code,
                   }))}
                 />
               </Form.Item>
@@ -271,11 +384,13 @@ export default function AdminRentalAreaEditModal({
               >
                 <Select
                   showSearch
+                  allowClear
+                  disabled={!selectedCityId}
                   placeholder="Chọn phường/xã"
                   optionFilterProp="label"
-                  options={wards.map((item) => ({
-                    label: item.name,
-                    value: item.name,
+                  options={wards.map((ward) => ({
+                    label: ward.name,
+                    value: ward.name,
                   }))}
                 />
               </Form.Item>
@@ -286,7 +401,10 @@ export default function AdminRentalAreaEditModal({
                 label="Số nhà/Tên đường"
                 name="street"
                 rules={[
-                  { required: true, message: "Vui lòng nhập số nhà/đường" },
+                  {
+                    required: true,
+                    message: "Vui lòng nhập số nhà/tên đường",
+                  },
                 ]}
               >
                 <Input placeholder="Ví dụ: 456 Lê Văn Việt" />
@@ -333,6 +451,7 @@ export default function AdminRentalAreaEditModal({
               </Form.Item>
             </Col>
           </Row>
+
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -342,23 +461,25 @@ export default function AdminRentalAreaEditModal({
                   { required: true, message: "Vui lòng chọn trạng thái" },
                 ]}
               >
-                <Select placeholder="Chọn trạng thái">
-                  <Select.Option value="ACTIVE">Đang hoạt động</Select.Option>
-
-                  <Select.Option value="INACTIVE">Tạm ngưng</Select.Option>
-
-                  <Select.Option value="SUSPENDED">
-                    Bị khóa / Suspended
-                  </Select.Option>
-                </Select>
+                <Select
+                  placeholder="Chọn trạng thái"
+                  options={[
+                    { label: "Đang hoạt động", value: "ACTIVE" },
+                    { label: "Tạm ngưng", value: "INACTIVE" },
+                    { label: "Bị khóa / Suspended", value: "SUSPENDED" },
+                  ]}
+                />
               </Form.Item>
             </Col>
           </Row>
+
           <Form.Item label="Hình ảnh tòa nhà">
             <Upload
               listType="picture-card"
               fileList={fileList}
-              onChange={({ fileList: newFileList }) => setFileList(newFileList)}
+              onChange={({ fileList: nextFileList }) =>
+                setFileList(nextFileList)
+              }
               beforeUpload={() => false}
               multiple
               maxCount={5}

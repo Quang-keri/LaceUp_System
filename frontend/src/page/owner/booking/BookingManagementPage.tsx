@@ -341,9 +341,9 @@ export default function BookingManagementPage() {
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={() => navigate("/owner/bookings/calendar")}
-                  style={{ backgroundColor: "#ea580c", borderColor: "#ea580c" }}
+             
                 >
-                  Tạo đơn đặt
+                  Tạo vãng lai
                 </Button>
               }
             >
