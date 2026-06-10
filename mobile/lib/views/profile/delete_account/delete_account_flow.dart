@@ -172,7 +172,6 @@ Future<void> _showDeleteAccountSuccessDialog(
   );
 }
 
-/// Popup hiển thị khi tài khoản chưa thể xóa ngay.
 Future<void> _showWaitingDeletionDialog(
     BuildContext context, {
       required DeleteAccountResponse result,
@@ -387,7 +386,6 @@ Future<void> openDeleteAccountFlow(
     builder: (_) {
       return DeleteAccountDialog(
         service: service,
-        authProvider: loginProvider,
         role: role,
       );
     },

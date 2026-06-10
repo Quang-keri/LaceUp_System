@@ -4,7 +4,6 @@ package org.sport.backend.serviceImpl;
 
 import lombok.RequiredArgsConstructor;
 import org.sport.backend.constant.*;
-import org.sport.backend.dto.request.user.DeleteAccountRequest;
 import org.sport.backend.dto.response.user.DeleteAccountResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.repository.*;
@@ -72,18 +71,15 @@ public class AccountDeletionServiceImpl {
 
     @Transactional
     public DeleteAccountResponse requestDeletion(
-            UUID userId,
-            DeleteAccountRequest request
+            UUID userId
+
     ) {
         Objects.requireNonNull(
                 userId,
                 "userId không được null"
         );
 
-        Objects.requireNonNull(
-                request,
-                "DeleteAccountRequest không được null"
-        );
+
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
@@ -99,21 +95,7 @@ public class AccountDeletionServiceImpl {
             );
         }
 
-        String confirmation = Optional
-                .ofNullable(request.getConfirmation())
-                .orElse("")
-                .trim();
 
-        if (!"XOA".equalsIgnoreCase(confirmation)) {
-            throw new IllegalArgumentException(
-                    "Vui lòng nhập XOA để xác nhận"
-            );
-        }
-
-        verifyPassword(
-                user,
-                request.getPassword()
-        );
 
         if (user.getAccountDeletionStatus()
                 == AccountDeletionStatus.COMPLETED) {
@@ -140,9 +122,6 @@ public class AccountDeletionServiceImpl {
 
         user.setDeletionRequestedAt(now);
 
-        user.setDeletionReason(
-                normalizeReason(request.getReason())
-        );
 
         List<String> blockers = findBlockers(user);
 
@@ -310,35 +289,7 @@ public class AccountDeletionServiceImpl {
         );
     }
 
-    private void verifyPassword(
-            User user,
-            String rawPassword
-    ) {
-        /*
-         * Tài khoản GOOGLE hiện được xác thực bằng access token đang đăng nhập.
-         * Trước production nên thêm re-auth Google hoặc OTP dùng một lần.
-         */
-        if (user.getProvider() == AuthProvider.GOOGLE
-                && user.getPasswordHash() == null) {
-            return;
-        }
 
-        if (rawPassword == null || rawPassword.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Vui lòng nhập mật khẩu hiện tại"
-            );
-        }
-
-        if (user.getPasswordHash() == null
-                || !passwordEncoder.matches(
-                rawPassword,
-                user.getPasswordHash()
-        )) {
-            throw new IllegalArgumentException(
-                    "Mật khẩu hiện tại không chính xác"
-            );
-        }
-    }
 
     private void completeDeletion(User user) {
         UUID userId = user.getUserId();

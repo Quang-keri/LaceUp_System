@@ -149,6 +149,15 @@ class AuthService {
     await prefs.remove('accessToken');
     await prefs.remove('refreshToken');
   }
+
+  Future<void> forgotPassword(String email) async {
+    await apiClient.post(
+      '/auth/forgot-password',
+      queryParameters: {
+        'email': email.trim(),
+      },
+    );
+  }
 }
 
 final authService = AuthService();

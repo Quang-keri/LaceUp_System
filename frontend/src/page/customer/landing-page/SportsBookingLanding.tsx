@@ -266,7 +266,7 @@ export default function SportsBookingLanding() {
 
         <div className="w-full max-w-5xl bg-white/95 backdrop-blur-md p-5 rounded-[2rem] shadow-[0_20px_60px_rgba(145,86,241,0.16)] border border-white">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5  border border-gray rounded-xl">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-2 tracking-wider">
                 Môn chơi
               </label>
@@ -292,7 +292,7 @@ export default function SportsBookingLanding() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase text-gray-400 ml-2 tracking-wider">
+              <label className="text-[10px] font-bold uppercase text-gray-600 ml-2 tracking-wider">
                 Khu vực
               </label>
 

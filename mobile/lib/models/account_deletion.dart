@@ -9,10 +9,14 @@ class DeleteAccountResponse {
     required this.blockers,
   });
 
-  bool get isCompleted => status == 'COMPLETED';
+  String get normalizedStatus =>
+      status.trim().toUpperCase();
+
+  bool get isCompleted =>
+      normalizedStatus == 'COMPLETED';
 
   bool get isWaiting =>
-      status == 'WAITING_FOR_OBLIGATIONS';
+      normalizedStatus == 'WAITING_FOR_OBLIGATIONS';
 
   factory DeleteAccountResponse.fromJson(
       Map<String, dynamic> json,

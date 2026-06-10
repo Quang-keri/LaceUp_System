@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/services/account_deletion_service.dart';
+import 'package:mobile/views/profile/bank_account/user_bank_account_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -111,11 +112,12 @@ class ProfileScreen extends StatelessWidget {
       ProfileMenuItemData(
         title: 'Tài khoản ngân hàng',
         icon: Icons.account_balance_outlined,
-        isComingSoon: true,
+        isComingSoon: false,
         onTap: () {
-          showComingSoon(
-            context,
-            message: 'Chức năng tài khoản ngân hàng đang được phát triển',
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const UserBankAccountScreen(),
+            ),
           );
         },
       ),
@@ -377,49 +379,127 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildGuestContent(BuildContext context) {
+    final List<ProfileMenuItemData> publicSystemItems = [
+      ProfileMenuItemData(
+        title: 'Điều khoản và chính sách',
+        subtitle: 'Quyền riêng tư, điều khoản sử dụng và xóa tài khoản',
+        icon: Icons.verified_user_outlined,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const TermsPolicyScreen(),
+            ),
+          );
+        },
+      ),
+      ProfileMenuItemData(
+        title: 'Ngôn ngữ',
+        subtitle: 'Tiếng Việt',
+        icon: Icons.language_rounded,
+        onTap: () {
+          showDialog<void>(
+            context: context,
+            builder: (dialogContext) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                title: const Row(
+                  children: [
+                    Icon(
+                      Icons.language_rounded,
+                      color: primaryPurple,
+                    ),
+                    SizedBox(width: 10),
+                    Text('Ngôn ngữ'),
+                  ],
+                ),
+                content: const Text(
+                  'Ứng dụng hiện đang sử dụng Tiếng Việt.',
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    height: 1.5,
+                  ),
+                ),
+                actions: [
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: primaryPurple,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                    },
+                    child: const Text('Đã hiểu'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    ];
+
     return SingleChildScrollView(
+      keyboardDismissBehavior:
+      ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(18, 24, 18, 120),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: lightPurple,
+              gradient: LinearGradient(
+                colors: [
+                  lightPurple,
+                  Colors.white,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: primaryPurple.withOpacity(0.25)),
+              border: Border.all(
+                color: primaryPurple.withOpacity(0.22),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryPurple.withOpacity(0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               children: [
                 Container(
-                  width: 72,
-                  height: 72,
+                  width: 76,
+                  height: 76,
                   decoration: BoxDecoration(
                     color: primaryPurple.withOpacity(0.13),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.person_off_outlined,
+                    Icons.person_outline_rounded,
                     color: primaryPurple,
-                    size: 35,
+                    size: 38,
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 const Text(
                   'Chưa đăng nhập',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: textColor,
                     fontSize: 21,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-
-                const SizedBox(height: 7),
-
+                const SizedBox(height: 8),
                 const Text(
-                  'Đăng nhập để quản lý tài khoản, lịch đặt sân và các hoạt động của bạn.',
+                  'Đăng nhập để quản lý lịch đặt sân, trận đấu '
+                      'và thông tin tài khoản của bạn.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: secondaryTextColor,
@@ -427,59 +507,87 @@ class ProfileScreen extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                const LoginScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryPurple,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Đăng nhập',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                const RegisterScreen(),
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: primaryPurple,
+                            side: const BorderSide(
+                              color: primaryPurple,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Đăng ký',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
 
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryPurple,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                'Đăng nhập',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: primaryPurple,
-                side: const BorderSide(color: primaryPurple, width: 1.5),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                'Đăng ký tài khoản',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              ),
-            ),
+          ProfileSection(
+            title: 'Hệ thống và hỗ trợ',
+            icon: Icons.settings_suggest_outlined,
+            items: publicSystemItems,
           ),
         ],
       ),

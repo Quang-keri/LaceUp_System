@@ -23,8 +23,9 @@ dependencies:
   curved_navigation_bar: ^1.0.6
   maplibre_gl: ^0.26.1
   geolocator: ^11.0.0
-  image_picker: ^1.1.2
+  image_picker: ^1.2.2
   url_launcher: ^6.2.5
+  http_parser: ^4.1.2
 
 dev_dependencies:
   flutter_test:

@@ -39,7 +39,7 @@ export default function LandingPage() {
 
           <button
             onClick={handleStart}
-            className="start-btn group relative px-12 py-4 bg-[#B0DF94] text-[#1A1A1A] font-bold rounded-full overflow-hidden transition-all hover:scale-110 active:scale-95 shadow-2xl"
+            className="start-btn group relative px-12 py-4 bg-[#B0DF94] text-purple-800 font-bold rounded-full overflow-hidden transition-all hover:scale-110 active:scale-95 shadow-2xl"
           >
             <span className="relative z-10">BẮT ĐẦU TRẢI NGHIỆM</span>
             <div className="absolute inset-0 bg-white scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500"></div>
