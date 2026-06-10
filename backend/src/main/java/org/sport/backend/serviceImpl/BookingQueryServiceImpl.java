@@ -28,6 +28,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -141,7 +142,7 @@ public class BookingQueryServiceImpl implements BookingQueryService {
                     .build();
         }
 
-        return BookingResponse.builder()
+        BookingResponse response = BookingResponse.builder()
                 .bookingId(booking.getBookingId())
                 .totalPrice(booking.getTotalPrice())
                 .bookingStatus(booking.getBookingStatus())
@@ -162,14 +163,33 @@ public class BookingQueryServiceImpl implements BookingQueryService {
 
                 .bookingType(booking.getBookingType())
                 .maxParticipants(booking.getMaxParticipants())
+                .minParticipants(booking.getMinParticipants())
+                .minimumCheckCompleted(booking.getMinimumCheckCompleted())
+                .minimumCheckedAt(booking.getMinimumCheckedAt())
                 .currentParticipants(
                         booking.getCurrentParticipants() != null
                                 ? booking.getCurrentParticipants()
                                 : 0
                 )
                 .pricePerTicket(booking.getPricePerTicket())
-
                 .build();
+
+        attachSharedBookingFinancialSummary(
+                response,
+                booking
+        );
+
+        UUID currentUserId = userService
+                .getCurrentUserEntity()
+                .getUserId();
+
+        attachCurrentUserSharedTicket(
+                response,
+                booking,
+                currentUserId
+        );
+
+        return response;
     }
 
     @Override
@@ -203,7 +223,17 @@ public class BookingQueryServiceImpl implements BookingQueryService {
 
         List<BookingResponse> responses = bookingPage.getContent()
                 .stream()
-                .map(bookingMapper::toBookingResponse)
+                .map(booking -> {
+                    BookingResponse response =
+                            bookingMapper.toBookingResponse(booking);
+
+                    attachSharedBookingFinancialSummary(
+                            response,
+                            booking
+                    );
+
+                    return response;
+                })
                 .toList();
 
         return PageResponse.<BookingResponse>builder()
@@ -352,30 +382,16 @@ public class BookingQueryServiceImpl implements BookingQueryService {
                     BookingResponse response =
                             bookingMapper.toBookingResponse(booking);
 
-                    if (booking.getParticipants() != null) {
-                        booking.getParticipants()
-                                .stream()
-                                .filter(participant ->
-                                        participant.getUser() != null
-                                                && userId.equals(participant.getUser().getUserId())
-                                                && (participant.getPaymentStatus()
-                                                == PaymentStatus.SUCCESS
-                                                || participant.getPaymentStatus()
-                                                == PaymentStatus.PENDING)
-                                )
-                                .findFirst()
-                                .ifPresent(participant -> {
-                                    response.setParticipantId(participant.getParticipantId());
-                                    response.setTicketQuantity(
-                                            participant.getQuantity() != null
-                                                    ? participant.getQuantity()
-                                                    : 1
-                                    );
-                                    response.setTicketAmount(participant.getAmountPaid());
-                                    response.setTicketPaymentStatus(participant.getPaymentStatus());
-                                    response.setTicketPaymentProofUrl(participant.getPaymentProofUrl());
-                                });
-                    }
+                    attachSharedBookingFinancialSummary(
+                            response,
+                            booking
+                    );
+
+                    attachCurrentUserSharedTicket(
+                            response,
+                            booking,
+                            userId
+                    );
 
                     return response;
                 })
@@ -416,7 +432,17 @@ public class BookingQueryServiceImpl implements BookingQueryService {
 
         List<BookingResponse> responses = bookingPage.getContent()
                 .stream()
-                .map(bookingMapper::toBookingResponse)
+                .map(booking -> {
+                    BookingResponse response =
+                            bookingMapper.toBookingResponse(booking);
+
+                    attachSharedBookingFinancialSummary(
+                            response,
+                            booking
+                    );
+
+                    return response;
+                })
                 .toList();
 
         return PageResponse.<BookingResponse>builder()
@@ -427,4 +453,181 @@ public class BookingQueryServiceImpl implements BookingQueryService {
                 .data(responses)
                 .build();
     }
+
+    private void attachSharedBookingFinancialSummary(
+            BookingResponse response,
+            Booking booking
+    ) {
+        if (response == null
+                || booking == null
+                || booking.getBookingType() != BookingType.SHARED) {
+            return;
+        }
+
+        List<PaymentStatus> activePaidStatuses = List.of(
+                PaymentStatus.SUCCESS,
+                PaymentStatus.BOOKED,
+                PaymentStatus.COMPLETED
+        );
+
+        BigDecimal activeTicketAmount =
+                Optional.ofNullable(
+                        bookingParticipantRepository
+                                .sumAmountByBookingIdAndStatuses(
+                                        booking.getBookingId(),
+                                        activePaidStatuses
+                                )
+                ).orElse(BigDecimal.ZERO);
+
+        BigDecimal cancelledNoRefundAmount =
+                Optional.ofNullable(
+                        bookingParticipantRepository
+                                .sumAmountByBookingIdAndStatuses(
+                                        booking.getBookingId(),
+                                        List.of(
+                                                PaymentStatus.CANCELLED_NO_REFUND
+                                        )
+                                )
+                ).orElse(BigDecimal.ZERO);
+
+        long activeTicketQuantity =
+                Optional.ofNullable(
+                        bookingParticipantRepository
+                                .sumQuantityByBookingIdAndStatuses(
+                                        booking.getBookingId(),
+                                        activePaidStatuses
+                                )
+                ).orElse(0L);
+
+        long cancelledNoRefundQuantity =
+                Optional.ofNullable(
+                        bookingParticipantRepository
+                                .sumQuantityByBookingIdAndStatuses(
+                                        booking.getBookingId(),
+                                        List.of(
+                                                PaymentStatus.CANCELLED_NO_REFUND
+                                        )
+                                )
+                ).orElse(0L);
+
+        response.setTicketCollectedAmount(
+                activeTicketAmount.add(cancelledNoRefundAmount)
+        );
+        response.setActiveTicketQuantity(
+                Math.toIntExact(activeTicketQuantity)
+        );
+        response.setCancelledNoRefundQuantity(
+                Math.toIntExact(cancelledNoRefundQuantity)
+        );
+        response.setCancelledNoRefundAmount(
+                cancelledNoRefundAmount
+        );
+    }
+
+    private void attachCurrentUserSharedTicket(
+            BookingResponse response,
+            Booking booking,
+            UUID currentUserId
+    ) {
+        if (response == null
+                || booking == null
+                || currentUserId == null
+                || booking.getBookingType() != BookingType.SHARED) {
+            return;
+        }
+
+        bookingParticipantRepository
+                .findTopByBooking_BookingIdAndUser_UserIdOrderByCreatedAtDesc(
+                        booking.getBookingId(),
+                        currentUserId
+                )
+                .filter(participant ->
+                        !Boolean.TRUE.equals(
+                                participant.getIsHost()
+                        )
+                )
+                .ifPresent(participant -> {
+                    response.setParticipantId(
+                            participant.getParticipantId()
+                    );
+
+                    response.setTicketQuantity(
+                            participant.getQuantity() != null
+                                    ? participant.getQuantity()
+                                    : 1
+                    );
+
+                    response.setTicketAmount(
+                            participant.getAmountPaid()
+                    );
+
+                    response.setTicketPaymentStatus(
+                            participant.getPaymentStatus()
+                    );
+
+                    response.setTicketPaymentProofUrl(
+                            participant.getPaymentProofUrl()
+                    );
+
+                    response.setSharedTicketParticipant(true);
+
+                    paymentRepository
+                            .findTopByBookingParticipantOrderByTransactionDateDesc(
+                                    participant
+                            )
+                            .ifPresent(payment -> {
+                                response.setTransactionCode(
+                                        resolvePaymentTransactionCode(
+                                                payment
+                                        )
+                                );
+
+                                if (payment.getPaymentMethod() != null) {
+                                    response.setPaymentMethod(
+                                            payment
+                                                    .getPaymentMethod()
+                                                    .name()
+                                    );
+                                }
+                            });
+                });
+    }
+
+    private String resolvePaymentTransactionCode(
+            Payment payment
+    ) {
+        if (payment == null) {
+            return null;
+        }
+
+        if (payment.getTransactionCode() != null
+                && !payment.getTransactionCode().isBlank()) {
+            return payment
+                    .getTransactionCode()
+                    .trim();
+        }
+
+        if (payment.getOrderCode() != null) {
+            String prefix =
+                    payment.getPaymentMethod() != null
+                            ? payment.getPaymentMethod().name()
+                            : "PAYMENT";
+
+            return prefix
+                    + "-"
+                    + payment.getOrderCode();
+        }
+
+        if (payment.getPaymentId() == null) {
+            return null;
+        }
+
+        return "PAY-"
+                + payment.getPaymentId()
+                .toString()
+                .replace("-", "")
+                .substring(0, 12)
+                .toUpperCase();
+    }
+
 }

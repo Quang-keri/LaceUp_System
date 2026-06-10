@@ -19,9 +19,9 @@ public interface CourtPriceService {
 
     void delete(UUID id);
 
-    BigDecimal calculatePrice(CourtCopy courtCopy,
-                              LocalDateTime slotStart,
-                              LocalDateTime slotEnd);
+    BigDecimal calculatePrice(
+            CourtCopy courtCopy,
+            LocalDateTime slotStart,
+            LocalDateTime slotEnd);
 
-    BigDecimal calculateSlotPrice(UUID courtId, LocalDateTime startTime, LocalDateTime endTime);
 }

@@ -2,6 +2,7 @@ package org.sport.backend.repository;
 
 import jakarta.persistence.LockModeType;
 import org.sport.backend.constant.BookingStatus;
+import org.sport.backend.constant.BookingType;
 import org.sport.backend.entity.Booking;
 import org.sport.backend.entity.RentalArea;
 import org.sport.backend.entity.User;
@@ -125,4 +126,31 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     Optional<Booking> findByIdForUpdate(
             @Param("bookingId") UUID bookingId
     );
+
+    @Query("""
+        SELECT booking
+        FROM Booking booking
+        WHERE booking.bookingType = :bookingType
+          AND booking.bookingStatus = :bookingStatus
+          AND (
+                booking.minimumCheckCompleted = false
+                OR booking.minimumCheckCompleted IS NULL
+          )
+          AND booking.startTime <= :deadline
+          AND booking.startTime > :now
+        """)
+    List<Booking> findSharedBookingsDueForMinimumCheck(
+            @Param("bookingType")
+            BookingType bookingType,
+
+            @Param("bookingStatus")
+            BookingStatus bookingStatus,
+
+            @Param("now")
+            LocalDateTime now,
+
+            @Param("deadline")
+            LocalDateTime deadline
+    );
+
 }

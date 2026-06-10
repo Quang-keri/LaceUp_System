@@ -117,9 +117,12 @@ const OwnerHeader: React.FC<AdminHeaderProps> = ({
           label: <Link to="/owner/transactions">Giao dịch</Link>,
         },
         {
-          ///owner/settlements/:rentalAreaId
-          key: "/owner/users/customers",
+          key: "/owner/settlements",
           label: <Link to="/owner/settlements">Lịch sử tiền nhận</Link>,
+        },
+        {
+          key: "/owner/refunds",
+          label: <Link to="/owner/refunds">Hoàn tiền</Link>,
         },
       ],
     },

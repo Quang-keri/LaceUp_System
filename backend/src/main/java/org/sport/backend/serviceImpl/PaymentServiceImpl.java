@@ -5,12 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sport.backend.config.VnPayConfig;
 import org.sport.backend.constant.*;
-import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.payment.CheckoutRequest;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.payment.CheckoutResponse;
-import org.sport.backend.dto.response.payment.RefundResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
@@ -19,10 +17,6 @@ import org.sport.backend.properties.UrlProperties;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.*;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,7 +45,6 @@ public class PaymentServiceImpl implements PaymentService {
     private final BookingService bookingService;
     private final UserService userService;
     private final SharedBookingService sharedBookingService;
-    private final EmailService emailService;
     private final CloudinaryService cloudinaryService;
 
     private final BookingIntentRepository bookingIntentRepository;
@@ -151,6 +144,20 @@ public class PaymentServiceImpl implements PaymentService {
             }
 
             Payment payment = optionalPayment.get();
+
+            String payOsTransactionCode =
+                    firstNonBlank(
+                            data.get("reference"),
+                            data.get("transactionCode"),
+                            data.get("paymentLinkId")
+                    );
+
+            if (payOsTransactionCode != null) {
+                payment.setTransactionCode(payOsTransactionCode);
+            } else {
+                ensureTransactionCode(payment, "PAYOS");
+            }
+
             String code = String.valueOf(payload.getOrDefault("code", ""));
             if ((code == null || code.isBlank()) && data.get("code") != null) {
                 code = String.valueOf(data.get("code"));
@@ -244,6 +251,21 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch với orderCode: " + orderCode));
 
+        String vnpTransactionNo =
+                fields.get("vnp_TransactionNo");
+
+        if (vnpTransactionNo != null
+                && !vnpTransactionNo.isBlank()) {
+            payment.setTransactionCode(
+                    vnpTransactionNo.trim()
+            );
+        } else {
+            ensureTransactionCode(
+                    payment,
+                    "VNPAY"
+            );
+        }
+
         if ("00".equals(vnp_ResponseCode)) {
             if (payment.getPaymentStatus() == PaymentStatus.PENDING) {
                 finalizePaidBookingPayment(payment);
@@ -284,8 +306,23 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Bạn không có quyền thanh toán vé này");
         }
 
-        if (participant.getPaymentStatus() == PaymentStatus.SUCCESS) {
+        PaymentStatus participantStatus = participant.getPaymentStatus();
+
+        if (participantStatus == PaymentStatus.SUCCESS
+                || participantStatus == PaymentStatus.BOOKED
+                || participantStatus == PaymentStatus.COMPLETED) {
             throw new RuntimeException("Vé này đã được thanh toán");
+        }
+
+        if (participantStatus == PaymentStatus.CANCELLED
+                || participantStatus == PaymentStatus.CANCELLED_NO_REFUND
+                || participantStatus == PaymentStatus.REFUND_PENDING
+                || participantStatus == PaymentStatus.REFUND_FAILED
+                || participantStatus == PaymentStatus.REFUNDED
+                || participantStatus == PaymentStatus.FAILED) {
+            throw new RuntimeException(
+                    "Vé này đã kết thúc. Vui lòng đăng ký một lượt tham gia mới"
+            );
         }
 
         Booking booking = participant.getBooking();
@@ -293,8 +330,13 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Booking không phải đặt vãng lai");
         }
 
-        if (booking.getStartTime() != null && booking.getStartTime().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Sân Vãng lai đã diễn ra");
+        if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+            throw new RuntimeException("Kèo vãng lai đã bị hủy");
+        }
+
+        if (booking.getStartTime() == null
+                || !booking.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new RuntimeException("Sân vãng lai đã diễn ra");
         }
 
         BigDecimal amount = participant.getAmountPaid();
@@ -317,6 +359,14 @@ public class PaymentServiceImpl implements PaymentService {
                 .transactionDate(LocalDateTime.now())
                 .orderCode(orderCode)
                 .build();
+
+        ensureTransactionCode(
+                payment,
+                method == PaymentMethod.VIET_QR
+                        ? "VQR"
+                        : method.name()
+        );
+
         paymentRepository.save(payment);
 
         if (method == PaymentMethod.PAY_OS) {
@@ -377,6 +427,13 @@ public class PaymentServiceImpl implements PaymentService {
                 .orderCode(orderCode)
                 .build();
 
+        ensureTransactionCode(
+                payment,
+                method == PaymentMethod.VIET_QR
+                        ? "VQR"
+                        : method.name()
+        );
+
         paymentRepository.save(payment);
 
         if (method == PaymentMethod.VN_PAY) return handleVnPayMatchJoin(payment, reg);
@@ -384,20 +441,6 @@ public class PaymentServiceImpl implements PaymentService {
         if (method == PaymentMethod.VIET_QR) return handleVietQrMatchJoin(payment, reg);
 
         throw new RuntimeException("Phương thức thanh toán chưa được hỗ trợ cho ghép trận: " + method);
-    }
-
-    @Override
-    public PageResponse<RefundResponse> getPendingRefunds(int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("transactionDate").descending());
-        Page<Payment> payments = paymentRepository.findByPaymentStatus(PaymentStatus.REFUND_PENDING, pageable);
-        return PageResponse.of(payments, mapToRefundResponses(payments.getContent(), true));
-    }
-
-    @Override
-    public PageResponse<RefundResponse> getCompletedRefunds(int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by("transactionDate").descending());
-        Page<Payment> payments = paymentRepository.findByPaymentStatus(PaymentStatus.REFUNDED, pageable);
-        return PageResponse.of(payments, mapToRefundResponses(payments.getContent(), false));
     }
 
     @Transactional
@@ -491,36 +534,15 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (isApproved) {
+            ensureTransactionCode(
+                    payment,
+                    "VQR"
+            );
             finalizePaidBookingPayment(payment);
         } else {
             payment.setPaymentStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
         }
-    }
-
-    @Transactional
-    @Override
-    public void confirmManualRefund(UUID paymentId) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy giao dịch"));
-
-        if (payment.getPaymentStatus() != PaymentStatus.REFUND_PENDING) {
-            throw new RuntimeException("Giao dịch này không ở trạng thái chờ hoàn tiền!");
-        }
-
-        payment.setPaymentStatus(PaymentStatus.REFUNDED);
-        paymentRepository.save(payment);
-
-        Transaction expenseTx = Transaction.builder()
-                .type(TransactionType.EXPENSE)
-                .amount(payment.getAmount())
-                .description("Hoàn tiền thủ công cho Order Code: " + payment.getOrderCode())
-                .status(TransactionStatus.SUCCESS)
-                .transactionDate(LocalDateTime.now())
-                .build();
-        transactionRepository.save(expenseTx);
-
-        log.info("Admin đã xác nhận hoàn tiền thành công cho Payment ID: {}", paymentId);
     }
 
     private CheckoutResponse handleVnPayCheckout(BookingIntent intent, User user, PaymentMethod method, BigDecimal amountToPay, PaymentType paymentType) {
@@ -587,69 +609,153 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void finalizePaidSharedTicket(Payment payment) {
-        BookingParticipant participant = payment.getBookingParticipant();
-        if (participant == null) throw new RuntimeException("Không tìm thấy thông tin người tham gia");
+        BookingParticipant participant =
+                payment.getBookingParticipant();
+
+        if (participant == null) {
+            throw new RuntimeException(
+                    "Không tìm thấy thông tin người tham gia"
+            );
+        }
 
         if (participant.getPaymentStatus() == PaymentStatus.SUCCESS) {
-            payment.setPaymentStatus(PaymentStatus.SUCCESS);
-            paymentRepository.save(payment);
+            if (payment.getPaymentStatus() != PaymentStatus.SUCCESS) {
+                payment.setPaymentStatus(PaymentStatus.SUCCESS);
+                paymentRepository.save(payment);
+            }
             return;
         }
 
-        participant.setAmountPaid(payment.getAmount());
-        participant.setPaymentStatus(PaymentStatus.SUCCESS);
-        bookingParticipantRepository.save(participant);
+        PaymentStatus currentStatus = participant.getPaymentStatus();
 
-        payment.setPaymentStatus(PaymentStatus.SUCCESS);
-        paymentRepository.save(payment);
-
-        Booking booking = participant.getBooking();
-        if (booking != null) {
-            try {
-                BigDecimal currentDeposit = booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO;
-                BigDecimal newDeposit = currentDeposit.add(payment.getAmount());
-                booking.setDepositAmount(newDeposit);
-
-                BigDecimal totalPrice = booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO;
-                BigDecimal remaining = totalPrice.subtract(newDeposit);
-                if (remaining.compareTo(BigDecimal.ZERO) < 0) {
-                    remaining = BigDecimal.ZERO;
-                }
-                booking.setRemainingAmount(remaining);
-
-                bookingRepository.save(booking);
-            } catch (Exception e) {
-                log.error("Lỗi khi cập nhật tiền cho Booking: ", e);
-            }
-
-            try {
-                RentalArea rentalArea = booking.getRentalArea();
-                User owner = rentalArea != null ? rentalArea.getOwner() : null;
-
-                if (rentalArea != null && owner != null) {
-                    String userName = payment.getUser() != null ? payment.getUser().getUserName() : "Khách vãng lai";
-
-                    Transaction transaction = Transaction.builder()
-                            .type(TransactionType.INCOME)
-                            .amount(payment.getAmount())
-                            .description("Thu tiền sân vãng lai " + booking.getBookingId().toString().substring(0, 8) + " - " + userName)
-                            .status(TransactionStatus.SUCCESS)
-                            .paymentMethod(payment.getPaymentMethod())
-                            .category(TransactionCategory.BOOKING_FULL_PAYMENT)
-                            .moneyFlow(payment.getPaymentMethod() == PaymentMethod.VIET_QR ? MoneyFlow.OWNER_COLLECTED : MoneyFlow.ADMIN_COLLECTED)
-                            .rentalArea(rentalArea)
-                            .owner(owner)
-                            .booking(booking)
-                            .transactionDate(LocalDateTime.now())
-                            .referenceId(payment.getPaymentId().toString())
-                            .build();
-
-                    transactionRepository.save(transaction);
-                }
-            } catch (Exception e) {
-                log.error("Lỗi khi lưu Transaction cho vãng lai: ", e);
-            }
+        if (currentStatus == PaymentStatus.CANCELLED
+                || currentStatus == PaymentStatus.CANCELLED_NO_REFUND
+                || currentStatus == PaymentStatus.REFUND_PENDING
+                || currentStatus == PaymentStatus.REFUND_FAILED
+                || currentStatus == PaymentStatus.REFUNDED
+                || currentStatus == PaymentStatus.FAILED) {
+            throw new RuntimeException(
+                    "Vé này không còn hợp lệ để thanh toán"
+            );
         }
+
+        Booking sourceBooking = participant.getBooking();
+
+        if (sourceBooking == null) {
+            throw new RuntimeException(
+                    "Không tìm thấy booking vãng lai"
+            );
+        }
+
+        Booking booking = bookingRepository
+                .findByIdForUpdate(sourceBooking.getBookingId())
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Không tìm thấy booking vãng lai"
+                        )
+                );
+
+        if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
+            throw new RuntimeException(
+                    "Kèo vãng lai đã bị hủy"
+            );
+        }
+
+        int quantity =
+                participant.getQuantity() != null
+                        ? participant.getQuantity()
+                        : 1;
+
+        BigDecimal paidAmount =
+                payment.getAmount() != null
+                        ? payment.getAmount()
+                        : participant.getAmountPaid();
+
+        if (paidAmount == null
+                || paidAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException(
+                    "Số tiền thanh toán vé không hợp lệ"
+            );
+        }
+
+        participant.setAmountPaid(paidAmount);
+        participant.setPaymentStatus(PaymentStatus.SUCCESS);
+        bookingParticipantRepository.saveAndFlush(participant);
+
+        int currentParticipants =
+                booking.getCurrentParticipants() != null
+                        ? booking.getCurrentParticipants()
+                        : 0;
+
+        int newParticipantCount = currentParticipants + quantity;
+
+        if (booking.getMaxParticipants() != null
+                && newParticipantCount > booking.getMaxParticipants()) {
+            throw new RuntimeException(
+                    "Số người tham gia vượt quá giới hạn của kèo"
+            );
+        }
+
+        booking.setCurrentParticipants(newParticipantCount);
+        bookingRepository.saveAndFlush(booking);
+
+        payment.setBooking(booking);
+        payment.setPaymentStatus(PaymentStatus.SUCCESS);
+        paymentRepository.saveAndFlush(payment);
+
+        RentalArea rentalArea = booking.getRentalArea();
+        User owner =
+                rentalArea != null
+                        ? rentalArea.getOwner()
+                        : null;
+
+        if (rentalArea == null || owner == null) {
+            log.warn(
+                    "Booking vãng lai {} chưa có rentalArea hoặc owner",
+                    booking.getBookingId()
+            );
+            return;
+        }
+
+        String userName =
+                payment.getUser() != null
+                        && payment.getUser().getUserName() != null
+                        ? payment.getUser().getUserName()
+                        : "Khách vãng lai";
+
+        MoneyFlow moneyFlow =
+                payment.getPaymentMethod() == PaymentMethod.VIET_QR
+                        ? MoneyFlow.OWNER_COLLECTED
+                        : MoneyFlow.ADMIN_COLLECTED;
+
+        Transaction transaction =
+                Transaction.builder()
+                        .type(TransactionType.INCOME)
+                        .amount(paidAmount)
+                        .description(
+                                "Thu tiền vé vãng lai "
+                                        + booking.getBookingId()
+                                        .toString()
+                                        .substring(0, 8)
+                                        + " - "
+                                        + userName
+                        )
+                        .status(TransactionStatus.SUCCESS)
+                        .paymentMethod(payment.getPaymentMethod())
+                        .category(
+                                TransactionCategory.BOOKING_FULL_PAYMENT
+                        )
+                        .moneyFlow(moneyFlow)
+                        .rentalArea(rentalArea)
+                        .owner(owner)
+                        .booking(booking)
+                        .transactionDate(LocalDateTime.now())
+                        .referenceId(
+                                participant.getParticipantId().toString()
+                        )
+                        .build();
+
+        transactionRepository.save(transaction);
     }
 
     private void finalizePaidBookingPayment(Payment payment) {
@@ -929,39 +1035,6 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-    private List<RefundResponse> mapToRefundResponses(List<Payment> payments, boolean requireQr) {
-        return payments.stream().map(p -> {
-            String source = (p.getPaymentType() == PaymentType.MATCH_JOIN) ? "MATCH" : "BOOKING";
-            String refCode = "N/A";
-            if (source.equals("MATCH") && p.getMatchRegistration() != null) {
-                refCode = p.getMatchRegistration().getMatch().getRoomCode();
-            } else if (source.equals("BOOKING") && p.getBooking() != null) {
-                refCode = p.getBooking().getBookingId().toString().substring(0, 8).toUpperCase();
-            }
-
-            BankAccount bank = p.getUser() != null ? p.getUser().getBankAccount() : null;
-            String bankNameStr = bank != null ? bank.getBankName() : null;
-            String accNumStr = bank != null ? bank.getAccountNumber() : null;
-            String accNameStr = bank != null ? bank.getAccountHolderName() : null;
-
-            String qrUrl = null;
-            if (requireQr && bankNameStr != null && accNumStr != null) {
-                String description = "LACEUP HOAN TIEN " + p.getOrderCode();
-                qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
-                        bankNameStr, accNumStr, p.getAmount().longValue(), description.replace(" ", "%20"),
-                        accNameStr != null ? accNameStr.replace(" ", "%20") : "");
-            }
-
-            return RefundResponse.builder()
-                    .paymentId(p.getPaymentId()).userName(p.getUser() != null ? p.getUser().getUserName() : "Khách ẩn danh")
-                    .phone(p.getUser() != null ? p.getUser().getPhone() : "N/A").amount(p.getAmount())
-                    .paymentMethod(p.getPaymentMethod() != null ? p.getPaymentMethod().name() : "VN_PAY")
-                    .orderCode(String.valueOf(p.getOrderCode())).transactionDate(p.getTransactionDate())
-                    .source(source).referenceCode(refCode).bankName(bankNameStr).accountNumber(accNumStr)
-                    .accountHolderName(accNameStr).qrCodeUrl(qrUrl).build();
-        }).collect(Collectors.toList());
-    }
-
     private boolean tryFinalizeByPayOsPaymentStatus(Payment payment) {
         PayOS payOS = requirePayOsClient();
         if (payment.getOrderCode() == null) return false;
@@ -970,6 +1043,20 @@ public class PaymentServiceImpl implements PaymentService {
             Map<String, Object> data = objectMapper.convertValue(linkData, Map.class);
             String status = String.valueOf(data.getOrDefault("status", ""));
             if (!"PAID".equalsIgnoreCase(status)) return false;
+
+            String payOsTransactionCode =
+                    firstNonBlank(
+                            data.get("reference"),
+                            data.get("transactionCode"),
+                            data.get("paymentLinkId")
+                    );
+
+            if (payOsTransactionCode != null) {
+                payment.setTransactionCode(payOsTransactionCode);
+            } else {
+                ensureTransactionCode(payment, "PAYOS");
+            }
+
             finalizePaidBookingPayment(payment);
             return true;
         } catch (Exception e) {
@@ -1069,4 +1156,64 @@ public class PaymentServiceImpl implements PaymentService {
         String normalized = status.trim().toLowerCase();
         return "cancel".equals(normalized) || "cancelled".equals(normalized) || "canceled".equals(normalized) || "failed".equals(normalized) || "fail".equals(normalized);
     }
+
+
+    private void ensureTransactionCode(
+            Payment payment,
+            String prefix
+    ) {
+        if (payment.getTransactionCode() != null
+                && !payment.getTransactionCode().isBlank()) {
+            return;
+        }
+
+        String safePrefix =
+                prefix != null && !prefix.isBlank()
+                        ? prefix.trim().toUpperCase()
+                        : "PAY";
+
+        if (payment.getOrderCode() != null) {
+            payment.setTransactionCode(
+                    safePrefix
+                            + "-"
+                            + payment.getOrderCode()
+            );
+            return;
+        }
+
+        payment.setTransactionCode(
+                safePrefix
+                        + "-"
+                        + payment.getPaymentId()
+                        .toString()
+                        .replace("-", "")
+                        .substring(0, 12)
+                        .toUpperCase()
+        );
+    }
+
+    private String firstNonBlank(
+            Object... values
+    ) {
+        if (values == null) {
+            return null;
+        }
+
+        for (Object value : values) {
+            if (value == null) {
+                continue;
+            }
+
+            String text =
+                    String.valueOf(value).trim();
+
+            if (!text.isBlank()
+                    && !"null".equalsIgnoreCase(text)) {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
 }

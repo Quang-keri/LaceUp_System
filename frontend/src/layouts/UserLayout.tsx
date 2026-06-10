@@ -9,10 +9,11 @@ const UserLayout: React.FC = () => {
   const getSelectedMenuKey = (path: string) => {
     if (path.includes("/dashboard")) return "0";
     if (path.includes("/profile")) return "1";
-    if (path.includes("/my-matches")) return "2";
+    if (path.includes("/bank-account")) return "2";
     if (path.includes("/booking-history")) return "3";
-    if (path.includes("/achievements")) return "7";
-    if (path.includes("/my-ranks")) return "8";
+    if (path.includes("/my-matches")) return "4";
+    if (path.includes("/my-ranks")) return "5";
+    if (path.includes("/achievements")) return "6";
     return "0";
   };
 

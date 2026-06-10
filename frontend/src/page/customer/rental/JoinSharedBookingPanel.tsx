@@ -82,19 +82,17 @@ export default function JoinSharedBookingPanel({
   }, [bookingDetail]);
 
   const price = Number(bookingDetail?.pricePerTicket ?? 0);
-
   const currentParticipants = Number(bookingDetail?.currentParticipants ?? 0);
-
   const maxParticipants = Number(bookingDetail?.maxParticipants ?? 0);
 
+  const minParticipants = Number(bookingDetail?.minParticipants ?? 0);
+  const remainingToStart = Math.max(minParticipants - currentParticipants, 0);
+
   const remainingSlots = Math.max(maxParticipants - currentParticipants, 0);
-
   const isFull = maxParticipants > 0 && currentParticipants >= maxParticipants;
-
   const hasValidTicketInformation = price > 0 && maxParticipants > 0;
 
   const startTime = bookingDetail?.startTime ?? firstSlot?.startTime ?? null;
-
   const endTime = bookingDetail?.endTime ?? firstSlot?.endTime ?? null;
 
   const isExpired =
@@ -106,7 +104,6 @@ export default function JoinSharedBookingPanel({
 
   const courtName =
     slotInfo?.courtCopy?.courtName || firstSlot?.courtName || "Sân thể thao";
-
   const courtCode =
     slotInfo?.courtCopy?.courtCode || firstSlot?.courtCode || "";
 
@@ -167,7 +164,6 @@ export default function JoinSharedBookingPanel({
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Spin size="large" />
-
         <p className="text-sm text-gray-500 mt-4">
           Đang tải thông tin trận vãng lai...
         </p>
@@ -205,7 +201,6 @@ export default function JoinSharedBookingPanel({
           <p className="text-sm text-teal-900 font-semibold">
             Tham Gia trận vãng lai
           </p>
-
           <p className="text-xs text-teal-700 mt-1">
             Cùng giao lưu thể thao và kết bạn mới!
           </p>
@@ -214,10 +209,8 @@ export default function JoinSharedBookingPanel({
         <div className="border border-teal-100 rounded-xl p-3 bg-teal-50/40 mb-4">
           <p className="font-bold text-gray-800">
             {courtName}
-
             {courtCode && <span className="text-teal-600"> - {courtCode}</span>}
           </p>
-
           {startTime && endTime && (
             <p className="text-sm text-gray-500 mt-1">
               {dayjs(startTime).format("DD/MM/YYYY")} •{" "}
@@ -232,7 +225,6 @@ export default function JoinSharedBookingPanel({
             <p className="text-sm font-semibold text-red-600">
               Kèo Vãng Lai đã bắt đầu hoặc đã kết thúc.
             </p>
-
             <p className="text-xs text-red-500 mt-1">
               Bạn không thể đăng ký tham gia kèo này.
             </p>
@@ -244,7 +236,6 @@ export default function JoinSharedBookingPanel({
             <p className="text-sm font-semibold text-red-600">
               Kèo Vãng Lai chưa có thông tin giá vé hoặc số lượng người tối đa.
             </p>
-
             <p className="text-xs text-red-500 mt-1">
               Kèo này có thể được tạo trước khi hệ thống cập nhật chức năng giá
               vé. Vui lòng tạo lại kèo mới.
@@ -252,10 +243,18 @@ export default function JoinSharedBookingPanel({
           </div>
         ) : (
           <>
+            {remainingToStart > 0 && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p className="text-sm text-amber-700">
+                  Cần thêm <b>{remainingToStart} người</b> để trận vãng lai được
+                  bắt đầu.
+                </p>
+              </div>
+            )}
+
             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 space-y-3 text-sm">
               <div className="flex justify-between items-center text-gray-600">
                 <span>Số lượng hiện tại:</span>
-
                 <span
                   className={`font-bold ${
                     isFull ? "text-red-500" : "text-teal-600"
@@ -267,7 +266,6 @@ export default function JoinSharedBookingPanel({
 
               <div className="flex justify-between items-center text-gray-600">
                 <span>Số chỗ còn lại:</span>
-
                 <span
                   className={`font-bold ${
                     remainingSlots <= 0 ? "text-red-500" : "text-teal-600"
@@ -279,12 +277,10 @@ export default function JoinSharedBookingPanel({
 
               <div className="border-t border-gray-200 pt-3 flex justify-between items-end gap-3">
                 <span className="text-gray-700 font-bold">Giá một vé:</span>
-
                 <div className="text-right">
                   <span className="text-2xl font-extrabold text-teal-600">
                     {price.toLocaleString("vi-VN")}
                   </span>
-
                   <span className="text-gray-500 font-medium ml-1">
                     đ/người
                   </span>
@@ -297,7 +293,6 @@ export default function JoinSharedBookingPanel({
                 <span className="text-sm font-semibold text-gray-700">
                   Số người đăng ký:
                 </span>
-
                 <span className="text-xs text-gray-500">
                   Tối đa {remainingSlots} người
                 </span>
@@ -314,27 +309,18 @@ export default function JoinSharedBookingPanel({
               />
             </div>
 
-            <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 mb-6">
-              <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
-                <span>
+            <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 mb-6 flex justify-between items-center">
+              <div>
+                <div className="font-bold text-gray-800">Tổng thanh toán:</div>
+                <div className="text-sm text-gray-500 mt-1">
                   {quantity} người × {price.toLocaleString("vi-VN")}đ
-                </span>
-
-                <span>{totalAmount.toLocaleString("vi-VN")}đ</span>
-              </div>
-
-              <div className="border-t border-teal-100 pt-3 flex justify-between items-end">
-                <span className="font-bold text-gray-800">
-                  Tổng thanh toán:
-                </span>
-
-                <div>
-                  <span className="text-2xl font-extrabold text-teal-600">
-                    {totalAmount.toLocaleString("vi-VN")}
-                  </span>
-
-                  <span className="text-gray-500 ml-1">đ</span>
                 </div>
+              </div>
+              <div>
+                <span className="text-2xl font-extrabold text-teal-600">
+                  {totalAmount.toLocaleString("vi-VN")}
+                </span>
+                <span className="text-gray-500 ml-1 font-medium">đ</span>
               </div>
             </div>
           </>

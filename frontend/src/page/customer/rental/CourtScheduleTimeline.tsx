@@ -377,11 +377,11 @@ export default function CourtScheduleTimeline({
           break;
 
         case "MATCH_PENDING":
-          currentStatusLabel = "Kèo đang chờ xác nhận";
+          currentStatusLabel = "Trận đang chờ xác nhận";
           break;
 
         case "MATCH_FULL":
-          currentStatusLabel = "Kèo đã đủ người";
+          currentStatusLabel = "Trận đã đủ người";
           break;
 
         case "LOCKED":

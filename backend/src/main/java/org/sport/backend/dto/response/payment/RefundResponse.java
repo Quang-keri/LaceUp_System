@@ -2,6 +2,8 @@ package org.sport.backend.dto.response.payment;
 
 import lombok.Builder;
 import lombok.Data;
+import org.sport.backend.constant.MoneyFlow;
+import org.sport.backend.constant.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,4 +25,15 @@ public class RefundResponse {
     private String accountNumber;
     private String accountHolderName;
     private String qrCodeUrl;
+    private String email;
+    private PaymentStatus refundStatus;
+    private String refundNote;
+    private LocalDateTime refundProcessedAt;
+    private UUID rentalAreaId;
+    private String rentalAreaName;
+    private UUID ownerId;
+    private String ownerName;
+    private String refundResponsible;
+    private MoneyFlow moneyFlow;
+
 }

@@ -21,7 +21,6 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-
 import { useAuth } from "../../context/AuthContext.tsx";
 import userService from "../../service/userService.ts";
 import DeleteAccountModal from "../../components/user/DeleteAccountModal.tsx";
@@ -84,36 +83,28 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
       case "0":
         navigate("/dashboard");
         break;
-
       case "1":
         navigate("/profile");
         break;
-
       case "2":
-        navigate("/my-matches");
+        navigate("/bank-account");
         break;
-
-      case "8":
-        navigate("/my-ranks");
-        break;
-
-      case "7":
-        navigate("/achievements");
-        break;
-
       case "3":
         navigate("/booking-history");
         break;
-
-      case "6":
-        navigate("/bank-account");
-        break;
-
       case "4":
+        navigate("/my-matches");
+        break;
+      case "5":
+        navigate("/my-ranks");
+        break;
+      case "6":
+        navigate("/achievements");
+        break;
+      case "7":
         message.info("Cài đặt chưa được phát triển");
         break;
-
-      case "5":
+      case "8":
         message.info("Bảo mật tài khoản chưa được phát triển");
         break;
 
@@ -234,57 +225,32 @@ const UserSidebar: React.FC<UserSidebarProps> = ({
   );
 
   const menuItems = [
-    {
-      key: "0",
-      icon: <DashboardOutlined />,
-      label: "Bảng điều khiển",
-    },
-    {
-      key: "1",
-      icon: <UserOutlined />,
-      label: "Thông tin cá nhân",
-    },
-    {
-      key: "2",
-      icon: <HistoryOutlined />,
-      label: "Trận đấu của tôi",
-    },
+    { key: "0", icon: <DashboardOutlined />, label: "Bảng điều khiển" },
+    { key: "1", icon: <UserOutlined />, label: "Thông tin cá nhân" },
+    { key: "2", icon: <BankOutlined />, label: "Tài khoản ngân hàng" },
+    { key: "3", icon: <HistoryOutlined />, label: "Lịch sử đặt sân" },
+    { key: "4", icon: <HistoryOutlined />, label: "Trận đấu của tôi" },
+    { key: "5", icon: <BarChartOutlined />, label: "Xếp hạng của tôi" },
+    { key: "6", icon: <TrophyOutlined />, label: "Thành tựu" },
+
+    { key: "7", icon: <SettingOutlined />, label: "Cài đặt" },
     {
       key: "8",
-      icon: <BarChartOutlined />,
-      label: "Xếp hạng của tôi",
+      icon: <SafetyCertificateOutlined />,
+      label: "Bảo mật tài khoản",
     },
-    {
-      key: "7",
-      icon: <TrophyOutlined />,
-      label: "Thành tựu",
-    },
-    {
-      key: "3",
-      icon: <HistoryOutlined />,
-      label: "Lịch sử đặt sân",
-    },
-    {
-      key: "6",
-      icon: <BankOutlined />,
-      label: "Tài khoản ngân hàng",
-    },
-    {
-      key: "4",
-      icon: <SettingOutlined />,
-      label: "Cài đặt",
-    },
-    {
-      key: "9",
-      icon: <DeleteOutlined />,
-      label: "Xóa tài khoản",
-      danger: true,
-    },
+      {
+          key: "9",
+          icon: <DeleteOutlined />,
+          label: "Xóa tài khoản",
+          danger: true,
+      },
     {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Đăng xuất",
       danger: true,
+      onClick: handleLogout,
     },
   ];
 

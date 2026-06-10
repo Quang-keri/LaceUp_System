@@ -62,6 +62,34 @@ public class SharedBookingController {
         }
     }
 
+    @PutMapping("/ticket/{participantId}/cancel")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<BookingParticipantResponse>> cancelTicketByUser(
+            @PathVariable UUID participantId
+    ) {
+        try {
+            return ResponseEntity.ok(
+                    ApiResponse.success(
+                            200,
+                            "Hủy vé thành công. Tiền sẽ không được hoàn lại theo quy định hệ thống.",
+                            sharedBookingService
+                                    .cancelSharedTicketByUser(
+                                            participantId
+                                    )
+                    )
+            );
+        } catch (Exception exception) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.error(
+                                    400,
+                                    exception.getMessage()
+                            )
+                    );
+        }
+    }
+
     @GetMapping("/ticket/{participantId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<BookingParticipantResponse>> getTicketParticipant(

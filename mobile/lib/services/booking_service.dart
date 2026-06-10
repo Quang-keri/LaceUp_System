@@ -604,6 +604,19 @@ class BookingService {
       },
     );
   }
+
+  Future<dynamic> cancelSharedTicketByUser(String participantId) {
+    return _execute(
+      fallbackMessage: 'Không thể hủy vé vãng lai',
+      request: () async {
+        final response = await apiClient.put(
+          '/bookings/shared/ticket/$participantId/cancel',
+        );
+
+        return response.data;
+      },
+    );
+  }
 }
 
 final bookingService = BookingService();
