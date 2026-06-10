@@ -7,20 +7,27 @@ import 'package:provider/provider.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
+import './forgot_password_screen.dart';
 import './register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
 
-  const LoginScreen({super.key, this.onLoginSuccess});
+  const LoginScreen({
+    super.key,
+    this.onLoginSuccess,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _emailController =
+  TextEditingController();
+
+  final TextEditingController _passwordController =
+  TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -58,7 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       await authService.login(email, password);
@@ -68,6 +77,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       await context.read<AuthProvider>().setUser(userInfo);
+
+      if (!mounted) return;
 
       showTopMessage(
         context,
@@ -81,20 +92,24 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const MainNavigation()),
+          MaterialPageRoute(
+            builder: (_) => const MainNavigation(),
+          ),
         );
       }
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
 
       showTopMessage(
         context,
-        getErrorMessage(e),
+        getErrorMessage(error),
         isError: true,
       );
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -102,14 +117,40 @@ class _LoginScreenState extends State<LoginScreen> {
   void _goRegister() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+      MaterialPageRoute(
+        builder: (_) => const RegisterScreen(),
+      ),
     );
+  }
+
+  Future<void> _goForgotPassword() async {
+    FocusScope.of(context).unfocus();
+
+    final email = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ForgotPasswordScreen(
+          initialEmail: _emailController.text.trim(),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (email != null && email.trim().isNotEmpty) {
+      _emailController.text = email.trim();
+
+      setState(() {
+        _emailError = null;
+      });
+    }
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+
     super.dispose();
   }
 
@@ -130,23 +171,36 @@ class _LoginScreenState extends State<LoginScreen> {
       suffixIcon: suffixIcon,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
+        borderSide: const BorderSide(
+          color: Color(0xFFCDD6E5),
+        ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFCDD6E5)),
+        borderSide: const BorderSide(
+          color: Color(0xFFCDD6E5),
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: primaryColor, width: 1.5),
+        borderSide: const BorderSide(
+          color: primaryColor,
+          width: 1.5,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 1.4),
+        borderSide: const BorderSide(
+          color: Colors.redAccent,
+          width: 1.4,
+        ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        borderSide: const BorderSide(
+          color: Colors.redAccent,
+          width: 1.5,
+        ),
       ),
     );
   }
@@ -154,9 +208,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildDividerText() {
     return const Row(
       children: [
-        Expanded(child: Divider()),
+        Expanded(
+          child: Divider(),
+        ),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: 14,
+          ),
           child: Text(
             'HOẶC',
             style: TextStyle(
@@ -165,7 +223,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-        Expanded(child: Divider()),
+        Expanded(
+          child: Divider(),
+        ),
       ],
     );
   }
@@ -178,7 +238,10 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black,
+          ),
           onPressed: () {
             Navigator.of(context).pop();
           },
@@ -190,7 +253,12 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.all(22),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(22, 34, 22, 26),
+              padding: const EdgeInsets.fromLTRB(
+                22,
+                34,
+                22,
+                26,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
@@ -212,14 +280,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.black,
                     ),
                   ),
+
                   const SizedBox(height: 30),
 
                   TextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [
+                      AutofillHints.email,
+                    ],
                     onChanged: (_) {
                       if (_emailError != null) {
-                        setState(() => _emailError = null);
+                        setState(() {
+                          _emailError = null;
+                        });
                       }
                     },
                     decoration: _inputDecoration(
@@ -233,9 +308,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [
+                      AutofillHints.password,
+                    ],
+                    onSubmitted: (_) {
+                      if (!_isLoading) {
+                        _handleLogin();
+                      }
+                    },
                     onChanged: (_) {
                       if (_passwordError != null) {
-                        setState(() => _passwordError = null);
+                        setState(() {
+                          _passwordError = null;
+                        });
                       }
                     },
                     decoration: _inputDecoration(
@@ -250,33 +336,65 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         onPressed: () {
                           setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
+                            _isPasswordVisible =
+                            !_isPasswordVisible;
                           });
                         },
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 4),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : _goForgotPassword,
+                      style: TextButton.styleFrom(
+                        foregroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 8,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize:
+                        MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Quên mật khẩu?',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
 
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
+                      onPressed:
+                      _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(9),
+                          borderRadius:
+                          BorderRadius.circular(9),
                         ),
                       ),
                       child: _isLoading
                           ? const SizedBox(
                         height: 24,
                         width: 24,
-                        child: CircularProgressIndicator(
+                        child:
+                        CircularProgressIndicator(
                           color: Colors.white,
                           strokeWidth: 2,
                         ),
@@ -330,7 +448,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 1.2,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius:
+                          BorderRadius.circular(10),
                         ),
                       ),
                     ),
@@ -346,8 +465,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextButton.styleFrom(
                         foregroundColor: primaryColor,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: const BorderSide(color: Color(0xFFE7D8FF)),
+                          borderRadius:
+                          BorderRadius.circular(10),
+                          side: const BorderSide(
+                            color: Color(0xFFE7D8FF),
+                          ),
                         ),
                       ),
                       child: const Text(
