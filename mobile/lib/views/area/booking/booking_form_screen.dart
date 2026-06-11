@@ -582,7 +582,6 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     );
   }
 
-  // ĐÃ SỬA: Cập nhật hàm này để hỗ trợ trạng thái readOnly
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,

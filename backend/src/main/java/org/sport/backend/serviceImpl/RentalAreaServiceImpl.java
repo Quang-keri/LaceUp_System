@@ -8,6 +8,7 @@ import org.sport.backend.constant.RentalAreaStatus;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.request.rental.RentalAreaRequest;
 import org.sport.backend.dto.request.rental.RentalAreaUpdateRequest;
+import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.amenity.AmenityResponse;
 import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.city.CityResponse;
@@ -212,7 +213,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
     }
 
     private RentalAreaResponse mapToResponse(RentalArea rentalArea) {
-        List<RentalAreaImage> images = rentalAreaImageRepository.findByRentalArea(rentalArea);
+        List<RentalAreaImage> images =
+                rentalAreaImageRepository.findByRentalArea(rentalArea);
 
         List<RentalAreaImageResponse> imageResponses = images.stream()
                 .sorted(Comparator.comparing(
@@ -227,15 +229,45 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                         .build())
                 .toList();
 
+        Address address = rentalArea.getAddress();
+
         CityResponse cityResponse = null;
-        List<Court> courts = courtRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId());
+        AddressResponse addressResponse = null;
+
+        if (address != null) {
+            City city = address.getCity();
+
+            if (city != null) {
+                cityResponse = CityResponse.builder()
+                        .cityId(city.getCityId())
+                        .cityName(city.getCityName())
+                        .provinceCode(city.getProvinceCode())
+                        .build();
+            }
+
+            addressResponse = AddressResponse.builder()
+                    .street(address.getStreet())
+                    .ward(address.getWard())
+                    .city(cityResponse)
+                    .build();
+        }
+
+        List<Court> courts =
+                courtRepository.findByRentalArea_RentalAreaId(
+                        rentalArea.getRentalAreaId()
+                );
+
         List<CourtResponse> courtResponses = courts.stream()
                 .map(this::mapToResponseCourt)
                 .toList();
 
-        List<ServiceItem> serviceItemResponses = serviceItemRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId());
-        List<ServiceItemResponse> serviceItems = serviceItemResponses.stream().map(
-                item -> ServiceItemResponse.builder()
+        List<ServiceItem> serviceItemResponses =
+                serviceItemRepository.findByRentalArea_RentalAreaId(
+                        rentalArea.getRentalAreaId()
+                );
+
+        List<ServiceItemResponse> serviceItems = serviceItemResponses.stream()
+                .map(item -> ServiceItemResponse.builder()
                         .id(item.getServiceItemId())
                         .serviceName(item.getServiceName())
                         .quantity(item.getQuantity())
@@ -244,26 +276,43 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                         .priceOriginal(item.getPriceOriginal())
                         .serviceNote(item.getServiceNote())
                         .build()
-        ).toList();
+                )
+                .toList();
 
-        LegalProfile legalProfile = legalProfileRepository.findByRentalArea_RentalAreaId(rentalArea.getRentalAreaId()).orElse(null);
+        LegalProfile legalProfile =
+                legalProfileRepository
+                        .findByRentalArea_RentalAreaId(
+                                rentalArea.getRentalAreaId()
+                        )
+                        .orElse(null);
+
         LegalProfileResponse legalProfileResponse = null;
+
         if (legalProfile != null) {
             legalProfileResponse = LegalProfileResponse.builder()
                     .id(rentalArea.getRentalAreaId())
-                    .businessLicenseNumber(legalProfile.getBusinessLicenseNumber())
+                    .businessLicenseNumber(
+                            legalProfile.getBusinessLicenseNumber()
+                    )
                     .taxId(legalProfile.getTaxId())
                     .legalNote(legalProfile.getLegalNote())
                     .companyName(legalProfile.getCompanyName())
-                    .responsiblePersonName(legalProfile.getResponsiblePersonName())
+                    .responsiblePersonName(
+                            legalProfile.getResponsiblePersonName()
+                    )
                     .address(legalProfile.getAddress())
                     .rentalAreaId(rentalArea.getRentalAreaId())
                     .images(
-                            legalProfile.getImages() != null ?
-                                    legalProfile.getImages().stream().map(img -> LegalImageResponse.builder()
-                                            .legalImageId(img.getId())
-                                            .imageUrl(img.getImageUrl())
-                                            .build()).toList()
+                            legalProfile.getImages() != null
+                                    ? legalProfile.getImages()
+                                    .stream()
+                                    .map(img ->
+                                            LegalImageResponse.builder()
+                                                    .legalImageId(img.getId())
+                                                    .imageUrl(img.getImageUrl())
+                                                    .build()
+                                    )
+                                    .toList()
                                     : List.of()
                     )
                     .build();
@@ -276,10 +325,11 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .phone(rentalArea.getOwner().getPhone())
                 .role(rentalArea.getOwner().getRole().getRoleName())
                 .build();
+
         return RentalAreaResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
-                .address(addressMapper.toAddressResponse(rentalArea.getAddress()))
+                .address(addressResponse)
                 .contactName(rentalArea.getContactName())
                 .contactPhone(rentalArea.getContactPhone())
                 .status(rentalArea.getStatus())
@@ -485,6 +535,7 @@ public class RentalAreaServiceImpl implements RentalAreaService {
             City newCity = cityRepository.findByProvinceCode(request.getCityId())
                     .orElseThrow(() -> new AppException(ErrorCode.CITY_NOT_FOUND));
             currentAddress.setCity(newCity);
+            currentAddress.setCityName(newCity.getCityName());
         }
 
         rentalArea.setAddress(currentAddress);

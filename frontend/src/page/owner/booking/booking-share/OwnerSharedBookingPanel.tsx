@@ -281,12 +281,8 @@ export default function OwnerSharedBookingPanel({
             }
             onClick={handleSubmit}
             className="flex-1 font-semibold"
-            style={{
-              backgroundColor: "#262626",
-              borderColor: "#262626",
-            }}
           >
-            Đăng kèo lên ứng dụng
+            Đăng trận lên ứng dụng
           </Button>
         </div>
       </div>

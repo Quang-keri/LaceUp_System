@@ -651,10 +651,46 @@ public class BookingServiceImpl implements BookingService {
 
         BookingIntent intent = bookingIntentRepository
                 .findById(bookingIntentId)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy yêu cầu đặt sân")
+                );
 
-        if (intent.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Hold expired");
+        LocalDateTime now = LocalDateTime.now();
+
+        if (intent.getStatus() == BookingIntentStatus.EXPIRED) {
+            throw new RuntimeException(
+                    "Yêu cầu đặt sân đã hết hạn"
+            );
+        }
+
+        if (intent.getStatus() == BookingIntentStatus.CONFIRMED) {
+            throw new RuntimeException(
+                    "Yêu cầu đặt sân đã được xác nhận trước đó"
+            );
+        }
+
+        if (intent.getStatus() == BookingIntentStatus.ACTIVE) {
+            if (intent.getExpiresAt() != null
+                    && now.isAfter(intent.getExpiresAt())) {
+
+                intent.setStatus(BookingIntentStatus.EXPIRED);
+                bookingIntentRepository.save(intent);
+
+                throw new RuntimeException(
+                        "Đã hết thời gian thanh toán"
+                );
+            }
+        }
+
+        boolean canConfirm =
+                intent.getStatus() == BookingIntentStatus.ACTIVE
+                        || intent.getStatus()
+                        == BookingIntentStatus.PENDING_OWNER_CONFIRM;
+
+        if (!canConfirm) {
+            throw new RuntimeException(
+                    "Yêu cầu không ở trạng thái có thể xác nhận"
+            );
         }
         BigDecimal totalPrice = intent.getPreviewPrice();
         BigDecimal paidAmount = payment.getAmount();

@@ -566,7 +566,7 @@ public class DataInitializer implements CommandLineRunner {
 
         RentalArea area = RentalArea.builder()
                 .rentalAreaName("Hệ thống Sân Cầu Lông Pro - Quận 9")
-                .address(Address.builder().street("456 Lê Văn Việt").ward("Phường Thủ Dầu Một").city(city).build())
+                .address(Address.builder().street("456 Lê Văn Việt").ward("Phường Thủ Dầu Một").city(city).cityName(city.getCityName()).build())
                 .owner(owner)
                 .openTime(LocalTime.of(5, 0))
                 .closeTime(LocalTime.of(22, 0))
