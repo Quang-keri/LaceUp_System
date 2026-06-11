@@ -47,5 +47,6 @@ public interface RentalAreaService {
     RentalAreaDetailResponse getRentalAreaById(UUID rentalAreaId);
 
     void deleteRentalArea(UUID rentalAreaId);
+
     RentalAreaScheduleResponse getRentalAreaSchedule(UUID rentalAreaId, LocalDate date);
 }

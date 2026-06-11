@@ -38,6 +38,8 @@ public class DataInitializer implements CommandLineRunner {
     private final RentalAreaRepository rentalAreaRepository;
     private final CourtCopyRepository courtCopyRepository;
     private final PostRepository postRepository;
+    private final UserAchievementRepository userAchievementRepository;
+    private final UserCategoryRankRepository userCategoryRankRepository;
     private final PasswordEncoder passwordEncoder;
     private final ItemGroupRepository itemGroupRepository;
     private final ObjectMapper objectMapper;
@@ -67,10 +69,9 @@ public class DataInitializer implements CommandLineRunner {
 
         Role adminRole = roleRepository.findByRoleName("ADMIN").orElse(null);
         Role ownerRole = roleRepository.findByRoleName("OWNER").orElse(null);
-        Role staffRole = roleRepository.findByRoleName("STAFF").orElse(null);
         Role renterRole = roleRepository.findByRoleName("RENTER").orElse(null);
 
-        if (adminRole == null || ownerRole == null || staffRole == null || renterRole == null) return;
+        if (adminRole == null || ownerRole == null || renterRole == null) return;
 
         if (cityRepository.count() == 0) {
             initAddressData();
@@ -82,22 +83,27 @@ public class DataInitializer implements CommandLineRunner {
             String commonPass = passwordEncoder.encode("123456");
             List<User> users = new ArrayList<>();
 
-            users.add(User.builder().userName("Admin main").email("admin@gmail.com").passwordHash(passwordEncoder.encode("enozpuecal")).gender("Male").phone("0901000011").dateOfBirth(LocalDate.of(1990, 5, 15)).provider(AuthProvider.LOCAL).role(adminRole).createdAt(LocalDateTime.now().minusYears(5)).active(true)
+            users.add(User.builder().userName("Admin main").email("admin@gmail.com").passwordHash(commonPass).gender("Male").phone("0901000011").dateOfBirth(LocalDate.of(1990, 5, 15)).provider(AuthProvider.LOCAL).role(adminRole).createdAt(LocalDateTime.now().minusYears(5)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
             users.add(User.builder().userName("Dương Xuân Sơn").email("owner@gmail.com").passwordHash(commonPass).gender("Male").phone("0911000011").dateOfBirth(LocalDate.of(1985, 8, 20)).provider(AuthProvider.LOCAL).role(ownerRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
             users.add(User.builder().userName("Ngô Anh Kiệt").email("renter@gmail.com").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
 
+            for (int i = 1; i <= 4; i++)
+                users.add(createDummyUser("Renter " + i, "renter" + i + "@gmail.com", commonPass, renterRole));
             users.add(createDummyUser("Owner1", "owner1@gmail.com", commonPass, ownerRole));
             users.add(createDummyUser("Admin1", "admin1@gmail.com", commonPass, adminRole));
-            userRepository.saveAll(users);
+            users = userRepository.saveAll(users);
 
         }
 
         seedBankAccountsAndDeletionTestUsers(ownerRole, renterRole);
 
         if (courtRepository.count() == 0) seedCourtData(courtImagesList.subList(0, 2));
+
+        // Chỉ bổ sung dữ liệu mới, không xóa hoặc ghi đè các sân cũ.
+        seedAdditionalOwnersAndRentalAreas(ownerRole);
         if (postRepository.count() == 0) seedPostData();
         if (itemGroupRepository.count() == 0) {
             seedItemGroup();
@@ -127,40 +133,83 @@ public class DataInitializer implements CommandLineRunner {
         roleRepository.save(deletedRole);
     }
 
-    private void seedBankAccountsAndDeletionTestUsers(Role ownerRole, Role renterRole) {
+    private void seedBankAccountsAndDeletionTestUsers(
+            Role ownerRole,
+            Role renterRole
+    ) {
         String commonPass = passwordEncoder.encode("123456");
 
-        User owner1 = userRepository.findByEmail("owner1@gmail.com").orElseGet(() -> userRepository.save(
-                buildSeedUser("Dương Xuân Sơn", "owner1@gmail.com", "0911000011", commonPass, ownerRole)));
+        User sonOwner = userRepository.findByEmail("owner@gmail.com")
+                .orElseGet(() -> userRepository.save(
+                        buildSeedUser(
+                                "Dương Xuân Sơn",
+                                "owner@gmail.com",
+                                "0911000011",
+                                commonPass,
+                                ownerRole
+                        )
+                ));
 
-        User owner2 = userRepository.findByEmail("owner2@gmail.com").orElseGet(() -> userRepository.save(
-                buildSeedUser("Trần Văn Huy", "owner2@gmail.com", "0911000012", commonPass, ownerRole)));
+        sonOwner.setUserName("Dương Xuân Sơn");
+        sonOwner.setRole(ownerRole);
+        sonOwner.setActive(true);
+        userRepository.save(sonOwner);
 
-        User owner3 = userRepository.findByEmail("Nguyễn Công Thanh").orElseGet(() -> userRepository.save(
-                buildSeedUser("Nguyễn Công Thanh", "owner3@gmail.com", "0911000013", commonPass, ownerRole)));
+        User kietRenter = userRepository.findByEmail("renter@gmail.com")
+                .orElseGet(() -> userRepository.save(
+                        buildSeedUser(
+                                "Ngô Anh Kiệt",
+                                "renter@gmail.com",
+                                "0931000011",
+                                commonPass,
+                                renterRole
+                        )
+                ));
 
-        List<User> owners = List.of(owner1, owner2, owner3);
-        owners.forEach(o -> {
-            o.setRole(ownerRole);
-            o.setActive(true);
-            userRepository.save(o);
-        });
-
-        ensureBankAccount(owner1, "TPBank", "07711338101", "DUONG XUAN SON", "970423");
-        ensureBankAccount(owner2, "Vietcombank", "09911338102", "TRAN VAN HUY", "970436");
-        ensureBankAccount(owner3, "MB Bank", "08811338103", "NGUYEN CONG THANH", "970422");
-
-        User kietRenter = userRepository.findByEmail("renter@gmail.com").orElseGet(() -> userRepository.save(
-                buildSeedUser("Ngô Anh Kiệt", "renter@gmail.com", "0931000011", commonPass, renterRole)));
+        kietRenter.setUserName("Ngô Anh Kiệt");
         kietRenter.setRole(renterRole);
         kietRenter.setActive(true);
         userRepository.save(kietRenter);
 
-        ensureBankAccount(kietRenter, "MB Bank", "0933484531", "NGO ANH KIET", "970422");
+        ensureBankAccount(
+                sonOwner,
+                "TPBank",
+                "07711338101",
+                "DUONG XUAN SON",
+                "970423"
+        );
 
-        ensureDeletionTestUser("Tester 1", "tester1app@gmail.com", "0909000001", commonPass, renterRole);
-        ensureDeletionTestUser("Tester 2 web", "tester2web@gmail.com", "0909000002", commonPass, renterRole);
-        ensureDeletionTestUser("Tester 3 owner", "se184616phamdangquang@gmail.com", "0909000003", commonPass, ownerRole);
+        ensureBankAccount(
+                kietRenter,
+                "MB Bank",
+                "0933484531",
+                "NGO ANH KIET",
+                "970422"
+        );
+
+        ensureDeletionTestUser(
+                "Tester 1",
+                "tester1app@gmail.com",
+                "0909000001",
+                commonPass,
+                renterRole
+        );
+
+        ensureDeletionTestUser(
+                "Tester 2 web",
+                "tester2web@gmail.com",
+                "0909000002",
+                commonPass,
+                renterRole
+        );
+
+        ensureDeletionTestUser(
+                "Tester 3 owner",
+                "se184616phamdangquang@gmail.com",
+                "0909000003",
+                commonPass,
+                ownerRole
+        );
     }
 
     private void ensureDeletionTestUser(
@@ -251,6 +300,265 @@ public class DataInitializer implements CommandLineRunner {
 
         user.setBankAccount(savedBankAccount);
         userRepository.save(user);
+    }
+
+    /**
+     * Bổ sung 2 chủ sân và 2 cơ sở mới tại TP.HCM.
+     * Hàm được thiết kế idempotent: chạy lại ứng dụng sẽ không tạo trùng cơ sở.
+     */
+    private void seedAdditionalOwnersAndRentalAreas(Role ownerRole) {
+        String encodedPassword = passwordEncoder.encode("123456");
+
+        User hanOwner = ensureSeedOwner(
+                "Nguyễn Hồng Vũ Hân",
+                "nguyenhongvuhan.owner@gmail.com",
+                "0909000101",
+                encodedPassword,
+                ownerRole
+        );
+        ensureBankAccount(
+                hanOwner,
+                "Vietcombank",
+                "9945356477",
+                "NGUYEN HONG VU HAN",
+                "970436"
+        );
+
+        User nhuYOwner = ensureSeedOwner(
+                "Trần Vũ Như Ý",
+                "tranvunhuy.owner@gmail.com",
+                "0909000102",
+                encodedPassword,
+                ownerRole
+        );
+        ensureBankAccount(
+                nhuYOwner,
+                "VPBank",
+                "0342836060",
+                "TRAN VU NHU Y",
+                "970432"
+        );
+
+        City hoChiMinhCity = findHoChiMinhCity();
+
+        ensureRentalAreaWithFourCourts(
+                hanOwner,
+                hoChiMinhCity,
+                "Sân Bóng Đá Hân Sport - Bình Thạnh",
+                "25 Nguyễn Xí",
+                "Phường 26",
+                10.8137,
+                106.7074,
+                "Sân bóng đá",
+                "Cỏ nhân tạo",
+                false,
+                "HAN-FB",
+                List.of(
+                        "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+                        "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80"
+                ),
+                new int[][]{
+                        {5, 12, 80000, 120000},
+                        {12, 18, 120000, 160000},
+                        {18, 22, 180000, 220000}
+                }
+        );
+
+        ensureRentalAreaWithFourCourts(
+                nhuYOwner,
+                hoChiMinhCity,
+                "Sân Cầu Lông Như Ý - Thủ Đức",
+                "88 Võ Văn Ngân",
+                "Phường Linh Chiểu",
+                10.8506,
+                106.7719,
+                "Sân cầu lông",
+                "Thảm PVC",
+                true,
+                "NHUY-BD",
+                List.of(
+                        "https://babolat.com.vn/wp-content/uploads/2023/10/san-cau-long-viettel.jpg",
+                        "https://cdn.shopvnb.com/uploads/images/tin_tuc/review-san-cau-long-quan-12-san-cau-long-nhat-pham-1.webp"
+                ),
+                new int[][]{
+                        {5, 12, 80000, 100000},
+                        {12, 18, 90000, 120000},
+                        {18, 22, 120000, 150000}
+                }
+        );
+    }
+
+    private User ensureSeedOwner(
+            String userName,
+            String email,
+            String phone,
+            String encodedPassword,
+            Role ownerRole
+    ) {
+        User owner = userRepository.findByEmail(email)
+                .orElseGet(() -> userRepository.save(
+                        buildSeedUser(
+                                userName,
+                                email,
+                                phone,
+                                encodedPassword,
+                                ownerRole
+                        )
+                ));
+
+        // Chỉ chuẩn hóa tài khoản seed này, không tác động các user cũ khác.
+        owner.setUserName(userName);
+        owner.setPhone(phone);
+        owner.setGender("Female");
+        owner.setRole(ownerRole);
+        owner.setActive(true);
+        return userRepository.save(owner);
+    }
+
+    private City findHoChiMinhCity() {
+        return cityRepository.findAll().stream()
+                .filter(city -> Objects.equals(city.getProvinceCode(), 79)
+                        || normalizeVietnamese(city.getCityName()).contains("ho chi minh"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không tìm thấy Thành phố Hồ Chí Minh trong bảng city"
+                ));
+    }
+
+    private String normalizeVietnamese(String value) {
+        if (value == null) return "";
+
+        String normalized = java.text.Normalizer.normalize(
+                value,
+                java.text.Normalizer.Form.NFD
+        );
+
+        return normalized
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private void ensureRentalAreaWithFourCourts(
+            User owner,
+            City city,
+            String rentalAreaName,
+            String street,
+            String ward,
+            double latitude,
+            double longitude,
+            String categoryName,
+            String surfaceType,
+            boolean indoor,
+            String courtCodePrefix,
+            List<String> imageUrls,
+            int[][] priceRanges
+    ) {
+        boolean alreadyExists = rentalAreaRepository.findAll().stream()
+                .anyMatch(area -> rentalAreaName.equalsIgnoreCase(area.getRentalAreaName()));
+
+        if (alreadyExists) {
+            return;
+        }
+
+        Category category = categoryRepository.findAll().stream()
+                .filter(item -> categoryName.equalsIgnoreCase(item.getCategoryName()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không tìm thấy category: " + categoryName
+                ));
+
+        RentalArea area = RentalArea.builder()
+                .rentalAreaName(rentalAreaName)
+                .address(Address.builder()
+                        .street(street)
+                        .ward(ward)
+                        .city(city)
+                        .cityName(city.getCityName())
+                        .build())
+                .owner(owner)
+                .openTime(LocalTime.of(5, 0))
+                .closeTime(LocalTime.of(22, 0))
+                .contactName(owner.getUserName())
+                .contactPhone(owner.getPhone())
+                .gmail(owner.getEmail())
+                .isActive(true)
+                .status(RentalAreaStatus.ACTIVE)
+                .verificationStatus(VerificationStatus.VERIFIED)
+                .createdAt(LocalDateTime.now())
+                .latitude(latitude)
+                .longitude(longitude)
+                .rating(5.0)
+                .build();
+
+        rentalAreaRepository.save(area);
+
+        for (int index = 1; index <= 4; index++) {
+            Court court = Court.builder()
+                    .courtName(categoryName + " 0" + index)
+                    .surfaceType(surfaceType)
+                    .courtStatus(CourtStatus.ACTIVE)
+                    .indoor(indoor)
+                    .rentalArea(area)
+                    .category(category)
+                    .images(new ArrayList<>())
+                    .build();
+
+            String imageUrl = imageUrls.get((index - 1) % imageUrls.size());
+            CourtImage image = CourtImage.builder()
+                    .imageUrl(imageUrl)
+                    .publicId("seed-" + courtCodePrefix.toLowerCase(Locale.ROOT)
+                            + "-" + index)
+                    .court(court)
+                    .isCover(true)
+                    .build();
+            court.getImages().add(image);
+
+            courtRepository.save(court);
+
+            courtCopyRepository.save(
+                    CourtCopy.builder()
+                            .court(court)
+                            .courtCode(courtCodePrefix + "-0" + index)
+                            .courtCopyStatus(CourtCopyStatus.ACTIVE)
+                            .build()
+            );
+
+            List<CourtPrice> prices = new ArrayList<>();
+            for (int[] range : priceRanges) {
+                int startHour = range[0];
+                int endHour = range[1];
+                int weekdayPrice = range[2];
+                int weekendPrice = range[3];
+
+                prices.add(createPrice(
+                        court,
+                        startHour,
+                        endHour,
+                        null,
+                        null,
+                        weekdayPrice,
+                        DayType.WEEKDAY,
+                        PriceType.NORMAL,
+                        1
+                ));
+
+                prices.add(createPrice(
+                        court,
+                        startHour,
+                        endHour,
+                        null,
+                        null,
+                        weekendPrice,
+                        DayType.WEEKEND,
+                        PriceType.NORMAL,
+                        1
+                ));
+            }
+
+            courtPriceRepository.saveAll(prices);
+        }
     }
 
     private void seedReviews() {
@@ -490,11 +798,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedCourtData(List<String> images) {
-
-        User owner1 = userRepository.findByEmail("owner1@gmail.com").orElseThrow();
-        User owner2 = userRepository.findByEmail("owner2@gmail.com").orElseThrow();
-        User owner3 = userRepository.findByEmail("owner3@gmail.com").orElseThrow();
-
+        User owner = userRepository.findByEmail("owner@gmail.com").orElseThrow();
         List<City> cities = cityRepository.findAll();
         if (cities.isEmpty()) {
             initAddressData();
@@ -503,60 +807,77 @@ public class DataInitializer implements CommandLineRunner {
         if (cities.isEmpty()) {
             throw new IllegalStateException("Cannot seed courts: no cities found after initAddressData()");
         }
-
         City city = cities.get(27);
 
         Category category = categoryRepository.findAll().stream()
                 .filter(c -> c.getCategoryName().equals("Sân cầu lông"))
                 .findFirst().orElseThrow();
 
-        List<RentalArea> rentalAreasToCreate = List.of(
-                buildRentalArea("LaceUP Cầu Lông Pro - Quận 9", "456 Lê Văn Việt", "Phường Tăng Nhơn Phú A", city, owner1, 10.845542, 106.794426),
-                buildRentalArea("LaceUP Premium - Sư Vạn Hạnh", "828 Sư Vạn Hạnh", "Phường 12", city, owner2, 10.776889, 106.666885),
-                buildRentalArea("LaceUP Central - Quận 7", "123 Nguyễn Thị Thập", "Phường Tân Phú", city, owner3, 10.732530, 106.702012)
-        );
+        RentalArea area = RentalArea.builder()
+                .rentalAreaName("Hệ thống Sân Cầu Lông Pro - Quận 9")
+                .address(Address.builder().street("456 Lê Văn Việt").ward("Phường Thủ Dầu Một").city(city).cityName(city.getCityName()).build())
+                .owner(owner)
+                .openTime(LocalTime.of(5, 0))
+                .closeTime(LocalTime.of(22, 0))
+                .contactName(owner.getUserName())
+                .contactPhone(owner.getPhone())
+                .gmail(owner.getEmail())
+                .isActive(true)
+                .status(RentalAreaStatus.ACTIVE)
+                .verificationStatus(VerificationStatus.VERIFIED)
+                .createdAt(LocalDateTime.now().minusMonths(2))
+                .latitude(10.80155)
+                .longitude(106.65421)
+                .build();
+        rentalAreaRepository.save(area);
 
-        rentalAreaRepository.saveAll(rentalAreasToCreate);
+        int imgIndex = 0;
+        for (int i = 1; i <= 2; i++) {
+            Court court = Court.builder()
+                    .courtName("Sân Standard 0" + i)
+                    .surfaceType("Thảm PVC")
+                    .courtStatus(CourtStatus.ACTIVE)
+                    .indoor(true)
+                    .rentalArea(area)
+                    .category(category)
+                    .images(new ArrayList<>())
+                    .build();
 
-        for (RentalArea area : rentalAreasToCreate) {
-            int imgIndex = 0;
-            for (int i = 1; i <= 2; i++) {
-                Court court = Court.builder()
-                        .courtName("Sân Standard 0" + i + " (" + area.getRentalAreaName() + ")")
-                        .surfaceType("Thảm PVC")
-                        .courtStatus(CourtStatus.ACTIVE)
-                        .indoor(true)
-                        .rentalArea(area)
-                        .category(category)
-                        .images(new ArrayList<>())
-                        .build();
+            CourtImage img = CourtImage.builder()
+                    .imageUrl(images.get(imgIndex++))
+                    .publicId("dummy-public-id-" + UUID.randomUUID().toString().substring(0, 8))
+                    .court(court)
+                    .isCover(true)
+                    .build();
+            court.getImages().add(img);
 
-                CourtImage img = CourtImage.builder()
-                        .imageUrl(images.get(imgIndex++ % images.size())) // Đảm bảo không bị OutOfBounds
-                        .publicId("dummy-public-id-" + UUID.randomUUID().toString().substring(0, 8))
-                        .court(court)
-                        .isCover(true)
-                        .build();
-                court.getImages().add(img);
+            courtRepository.save(court);
 
-                courtRepository.save(court);
+            courtCopyRepository.save(CourtCopy.builder()
+                    .court(court).courtCode("STD-0" + i).courtCopyStatus(CourtCopyStatus.ACTIVE).build());
 
-                courtCopyRepository.save(CourtCopy.builder()
-                        .court(court).courtCode("STD-" + area.getOwner().getUserId().toString().substring(0, 3) + "-0" + i).courtCopyStatus(CourtCopyStatus.ACTIVE).build());
+            LocalDate eventStart = LocalDate.of(2026, 6, 1);
+            LocalDate eventEnd = LocalDate.of(2026, 6, 15);
 
-                LocalDate eventStart = LocalDate.of(2026, 6, 1);
-                LocalDate eventEnd = LocalDate.of(2026, 6, 15);
+            List<CourtPrice> prices = new ArrayList<>();
 
-                List<CourtPrice> prices = new ArrayList<>();
-                prices.add(createPrice(court, 5, 12, eventStart, eventEnd, 170000, DayType.WEEKDAY, PriceType.EVENT, 2));
-                prices.add(createPrice(court, 12, 18, eventStart, eventEnd, 160000, DayType.WEEKDAY, PriceType.EVENT, 2));
-                prices.add(createPrice(court, 18, 22, eventStart, eventEnd, 180000, DayType.WEEKDAY, PriceType.EVENT, 2));
-                prices.add(createPrice(court, 5, 12, null, null, 90000, DayType.WEEKDAY, PriceType.NORMAL, 1));
-                prices.add(createPrice(court, 12, 18, null, null, 80000, DayType.WEEKDAY, PriceType.NORMAL, 1));
-                prices.add(createPrice(court, 18, 22, null, null, 100000, DayType.WEEKDAY, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 5, 12, eventStart, eventEnd, 170000, DayType.WEEKDAY, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 12, 18, eventStart, eventEnd, 160000, DayType.WEEKDAY, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 18, 22, eventStart, eventEnd, 180000, DayType.WEEKDAY, PriceType.EVENT, 2));
 
-                courtPriceRepository.saveAll(prices);
-            }
+            prices.add(createPrice(court, 5, 12, eventStart, eventEnd, 190000, DayType.WEEKEND, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 12, 18, eventStart, eventEnd, 180000, DayType.WEEKEND, PriceType.EVENT, 2));
+            prices.add(createPrice(court, 18, 22, eventStart, eventEnd, 200000, DayType.WEEKEND, PriceType.EVENT, 2));
+
+            prices.add(createPrice(court, 5, 12, null, null, 90000, DayType.WEEKDAY, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 12, 18, null, null, 80000, DayType.WEEKDAY, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 18, 22, null, null, 100000, DayType.WEEKDAY, PriceType.NORMAL, 1));
+
+            prices.add(createPrice(court, 5, 12, null, null, 110000, DayType.WEEKEND, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 12, 18, null, null, 100000, DayType.WEEKEND, PriceType.NORMAL, 1));
+            prices.add(createPrice(court, 18, 22, null, null, 120000, DayType.WEEKEND, PriceType.NORMAL, 1));
+
+            courtPriceRepository.saveAll(prices);
         }
     }
 
@@ -639,30 +960,6 @@ public class DataInitializer implements CommandLineRunner {
                 .dayType(dayType)
                 .priceType(priceType)
                 .priority(priority)
-                .build();
-    }
-
-    private RentalArea buildRentalArea(String name, String street, String ward, City city, User owner, double lat, double lng) {
-        return RentalArea.builder()
-                .rentalAreaName(name)
-                .address(Address.builder()
-                        .street(street)
-                        .ward(ward)
-                        .city(city)
-                        .cityName(city.getCityName())
-                        .build())
-                .owner(owner)
-                .openTime(LocalTime.of(5, 0))
-                .closeTime(LocalTime.of(22, 0))
-                .contactName(owner.getUserName())
-                .contactPhone(owner.getPhone())
-                .gmail(owner.getEmail())
-                .isActive(true)
-                .status(RentalAreaStatus.ACTIVE)
-                .verificationStatus(VerificationStatus.VERIFIED)
-                .createdAt(LocalDateTime.now().minusMonths(2))
-                .latitude(lat)
-                .longitude(lng)
                 .build();
     }
 

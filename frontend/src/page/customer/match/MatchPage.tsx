@@ -640,24 +640,6 @@ const MatchPage: React.FC = () => {
             />
 
             <Button
-              type="primary"
-              size="large"
-              icon={<Plus size={18} />}
-              onClick={() => navigate("/courts")}
-              style={{
-                backgroundColor: "#9156F1",
-                borderColor: "#9156F1",
-                borderRadius: "12px",
-                display: "flex",
-                alignItems: "center",
-                padding: "0 24px",
-              }}
-              className="font-bold shadow-sm hover:opacity-90"
-            >
-              Tạo trận ngay
-            </Button>
-
-            <Button
               size="large"
               icon={<Calendar size={18} />}
               onClick={() => navigate("/my-matches")}
@@ -714,13 +696,7 @@ const MatchPage: React.FC = () => {
                     Không tìm thấy trận đấu nào!
                     <br />
                     <span className="text-sm font-normal">
-                      Hãy thử thay đổi tiêu chí bộ lọc hoặc{" "}
-                      <span
-                        onClick={() => navigate("/courts")}
-                        className="text-purple-600 font-semibold cursor-pointer hover:underline"
-                      >
-                        tạo trận ngay
-                      </span>
+                      Hãy thử thay đổi tiêu chí bộ lọc.
                     </span>
                   </span>
                 }

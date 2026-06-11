@@ -101,8 +101,17 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                         slotReq.getEndTime()
                 );
 
-                if (!conflicts.isEmpty()) {
-                    throw new RuntimeException("Sân đã có lịch trong khung giờ này");
+                boolean hasHeldIntent = hasBlockingIntent(
+                        copy.getCourtCopyId(),
+                        slotReq.getStartTime(),
+                        slotReq.getEndTime()
+                );
+
+                if (!conflicts.isEmpty() || hasHeldIntent) {
+                    throw new RuntimeException(
+                            "Sân đã được đặt hoặc đang được giữ chỗ!" +
+                                    " Vui lòng thử lại khung giờ này sau 5 phút."
+                    );
                 }
 
                 selectedCopies.add(copy);
@@ -126,7 +135,13 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                                     slotReq.getEndTime()
                             );
 
-                            return conflicts.isEmpty();
+                            boolean hasHeldIntent = hasBlockingIntent(
+                                    copy.getCourtCopyId(),
+                                    slotReq.getStartTime(),
+                                    slotReq.getEndTime()
+                            );
+
+                            return conflicts.isEmpty() && !hasHeldIntent;
 
                         })
                         .limit(quantity)
@@ -461,6 +476,20 @@ public class BookingIntentServiceImpl implements BookingIntentService {
         BookingIntent intent = bookingIntentRepository.findById(intentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu đặt sân"));
 
+        LocalDateTime now = LocalDateTime.now();
+
+        if (intent.getStatus() == BookingIntentStatus.ACTIVE
+                && intent.getExpiresAt() != null
+                && !now.isBefore(intent.getExpiresAt())) {
+
+            intent.setStatus(BookingIntentStatus.EXPIRED);
+            bookingIntentRepository.save(intent);
+
+            throw new RuntimeException(
+                    "Đã hết 5 phút giữ chỗ. Vui lòng chọn lại thời gian"
+            );
+        }
+
         if (intent.getStatus() != BookingIntentStatus.ACTIVE
                 && intent.getStatus() != BookingIntentStatus.PENDING_OWNER_CONFIRM) {
             throw new RuntimeException("Yêu cầu đặt sân không còn hiệu lực");
@@ -478,7 +507,7 @@ public class BookingIntentServiceImpl implements BookingIntentService {
         intent.setPaymentProofPublicId(uploadResult.getPublicId());
         intent.setPaymentProofUploadedAt(LocalDateTime.now());
         intent.setStatus(BookingIntentStatus.PENDING_OWNER_CONFIRM);
-
+        intent.setExpiresAt(null);
         bookingIntentRepository.save(intent);
 
         return uploadResult.getUrl();

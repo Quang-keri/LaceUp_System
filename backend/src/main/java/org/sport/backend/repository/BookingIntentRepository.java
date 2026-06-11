@@ -34,7 +34,6 @@ public interface BookingIntentRepository extends JpaRepository<BookingIntent, UU
 
     List<BookingIntent> findAllByUser_UserId(UUID userId);
 
-    void deleteAllByUser_UserId(UUID userId);
     @Modifying(
             flushAutomatically = true
     )
@@ -53,5 +52,10 @@ public interface BookingIntentRepository extends JpaRepository<BookingIntent, UU
             @Param("expiredStatus")
             BookingIntentStatus expiredStatus,
             @Param("now") LocalDateTime now
+    );
+
+    List<BookingIntent> findAllByStatusAndExpiresAtLessThanEqual(
+            BookingIntentStatus status,
+            LocalDateTime expiresAt
     );
 }
