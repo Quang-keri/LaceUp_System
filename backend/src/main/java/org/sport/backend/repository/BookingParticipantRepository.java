@@ -88,4 +88,17 @@ public interface BookingParticipantRepository
             Pageable pageable
     );
 
+    @Query("""
+            SELECT participant
+            FROM BookingParticipant participant
+            JOIN FETCH participant.user
+            WHERE participant.booking.bookingId = :bookingId
+              AND participant.paymentStatus IN :statuses
+            ORDER BY participant.createdAt ASC
+            """)
+    List<BookingParticipant> findActiveParticipantsByBookingId(
+            @Param("bookingId") UUID bookingId,
+            @Param("statuses") Collection<PaymentStatus> statuses
+    );
+
 }

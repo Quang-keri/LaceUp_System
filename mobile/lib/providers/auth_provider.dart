@@ -58,11 +58,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       user = await userLocalService.getUser();
 
-      debugPrint('LOCAL USER ID: $userId');
-      debugPrint('AUTH PROVIDER: $authProvider');
-      debugPrint('USER ROLE: $role');
     } catch (e) {
-      debugPrint('Error loading local user: $e');
       user = null;
     } finally {
       loading = false;
@@ -96,7 +92,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Đăng xuất bình thường.
   Future<void> logout() async {
     try {
       await authService.logout();

@@ -31,11 +31,9 @@ class ChatBotService {
           return "Bot không trả về nội dung hợp lệ.";
         }
       } else {
-        debugPrint('Lỗi Server: ${response.statusCode}');
         throw Exception('Lỗi API');
       }
     } catch (e) {
-      debugPrint('Lỗi kết nối API Chatbot: $e');
       throw Exception('Không thể kết nối đến máy chủ.');
     }
   }

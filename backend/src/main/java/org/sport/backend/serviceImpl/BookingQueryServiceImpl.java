@@ -204,10 +204,12 @@ public class BookingQueryServiceImpl implements BookingQueryService {
             int size
     ) {
 
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(
-                Sort.Order.desc("updatedAt"),
-                Sort.Order.desc("createdAt")
-        ).descending());
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by(Sort.Direction.DESC, "startTime")
+                        .and(Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
 
         Specification<Booking> spec = BookingSpecification.filterBooking(
                 rentalId,

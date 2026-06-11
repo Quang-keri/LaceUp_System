@@ -14,13 +14,10 @@ const Color _primaryColor = Color(0xFF9156F1);
 const Color _orangeColor = Color(0xFFEA580C);
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({
-    super.key,
-  });
+  const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() =>
-      _MainNavigationState();
+  State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
@@ -53,9 +50,7 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   void _onNavigationTap(int index) {
-    if (_selectedIndex == index) {
-      return;
-    }
+    if (_selectedIndex == index) return;
 
     HapticFeedback.selectionClick();
 
@@ -72,9 +67,6 @@ class _MainNavigationState extends State<MainNavigation> {
     return _buildOuterNavigationItem(index);
   }
 
-  /// Bốn nút bên ngoài:
-  /// - Chưa chọn: icon trắng
-  /// - Đang chọn: vòng tròn trắng + icon tím + chấm cam
   Widget _buildOuterNavigationItem(int index) {
     final bool isSelected = _selectedIndex == index;
 
@@ -83,37 +75,28 @@ class _MainNavigationState extends State<MainNavigation> {
       selected: isSelected,
       button: true,
       child: AnimatedContainer(
-        duration: const Duration(
-          milliseconds: 260,
-        ),
+        duration: const Duration(milliseconds: 260),
         curve: Curves.easeOutCubic,
         width: 50,
         height: 50,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white
-              : Colors.transparent,
+          color: isSelected ? Colors.white : Colors.transparent,
           shape: BoxShape.circle,
-          border: isSelected
-              ? Border.all(
-            color: Colors.white,
-            width: 2,
-          )
-              : null,
+          border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
           boxShadow: isSelected
               ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.18),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-            BoxShadow(
-              color: _primaryColor.withOpacity(0.18),
-              blurRadius: 16,
-              spreadRadius: 2,
-            ),
-          ]
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.18),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                  BoxShadow(
+                    color: _primaryColor.withOpacity(0.18),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ]
               : null,
         ),
         child: Stack(
@@ -121,20 +104,15 @@ class _MainNavigationState extends State<MainNavigation> {
           alignment: Alignment.center,
           children: [
             AnimatedScale(
-              duration: const Duration(
-                milliseconds: 260,
-              ),
+              duration: const Duration(milliseconds: 260),
               curve: Curves.easeOutBack,
               scale: isSelected ? 1.08 : 1,
               child: Icon(
                 _icons[index],
                 size: isSelected ? 29 : 27,
-                color: isSelected
-                    ? _primaryColor
-                    : Colors.white,
+                color: isSelected ? _primaryColor : Colors.white,
               ),
             ),
-
             if (isSelected)
               Positioned(
                 top: 3,
@@ -145,10 +123,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   decoration: BoxDecoration(
                     color: _orangeColor,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
+                    border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
                         color: _orangeColor.withOpacity(0.35),
@@ -164,25 +139,19 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
-  /// Nút giữa luôn giữ vòng tròn trắng.
   Widget _buildCenterNavigationItem() {
-    final bool isSelected =
-        _selectedIndex == _centerTabIndex;
+    final bool isSelected = _selectedIndex == _centerTabIndex;
 
     return Semantics(
       label: _labels[_centerTabIndex],
       selected: isSelected,
       button: true,
       child: AnimatedScale(
-        duration: const Duration(
-          milliseconds: 260,
-        ),
+        duration: const Duration(milliseconds: 260),
         curve: Curves.easeOutBack,
         scale: isSelected ? 1.1 : 1,
         child: AnimatedContainer(
-          duration: const Duration(
-            milliseconds: 260,
-          ),
+          duration: const Duration(milliseconds: 260),
           curve: Curves.easeOutCubic,
           width: 52,
           height: 52,
@@ -190,16 +159,12 @@ class _MainNavigationState extends State<MainNavigation> {
             color: Colors.white,
             shape: BoxShape.circle,
             border: Border.all(
-              color: isSelected
-                  ? _orangeColor
-                  : Colors.white,
+              color: isSelected ? _orangeColor : Colors.white,
               width: isSelected ? 2.5 : 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(
-                  isSelected ? 0.22 : 0.15,
-                ),
+                color: Colors.black.withOpacity(isSelected ? 0.22 : 0.15),
                 blurRadius: isSelected ? 14 : 8,
                 offset: const Offset(0, 4),
               ),
@@ -215,12 +180,7 @@ class _MainNavigationState extends State<MainNavigation> {
             alignment: Alignment.center,
             clipBehavior: Clip.none,
             children: [
-              const Icon(
-                Icons.groups_rounded,
-                size: 30,
-                color: _primaryColor,
-              ),
-
+              const Icon(Icons.groups_rounded, size: 30, color: _primaryColor),
               if (isSelected)
                 Positioned(
                   top: 3,
@@ -231,10 +191,7 @@ class _MainNavigationState extends State<MainNavigation> {
                     decoration: BoxDecoration(
                       color: _orangeColor,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 2,
-                      ),
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                   ),
                 ),
@@ -247,42 +204,27 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    final double bottomSafeArea =
-        MediaQuery.paddingOf(context).bottom;
+    final double bottomSafeArea = MediaQuery.paddingOf(context).bottom;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-        Brightness.dark,
-        statusBarBrightness:
-        Brightness.light,
-        systemNavigationBarColor:
-        _primaryColor,
-        systemNavigationBarDividerColor:
-        _primaryColor,
-        systemNavigationBarIconBrightness:
-        Brightness.light,
-        systemNavigationBarContrastEnforced:
-        false,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: _primaryColor,
+        systemNavigationBarDividerColor: _primaryColor,
+        systemNavigationBarIconBrightness: Brightness.light,
+        systemNavigationBarContrastEnforced: false,
       ),
       child: Scaffold(
         extendBody: true,
+        body: IndexedStack(index: _selectedIndex, children: _pages),
 
-        body: IndexedStack(
-          index: _selectedIndex,
-          children: _pages,
+        floatingActionButton: const Padding(
+          padding: EdgeInsets.only(bottom: 4),
+          child: ChatbotBubble(),
         ),
-
-        floatingActionButton: Padding(
-          padding: EdgeInsets.only(
-            bottom: bottomSafeArea + 78,
-          ),
-          child: const ChatbotBubble(),
-        ),
-
-        floatingActionButtonLocation:
-        FloatingActionButtonLocation.endFloat,
+        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
 
         bottomNavigationBar: Container(
           decoration: const BoxDecoration(
@@ -295,43 +237,20 @@ class _MainNavigationState extends State<MainNavigation> {
               ),
             ],
           ),
-          padding: EdgeInsets.only(
-            bottom: bottomSafeArea,
-          ),
+          padding: EdgeInsets.only(bottom: bottomSafeArea),
           child: CurvedNavigationBar(
             index: _selectedIndex,
-
-            backgroundColor:
-            Colors.transparent,
-
+            backgroundColor: Colors.transparent,
             color: _primaryColor,
-
-            buttonBackgroundColor:
-            Colors.transparent,
-
+            buttonBackgroundColor: Colors.transparent,
             height: 60,
-
-            animationDuration:
-            const Duration(
-              milliseconds: 320,
-            ),
-
-            animationCurve:
-            Curves.easeOutCubic,
-
-            letIndexChange: (int index) {
-              return true;
-            },
-
+            animationDuration: const Duration(milliseconds: 320),
+            animationCurve: Curves.easeOutCubic,
+            letIndexChange: (_) => true,
             onTap: _onNavigationTap,
-
             items: List<Widget>.generate(
               _icons.length,
-                  (int index) {
-                return _buildNavigationItem(
-                  index,
-                );
-              },
+              (int index) => _buildNavigationItem(index),
             ),
           ),
         ),

@@ -7,6 +7,7 @@ import org.sport.backend.dto.base.ApiResponse;
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.request.booking.JoinSharedBookingRequest;
 import org.sport.backend.dto.response.booking.BookingParticipantResponse;
+import org.sport.backend.dto.response.booking.SharedBookingPublicResponse;
 import org.sport.backend.service.SharedBookingService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,6 +31,53 @@ import java.util.UUID;
 public class SharedBookingController {
 
     private final SharedBookingService sharedBookingService;
+
+    @GetMapping("/community")
+    public ApiResponse<PageResponse<SharedBookingPublicResponse>> getOpenSharedBookingsForCommunity(
+            @RequestParam(required = false) UUID rentalAreaId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        PageResponse<SharedBookingPublicResponse> result =
+                sharedBookingService
+                        .getOpenSharedBookingsForCommunity(
+                                rentalAreaId,
+                                page,
+                                size
+                        );
+
+        return ApiResponse
+                .<PageResponse<SharedBookingPublicResponse>>builder()
+                .result(result)
+                .build();
+    }
+
+    @GetMapping("/{bookingId}/participants")
+    @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
+    public ResponseEntity<ApiResponse<List<BookingParticipantResponse>>>
+    getParticipantsForOwner(
+            @PathVariable UUID bookingId
+    ) {
+        try {
+            return ResponseEntity.ok(
+                    ApiResponse.success(
+                            200,
+                            "Lấy danh sách người tham gia thành công",
+                            sharedBookingService
+                                    .getParticipantsForOwner(bookingId)
+                    )
+            );
+        } catch (Exception exception) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(
+                            ApiResponse.error(
+                                    400,
+                                    exception.getMessage()
+                            )
+                    );
+        }
+    }
 
     @PostMapping("/{bookingId}/join")
     @PreAuthorize("isAuthenticated()")

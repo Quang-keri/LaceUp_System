@@ -40,6 +40,7 @@ public class BookingServiceImpl implements BookingService {
     private final TransactionRepository transactionRepository;
     private final PaymentRepository paymentRepository;
     private final ReputationLogRepository reputationLogRepository;
+    private final IntentSlotRepository intentSlotRepository;
 
     private final UserService userService;
     private final CourtCopyService courtCopyService;
@@ -76,10 +77,9 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse createOwnerBooking(
             OwnerBookingRequest request
     ) {
-        BookingType type =
-                request.getBookingType() != null
-                        ? request.getBookingType()
-                        : BookingType.PRIVATE;
+        BookingType type = request.getBookingType() != null
+                ? request.getBookingType()
+                : BookingType.PRIVATE;
 
         Integer maxParticipants = null;
         Integer minParticipants = null;
@@ -90,9 +90,7 @@ public class BookingServiceImpl implements BookingService {
 
             if (maxParticipants == null
                     || maxParticipants < 2) {
-                throw new RuntimeException(
-                        "Số người tối đa của trận vãng lai phải từ 2 người"
-                );
+                throw new RuntimeException("Số người tối đa của trận vãng lai phải từ 2 người");
             }
 
             if (minParticipants == null
@@ -238,16 +236,20 @@ public class BookingServiceImpl implements BookingService {
                             slotReq.getEndTime()
                     );
 
-            if (!conflicts.isEmpty()) {
+            boolean hasHeldIntent = hasBlockingIntent(
+                    courtCopy.getCourtCopyId(),
+                    slotReq.getStartTime(),
+                    slotReq.getEndTime()
+            );
+
+            if (!conflicts.isEmpty() || hasHeldIntent) {
                 throw new RuntimeException(
                         "Sân "
                                 + courtCopy.getCourtCode()
-                                + " đã bị đặt trong khung giờ "
-                                + slotReq.getStartTime()
-                                .toLocalTime()
+                                + " đã được đặt hoặc đang được giữ chỗ trong khung giờ "
+                                + slotReq.getStartTime().toLocalTime()
                                 + " - "
-                                + slotReq.getEndTime()
-                                .toLocalTime()
+                                + slotReq.getEndTime().toLocalTime()
                 );
             }
 
@@ -629,7 +631,13 @@ public class BookingServiceImpl implements BookingService {
                     request.getStartTime(),
                     request.getEndTime()
             );
-            if (conflicts.isEmpty()) {
+            boolean hasHeldIntent = hasBlockingIntent(
+                    copy.getCourtCopyId(),
+                    request.getStartTime(),
+                    request.getEndTime()
+            );
+
+            if (conflicts.isEmpty() && !hasHeldIntent) {
                 availableCount++;
             }
         }
@@ -1087,6 +1095,21 @@ public class BookingServiceImpl implements BookingService {
         Booking savedBooking = bookingRepository.save(booking);
 
         return bookingMapper.toBookingResponse(savedBooking);
+    }
+
+    private boolean hasBlockingIntent(
+            UUID courtCopyId,
+            LocalDateTime startTime,
+            LocalDateTime endTime
+    ) {
+        return intentSlotRepository.countBlockingIntentSlots(
+                courtCopyId,
+                startTime,
+                endTime,
+                LocalDateTime.now(),
+                BookingIntentStatus.ACTIVE,
+                BookingIntentStatus.PENDING_OWNER_CONFIRM
+        ) > 0;
     }
 
 }

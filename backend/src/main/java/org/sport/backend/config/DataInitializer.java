@@ -44,7 +44,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ItemGroupRepository itemGroupRepository;
     private final ObjectMapper objectMapper;
     private final WardRepository wardRepository;
-    private final  NewsRepository newsRepository;
+    private final NewsRepository newsRepository;
     private final ReviewRepository reviewRepository;
     private final BankAccountRepository bankAccountRepository;
 
@@ -69,10 +69,9 @@ public class DataInitializer implements CommandLineRunner {
 
         Role adminRole = roleRepository.findByRoleName("ADMIN").orElse(null);
         Role ownerRole = roleRepository.findByRoleName("OWNER").orElse(null);
-        Role staffRole = roleRepository.findByRoleName("STAFF").orElse(null);
         Role renterRole = roleRepository.findByRoleName("RENTER").orElse(null);
 
-        if (adminRole == null || ownerRole == null || staffRole == null || renterRole == null) return;
+        if (adminRole == null || ownerRole == null || renterRole == null) return;
 
         if (cityRepository.count() == 0) {
             initAddressData();
@@ -88,8 +87,6 @@ public class DataInitializer implements CommandLineRunner {
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
             users.add(User.builder().userName("Dương Xuân Sơn").email("owner@gmail.com").passwordHash(commonPass).gender("Male").phone("0911000011").dateOfBirth(LocalDate.of(1985, 8, 20)).provider(AuthProvider.LOCAL).role(ownerRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
-            users.add(User.builder().userName("Staff main").email("staff@gmail.com").passwordHash(commonPass).gender("Male").phone("0921000011").dateOfBirth(LocalDate.of(1995, 12, 1)).provider(AuthProvider.LOCAL).role(staffRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
-                    .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
             users.add(User.builder().userName("Ngô Anh Kiệt").email("renter@gmail.com").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
 
@@ -97,7 +94,6 @@ public class DataInitializer implements CommandLineRunner {
                 users.add(createDummyUser("Renter " + i, "renter" + i + "@gmail.com", commonPass, renterRole));
             users.add(createDummyUser("Owner1", "owner1@gmail.com", commonPass, ownerRole));
             users.add(createDummyUser("Admin1", "admin1@gmail.com", commonPass, adminRole));
-            users.add(createDummyUser("Staff1", "staff1@gmail.com", commonPass, staffRole));
             users = userRepository.saveAll(users);
 
         }
@@ -105,11 +101,14 @@ public class DataInitializer implements CommandLineRunner {
         seedBankAccountsAndDeletionTestUsers(ownerRole, renterRole);
 
         if (courtRepository.count() == 0) seedCourtData(courtImagesList.subList(0, 2));
+
+        // Chỉ bổ sung dữ liệu mới, không xóa hoặc ghi đè các sân cũ.
+        seedAdditionalOwnersAndRentalAreas(ownerRole);
         if (postRepository.count() == 0) seedPostData();
         if (itemGroupRepository.count() == 0) {
             seedItemGroup();
         }
-        if(newsRepository.count() == 0 ){
+        if (newsRepository.count() == 0) {
             seedNews();
         }
 
@@ -303,6 +302,265 @@ public class DataInitializer implements CommandLineRunner {
         userRepository.save(user);
     }
 
+    /**
+     * Bổ sung 2 chủ sân và 2 cơ sở mới tại TP.HCM.
+     * Hàm được thiết kế idempotent: chạy lại ứng dụng sẽ không tạo trùng cơ sở.
+     */
+    private void seedAdditionalOwnersAndRentalAreas(Role ownerRole) {
+        String encodedPassword = passwordEncoder.encode("123456");
+
+        User hanOwner = ensureSeedOwner(
+                "Nguyễn Hồng Vũ Hân",
+                "nguyenhongvuhan.owner@gmail.com",
+                "0909000101",
+                encodedPassword,
+                ownerRole
+        );
+        ensureBankAccount(
+                hanOwner,
+                "Vietcombank",
+                "9945356477",
+                "NGUYEN HONG VU HAN",
+                "970436"
+        );
+
+        User nhuYOwner = ensureSeedOwner(
+                "Trần Vũ Như Ý",
+                "tranvunhuy.owner@gmail.com",
+                "0909000102",
+                encodedPassword,
+                ownerRole
+        );
+        ensureBankAccount(
+                nhuYOwner,
+                "VPBank",
+                "0342836060",
+                "TRAN VU NHU Y",
+                "970432"
+        );
+
+        City hoChiMinhCity = findHoChiMinhCity();
+
+        ensureRentalAreaWithFourCourts(
+                hanOwner,
+                hoChiMinhCity,
+                "Sân Bóng Đá Hân Sport - Bình Thạnh",
+                "25 Nguyễn Xí",
+                "Phường 26",
+                10.8137,
+                106.7074,
+                "Sân bóng đá",
+                "Cỏ nhân tạo",
+                false,
+                "HAN-FB",
+                List.of(
+                        "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80",
+                        "https://images.unsplash.com/photo-1553778263-73a83bab9b0c?auto=format&fit=crop&w=1200&q=80"
+                ),
+                new int[][]{
+                        {5, 12, 80000, 120000},
+                        {12, 18, 120000, 160000},
+                        {18, 22, 180000, 220000}
+                }
+        );
+
+        ensureRentalAreaWithFourCourts(
+                nhuYOwner,
+                hoChiMinhCity,
+                "Sân Cầu Lông Như Ý - Thủ Đức",
+                "88 Võ Văn Ngân",
+                "Phường Linh Chiểu",
+                10.8506,
+                106.7719,
+                "Sân cầu lông",
+                "Thảm PVC",
+                true,
+                "NHUY-BD",
+                List.of(
+                        "https://babolat.com.vn/wp-content/uploads/2023/10/san-cau-long-viettel.jpg",
+                        "https://cdn.shopvnb.com/uploads/images/tin_tuc/review-san-cau-long-quan-12-san-cau-long-nhat-pham-1.webp"
+                ),
+                new int[][]{
+                        {5, 12, 80000, 100000},
+                        {12, 18, 90000, 120000},
+                        {18, 22, 120000, 150000}
+                }
+        );
+    }
+
+    private User ensureSeedOwner(
+            String userName,
+            String email,
+            String phone,
+            String encodedPassword,
+            Role ownerRole
+    ) {
+        User owner = userRepository.findByEmail(email)
+                .orElseGet(() -> userRepository.save(
+                        buildSeedUser(
+                                userName,
+                                email,
+                                phone,
+                                encodedPassword,
+                                ownerRole
+                        )
+                ));
+
+        // Chỉ chuẩn hóa tài khoản seed này, không tác động các user cũ khác.
+        owner.setUserName(userName);
+        owner.setPhone(phone);
+        owner.setGender("Female");
+        owner.setRole(ownerRole);
+        owner.setActive(true);
+        return userRepository.save(owner);
+    }
+
+    private City findHoChiMinhCity() {
+        return cityRepository.findAll().stream()
+                .filter(city -> Objects.equals(city.getProvinceCode(), 79)
+                        || normalizeVietnamese(city.getCityName()).contains("ho chi minh"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không tìm thấy Thành phố Hồ Chí Minh trong bảng city"
+                ));
+    }
+
+    private String normalizeVietnamese(String value) {
+        if (value == null) return "";
+
+        String normalized = java.text.Normalizer.normalize(
+                value,
+                java.text.Normalizer.Form.NFD
+        );
+
+        return normalized
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private void ensureRentalAreaWithFourCourts(
+            User owner,
+            City city,
+            String rentalAreaName,
+            String street,
+            String ward,
+            double latitude,
+            double longitude,
+            String categoryName,
+            String surfaceType,
+            boolean indoor,
+            String courtCodePrefix,
+            List<String> imageUrls,
+            int[][] priceRanges
+    ) {
+        boolean alreadyExists = rentalAreaRepository.findAll().stream()
+                .anyMatch(area -> rentalAreaName.equalsIgnoreCase(area.getRentalAreaName()));
+
+        if (alreadyExists) {
+            return;
+        }
+
+        Category category = categoryRepository.findAll().stream()
+                .filter(item -> categoryName.equalsIgnoreCase(item.getCategoryName()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không tìm thấy category: " + categoryName
+                ));
+
+        RentalArea area = RentalArea.builder()
+                .rentalAreaName(rentalAreaName)
+                .address(Address.builder()
+                        .street(street)
+                        .ward(ward)
+                        .city(city)
+                        .cityName(city.getCityName())
+                        .build())
+                .owner(owner)
+                .openTime(LocalTime.of(5, 0))
+                .closeTime(LocalTime.of(22, 0))
+                .contactName(owner.getUserName())
+                .contactPhone(owner.getPhone())
+                .gmail(owner.getEmail())
+                .isActive(true)
+                .status(RentalAreaStatus.ACTIVE)
+                .verificationStatus(VerificationStatus.VERIFIED)
+                .createdAt(LocalDateTime.now())
+                .latitude(latitude)
+                .longitude(longitude)
+                .rating(5.0)
+                .build();
+
+        rentalAreaRepository.save(area);
+
+        for (int index = 1; index <= 4; index++) {
+            Court court = Court.builder()
+                    .courtName(categoryName + " 0" + index)
+                    .surfaceType(surfaceType)
+                    .courtStatus(CourtStatus.ACTIVE)
+                    .indoor(indoor)
+                    .rentalArea(area)
+                    .category(category)
+                    .images(new ArrayList<>())
+                    .build();
+
+            String imageUrl = imageUrls.get((index - 1) % imageUrls.size());
+            CourtImage image = CourtImage.builder()
+                    .imageUrl(imageUrl)
+                    .publicId("seed-" + courtCodePrefix.toLowerCase(Locale.ROOT)
+                            + "-" + index)
+                    .court(court)
+                    .isCover(true)
+                    .build();
+            court.getImages().add(image);
+
+            courtRepository.save(court);
+
+            courtCopyRepository.save(
+                    CourtCopy.builder()
+                            .court(court)
+                            .courtCode(courtCodePrefix + "-0" + index)
+                            .courtCopyStatus(CourtCopyStatus.ACTIVE)
+                            .build()
+            );
+
+            List<CourtPrice> prices = new ArrayList<>();
+            for (int[] range : priceRanges) {
+                int startHour = range[0];
+                int endHour = range[1];
+                int weekdayPrice = range[2];
+                int weekendPrice = range[3];
+
+                prices.add(createPrice(
+                        court,
+                        startHour,
+                        endHour,
+                        null,
+                        null,
+                        weekdayPrice,
+                        DayType.WEEKDAY,
+                        PriceType.NORMAL,
+                        1
+                ));
+
+                prices.add(createPrice(
+                        court,
+                        startHour,
+                        endHour,
+                        null,
+                        null,
+                        weekendPrice,
+                        DayType.WEEKEND,
+                        PriceType.NORMAL,
+                        1
+                ));
+            }
+
+            courtPriceRepository.saveAll(prices);
+        }
+    }
+
     private void seedReviews() {
         List<RentalArea> rentalAreas = rentalAreaRepository.findAll();
         if (rentalAreas.isEmpty()) return;
@@ -363,8 +621,10 @@ public class DataInitializer implements CommandLineRunner {
             rentalAreaRepository.save(area);
         }
     }
+
     private void seedNews() {
-        User user = userRepository.findByEmail("admin@gmail.com").orElseThrow(null);;
+        User user = userRepository.findByEmail("admin@gmail.com").orElseThrow(null);
+        ;
         News news = News.builder()
                 .title("Phát thành web booking cho hệ thống LaceUp")
                 .content("Website của hệ thống LaceUp đươc phát thành , nền tảng của ra mắt các chức năng đặt lịch ,quản lí lịch , quản lí sân , quản lí người dùng , quản lí tài chính và nhiều chức năng khác nhằm mang lại trải nghiệm tốt nhất cho khách hàng và chủ sân .")
@@ -374,6 +634,7 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
         newsRepository.save(news);
     }
+
     private void seedItemGroup() {
         ItemGroup group1 = new ItemGroup();
         group1.setName("Đồ ăn / Thức uống");
@@ -489,18 +750,6 @@ public class DataInitializer implements CommandLineRunner {
                 .permissions(new HashSet<>(permMap.values()))
                 .build();
 
-        Set<Permission> staffPerms = getPermissions(permMap,
-                "VIEW_COURTS", "VIEW_BOOKINGS", "MANAGE_BOOKING",
-                "EXTEND_SLOT", "SWAP_SLOT", "USE_CHAT", "VIEW_OWNER_MATCHES",
-                "VIEW_CUSTOMER", "VIEW_CUSTOMER_DETAIL"
-        );
-        Role staffRole = Role.builder()
-                .roleName("STAFF")
-                .description("Nhân viên quản lý sân")
-                .active(true)
-                .permissions(staffPerms)
-                .build();
-
         Set<Permission> ownerPerms = getPermissions(permMap,
                 "VIEW_DASHBOARD_OWNER", "CREATE_RENTAL_AREA", "UPDATE_RENTAL_AREA",
                 "DELETE_RENTAL_AREA", "CREATE_COURT", "UPDATE_COURT", "DELETE_COURT",
@@ -530,7 +779,7 @@ public class DataInitializer implements CommandLineRunner {
                 .permissions(renterPerms)
                 .build();
 
-        roleRepository.saveAll(List.of(adminRole, staffRole, ownerRole, renterRole));
+        roleRepository.saveAll(List.of(adminRole, ownerRole, renterRole));
     }
 
     private Set<Permission> getPermissions(Map<String, Permission> permMap, String... names) {
@@ -628,7 +877,8 @@ public class DataInitializer implements CommandLineRunner {
             prices.add(createPrice(court, 12, 18, null, null, 100000, DayType.WEEKEND, PriceType.NORMAL, 1));
             prices.add(createPrice(court, 18, 22, null, null, 120000, DayType.WEEKEND, PriceType.NORMAL, 1));
 
-            courtPriceRepository.saveAll(prices);}
+            courtPriceRepository.saveAll(prices);
+        }
     }
 
     private void seedCategories() {

@@ -2,13 +2,28 @@ package org.sport.backend.service;
 
 import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.response.booking.BookingParticipantResponse;
+import org.sport.backend.dto.response.booking.SharedBookingPublicResponse;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public interface SharedBookingService {
+    @Transactional(readOnly = true)
+    PageResponse<SharedBookingPublicResponse>
+    getOpenSharedBookingsForCommunity(
+            UUID rentalAreaId,
+            int page,
+            int size
+    );
+
+    @Transactional(readOnly = true)
+    List<BookingParticipantResponse> getParticipantsForOwner(
+            UUID bookingId
+    );
+
     @Transactional(readOnly = true)
     BookingParticipantResponse getTicketParticipant(
             UUID participantId

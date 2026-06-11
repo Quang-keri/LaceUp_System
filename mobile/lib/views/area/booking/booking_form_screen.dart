@@ -89,12 +89,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   }
 
   Future<void> _onSubmit() async {
-    if (_nameController.text
-        .trim()
-        .isEmpty ||
-        _phoneController.text
-            .trim()
-            .isEmpty) {
+    if (_nameController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng nhập tên và số điện thoại')),
       );
@@ -141,7 +137,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
       final totalPriceFromBe =
           double.tryParse(result['previewPrice']?.toString() ?? '') ??
-              totalPrice;
+          totalPrice;
 
       if (bookingId == null || bookingId.isEmpty) {
         throw Exception('API chưa trả về bookingId / bookingIntentId');
@@ -152,14 +148,13 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              PaymentProofScreen(
-                bookingId: bookingId,
-                rentalArea: widget.rentalArea,
-                selectedSlots: widget.selectedSlots,
-                totalPrice: totalPriceFromBe,
-                bookingResult: result,
-              ),
+          builder: (_) => PaymentProofScreen(
+            bookingId: bookingId,
+            rentalArea: widget.rentalArea,
+            selectedSlots: widget.selectedSlots,
+            totalPrice: totalPriceFromBe,
+            bookingResult: result,
+          ),
         ),
       );
     } catch (e) {
@@ -251,7 +246,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     Navigator.of(dContext).pop();
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       '/my-matches',
-                          (route) => route.isFirst,
+                      (route) => route.isFirst,
                     );
                   },
                   child: const Text(
@@ -317,7 +312,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            color: Color(0xFF4338CA),
+            color: Color(0xFF111827),
           ),
         ),
       ),
@@ -363,18 +358,14 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               ),
               const SizedBox(height: 12),
 
-              Row(
-                children: [
-                  Expanded(
-                    flex: 8,
-                    child: _buildTextField(
-                      controller: _noteController,
-                      hintText: 'Ghi chú thêm (nếu có)',
-                      maxLines: 4,
-                    ),
-                  ),
-                  const Spacer(flex: 2),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: _buildTextField(
+                  controller: _noteController,
+                  hintText: 'Ghi chú thêm (nếu có)',
+                  minLines: 3,
+                  maxLines: 3,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -410,9 +401,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${DateFormat('dd/MM/yyyy').format(
-                                  item.date)} • ${item.startTime} - ${item
-                                  .endTime}',
+                              '${DateFormat('dd/MM/yyyy').format(item.date)} • ${item.startTime} - ${item.endTime}',
                               style: const TextStyle(
                                 color: Colors.black54,
                                 fontSize: 13,
@@ -535,20 +524,20 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
                           : Text(
-                        actionBtnText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                              actionBtnText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -560,11 +549,12 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     );
   }
 
-  Widget _buildMatchInfoRow(String label,
-      String value, {
-        bool isHighlight = false,
-        bool isOrange = false,
-      }) {
+  Widget _buildMatchInfoRow(
+    String label,
+    String value, {
+    bool isHighlight = false,
+    bool isOrange = false,
+  }) {
     Color valueColor = Colors.black87;
     if (isHighlight) valueColor = primaryColor;
     if (isOrange) valueColor = confirmColor;
@@ -592,18 +582,22 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     );
   }
 
-  // ĐÃ SỬA: Cập nhật hàm này để hỗ trợ trạng thái readOnly
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
     TextInputType keyboardType = TextInputType.text,
+    int minLines = 1,
     int maxLines = 1,
     bool readOnly = false,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      minLines: minLines,
       maxLines: maxLines,
+      textAlignVertical: maxLines > 1
+          ? TextAlignVertical.top
+          : TextAlignVertical.center,
       readOnly: readOnly,
       style: TextStyle(color: readOnly ? Colors.black54 : Colors.black87),
       decoration: InputDecoration(
@@ -633,40 +627,35 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     final overlay = Overlay.of(context);
 
     final overlayEntry = OverlayEntry(
-      builder: (context) =>
-          Positioned(
-            top: MediaQuery
-                .of(context)
-                .padding
-                .top + 12,
-            left: 16,
-            right: 16,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: isError ? Colors.red : Colors.green,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 12,
+        left: 16,
+        right: 16,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: isError ? Colors.red : Colors.green,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              ],
+            ),
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
+        ),
+      ),
     );
 
     overlay.insert(overlayEntry);

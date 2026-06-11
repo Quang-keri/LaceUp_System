@@ -13,25 +13,13 @@ class BookingService {
     return data;
   }
 
-  /// Giữ nguyên DioException để tầng UI có thể đọc:
-  /// error.response?.data['result']
   Future<T> _execute<T>({
     required Future<T> Function() request,
     required String fallbackMessage,
   }) async {
     try {
       return await request();
-    } on DioException catch (error) {
-      debugPrint('================ API ERROR ================');
-      debugPrint('FALLBACK: $fallbackMessage');
-      debugPrint('STATUS: ${error.response?.statusCode}');
-      debugPrint('DATA: ${error.response?.data}');
-      debugPrint('MESSAGE: ${error.message}');
-      debugPrint('URL: ${error.requestOptions.uri}');
-      debugPrint('METHOD: ${error.requestOptions.method}');
-      debugPrint('===========================================');
-
-      // Không chuyển thành Exception vì sẽ làm mất response.data.
+    } on DioException {
       rethrow;
     }
   }
@@ -63,9 +51,6 @@ class BookingService {
       fallbackMessage: 'Không thể tải đơn chờ xác nhận',
       request: () async {
         final response = await apiClient.get('/bookings/intent/my-intents');
-
-        debugPrint('KIỂU DỮ LIỆU CỦA DATA: ${response.data.runtimeType}');
-        debugPrint('DỮ LIỆU THẬT: ${response.data}');
 
         final dynamic result = _getResultOrData(response.data);
 
@@ -173,23 +158,10 @@ class BookingService {
         options: Options(contentType: 'multipart/form-data'),
       );
 
-      debugPrint('UPLOAD SUCCESS = ${response.data}');
-
       return response.data;
-    } on DioException catch (error) {
-      debugPrint('=========== UPLOAD PAYMENT ERROR ===========');
-      debugPrint('STATUS = ${error.response?.statusCode}');
-      debugPrint('DATA = ${error.response?.data}');
-      debugPrint('MESSAGE = ${error.message}');
-      debugPrint('URL = ${error.requestOptions.uri}');
-      debugPrint('HEADERS = ${error.requestOptions.headers}');
-      debugPrint('============================================');
-
-      // Giữ nguyên dữ liệu lỗi từ backend.
+    } on DioException {
       rethrow;
     } catch (error) {
-      debugPrint('UPLOAD UNKNOWN ERROR = $error');
-
       throw Exception('Upload ảnh thất bại: $error');
     }
   }
@@ -537,22 +509,10 @@ class BookingService {
         options: Options(contentType: 'multipart/form-data'),
       );
 
-      debugPrint('UPLOAD TICKET PAYMENT SUCCESS = ${response.data}');
-
       return response.data;
-    } on DioException catch (error) {
-      debugPrint('======= UPLOAD TICKET PAYMENT ERROR =======');
-      debugPrint('STATUS = ${error.response?.statusCode}');
-      debugPrint('DATA = ${error.response?.data}');
-      debugPrint('MESSAGE = ${error.message}');
-      debugPrint('URL = ${error.requestOptions.uri}');
-      debugPrint('===========================================');
-
-      // Giữ nguyên response.data để UI lấy lỗi chi tiết.
+    } on DioException {
       rethrow;
     } catch (error) {
-      debugPrint('UPLOAD TICKET UNKNOWN ERROR = $error');
-
       throw Exception('Không thể upload ảnh thanh toán vé: $error');
     }
   }

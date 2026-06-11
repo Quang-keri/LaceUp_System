@@ -12,6 +12,26 @@ import BookingDetailPage from "./BookingDetailPage";
 import { useNavigate } from "react-router-dom";
 import { PlusOutlined } from "@ant-design/icons";
 
+const getBookingStartTimestamp = (booking: any) => {
+  const slotTimestamps = (booking?.slots || [])
+    .map((slot: any) => {
+      const timestamp = new Date(slot?.startTime).getTime();
+      return Number.isNaN(timestamp) ? null : timestamp;
+    })
+    .filter(
+      (timestamp: number | null): timestamp is number => timestamp !== null,
+    );
+
+  if (slotTimestamps.length > 0) {
+    return Math.min(...slotTimestamps);
+  }
+
+  const fallback = booking?.startTime || booking?.createdAt;
+  const fallbackTimestamp = fallback ? new Date(fallback).getTime() : 0;
+
+  return Number.isNaN(fallbackTimestamp) ? 0 : fallbackTimestamp;
+};
+
 export default function BookingManagementPage() {
   const navigate = useNavigate();
   const [buildings, setBuildings] = useState<any[]>([]);
@@ -68,7 +88,9 @@ export default function BookingManagementPage() {
     range = dateRange,
   ) => {
     if (!selectedBuildingId) return;
+
     setLoading(true);
+
     try {
       const res = await bookingService.getBookingsByRentalArea(
         selectedBuildingId,
@@ -80,13 +102,26 @@ export default function BookingManagementPage() {
         range?.[0],
         range?.[1],
       );
-      setBookings(res.result.data);
+
+      const bookingData = res?.result?.data ?? [];
+
+      console.table(
+        bookingData.map((booking: any) => ({
+          bookingId: booking.bookingId,
+          startTime: booking.startTime,
+        })),
+      );
+
+      setBookings(bookingData);
+
       setPagination({
         current: page,
         pageSize: size,
-        total: res.result.totalElements,
+        total: res?.result?.totalElements ?? 0,
       });
-    } catch {
+    } catch (error) {
+      console.error("Lỗi tải booking:", error);
+
       message.error("Lỗi tải danh sách booking");
     } finally {
       setLoading(false);
@@ -185,8 +220,14 @@ export default function BookingManagementPage() {
       window.URL.revokeObjectURL(url);
 
       message.success({ content: "Tải hóa đơn thành công!", key: "invoice" });
-    } catch (error) {
-      message.error({ content: "Lỗi tải hóa đơn", key: "invoice" });
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+
+      message.error({
+        content: backendMessage || "Lỗi tải hóa đơn",
+        key: "invoice",
+        duration: 5,
+      });
     }
   };
 
@@ -341,9 +382,12 @@ export default function BookingManagementPage() {
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={() => navigate("/owner/bookings/calendar")}
-             
+                  style={{
+                    backgroundColor: "#0ca0eaff",
+                    borderColor: "#380ceaff",
+                  }}
                 >
-                  Tạo vãng lai
+                  Tạo đơn đặt
                 </Button>
               }
             >

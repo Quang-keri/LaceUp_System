@@ -6,6 +6,7 @@ import org.sport.backend.dto.base.PageResponse;
 import org.sport.backend.dto.internal.CloudinaryUploadResult;
 import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.booking.BookingParticipantResponse;
+import org.sport.backend.dto.response.booking.SharedBookingPublicResponse;
 import org.sport.backend.entity.*;
 import org.sport.backend.repository.*;
 import org.sport.backend.service.CloudinaryService;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +39,110 @@ public class SharedBookingServiceImpl implements SharedBookingService {
 
     private final UserService userService;
     private final CloudinaryService cloudinaryService;
+
+    @Transactional(readOnly = true)
+    @Override
+    public PageResponse<SharedBookingPublicResponse> getOpenSharedBookingsForCommunity(
+            UUID rentalAreaId,
+            int page,
+            int size
+    ) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(
+                Math.max(size, 1),
+                100
+        );
+
+        Pageable pageable = PageRequest.of(
+                safePage - 1,
+                safeSize
+        );
+
+        List<PaymentStatus> reservedStatuses =
+                List.of(
+                        PaymentStatus.PENDING,
+                        PaymentStatus.SUCCESS,
+                        PaymentStatus.BOOKED,
+                        PaymentStatus.COMPLETED
+                );
+
+        Page<Booking> bookingPage =
+                bookingRepository
+                        .findOpenSharedBookingsForCommunity(
+                                BookingType.SHARED,
+                                BookingStatus.BOOKED,
+                                LocalDateTime.now(),
+                                rentalAreaId,
+                                reservedStatuses,
+                                pageable
+                        );
+
+        List<SharedBookingPublicResponse> responses =
+                bookingPage.getContent()
+                        .stream()
+                        .map(this::mapToCommunityResponse)
+                        .toList();
+
+        return PageResponse
+                .<SharedBookingPublicResponse>builder()
+                .currentPage(safePage)
+                .pageSize(safeSize)
+                .totalPages(
+                        bookingPage.getTotalPages()
+                )
+                .totalElements(
+                        bookingPage.getTotalElements()
+                )
+                .data(responses)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<BookingParticipantResponse> getParticipantsForOwner(
+            UUID bookingId
+    ) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Không tìm thấy booking vãng lai"
+                        )
+                );
+
+        if (booking.getBookingType() != BookingType.SHARED) {
+            throw new RuntimeException(
+                    "Booking này không phải trận vãng lai"
+            );
+        }
+
+        User currentUser = userService.getCurrentUserEntity();
+        RentalArea rentalArea = booking.getRentalArea();
+
+        if (rentalArea == null
+                || rentalArea.getOwner() == null
+                || !rentalArea.getOwner().getUserId()
+                .equals(currentUser.getUserId())) {
+            throw new RuntimeException(
+                    "Bạn không có quyền xem người tham gia của sân này"
+            );
+        }
+
+        List<BookingParticipant> participants =
+                bookingParticipantRepository
+                        .findActiveParticipantsByBookingId(
+                                bookingId,
+                                List.of(
+                                        PaymentStatus.PENDING,
+                                        PaymentStatus.SUCCESS,
+                                        PaymentStatus.BOOKED,
+                                        PaymentStatus.COMPLETED
+                                )
+                        );
+
+        return participants.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
 
     @Transactional(readOnly = true)
     @Override
@@ -61,8 +167,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
     ) {
         User currentUser = userService.getCurrentUserEntity();
 
-        Booking booking = bookingRepository
-                .findByIdForUpdate(bookingId)
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
                 .orElseThrow(() ->
                         new RuntimeException(
                                 "Không tìm thấy thông tin đặt vé vãng lai."
@@ -109,8 +214,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         }
 
         BookingParticipant existingParticipant =
-                bookingParticipantRepository
-                        .findTopByBooking_BookingIdAndUser_UserIdOrderByCreatedAtDesc(
+                bookingParticipantRepository.findTopByBooking_BookingIdAndUser_UserIdOrderByCreatedAtDesc(
                                 bookingId,
                                 currentUser.getUserId()
                         )
@@ -138,17 +242,15 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         }
 
         long reservedParticipants =
-                bookingParticipantRepository
-                        .sumQuantityByBookingIdAndStatuses(
-                                bookingId,
-                                java.util.List.of(
-                                        PaymentStatus.PENDING,
-                                        PaymentStatus.SUCCESS
-                                )
-                        );
+                bookingParticipantRepository.sumQuantityByBookingIdAndStatuses(
+                        bookingId,
+                        java.util.List.of(
+                                PaymentStatus.PENDING,
+                                PaymentStatus.SUCCESS
+                        )
+                );
 
-        int remainingSlots =
-                maxParticipants - Math.toIntExact(reservedParticipants);
+        int remainingSlots = maxParticipants - Math.toIntExact(reservedParticipants);
 
         if (remainingSlots <= 0) {
             throw new RuntimeException(
@@ -171,20 +273,16 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 );
 
 
-        BookingParticipant participant =
-                BookingParticipant.builder()
-                        .booking(booking)
-                        .user(currentUser)
-                        .quantity(requestedQuantity)
-                        .amountPaid(totalAmount)
-                        .paymentStatus(PaymentStatus.PENDING)
-                        .isHost(false)
-                        .build();
+        BookingParticipant participant = BookingParticipant.builder()
+                .booking(booking)
+                .user(currentUser)
+                .quantity(requestedQuantity)
+                .amountPaid(totalAmount)
+                .paymentStatus(PaymentStatus.PENDING)
+                .isHost(false)
+                .build();
 
-        BookingParticipant saved =
-                bookingParticipantRepository.saveAndFlush(
-                        participant
-                );
+        BookingParticipant saved = bookingParticipantRepository.saveAndFlush(participant);
 
         return mapToResponse(saved);
     }
@@ -197,8 +295,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         User currentUser = userService.getCurrentUserEntity();
 
         BookingParticipant participant =
-                bookingParticipantRepository
-                        .findById(participantId)
+                bookingParticipantRepository.findById(participantId)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Không tìm thấy thông tin vé"
@@ -215,8 +312,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             );
         }
 
-        PaymentStatus currentStatus =
-                participant.getPaymentStatus();
+        PaymentStatus currentStatus = participant.getPaymentStatus();
 
         if (currentStatus == PaymentStatus.CANCELLED
                 || currentStatus == PaymentStatus.CANCELLED_NO_REFUND) {
@@ -255,47 +351,30 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                         || currentStatus == PaymentStatus.COMPLETED;
 
         if (wasPaid) {
-            int currentCount =
-                    booking.getCurrentParticipants() != null
-                            ? booking.getCurrentParticipants()
-                            : 0;
+            int currentCount = booking.getCurrentParticipants() != null
+                    ? booking.getCurrentParticipants()
+                    : 0;
 
-            int quantity =
-                    participant.getQuantity() != null
-                            ? participant.getQuantity()
-                            : 1;
+            int quantity = participant.getQuantity() != null
+                    ? participant.getQuantity()
+                    : 1;
 
-            booking.setCurrentParticipants(
-                    Math.max(0, currentCount - quantity)
-            );
+            booking.setCurrentParticipants(Math.max(0, currentCount - quantity));
 
             bookingRepository.save(booking);
 
-            /*
-             * Người dùng tự hủy vé đã thanh toán:
-             * giữ nguyên Payment SUCCESS để bảo toàn lịch sử thu tiền,
-             * participant chuyển CANCELLED_NO_REFUND.
-             */
-            participant.setPaymentStatus(
-                    PaymentStatus.CANCELLED_NO_REFUND
-            );
+            participant.setPaymentStatus(PaymentStatus.CANCELLED_NO_REFUND);
         } else {
-            participant.setPaymentStatus(
-                    PaymentStatus.CANCELLED
-            );
+            participant.setPaymentStatus(PaymentStatus.CANCELLED);
 
-            cancelPendingPaymentsForParticipant(
-                    participant
-            );
+            cancelPendingPaymentsForParticipant(participant);
         }
 
         participant.setPaymentProofUrl(null);
         participant.setPaymentProofPublicId(null);
         participant.setPaymentProofUploadedAt(null);
 
-        BookingParticipant saved =
-                bookingParticipantRepository
-                        .saveAndFlush(participant);
+        BookingParticipant saved = bookingParticipantRepository.saveAndFlush(participant);
 
         return mapToResponse(saved);
     }
@@ -307,16 +386,14 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             MultipartFile image
     ) {
         BookingParticipant participant =
-                bookingParticipantRepository
-                        .findById(participantId)
+                bookingParticipantRepository.findById(participantId)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Không tìm thấy thông tin vé"
                                 )
                         );
 
-        User currentUser =
-                userService.getCurrentUserEntity();
+        User currentUser = userService.getCurrentUserEntity();
 
         if (participant.getUser() == null
                 || !participant
@@ -328,8 +405,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             );
         }
 
-        PaymentStatus currentStatus =
-                participant.getPaymentStatus();
+        PaymentStatus currentStatus = participant.getPaymentStatus();
 
         if (currentStatus == PaymentStatus.SUCCESS
                 || currentStatus == PaymentStatus.BOOKED
@@ -380,17 +456,14 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             );
         }
 
-        CloudinaryUploadResult uploadResult =
-                cloudinaryService.uploadImage(
-                        image,
-                        "payment_proofs/shared_tickets"
-                );
+        CloudinaryUploadResult uploadResult = cloudinaryService.uploadImage(
+                image,
+                "payment_proofs/shared_tickets"
+        );
 
-        String proofUrl =
-                uploadResult.getUrl();
+        String proofUrl = uploadResult.getUrl();
 
-        String proofPublicId =
-                uploadResult.getPublicId();
+        String proofPublicId = uploadResult.getPublicId();
 
         if (proofUrl == null || proofUrl.isBlank()) {
             throw new RuntimeException(
@@ -398,49 +471,34 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             );
         }
 
-        BigDecimal paymentAmount =
-                resolveParticipantAmount(
-                        participant,
-                        booking
-                );
+        BigDecimal paymentAmount = resolveParticipantAmount(
+                participant,
+                booking
+        );
 
         participant.setAmountPaid(paymentAmount);
         participant.setPaymentProofUrl(proofUrl);
         participant.setPaymentProofPublicId(proofPublicId);
-        participant.setPaymentProofUploadedAt(
-                LocalDateTime.now()
-        );
-        participant.setPaymentStatus(
-                PaymentStatus.PENDING
-        );
+        participant.setPaymentProofUploadedAt(LocalDateTime.now());
+        participant.setPaymentStatus(PaymentStatus.PENDING);
 
-        bookingParticipantRepository
-                .saveAndFlush(participant);
+        bookingParticipantRepository.saveAndFlush(participant);
 
-        Payment payment =
-                getOrCreatePendingVietQrPayment(
-                        participant,
-                        booking,
-                        currentUser
-                );
+        Payment payment = getOrCreatePendingVietQrPayment(
+                participant,
+                booking,
+                currentUser
+        );
 
         payment.setAmount(paymentAmount);
         payment.setBooking(booking);
         payment.setBookingParticipant(participant);
         payment.setUser(currentUser);
-        payment.setPaymentMethod(
-                PaymentMethod.VIET_QR
-        );
-        payment.setPaymentType(
-                PaymentType.SHARED_BOOKING
-        );
-        payment.setPaymentStatus(
-                PaymentStatus.PENDING
-        );
+        payment.setPaymentMethod(PaymentMethod.VIET_QR);
+        payment.setPaymentType(PaymentType.SHARED_BOOKING);
+        payment.setPaymentStatus(PaymentStatus.PENDING);
         payment.setProof(proofUrl);
-        payment.setTransactionDate(
-                LocalDateTime.now()
-        );
+        payment.setTransactionDate(LocalDateTime.now());
 
         paymentRepository.saveAndFlush(payment);
 
@@ -457,8 +515,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             int size
     ) {
         if (from != null && to != null && from.isAfter(to)) {
-            throw new IllegalArgumentException(
-                    "Ngày bắt đầu không được lớn hơn ngày kết thúc"
+            throw new IllegalArgumentException("Ngày bắt đầu không được lớn hơn ngày kết thúc"
             );
         }
 
@@ -476,10 +533,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         boolean hasFrom = fromTime != null;
         boolean hasTo = toTimeExclusive != null;
 
-        Pageable pageable = PageRequest.of(
-                safePage - 1,
-                safeSize
-        );
+        Pageable pageable = PageRequest.of(safePage - 1, safeSize);
 
         Page<BookingParticipant> participantPage =
                 bookingParticipantRepository.findPendingTicketsForOwner(
@@ -513,8 +567,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             boolean isApproved
     ) {
         BookingParticipant participant =
-                bookingParticipantRepository
-                        .findById(participantId)
+                bookingParticipantRepository.findById(participantId)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Không tìm thấy thông tin vé"
@@ -523,31 +576,21 @@ public class SharedBookingServiceImpl implements SharedBookingService {
 
         if (participant.getPaymentProofUrl() == null
                 || participant.getPaymentProofUrl().isBlank()) {
-            throw new RuntimeException(
-                    "Người chơi chưa tải biên lai thanh toán"
-            );
+            throw new RuntimeException("Người chơi chưa tải biên lai thanh toán");
         }
 
         if (participant.getPaymentStatus() != PaymentStatus.PENDING) {
-            throw new RuntimeException(
-                    "Vé này không ở trạng thái chờ duyệt"
-            );
+            throw new RuntimeException("Vé này không ở trạng thái chờ duyệt");
         }
 
-        Booking sourceBooking =
-                participant.getBooking();
+        Booking sourceBooking = participant.getBooking();
 
         if (sourceBooking == null) {
-            throw new RuntimeException(
-                    "Không tìm thấy booking của vé"
-            );
+            throw new RuntimeException("Không tìm thấy booking của vé");
         }
 
         Booking booking =
-                bookingRepository
-                        .findByIdForUpdate(
-                                sourceBooking.getBookingId()
-                        )
+                bookingRepository.findByIdForUpdate(sourceBooking.getBookingId())
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Không tìm thấy booking"
@@ -555,31 +598,23 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                         );
 
         if (booking.getBookingType() != BookingType.SHARED) {
-            throw new RuntimeException(
-                    "Booking này không phải trận vãng lai"
-            );
+            throw new RuntimeException("Booking này không phải trận vãng lai");
         }
 
         if (booking.getBookingStatus() == BookingStatus.CANCELLED) {
-            throw new RuntimeException(
-                    "Kèo vãng lai đã bị hủy"
-            );
+            throw new RuntimeException("Kèo vãng lai đã bị hủy");
         }
 
         if (booking.getStartTime() == null
                 || !booking
                 .getStartTime()
                 .isAfter(LocalDateTime.now())) {
-            throw new RuntimeException(
-                    "Kèo vãng lai đã bắt đầu hoặc đã kết thúc"
-            );
+            throw new RuntimeException("Kèo vãng lai đã bắt đầu hoặc đã kết thúc");
         }
 
-        RentalArea rentalArea =
-                booking.getRentalArea();
+        RentalArea rentalArea = booking.getRentalArea();
 
-        User currentUser =
-                userService.getCurrentUserEntity();
+        User currentUser = userService.getCurrentUserEntity();
 
         if (rentalArea == null
                 || rentalArea.getOwner() == null
@@ -587,73 +622,49 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 .getOwner()
                 .getUserId()
                 .equals(currentUser.getUserId())) {
-            throw new RuntimeException(
-                    "Bạn không có quyền duyệt vé của sân này"
-            );
+            throw new RuntimeException("Bạn không có quyền duyệt vé của sân này");
         }
 
-        /*
-         * Dữ liệu mới: Payment được tạo lúc upload proof.
-         * Dữ liệu cũ: nếu proof đã có nhưng chưa có Payment,
-         * tự tạo bù Payment để owner vẫn duyệt được.
-         */
-        Payment payment =
-                getOrCreatePendingVietQrPayment(
-                        participant,
-                        booking,
-                        participant.getUser()
-                );
+        Payment payment = getOrCreatePendingVietQrPayment(
+                participant,
+                booking,
+                participant.getUser()
+        );
 
-        BigDecimal paymentAmount =
-                resolveParticipantAmount(
-                        participant,
-                        booking
-                );
+        BigDecimal paymentAmount = resolveParticipantAmount(
+                participant,
+                booking
+        );
 
         payment.setAmount(paymentAmount);
         payment.setBooking(booking);
         payment.setBookingParticipant(participant);
         payment.setUser(participant.getUser());
-        payment.setPaymentMethod(
-                PaymentMethod.VIET_QR
-        );
-        payment.setPaymentType(
-                PaymentType.SHARED_BOOKING
-        );
-        payment.setProof(
-                participant.getPaymentProofUrl()
-        );
+        payment.setPaymentMethod(PaymentMethod.VIET_QR);
+        payment.setPaymentType(PaymentType.SHARED_BOOKING);
+        payment.setProof(participant.getPaymentProofUrl());
 
         if (!isApproved) {
-            participant.setPaymentStatus(
-                    PaymentStatus.FAILED
-            );
+            participant.setPaymentStatus(PaymentStatus.FAILED);
 
-            payment.setPaymentStatus(
-                    PaymentStatus.FAILED
-            );
+            payment.setPaymentStatus(PaymentStatus.FAILED);
 
-            bookingParticipantRepository
-                    .saveAndFlush(participant);
+            bookingParticipantRepository.saveAndFlush(participant);
 
-            paymentRepository
-                    .saveAndFlush(payment);
+            paymentRepository.saveAndFlush(payment);
 
             return;
         }
 
-        int currentCount =
-                booking.getCurrentParticipants() != null
-                        ? booking.getCurrentParticipants()
-                        : 0;
+        int currentCount = booking.getCurrentParticipants() != null
+                ? booking.getCurrentParticipants()
+                : 0;
 
-        int quantity =
-                participant.getQuantity() != null
-                        ? participant.getQuantity()
-                        : 1;
+        int quantity = participant.getQuantity() != null
+                ? participant.getQuantity()
+                : 1;
 
-        int newCount =
-                currentCount + quantity;
+        int newCount = currentCount + quantity;
 
         if (booking.getMaxParticipants() != null
                 && newCount > booking.getMaxParticipants()) {
@@ -663,62 +674,41 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         }
 
         participant.setAmountPaid(paymentAmount);
-        participant.setPaymentStatus(
-                PaymentStatus.SUCCESS
-        );
+        participant.setPaymentStatus(PaymentStatus.SUCCESS);
 
-        payment.setPaymentStatus(
-                PaymentStatus.SUCCESS
-        );
-        payment.setTransactionDate(
-                LocalDateTime.now()
-        );
+        payment.setPaymentStatus(PaymentStatus.SUCCESS);
+        payment.setTransactionDate(LocalDateTime.now());
 
-        booking.setCurrentParticipants(
-                newCount
-        );
+        booking.setCurrentParticipants(newCount);
 
-        bookingParticipantRepository
-                .saveAndFlush(participant);
+        bookingParticipantRepository.saveAndFlush(participant);
 
-        paymentRepository
-                .saveAndFlush(payment);
+        paymentRepository.saveAndFlush(payment);
 
-        bookingRepository
-                .saveAndFlush(booking);
+        bookingRepository.saveAndFlush(booking);
 
-        Transaction transaction =
-                Transaction.builder()
-                        .type(TransactionType.INCOME)
-                        .amount(paymentAmount)
-                        .description(
-                                "Xác nhận thanh toán vé vãng lai VietQR - "
-                                        + participant
-                                        .getUser()
-                                        .getUserName()
-                        )
-                        .status(TransactionStatus.SUCCESS)
-                        .paymentMethod(PaymentMethod.VIET_QR)
-                        .category(
-                                TransactionCategory.BOOKING_FULL_PAYMENT
-                        )
-                        .moneyFlow(
-                                MoneyFlow.OWNER_COLLECTED
-                        )
-                        .rentalArea(rentalArea)
-                        .owner(
-                                rentalArea.getOwner()
-                        )
-                        .booking(booking)
-                        .transactionDate(
-                                LocalDateTime.now()
-                        )
-                        .referenceId(
-                                participant
-                                        .getParticipantId()
-                                        .toString()
-                        )
-                        .build();
+        Transaction transaction = Transaction.builder()
+                .type(TransactionType.INCOME)
+                .amount(paymentAmount)
+                .description(
+                        "Xác nhận thanh toán vé vãng lai VietQR - "
+                                + participant
+                                .getUser()
+                                .getUserName()
+                )
+                .status(TransactionStatus.SUCCESS)
+                .paymentMethod(PaymentMethod.VIET_QR)
+                .category(TransactionCategory.BOOKING_FULL_PAYMENT)
+                .moneyFlow(MoneyFlow.OWNER_COLLECTED)
+                .rentalArea(rentalArea)
+                .owner(rentalArea.getOwner())
+                .booking(booking)
+                .transactionDate(LocalDateTime.now())
+                .referenceId(participant
+                        .getParticipantId()
+                        .toString()
+                )
+                .build();
 
         transactionRepository.save(transaction);
     }
@@ -736,8 +726,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             boolean force
     ) {
         Booking booking =
-                bookingRepository
-                        .findByIdForUpdate(bookingId)
+                bookingRepository.findByIdForUpdate(bookingId)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Không tìm thấy booking vãng lai"
@@ -761,8 +750,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime checkTime =
-                booking.getStartTime().minusMinutes(30);
+        LocalDateTime checkTime = booking.getStartTime().minusMinutes(30);
 
         if (!force && now.isBefore(checkTime)) {
             return false;
@@ -772,28 +760,23 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             return false;
         }
 
-        if (Boolean.TRUE.equals(
-                booking.getMinimumCheckCompleted()
-        )) {
-            return booking.getBookingStatus()
-                    == BookingStatus.CANCELLED;
+        if (Boolean.TRUE.equals(booking.getMinimumCheckCompleted())) {
+            return booking.getBookingStatus() == BookingStatus.CANCELLED;
         }
 
-        int minParticipants =
-                booking.getMinParticipants() != null
-                        ? booking.getMinParticipants()
-                        : 2;
+        int minParticipants = booking.getMinParticipants() != null
+                ? booking.getMinParticipants()
+                : 2;
 
         long confirmedQuantity =
-                bookingParticipantRepository
-                        .sumQuantityByBookingIdAndStatuses(
-                                bookingId,
-                                List.of(
-                                        PaymentStatus.SUCCESS,
-                                        PaymentStatus.BOOKED,
-                                        PaymentStatus.COMPLETED
-                                )
-                        );
+                bookingParticipantRepository.sumQuantityByBookingIdAndStatuses(
+                        bookingId,
+                        List.of(
+                                PaymentStatus.SUCCESS,
+                                PaymentStatus.BOOKED,
+                                PaymentStatus.COMPLETED
+                        )
+                );
 
         booking.setMinimumCheckCompleted(true);
         booking.setMinimumCheckedAt(now);
@@ -804,12 +787,10 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         }
 
         List<BookingParticipant> participants =
-                bookingParticipantRepository
-                        .findAllByBooking_BookingId(bookingId);
+                bookingParticipantRepository.findAllByBooking_BookingId(bookingId);
 
         for (BookingParticipant participant : participants) {
-            PaymentStatus status =
-                    participant.getPaymentStatus();
+            PaymentStatus status = participant.getPaymentStatus();
 
             if (status == PaymentStatus.SUCCESS
                     || status == PaymentStatus.BOOKED
@@ -826,24 +807,15 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 participant.setPaymentProofPublicId(null);
                 participant.setPaymentProofUploadedAt(null);
             }
-
-            /*
-             * CANCELLED_NO_REFUND giữ nguyên:
-             * người dùng đã tự hủy trước đó theo chính sách không hoàn.
-             */
         }
 
         bookingParticipantRepository.saveAll(participants);
 
-        List<Payment> sharedPayments =
-                paymentRepository
-                        .findAllSharedTicketPaymentsByBookingId(
-                                bookingId
-                        );
+        List<Payment> sharedPayments = paymentRepository
+                .findAllSharedTicketPaymentsByBookingId(bookingId);
 
         for (Payment payment : sharedPayments) {
-            BookingParticipant linkedParticipant =
-                    payment.getBookingParticipant();
+            BookingParticipant linkedParticipant = payment.getBookingParticipant();
 
             if (payment.getPaymentStatus() == PaymentStatus.SUCCESS
                     && linkedParticipant != null
@@ -865,19 +837,17 @@ public class SharedBookingServiceImpl implements SharedBookingService {
         booking.setBookingStatus(BookingStatus.CANCELLED);
         booking.setCurrentParticipants(0);
 
-        String reason =
-                "Hệ thống hủy trận vãng lai do không đủ "
-                        + minParticipants
-                        + " người tối thiểu. Hiện có "
-                        + confirmedQuantity
-                        + " người đã thanh toán.";
+        String reason = "Hệ thống hủy trận vãng lai do không đủ "
+                + minParticipants
+                + " người tối thiểu. Hiện có "
+                + confirmedQuantity
+                + " người đã thanh toán.";
 
         String oldNote = booking.getNote();
 
-        booking.setNote(
-                oldNote == null || oldNote.isBlank()
-                        ? reason
-                        : oldNote + "\n" + reason
+        booking.setNote(oldNote == null || oldNote.isBlank()
+                ? reason
+                : oldNote + "\n" + reason
         );
 
         if (booking.getSlots() != null) {
@@ -886,9 +856,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 slot.setBooking(null);
             }
 
-            slotRepository.saveAllAndFlush(
-                    booking.getSlots()
-            );
+            slotRepository.saveAllAndFlush(booking.getSlots());
         }
 
         bookingRepository.saveAndFlush(booking);
@@ -900,17 +868,15 @@ public class SharedBookingServiceImpl implements SharedBookingService {
     public void cancelSharedTicketBySystem(
             UUID participantId
     ) {
-        BookingParticipant participant =
-                bookingParticipantRepository
-                        .findById(participantId)
-                        .orElse(null);
+        BookingParticipant participant = bookingParticipantRepository
+                .findById(participantId)
+                .orElse(null);
 
         if (participant == null) {
             return;
         }
 
-        PaymentStatus status =
-                participant.getPaymentStatus();
+        PaymentStatus status = participant.getPaymentStatus();
 
         if (status == PaymentStatus.SUCCESS
                 || status == PaymentStatus.BOOKED
@@ -923,41 +889,33 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             return;
         }
 
-        participant.setPaymentStatus(
-                PaymentStatus.CANCELLED
-        );
+        participant.setPaymentStatus(PaymentStatus.CANCELLED);
 
         participant.setPaymentProofUrl(null);
         participant.setPaymentProofPublicId(null);
         participant.setPaymentProofUploadedAt(null);
 
-        bookingParticipantRepository
-                .saveAndFlush(participant);
+        bookingParticipantRepository.saveAndFlush(participant);
 
-        cancelPendingPaymentsForParticipant(
-                participant
-        );
+        cancelPendingPaymentsForParticipant(participant);
     }
 
     private BigDecimal resolveParticipantAmount(
             BookingParticipant participant,
             Booking booking
     ) {
-        BigDecimal amount =
-                participant.getAmountPaid();
+        BigDecimal amount = participant.getAmountPaid();
 
         if (amount != null
                 && amount.compareTo(BigDecimal.ZERO) > 0) {
             return amount;
         }
 
-        int quantity =
-                participant.getQuantity() != null
-                        ? participant.getQuantity()
-                        : 1;
+        int quantity = participant.getQuantity() != null
+                ? participant.getQuantity()
+                : 1;
 
-        BigDecimal pricePerTicket =
-                booking.getPricePerTicket();
+        BigDecimal pricePerTicket = booking.getPricePerTicket();
 
         if (pricePerTicket == null
                 || pricePerTicket.compareTo(
@@ -968,9 +926,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             );
         }
 
-        return pricePerTicket.multiply(
-                BigDecimal.valueOf(quantity)
-        );
+        return pricePerTicket.multiply(BigDecimal.valueOf(quantity));
     }
 
     private Payment getOrCreatePendingVietQrPayment(
@@ -985,36 +941,17 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                         PaymentStatus.PENDING
                 )
                 .orElseGet(() -> {
-                    Payment payment =
-                            Payment.builder()
-                                    .bookingParticipant(
-                                            participant
-                                    )
-                                    .booking(booking)
-                                    .user(payer)
-                                    .amount(
-                                            resolveParticipantAmount(
-                                                    participant,
-                                                    booking
-                                            )
-                                    )
-                                    .paymentMethod(
-                                            PaymentMethod.VIET_QR
-                                    )
-                                    .paymentType(
-                                            PaymentType.SHARED_BOOKING
-                                    )
-                                    .paymentStatus(
-                                            PaymentStatus.PENDING
-                                    )
-                                    .proof(
-                                            participant
-                                                    .getPaymentProofUrl()
-                                    )
-                                    .transactionDate(
-                                            LocalDateTime.now()
-                                    )
-                                    .build();
+                    Payment payment = Payment.builder()
+                            .bookingParticipant(participant)
+                            .booking(booking)
+                            .user(payer)
+                            .amount(resolveParticipantAmount(participant, booking))
+                            .paymentMethod(PaymentMethod.VIET_QR)
+                            .paymentType(PaymentType.SHARED_BOOKING)
+                            .paymentStatus(PaymentStatus.PENDING)
+                            .proof(participant.getPaymentProofUrl())
+                            .transactionDate(LocalDateTime.now())
+                            .build();
 
                     return paymentRepository
                             .saveAndFlush(payment);
@@ -1028,13 +965,12 @@ public class SharedBookingServiceImpl implements SharedBookingService {
             return;
         }
 
-        List<Payment> payments =
-                paymentRepository
-                        .findAllSharedTicketPaymentsByBookingId(
-                                participant
-                                        .getBooking()
-                                        .getBookingId()
-                        );
+        List<Payment> payments = paymentRepository
+                .findAllSharedTicketPaymentsByBookingId(
+                        participant
+                                .getBooking()
+                                .getBookingId()
+                );
 
         for (Payment payment : payments) {
             if (payment.getBookingParticipant() == null
@@ -1118,4 +1054,96 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 .vietQrUrl(qrUrl)
                 .build();
     }
+
+    private SharedBookingPublicResponse mapToCommunityResponse(
+            Booking booking
+    ) {
+        RentalArea rentalArea = booking.getRentalArea();
+
+        Slot firstSlot =
+                Optional.ofNullable(booking.getSlots())
+                        .orElse(List.of())
+                        .stream()
+                        .filter(slot -> slot.getStartTime() != null)
+                        .min(Comparator.comparing(Slot::getStartTime))
+                        .orElse(null);
+
+        CourtCopy courtCopy = firstSlot != null
+                ? firstSlot.getCourtCopy()
+                : null;
+
+        Court court = courtCopy != null
+                ? courtCopy.getCourt()
+                : null;
+
+        long confirmedParticipants = bookingParticipantRepository
+                .sumQuantityByBookingIdAndStatuses(
+                        booking.getBookingId(),
+                        List.of(
+                                PaymentStatus.SUCCESS,
+                                PaymentStatus.BOOKED,
+                                PaymentStatus.COMPLETED
+                        )
+                );
+
+        long reservedParticipants = bookingParticipantRepository
+                .sumQuantityByBookingIdAndStatuses(
+                        booking.getBookingId(),
+                        List.of(
+                                PaymentStatus.PENDING,
+                                PaymentStatus.SUCCESS,
+                                PaymentStatus.BOOKED,
+                                PaymentStatus.COMPLETED
+                        )
+                );
+
+        int maxParticipants = booking.getMaxParticipants() != null
+                ? booking.getMaxParticipants()
+                : 0;
+
+        long remainingSlots = Math.max(0, maxParticipants - reservedParticipants);
+
+        return SharedBookingPublicResponse
+                .builder()
+                .bookingId(booking.getBookingId())
+                .bookingType(booking.getBookingType())
+                .bookingStatus(booking.getBookingStatus())
+                .rentalAreaId(rentalArea != null
+                        ? rentalArea.getRentalAreaId()
+                        : null
+                )
+                .rentalAreaName(rentalArea != null
+                        ? rentalArea.getRentalAreaName()
+                        : null
+                )
+                .courtId(court != null
+                        ? court.getCourtId()
+                        : null
+                )
+                .courtName(court != null
+                        ? court.getCourtName()
+                        : null
+                )
+                .courtCode(courtCopy != null
+                        ? courtCopy.getCourtCode()
+                        : null
+                )
+                .categoryName(court != null
+                        && court.getCategory() != null
+                        ? court.getCategory()
+                        .getCategoryName()
+                        : null
+                )
+                .pricePerTicket(booking.getPricePerTicket())
+                .currentParticipants(confirmedParticipants)
+                .reservedParticipants(reservedParticipants)
+                .remainingSlots(remainingSlots)
+                .maxParticipants(maxParticipants)
+                .minParticipants(booking.getMinParticipants())
+                .startTime(booking.getStartTime())
+                .endTime(booking.getEndTime())
+                .note(booking.getNote())
+                .build();
+    }
+
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/booking_share.dart';
 import '../../models/category.dart';
 import '../../models/match.dart';
 import '../../models/rental_area.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/booking_shared_service.dart';
 import '../../services/category_service.dart';
 import '../../services/location_service.dart';
 import '../../services/match_service.dart';
@@ -12,6 +14,7 @@ import '../../services/rental_service.dart';
 import 'match_card.dart';
 import 'join_match_dialog.dart';
 import 'match_filter.dart';
+import 'shared_booking_card.dart';
 
 class MatchPage extends StatefulWidget {
   const MatchPage({super.key});
@@ -24,7 +27,10 @@ class _MatchPageState extends State<MatchPage> {
   final TextEditingController _roomCodeController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isLoadingShared = false;
+
   List<MatchResponse> _matches = [];
+  List<SharedBookingPublicResponse> _sharedBookings = [];
 
   List<RentalAreaResponse> _rentalAreas = [];
   Map<String, Map<String, dynamic>> _groupedMatches = {};
@@ -53,6 +59,7 @@ class _MatchPageState extends State<MatchPage> {
 
   Future<void> _fetchInitialData() async {
     _fetchMatches();
+    _fetchSharedBookings();
     _fetchCategories();
 
     try {
@@ -74,6 +81,46 @@ class _MatchPageState extends State<MatchPage> {
       debugPrint("Lỗi tải danh mục: $e");
     } finally {
       if (mounted) setState(() => _isFetchingCategories = false);
+    }
+  }
+
+  Future<void> _fetchSharedBookings() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingShared = true;
+      });
+    }
+
+    try {
+      final bookings = await sharedBookingService
+          .getOpenSharedBookingsForCommunity(page: 1, size: 100);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _sharedBookings = bookings;
+        _groupMatchesByArea();
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingShared = false;
+        });
+      }
     }
   }
 
@@ -169,11 +216,125 @@ class _MatchPageState extends State<MatchPage> {
   }
 
   void _groupMatchesByArea() {
-    Map<String, Map<String, dynamic>> groups = {};
+    final groups = <String, Map<String, dynamic>>{};
 
-    for (var match in _matches) {
+    bool matchesLocation(RentalAreaResponse? area) {
+      if (_selectedLocation.isEmpty && _selectedWard.isEmpty) {
+        return true;
+      }
+
+      final cityName = (area?.cityName ?? '').toLowerCase();
+
+      final wardName = (area?.address?.ward ?? '').toLowerCase();
+
+      final cityMatched =
+          _selectedLocation.isEmpty ||
+          cityName.contains(_selectedLocation.toLowerCase());
+
+      final wardMatched =
+          _selectedWard.isEmpty ||
+          wardName.contains(_selectedWard.toLowerCase());
+
+      return cityMatched && wardMatched;
+    }
+
+    Map<String, dynamic> ensureGroup({
+      required String areaId,
+      required String areaName,
+      required String address,
+      required String firstLetter,
+    }) {
+      return groups.putIfAbsent(
+        areaId,
+        () => {
+          'areaName': areaName,
+          'address': address,
+          'firstLetter': firstLetter,
+          'sharedBookings': <SharedBookingPublicResponse>[],
+          'matches': <MatchResponse>[],
+        },
+      );
+    }
+
+    final filteredShared = _sharedBookings.where((booking) {
+      if (!['ALL', 'NORMAL'].contains(_typeFilter)) {
+        return false;
+      }
+
+      if (_selectedCategory.isNotEmpty &&
+          !(booking.categoryName ?? '').toLowerCase().contains(
+            _selectedCategory.toLowerCase(),
+          )) {
+        return false;
+      }
+
+      final area = _rentalAreas.cast<RentalAreaResponse?>().firstWhere(
+        (item) => item?.rentalAreaId == booking.rentalAreaId,
+        orElse: () => null,
+      );
+
+      return matchesLocation(area);
+    }).toList();
+
+    if (_sortOrder == 'PRICE_ASC') {
+      filteredShared.sort(
+        (first, second) =>
+            first.pricePerTicket.compareTo(second.pricePerTicket),
+      );
+    } else if (_sortOrder == 'PRICE_DESC') {
+      filteredShared.sort(
+        (first, second) =>
+            second.pricePerTicket.compareTo(first.pricePerTicket),
+      );
+    } else {
+      filteredShared.sort((first, second) {
+        final firstTime = DateTime.tryParse(first.startTime);
+        final secondTime = DateTime.tryParse(second.startTime);
+
+        if (firstTime == null || secondTime == null) {
+          return 0;
+        }
+
+        return firstTime.compareTo(secondTime);
+      });
+    }
+
+    for (final booking in filteredShared) {
+      RentalAreaResponse? area;
+
+      for (final rentalArea in _rentalAreas) {
+        if (rentalArea.rentalAreaId == booking.rentalAreaId) {
+          area = rentalArea;
+          break;
+        }
+      }
+
+      final areaName = area?.rentalAreaName ?? booking.rentalAreaName;
+
+      final address = area?.address != null
+          ? '${area!.address!.street}, '
+                '${area.address!.ward}, '
+                '${area.cityName}'
+          : 'Chưa cập nhật địa chỉ';
+
+      final group = ensureGroup(
+        areaId: booking.rentalAreaId.isNotEmpty
+            ? booking.rentalAreaId
+            : 'shared-${booking.rentalAreaName}',
+        areaName: areaName,
+        address: address,
+        firstLetter: areaName.isNotEmpty ? areaName[0].toUpperCase() : 'K',
+      );
+
+      (group['sharedBookings'] as List<SharedBookingPublicResponse>).add(
+        booking,
+      );
+    }
+
+    for (final match in _matches) {
       RentalAreaResponse? matchedArea;
-      for (var area in _rentalAreas) {
+
+      for (final area in _rentalAreas) {
         if (area.courts != null &&
             area.courts!.any((court) => court.courtName == match.courtName)) {
           matchedArea = area;
@@ -181,28 +342,36 @@ class _MatchPageState extends State<MatchPage> {
         }
       }
 
-      final areaId = matchedArea?.rentalAreaId ?? "unknown_area";
-
-      if (!groups.containsKey(areaId)) {
-        groups[areaId] = {
-          'areaName':
-              matchedArea?.rentalAreaName ?? "Khu vực khác (Chưa xác định)",
-          'address': matchedArea?.address != null
-              ? '${matchedArea!.address!.street}, ${matchedArea.address!.ward}, ${matchedArea.cityName}'
-              : "Chưa cập nhật địa chỉ",
-          'firstLetter': matchedArea?.rentalAreaName.isNotEmpty == true
-              ? matchedArea!.rentalAreaName[0].toUpperCase()
-              : "K",
-          'matches': <MatchResponse>[],
-        };
+      if (!matchesLocation(matchedArea)) {
+        continue;
       }
 
-      (groups[areaId]!['matches'] as List<MatchResponse>).add(match);
+      final areaId = matchedArea?.rentalAreaId ?? 'match-${match.courtName}';
+
+      final areaName =
+          matchedArea?.rentalAreaName ?? 'Khu vực khác (Chưa xác định)';
+
+      final address = matchedArea?.address != null
+          ? '${matchedArea!.address!.street}, '
+                '${matchedArea.address!.ward}, '
+                '${matchedArea.cityName}'
+          : 'Chưa cập nhật địa chỉ';
+
+      final group = ensureGroup(
+        areaId: areaId,
+        areaName: areaName,
+        address: address,
+        firstLetter: areaName.isNotEmpty ? areaName[0].toUpperCase() : 'K',
+      );
+
+      (group['matches'] as List<MatchResponse>).add(match);
     }
 
-    setState(() {
-      _groupedMatches = groups;
-    });
+    _groupedMatches = groups;
+  }
+
+  Future<void> _refreshCommunity() async {
+    await Future.wait([_fetchMatches(), _fetchSharedBookings()]);
   }
 
   Future<void> _handleJoinByRoomCode() async {
@@ -337,7 +506,9 @@ class _MatchPageState extends State<MatchPage> {
       itemBuilder: (context, index) {
         String key = _groupedMatches.keys.elementAt(index);
         var group = _groupedMatches[key]!;
-        List<MatchResponse> areaMatches = group['matches'];
+        final List<SharedBookingPublicResponse> areaSharedBookings =
+            group['sharedBookings'];
+        final List<MatchResponse> areaMatches = group['matches'];
 
         return Container(
           margin: const EdgeInsets.only(bottom: 24),
@@ -409,15 +580,27 @@ class _MatchPageState extends State<MatchPage> {
                 color: Colors.grey.shade50,
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                  children: areaMatches.map((match) {
-                    return MatchCard(
-                      match: match,
-                      currentUserId: currentUserId,
-                      onOpenJoinModal: () =>
-                          _openJoinModal(match, currentUserId, currentUserName),
-                      onJoinSuccess: _fetchMatches,
-                    );
-                  }).toList(),
+                  children: [
+                    ...areaSharedBookings.map(
+                      (booking) => SharedBookingCard(
+                        booking: booking,
+                        currentUserId: currentUserId,
+                        onJoinSuccess: _fetchSharedBookings,
+                      ),
+                    ),
+                    ...areaMatches.map(
+                      (match) => MatchCard(
+                        match: match,
+                        currentUserId: currentUserId,
+                        onOpenJoinModal: () => _openJoinModal(
+                          match,
+                          currentUserId,
+                          currentUserName,
+                        ),
+                        onJoinSuccess: _fetchMatches,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -517,13 +700,13 @@ class _MatchPageState extends State<MatchPage> {
             const SizedBox(height: 16),
 
             Expanded(
-              child: _isLoading
+              child: (_isLoading || _isLoadingShared)
                   ? const Center(
                       child: CircularProgressIndicator(
                         color: Color(0xFF9156F1),
                       ),
                     )
-                  : _matches.isEmpty
+                  : _groupedMatches.isEmpty
                   ? const Center(
                       child: Text(
                         'Không tìm thấy trận đấu nào!',
@@ -531,7 +714,7 @@ class _MatchPageState extends State<MatchPage> {
                       ),
                     )
                   : RefreshIndicator(
-                      onRefresh: _fetchMatches,
+                      onRefresh: _refreshCommunity,
                       child: _buildGroupedMatches(
                         currentUserId,
                         currentUserName,

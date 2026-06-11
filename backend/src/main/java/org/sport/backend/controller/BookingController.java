@@ -43,7 +43,8 @@ public class BookingController {
 
     @PostMapping("/preview-price")
     public ResponseEntity<?> previewOwnerBookingPrice(
-            @RequestBody OwnerBookingRequest request) {
+            @RequestBody OwnerBookingRequest request
+    ) {
         BigDecimal total = bookingService.previewOwnerBookingPrice(request);
         return ResponseEntity.ok(new ApiResponse<>(
                 200,
@@ -54,7 +55,8 @@ public class BookingController {
     @PostMapping("/owner")
     @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<BookingResponse> ownerCreateBooking(
-            @Valid @RequestBody OwnerBookingRequest request) {
+            @Valid @RequestBody OwnerBookingRequest request
+    ) {
         try {
             return ApiResponse.success(
                     201,
@@ -70,7 +72,8 @@ public class BookingController {
     @PostMapping("/{bookingId}/services")
     public ResponseEntity<ApiResponse<Void>> addExtraServicesToBooking(
             @PathVariable UUID bookingId,
-            @RequestBody AddExtraServicesRequest request) {
+            @RequestBody AddExtraServicesRequest request
+    ) {
         try {
             bookingService.addExtraServices(bookingId, request);
             return ResponseEntity.ok(ApiResponse.success(
@@ -87,7 +90,8 @@ public class BookingController {
 
     @PostMapping("/check-availability")
     public ApiResponse<CheckAvailabilityResponse> checkAvailability(
-            @RequestBody @Valid SlotRequest request) {
+            @RequestBody @Valid SlotRequest request
+    ) {
         return ApiResponse.success(
                 200,
                 "Check availability successfully",
@@ -96,7 +100,8 @@ public class BookingController {
 
     @PostMapping("/confirm/{intentId}")
     public ApiResponse<BookingResponse> confirmBooking(
-            @PathVariable UUID intentId) {
+            @PathVariable UUID intentId
+    ) {
         return ApiResponse.success(
                 bookingService.confirmBooking(intentId, null));
     }
@@ -104,7 +109,8 @@ public class BookingController {
     @GetMapping("/{bookingId}")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<BookingResponse> getBooking(
-            @PathVariable UUID bookingId) {
+            @PathVariable UUID bookingId
+    ) {
         try {
             return ApiResponse.success(
                     200,
@@ -131,7 +137,9 @@ public class BookingController {
     @GetMapping(value = "/{bookingId}/invoice/view",
             produces = MediaType.TEXT_HTML_VALUE)
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> viewInvoice(@PathVariable UUID bookingId) {
+    public ResponseEntity<String> viewInvoice(
+            @PathVariable UUID bookingId
+    ) {
         try {
             var booking = bookingQueryService.getBookingById(bookingId);
             StringBuilder html = new StringBuilder();
@@ -155,7 +163,8 @@ public class BookingController {
     @GetMapping("/{bookingId}/invoice/download")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadInvoice(
-            @PathVariable UUID bookingId) {
+            @PathVariable UUID bookingId
+    ) {
         var booking = bookingQueryService.getBookingById(bookingId);
         byte[] pdf = invoiceService.generateInvoicePdf(booking);
         return ResponseEntity.ok()
@@ -219,7 +228,8 @@ public class BookingController {
     @PreAuthorize("hasAuthority('MANAGE_BOOKING')")
     public ApiResponse<BookingResponse> updateBooking(
             @PathVariable UUID bookingId,
-            @Valid @RequestBody UpdateBookingRequest request) {
+            @Valid @RequestBody UpdateBookingRequest request
+    ) {
         try {
             return ApiResponse.<BookingResponse>builder()
                     .code(200)
@@ -351,7 +361,8 @@ public class BookingController {
     @PutMapping("/{bookingId}/cancel")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<BookingResponse>> cancelBooking(
-            @PathVariable UUID bookingId) {
+            @PathVariable UUID bookingId
+    ) {
         try {
             BookingResponse response = bookingService.cancelBookingByUser(bookingId);
             return ResponseEntity.ok(ApiResponse.success(

@@ -62,10 +62,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Color(0xFF111827)),
         elevation: 0,
         title: const Text(
           'Xác nhận đặt sân',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ),
       bottomNavigationBar: Container(

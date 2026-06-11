@@ -143,8 +143,6 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
         quantity,
       );
 
-      debugPrint('JOIN SHARED RESPONSE = $response');
-
       Map<String, dynamic>? responseMap;
 
       if (response is Map<String, dynamic>) {

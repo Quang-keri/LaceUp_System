@@ -252,7 +252,7 @@ export const router = createBrowserRouter([
         path: "/owner/transactions/:rentalAreaId",
         element: <TransactionManager />,
       },
-      { path: "owner/refunds", element: <OwnerRefundManagement /> },
+      { path: "refunds", element: <OwnerRefundManagement /> },
       {
         path: "notifications",
         element: <NotificationPage />,

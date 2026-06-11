@@ -235,9 +235,6 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                       );
                     },
                     errorBuilder: (context, error, stackTrace) {
-                      debugPrint('VIETQR URL = $vietQrUrl');
-                      debugPrint('VIETQR ERROR = $error');
-
                       return const SizedBox(
                         height: 120,
                         child: Center(

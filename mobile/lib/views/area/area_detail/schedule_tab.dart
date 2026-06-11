@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -31,10 +33,7 @@ class ScheduleTab extends StatefulWidget {
 
   final Map<String, dynamic>? selectedJoinableSlot;
 
-  final Future<void> Function(
-      String bookingId,
-      int quantity,
-      )? onJoinShared;
+  final Future<void> Function(String bookingId, int quantity)? onJoinShared;
 
   const ScheduleTab({
     super.key,
@@ -64,6 +63,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
   final ScrollController _scheduleScrollController = ScrollController();
   double _scrollProgress = 0.0;
 
+  Timer? _clockTimer;
+  DateTime _currentTime = DateTime.now();
+
   late List<String> dynamicTimeSlots;
 
   static bool _hideMatchGuide = false;
@@ -73,6 +75,16 @@ class _ScheduleTabState extends State<ScheduleTab> {
     super.initState();
     _scheduleScrollController.addListener(_onScroll);
     dynamicTimeSlots = _generateTimeSlots();
+
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _currentTime = DateTime.now();
+      });
+    });
   }
 
   @override
@@ -105,6 +117,26 @@ class _ScheduleTabState extends State<ScheduleTab> {
   int _timeToMinutes(String timeStr) {
     final parts = timeStr.split(':');
     return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+  }
+
+  DateTime _buildCellStartDateTime(String timeStr) {
+    final parts = timeStr.split(':');
+
+    final hour = int.tryParse(parts.first) ?? 0;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+
+    return DateTime(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+      widget.selectedDate.day,
+      hour,
+      minute,
+    );
+  }
+
+  bool _isPastCell(String timeStr) {
+    final cellStart = _buildCellStartDateTime(timeStr);
+    return !cellStart.isAfter(_currentTime);
   }
 
   SlotResponse? _getSlotAtTime(CourtCopyResponse copy, String timeStr) {
@@ -332,6 +364,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
 
   @override
   void dispose() {
+    _clockTimer?.cancel();
     _scheduleScrollController.removeListener(_onScroll);
     _scheduleScrollController.dispose();
     super.dispose();
@@ -493,37 +526,75 @@ class _ScheduleTabState extends State<ScheduleTab> {
             children: [
               Icon(Icons.warning_amber_rounded, color: Color(0xFFEA580C)),
               SizedBox(width: 8),
-              Text(
-                'Lưu ý đặt sân',
-                style: TextStyle(
-                  color: Color(0xFFEA580C),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Lưu ý',
+                  style: TextStyle(
+                    color: Color(0xFFEA580C),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '- Chọn vào khung giờ phù hợp với bạn trên biểu đồ sân.',
-                style: TextStyle(height: 1.5),
-              ),
-              Text(
-                '- Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử và nhận ưu đãi.',
-                style: TextStyle(height: 1.5),
-              ),
-              Text(
-                '- Hệ thống hiện KHÔNG hỗ trợ hoàn tiền, hãy kiểm tra kỹ trước khi thanh toán.',
-                style: TextStyle(height: 1.5),
-              ),
-              Text(
-                '- Chức năng "Ghép trận" yêu cầu bạn phải chọn sân trước để ra cấu hình trận.',
-                style: TextStyle(height: 1.5),
-              ),
-            ],
+          content: const SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '1. Đặt sân',
+                  style: TextStyle(
+                    color: Color(0xFFEA580C),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '• Chọn vào khung giờ phù hợp với bạn trên biểu đồ sân.',
+                  style: TextStyle(height: 1.5),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '• Đăng nhập để đặt lịch nhanh hơn, theo dõi lịch sử và nhận ưu đãi.',
+                  style: TextStyle(height: 1.5),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '• Hệ thống hiện không hỗ trợ hoàn tiền cho lịch đặt sân thông thường, hãy kiểm tra kỹ trước khi thanh toán.',
+                  style: TextStyle(height: 1.5),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '• Chức năng Đánh Rank yêu cầu bạn phải chọn sân trước để mở phần cấu hình trận.',
+                  style: TextStyle(height: 1.5),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  child: Divider(height: 1),
+                ),
+                Text(
+                  '2. Vãng lai',
+                  style: TextStyle(
+                    color: Color(0xFF0F766E),
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '• Trận đấu sẽ được chốt danh sách trước giờ chơi 30 phút.',
+                  style: TextStyle(height: 1.5),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '• Nếu không đủ số lượng người tối thiểu, chúng tôi sẽ lên kế hoạch hoàn tiền vì trận đấu không xảy ra.',
+                  style: TextStyle(height: 1.5),
+                ),
+              ],
+            ),
           ),
           actions: [
             ElevatedButton(
@@ -542,6 +613,45 @@ class _ScheduleTabState extends State<ScheduleTab> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSharedNotice() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDFA),
+          border: Border.all(color: const Color(0xFF99F6E4)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 18,
+              color: Color(0xFF0F766E),
+            ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Trận đấu sẽ được chốt danh sách trước giờ chơi 30 phút. '
+                'Nếu không đủ số lượng người tối thiểu, chúng tôi sẽ lên kế hoạch '
+                'hoàn tiền vì trận đấu không xảy ra.',
+                style: TextStyle(
+                  color: Color(0xFF115E59),
+                  fontSize: 12.5,
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -565,6 +675,12 @@ class _ScheduleTabState extends State<ScheduleTab> {
         _buildDateSelector(context),
         _buildModeToggle(),
         _buildActionButtons(),
+
+        if (widget.activeMode == 'shared') ...[
+          const SizedBox(height: 10),
+          _buildSharedNotice(),
+        ],
+
         const SizedBox(height: 16),
         _buildLegends(),
         const SizedBox(height: 16),
@@ -574,15 +690,10 @@ class _ScheduleTabState extends State<ScheduleTab> {
 
         if (widget.activeMode == 'shared')
           JoinSharedBookingPanel(
-            slotInfo:
-            widget.selectedJoinableSlot?['slot']
-            as SlotResponse?,
-            court:
-            widget.selectedJoinableSlot?['court']
-            as CourtResponse?,
+            slotInfo: widget.selectedJoinableSlot?['slot'] as SlotResponse?,
+            court: widget.selectedJoinableSlot?['court'] as CourtResponse?,
             courtCopy:
-            widget.selectedJoinableSlot?['copy']
-            as CourtCopyResponse?,
+                widget.selectedJoinableSlot?['copy'] as CourtCopyResponse?,
             onConfirmJoin: widget.onJoinShared,
           ),
 
@@ -644,6 +755,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
           borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildModeButton(
               mode: 'booking',
@@ -659,8 +771,8 @@ class _ScheduleTabState extends State<ScheduleTab> {
             ),
             _buildModeButton(
               mode: 'match',
-              title: 'Tìm đối',
-              icon: Icons.sports_tennis_rounded,
+              title: 'Đánh Rank',
+              icon: Icons.emoji_events_rounded,
               activeColor: primaryColor,
             ),
           ],
@@ -678,53 +790,61 @@ class _ScheduleTabState extends State<ScheduleTab> {
     final isActive = widget.activeMode == mode;
 
     return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          widget.onModeChanged(mode);
-
-          if (mode == 'match' && !_hideMatchGuide) {
-            _showMatchGuideDialog();
-          }
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeInOut,
-          decoration: BoxDecoration(
-            color: isActive ? activeColor : Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(22),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: activeColor.withOpacity(0.22),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isActive ? Colors.white : Colors.grey.shade600,
+            onTap: () {
+              widget.onModeChanged(mode);
+
+              if (mode == 'match' && !_hideMatchGuide) {
+                _showMatchGuideDialog();
+              }
+            },
+            child: AnimatedContainer(
+              height: double.infinity,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOut,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isActive ? activeColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: activeColor.withOpacity(0.22),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.bold,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 17,
                     color: isActive ? Colors.white : Colors.grey.shade600,
                   ),
-                ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: isActive ? Colors.white : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -997,15 +1117,17 @@ class _ScheduleTabState extends State<ScheduleTab> {
                               );
 
                               final isSharedOpen = _isSharedOpen(slot);
+                              final isPast = _isPastCell(time);
 
                               final isBlocked =
-                                  !isSharedOpen &&
-                                  [
-                                    'BOOKED',
-                                    'MATCH_FULL',
-                                    'LOCKED',
-                                    'COMPLETED',
-                                  ].contains(slotStatus);
+                                  isPast ||
+                                  (!isSharedOpen &&
+                                      [
+                                        'BOOKED',
+                                        'MATCH_FULL',
+                                        'LOCKED',
+                                        'COMPLETED',
+                                      ].contains(slotStatus));
 
                               final activeBlock = myBlocks.where((b) {
                                 return idx >= b.startIndex && idx <= b.endIndex;
@@ -1019,6 +1141,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                 bottom: BorderSide(color: Colors.grey.shade300),
                                 right: BorderSide(color: Colors.grey.shade300),
                               );
+
+                              bool showLockedPattern = false;
+                              bool showPastOverlay = false;
 
                               if (isSharedOpen) {
                                 bgColor = const Color(0xFF99F6E4);
@@ -1067,6 +1192,31 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                 );
                               }
 
+                              if (isPast) {
+                                if (slot == null) {
+                                  bgColor = Colors.grey.shade400;
+                                  border = Border(
+                                    bottom: BorderSide(
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    right: BorderSide(
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  );
+                                  showLockedPattern = true;
+                                } else {
+                                  showPastOverlay = true;
+                                  border = Border(
+                                    bottom: BorderSide(
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    right: BorderSide(
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  );
+                                }
+                              }
+
                               return InkWell(
                                 onTap: isBlocked
                                     ? null
@@ -1113,11 +1263,19 @@ class _ScheduleTabState extends State<ScheduleTab> {
                                     color: bgColor,
                                     border: border,
                                   ),
-                                  child: isSharedOpen
-                                      ? CustomPaint(
-                                          painter: _SharedSlotPatternPainter(),
-                                        )
-                                      : null,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      if (showLockedPattern)
+                                        CustomPaint(
+                                          painter: _LockedSlotPatternPainter(),
+                                        ),
+                                      if (showPastOverlay)
+                                        ColoredBox(
+                                          color: Colors.black.withOpacity(0.28),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               );
                             }).toList(),
@@ -1157,11 +1315,11 @@ class _ScheduleTabState extends State<ScheduleTab> {
   }
 }
 
-class _SharedSlotPatternPainter extends CustomPainter {
+class _LockedSlotPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF14B8A6).withOpacity(0.18)
+      ..color = const Color(0xFF525252).withOpacity(0.22)
       ..strokeWidth = 2;
 
     const spacing = 10.0;
@@ -1176,7 +1334,7 @@ class _SharedSlotPatternPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SharedSlotPatternPainter oldDelegate) {
+  bool shouldRepaint(covariant _LockedSlotPatternPainter oldDelegate) {
     return false;
   }
 }
