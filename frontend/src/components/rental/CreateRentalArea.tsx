@@ -22,10 +22,7 @@ import Step4CourtCopy from "./Step4CourtCopy";
 import Step5Services from "./Step5Services";
 import Step6Legal from "./Step6Legal";
 
-/**
- * Lấy lỗi chi tiết từ response backend.
- * Không thay đổi logic submit, chỉ hỗ trợ hiển thị lỗi validation rõ ràng hơn.
- */
+
 const getApiErrorMessage = (error: any): string => {
   const data = error?.response?.data;
 

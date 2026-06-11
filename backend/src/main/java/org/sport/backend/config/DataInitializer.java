@@ -308,7 +308,7 @@ public class DataInitializer implements CommandLineRunner {
 
         User hanOwner = ensureSeedOwner(
                 "Nguyễn Hồng Vũ Hân",
-                "nguyenhongvuhan.owner@gmail.com",
+                "moon060404@gmail.com",
                 "0909000101",
                 encodedPassword,
                 ownerRole
@@ -323,7 +323,7 @@ public class DataInitializer implements CommandLineRunner {
 
         User nhuYOwner = ensureSeedOwner(
                 "Trần Vũ Như Ý",
-                "tranvunhuy.owner@gmail.com",
+                "tranvunhuy20112020@gmail.com",
                 "0909000102",
                 encodedPassword,
                 ownerRole

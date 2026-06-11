@@ -17,12 +17,11 @@ class UserService {
   }
 
   Future<dynamic> updateUser(
-    String userId,
     Map<String, dynamic> updateData,
   ) async {
     try {
       final response = await apiClient.put(
-        '$_endpoint/$userId',
+        '$_endpoint/my-info',
         data: updateData,
       );
       return response.data['result'];
