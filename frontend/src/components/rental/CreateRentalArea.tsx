@@ -22,6 +22,90 @@ import Step4CourtCopy from "./Step4CourtCopy";
 import Step5Services from "./Step5Services";
 import Step6Legal from "./Step6Legal";
 
+/**
+ * Lấy lỗi chi tiết từ response backend.
+ * Không thay đổi logic submit, chỉ hỗ trợ hiển thị lỗi validation rõ ràng hơn.
+ */
+const getApiErrorMessage = (error: any): string => {
+  const data = error?.response?.data;
+
+  if (!data) {
+    return error?.message
+      ? `Lỗi khởi tạo: ${error.message}`
+      : "Có lỗi xảy ra trong quá trình tạo. Vui lòng kiểm tra lại.";
+  }
+
+  const messages: string[] = [];
+
+  const collect = (field: string | undefined, value: any) => {
+    if (value === null || value === undefined) return;
+
+    if (typeof value === "string") {
+      const text = value.trim();
+      if (text) messages.push(field ? `${field}: ${text}` : text);
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (typeof item === "string") {
+          collect(field, item);
+          return;
+        }
+
+        if (item && typeof item === "object") {
+          const itemField =
+            item.field || item.property || item.path || item.param || field;
+
+          const itemMessage =
+            item.defaultMessage || item.message || item.reason || item.detail;
+
+          if (itemMessage !== undefined) {
+            collect(itemField, itemMessage);
+          } else {
+            Object.entries(item).forEach(([key, nestedValue]) => {
+              collect(key, nestedValue);
+            });
+          }
+        }
+      });
+      return;
+    }
+
+    if (typeof value === "object") {
+      Object.entries(value).forEach(([key, nestedValue]) => {
+        collect(key, nestedValue);
+      });
+    }
+  };
+
+  collect(undefined, data.errors);
+  collect(undefined, data.validationErrors);
+  collect(undefined, data.violations);
+
+  if (
+    data.result &&
+    typeof data.result === "object" &&
+    !Array.isArray(data.result)
+  ) {
+    collect(undefined, data.result.errors ?? data.result);
+  }
+
+  const uniqueMessages = [...new Set(messages)];
+
+  if (uniqueMessages.length > 0) {
+    return uniqueMessages.join("\n");
+  }
+
+  return (
+    data.message ||
+    data.error ||
+    data.detail ||
+    error?.message ||
+    "Có lỗi xảy ra trong quá trình tạo. Vui lòng kiểm tra lại."
+  );
+};
+
 const FormContainer: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshProfile } = useAuth();
@@ -46,7 +130,6 @@ const FormContainer: React.FC = () => {
       legalInfo: finalStepData,
     };
 
-    console.log("=== TỔNG HỢP DỮ LIỆU CUỐI CÙNG ===", completeData);
 
     try {
       const rentalPayload = {
@@ -93,7 +176,7 @@ const FormContainer: React.FC = () => {
           accountNumber: bankData.accountNumber,
           accountHolderName: bankData.accountHolderName,
           branchName: bankData.branchName || "",
-           bankBin: bankData.bankBin,
+          bankBin: bankData.bankBin,
           qrCode: bankData.qrCodeFile?.[0]?.url || "",
         };
 
@@ -176,12 +259,13 @@ const FormContainer: React.FC = () => {
         "Tạo cơ sở thành công! Giờ đây hãy tới trang quản lí cơ sở !",
       );
     } catch (error: any) {
-      console.error("Lỗi luồng tạo dữ liệu:", error);
-      message.error(
-        error?.response?.data?.message ||
-          "Lỗi khởi tạo: " + error?.message ||
-          "Có lỗi xảy ra trong quá trình tạo. Vui lòng kiểm tra lại.",
-      );
+
+      const errorMessage = getApiErrorMessage(error);
+
+      message.error({
+        content: <span style={{ whiteSpace: "pre-line" }}>{errorMessage}</span>,
+        duration: 10,
+      });
     } finally {
       setLoading(false);
     }

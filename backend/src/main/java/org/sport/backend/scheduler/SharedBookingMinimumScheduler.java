@@ -21,6 +21,7 @@ public class SharedBookingMinimumScheduler {
     private final BookingRepository bookingRepository;
     private final SharedBookingService sharedBookingService;
 
+
     @Scheduled(cron = "0 */5 * * * *")
     public void checkMinimumParticipants() {
         LocalDateTime now =

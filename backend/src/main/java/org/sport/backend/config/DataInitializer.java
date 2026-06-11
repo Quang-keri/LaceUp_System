@@ -87,7 +87,7 @@ public class DataInitializer implements CommandLineRunner {
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
             users.add(User.builder().userName("Dương Xuân Sơn").email("owner@gmail.com").passwordHash(commonPass).gender("Male").phone("0911000011").dateOfBirth(LocalDate.of(1985, 8, 20)).provider(AuthProvider.LOCAL).role(ownerRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
-            users.add(User.builder().userName("Ngô Anh Kiệt").email("renter@gmail.com").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
+            users.add(User.builder().userName("Ngô Anh Kiệt").email("kietnass181060@fpt.edu.vn").passwordHash(commonPass).gender("Male").phone("0931000011").dateOfBirth(LocalDate.of(2000, 1, 10)).provider(AuthProvider.LOCAL).role(renterRole).createdAt(LocalDateTime.now().minusYears(1)).active(true)
                     .creditScore(100).memberTier(MemberTier.BRONZE).totalMatches(0).totalSpent(BigDecimal.ZERO).build());
 
             for (int i = 1; i <= 4; i++)
@@ -102,9 +102,9 @@ public class DataInitializer implements CommandLineRunner {
 
         if (courtRepository.count() == 0) seedCourtData(courtImagesList.subList(0, 2));
 
-        // Chỉ bổ sung dữ liệu mới, không xóa hoặc ghi đè các sân cũ.
         seedAdditionalOwnersAndRentalAreas(ownerRole);
-        if (postRepository.count() == 0) seedPostData();
+
+        seedPostsForAllRentalAreas();
         if (itemGroupRepository.count() == 0) {
             seedItemGroup();
         }
@@ -155,11 +155,11 @@ public class DataInitializer implements CommandLineRunner {
         sonOwner.setActive(true);
         userRepository.save(sonOwner);
 
-        User kietRenter = userRepository.findByEmail("renter@gmail.com")
+        User kietRenter = userRepository.findByEmail("kietnass181060@fpt.edu.vn")
                 .orElseGet(() -> userRepository.save(
                         buildSeedUser(
                                 "Ngô Anh Kiệt",
-                                "renter@gmail.com",
+                                "kietnass181060@fpt.edu.vn",
                                 "0931000011",
                                 commonPass,
                                 renterRole
@@ -302,10 +302,7 @@ public class DataInitializer implements CommandLineRunner {
         userRepository.save(user);
     }
 
-    /**
-     * Bổ sung 2 chủ sân và 2 cơ sở mới tại TP.HCM.
-     * Hàm được thiết kế idempotent: chạy lại ứng dụng sẽ không tạo trùng cơ sở.
-     */
+
     private void seedAdditionalOwnersAndRentalAreas(Role ownerRole) {
         String encodedPassword = passwordEncoder.encode("123456");
 
@@ -936,15 +933,70 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    private void seedPostData() {
-        User owner = userRepository.findByEmail("owner@gmail.com").orElseThrow();
-        RentalArea area = rentalAreaRepository.findAll().stream()
-                .filter(a -> a.getOwner().equals(owner)).findFirst().orElseThrow();
-        Court court = courtRepository.findAllByRentalArea(area).getFirst();
-        Post post = Post.builder()
-                .title(area.getRentalAreaName()).description("Sân bãi tiêu chuẩn, đầy đủ tiện nghi cho mọi lứa tuổi.")
-                .postStatus(PostStatus.PUBLISHED).user(owner).court(court).rentalArea(area).build();
-        postRepository.save(post);
+    /**
+     * Đảm bảo mỗi RentalArea có đúng một bài đăng PUBLISHED để hiển thị cho renter.
+     * Hàm idempotent: chạy lại ứng dụng chỉ bổ sung post còn thiếu, không tạo trùng.
+     */
+    private void seedPostsForAllRentalAreas() {
+        List<Post> existingPosts = postRepository.findAll();
+
+        for (RentalArea area : rentalAreaRepository.findAll()) {
+            if (area.getOwner() == null) {
+                continue;
+            }
+
+            boolean postAlreadyExists = existingPosts.stream()
+                    .anyMatch(post -> post.getRentalArea() != null
+                            && Objects.equals(
+                            post.getRentalArea().getRentalAreaId(),
+                            area.getRentalAreaId()
+                    ));
+
+            if (postAlreadyExists) {
+                continue;
+            }
+
+            List<Court> courts = courtRepository.findAllByRentalArea(area);
+            if (courts.isEmpty()) {
+                continue;
+            }
+
+            Court representativeCourt = courts.getFirst();
+
+            Post post = Post.builder()
+                    .title(area.getRentalAreaName())
+                    .description(buildRentalAreaPostDescription(area, courts))
+                    .postStatus(PostStatus.PUBLISHED)
+                    .user(area.getOwner())
+                    .court(representativeCourt)
+                    .rentalArea(area)
+                    .build();
+
+            Post savedPost = postRepository.save(post);
+            existingPosts.add(savedPost);
+        }
+    }
+
+    private String buildRentalAreaPostDescription(
+            RentalArea area,
+            List<Court> courts
+    ) {
+        String categoryName = courts.stream()
+                .map(Court::getCategory)
+                .filter(Objects::nonNull)
+                .map(Category::getCategoryName)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("Sân thể thao");
+
+        return String.format(
+                "%s có %d sân, hoạt động từ %s đến %s. "
+                        + "Sân bãi tiêu chuẩn, đầy đủ tiện nghi và đã mở lịch đặt sân.",
+                categoryName,
+                courts.size(),
+                area.getOpenTime(),
+                area.getCloseTime()
+        );
     }
 
     private CourtPrice createPrice(Court court, int startHour, int endHour,
