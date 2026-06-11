@@ -15,6 +15,7 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import org.sport.backend.dto.response.address.AddressResponse;
 import org.sport.backend.dto.response.booking.BookingResponse;
 import org.sport.backend.dto.response.slot.SlotResponse;
 import org.sport.backend.service.InvoiceService;
@@ -25,6 +26,8 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class InvoiceServiceImpl implements InvoiceService {
@@ -52,11 +55,20 @@ public class InvoiceServiceImpl implements InvoiceService {
 
 
             document.add(new Paragraph("HỆ THỐNG QUẢN LÝ LACE UP")
-                    .setFont(boldFont).setFontSize(16).setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-            document.add(new Paragraph("Địa chỉ: "+booking.getRentalArea().getAddress().getStreet() + ", " + booking.getRentalArea().getAddress().getWard() +", " + booking.getRentalArea().getAddress().getCity().getCityName())
-                    .setFont(font).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setMarginBottom(0));
-            document.add(new Paragraph("Điện thoại: "+booking.getRentalArea().getContactPhone())
-                    .setFont(font).setFontSize(10).setTextAlignment(TextAlignment.CENTER).setMarginBottom(15));
+                    .setFont(boldFont)
+                    .setFontSize(16)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(2));
+            document.add(new Paragraph("Địa chỉ: " + resolveRentalAreaAddress(booking))
+                    .setFont(font)
+                    .setFontSize(10)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(0));
+            document.add(new Paragraph("Điện thoại: " + booking.getRentalArea().getContactPhone())
+                    .setFont(font)
+                    .setFontSize(10)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(15));
 
 
             String shortId = booking.getBookingId().toString().split("-")[0].toUpperCase();
@@ -113,7 +125,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                     Cell c3 = new Cell().add(new Paragraph(df.format(slotPrice)).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
                     Cell c4 = new Cell().add(new Paragraph(df.format(slotPrice)).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
 
-                    table.addCell(c1); table.addCell(c2); table.addCell(c3); table.addCell(c4);
+                    table.addCell(c1);
+                    table.addCell(c2);
+                    table.addCell(c3);
+                    table.addCell(c4);
                 }
             }
 
@@ -127,7 +142,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                     Cell c3 = new Cell().add(new Paragraph(df.format(service.getPrice())).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
                     Cell c4 = new Cell().add(new Paragraph(df.format(rowTotal)).setMargin(0)).setFontSize(10).setTextAlignment(TextAlignment.RIGHT).setBorder(noBorder).setBorderBottom(dashedBorder);
 
-                    table.addCell(c1); table.addCell(c2); table.addCell(c3); table.addCell(c4);
+                    table.addCell(c1);
+                    table.addCell(c2);
+                    table.addCell(c3);
+                    table.addCell(c4);
                 }
             }
             document.add(table);
@@ -169,4 +187,75 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new RuntimeException("Lỗi xuất hóa đơn PDF: " + e.getMessage());
         }
     }
+
+    private String resolveRentalAreaAddress(
+            BookingResponse booking
+    ) {
+        if (booking == null
+                || booking.getRentalArea() == null
+                || booking.getRentalArea().getAddress() == null) {
+            return "Chưa cập nhật địa chỉ";
+        }
+
+        AddressResponse address =
+                booking.getRentalArea().getAddress();
+
+        List<String> addressParts =
+                new ArrayList<>();
+
+        if (address.getStreet() != null
+                && !address.getStreet().isBlank()) {
+            addressParts.add(
+                    address.getStreet().trim()
+            );
+        }
+
+        if (address.getWard() != null
+                && !address.getWard().isBlank()) {
+            addressParts.add(
+                    address.getWard().trim()
+            );
+        }
+
+        if (address.getCity() != null
+                && address.getCity().getCityName() != null
+                && !address
+                .getCity()
+                .getCityName()
+                .isBlank()) {
+            addressParts.add(
+                    address
+                            .getCity()
+                            .getCityName()
+                            .trim()
+            );
+        }
+
+        if (addressParts.isEmpty()) {
+            return "Chưa cập nhật địa chỉ";
+        }
+
+        return String.join(", ", addressParts);
+    }
+
+    private String resolveContactPhone(
+            BookingResponse booking
+    ) {
+        if (booking == null
+                || booking.getRentalArea() == null
+                || booking
+                .getRentalArea()
+                .getContactPhone() == null
+                || booking
+                .getRentalArea()
+                .getContactPhone()
+                .isBlank()) {
+            return "---";
+        }
+
+        return booking
+                .getRentalArea()
+                .getContactPhone();
+    }
+
 }

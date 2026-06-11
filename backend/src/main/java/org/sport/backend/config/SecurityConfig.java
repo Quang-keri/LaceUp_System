@@ -93,6 +93,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/cities/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/news/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/reviews/rental/{rentalId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/bookings/shared/community").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/lace-up/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/lace-up/rental-areas/**").permitAll()

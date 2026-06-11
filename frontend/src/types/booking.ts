@@ -135,3 +135,47 @@ export interface BookingParticipantResponse {
   paymentProofUrl?: string;
   paymentProofUploadedAt?: string;
 }
+
+export interface SharedBookingPublicResponse {
+  bookingId: string;
+  itemType?: "SHARED";
+  bookingType: "SHARED";
+  bookingStatus: BookingStatus;
+
+  rentalAreaId: string;
+  rentalAreaName: string;
+
+  courtId?: string;
+  courtName?: string;
+  courtCode?: string;
+
+  categoryId?: string;
+  categoryName?: string;
+
+  pricePerTicket: number;
+
+  currentParticipants: number;
+  reservedParticipants: number;
+  remainingSlots: number;
+
+  maxParticipants: number;
+  minParticipants: number;
+
+  startTime: string;
+  endTime: string;
+
+  note?: string;
+}
+
+export interface SharedBookingListResponse {
+  data: SharedBookingPublicResponse[];
+
+  currentPage?: number;
+  page?: number;
+
+  pageSize?: number;
+  size?: number;
+
+  totalElements: number;
+  totalPages: number;
+}

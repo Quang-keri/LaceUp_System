@@ -1,80 +1,336 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { Calendar, Plus, MapPin } from "lucide-react";
-import matchService from "../../../service/match/matchService.ts";
-import type { MatchResponse } from "../../../types/match.ts";
-import JoinMatchModal from "./JoinMatchModal";
-import MatchFilter from "./MatchFilter";
-import { useNavigate } from "react-router-dom";
-import { locationService } from "../../../service/locationService.ts";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Plus,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Avatar,
   Button,
+  Empty,
   Input,
   message,
-  Space,
-  Row,
-  Col,
-  Spin,
-  Empty,
-  Typography,
   Pagination,
-  Avatar,
+  Space,
+  Spin,
+  Typography,
 } from "antd";
-import MatchCard from "./MatchCard.tsx";
-import rentalService from "../../../service/rental/rentalService.ts";
+
+import matchService from "../../../service/match/matchService";
+import bookingService from "../../../service/bookingService";
+import rentalService from "../../../service/rental/rentalService";
+import { locationService } from "../../../service/locationService";
+
+import type { MatchResponse } from "../../../types/match";
+import type { SharedBookingPublicResponse } from "../../../types/booking";
+
+import JoinMatchModal from "./JoinMatchModal";
+import MatchFilter from "./MatchFilter";
+import MatchCard from "./MatchCard";
+import SharedBookingCard from "./SharedBookingCard";
 
 const { Title, Text } = Typography;
 
+type MatchWithArea = MatchResponse & {
+  areaInfo?: any;
+};
+
+type SharedBookingWithArea = SharedBookingPublicResponse & {
+  areaInfo?: any;
+};
+
+interface CommunityGroup {
+  area: any;
+  sharedBookings: SharedBookingWithArea[];
+  matches: MatchWithArea[];
+}
+
+interface CommunityHorizontalRowProps {
+  group: CommunityGroup;
+  onOpenJoinModal: (match: MatchResponse) => void;
+  onRefreshMatches: () => void;
+  onRefreshSharedBookings: () => void;
+}
+
+type CommunityItem =
+  | {
+      type: "SHARED";
+      id: string;
+      data: SharedBookingWithArea;
+    }
+  | {
+      type: "MATCH";
+      id: string;
+      data: MatchWithArea;
+    };
+
+const CommunityHorizontalRow: React.FC<CommunityHorizontalRowProps> = ({
+  group,
+  onOpenJoinModal,
+  onRefreshMatches,
+  onRefreshSharedBookings,
+}) => {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
+
+  const CARD_GAP = 16;
+
+  /*
+   * Gộp chung thành một danh sách.
+   * Vãng lai được đưa vào trước nên luôn đứng trước Rank/Kèo/Giao lưu.
+   */
+  const items = useMemo<CommunityItem[]>(() => {
+    const sharedItems: CommunityItem[] = group.sharedBookings.map(
+      (booking) => ({
+        type: "SHARED",
+        id: `shared-${booking.bookingId}`,
+        data: booking,
+      }),
+    );
+
+    const matchItems: CommunityItem[] = group.matches.map((match) => ({
+      type: "MATCH",
+      id: `match-${match.matchId}`,
+      data: match,
+    }));
+
+    return [...sharedItems, ...matchItems];
+  }, [group.sharedBookings, group.matches]);
+
+  /*
+   * Đo CHÍNH viewport của carousel, không dùng window.innerWidth.
+   * Vì bên trái còn có bộ lọc nên chiều rộng thật của carousel nhỏ hơn màn hình.
+   */
+  useEffect(() => {
+    const viewport = viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const updateWidth = () => {
+      setViewportWidth(viewport.clientWidth);
+    };
+
+    updateWidth();
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(viewport);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  /*
+   * Responsive dựa theo chiều rộng thật của khung card.
+   */
+  const itemsPerView = useMemo(() => {
+    if (viewportWidth < 640) {
+      return 1;
+    }
+
+    if (viewportWidth < 900) {
+      return 2;
+    }
+
+    return 3;
+  }, [viewportWidth]);
+
+  const cardWidth = useMemo(() => {
+    if (viewportWidth <= 0) {
+      return 0;
+    }
+
+    const totalGap = CARD_GAP * (itemsPerView - 1);
+    return (viewportWidth - totalGap) / itemsPerView;
+  }, [viewportWidth, itemsPerView]);
+
+  const maxIndex = Math.max(0, items.length - itemsPerView);
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex < maxIndex;
+
+  useEffect(() => {
+    setCurrentIndex((previous) => Math.min(previous, maxIndex));
+  }, [maxIndex]);
+
+  const handlePrevious = () => {
+    setCurrentIndex((previous) => Math.max(0, previous - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((previous) => Math.min(maxIndex, previous + 1));
+  };
+
+  const translateX = currentIndex * (cardWidth + CARD_GAP);
+
+  return (
+    <div className="relative w-full min-w-0 max-w-full">
+      {/*
+       * viewport chỉ làm nhiệm vụ cắt đúng phần hiển thị.
+       * Track bên trong mới di chuyển bằng transform nên card lướt mượt.
+       */}
+      <div
+        ref={viewportRef}
+        className="w-full min-w-0 max-w-full overflow-hidden"
+      >
+        <div
+          className="flex items-stretch gap-4 will-change-transform"
+          style={{
+            transform: `translate3d(-${translateX}px, 0, 0)`,
+            transition: "transform 450ms cubic-bezier(0.22, 1, 0.36, 1)",
+            visibility: viewportWidth > 0 ? "visible" : "hidden",
+          }}
+        >
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="h-[330px] min-w-0 shrink-0 overflow-hidden"
+              style={{
+                flex: `0 0 ${cardWidth}px`,
+                width: `${cardWidth}px`,
+                maxWidth: `${cardWidth}px`,
+              }}
+            >
+              <div className="h-full w-full min-w-0 overflow-hidden [&_.ant-card]:w-full">
+                {item.type === "SHARED" ? (
+                  <SharedBookingCard
+                    booking={item.data}
+                    onJoinSuccess={onRefreshSharedBookings}
+                  />
+                ) : (
+                  <MatchCard
+                    match={item.data}
+                    onOpenJoinModal={onOpenJoinModal}
+                    onJoinSuccess={onRefreshMatches}
+                  />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {canGoPrevious && (
+        <button
+          type="button"
+          aria-label="Xem trận trước"
+          onClick={handlePrevious}
+          className="absolute left-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg transition-all duration-200 hover:scale-105 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600"
+        >
+          <ChevronLeft size={23} />
+        </button>
+      )}
+
+      {canGoNext && (
+        <button
+          type="button"
+          aria-label="Xem trận tiếp theo"
+          onClick={handleNext}
+          className="absolute right-2 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-purple-200 bg-white text-purple-600 shadow-lg transition-all duration-200 hover:scale-105 hover:bg-purple-50"
+        >
+          <ChevronRight size={23} />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const MatchPage: React.FC = () => {
-  const [matches, setMatches] = useState<MatchResponse[]>([]);
-  const [rentalAreas, setRentalAreas] = useState<any[]>([]);
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(false);
+  const [matches, setMatches] = useState<MatchResponse[]>([]);
+
+  const [sharedBookings, setSharedBookings] = useState<
+    SharedBookingPublicResponse[]
+  >([]);
+
+  const [rentalAreas, setRentalAreas] = useState<any[]>([]);
+
+  const [loadingMatches, setLoadingMatches] = useState(false);
+
+  const [loadingShared, setLoadingShared] = useState(false);
+
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+
   const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
     null,
   );
 
   const [provinces, setProvinces] = useState<any[]>([]);
+
   const [wards, setWards] = useState<any[]>([]);
 
   const [typeFilter, setTypeFilter] = useState("ALL");
+
   const [sortOrder, setSortOrder] = useState("NEWEST");
-  const [selectedLocation, setSelectedLocation] = useState<string>("");
-  const [selectedWard, setSelectedWard] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  const [selectedLocation, setSelectedLocation] = useState("");
+
+  const [selectedWard, setSelectedWard] = useState("");
+
+  const [selectedCategory, setSelectedCategory] = useState("");
+
   const [roomCodeInput, setRoomCodeInput] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
+
   const [totalElements, setTotalElements] = useState(0);
+
   const PAGE_SIZE = 12;
 
-  // Lấy danh sách trận đấu
   const fetchMatches = async (pageToFetch = 1) => {
-    setLoading(true);
     try {
+      setLoadingMatches(true);
+
       const response = await matchService.getOpenMatches({
         page: pageToFetch,
         size: PAGE_SIZE,
       });
-      if (response.code === 200) {
-        setMatches(response.result.data || []);
-        setTotalElements(response.result.totalElements || 0);
+
+      if (response?.code === 200 || response?.code === 1000) {
+        setMatches(response?.result?.data || []);
+
+        setTotalElements(response?.result?.totalElements || 0);
       }
     } catch (error) {
-      message.error("Lỗi kết nối máy chủ");
+      message.error("Không thể tải danh sách trận đấu");
     } finally {
-      setLoading(false);
+      setLoadingMatches(false);
     }
   };
 
-  // Lấy danh sách toàn bộ Khu vực (Area) để làm data nguồn
+  const fetchSharedBookings = async () => {
+    try {
+      setLoadingShared(true);
+
+      const response = await bookingService.getOpenSharedBookingsForCommunity(
+        1,
+        100,
+      );
+
+      if (response?.code === 200 || response?.code === 1000) {
+        setSharedBookings(response?.result?.data || []);
+      }
+    } catch (error) {
+      console.error("Lỗi lấy trận vãng lai:", error);
+
+      message.error("Không thể tải danh sách vãng lai");
+    } finally {
+      setLoadingShared(false);
+    }
+  };
+
   const fetchRentalAreas = async () => {
     try {
-      const res = await rentalService.getAllRentalAreas(1, 100);
-      if (res && res.result && res.result.data) {
-        setRentalAreas(res.result.data);
-      }
+      const response = await rentalService.getAllRentalAreas(1, 100);
+
+      setRentalAreas(response?.result?.data || []);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin khu vực:", error);
     }
@@ -82,10 +338,12 @@ const MatchPage: React.FC = () => {
 
   useEffect(() => {
     fetchMatches(currentPage);
-    fetchRentalAreas();
   }, [currentPage]);
 
   useEffect(() => {
+    fetchSharedBookings();
+    fetchRentalAreas();
+
     locationService.getProvinces().then((data) => {
       setProvinces(data || []);
     });
@@ -93,7 +351,11 @@ const MatchPage: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const resetFilters = () => {
@@ -112,92 +374,232 @@ const MatchPage: React.FC = () => {
   };
 
   const handleJoinByRoomCode = () => {
-    if (!roomCodeInput.trim()) return;
+    if (!roomCodeInput.trim()) {
+      return;
+    }
 
     matchService
-      .joinMatchByCode(roomCodeInput)
-      .then((res) => {
-        if (res.code === 200) {
+      .joinMatchByCode(roomCodeInput.trim())
+      .then((response) => {
+        if (response?.code === 200 || response?.code === 1000) {
           message.success("Vào phòng thành công!");
+
           setRoomCodeInput("");
           fetchMatches(currentPage);
           navigate("/my-matches");
         }
       })
-      .catch((err) =>
-        message.error(err.response?.data?.message || "Mã không hợp lệ!"),
-      );
+      .catch((error) => {
+        message.error(
+          error?.response?.data?.message || "Mã phòng không hợp lệ!",
+        );
+      });
   };
 
-  const matchesWithArea = useMemo(() => {
+  /*
+   * Gắn area vào trận đấu thường.
+   *
+   * Ưu tiên tìm bằng rentalAreaId.
+   * Nếu response Match chưa có rentalAreaId
+   * thì tìm tạm bằng courtName như code cũ.
+   */
+  const matchesWithArea = useMemo<MatchWithArea[]>(() => {
     return matches.map((match) => {
-      const matchedArea = rentalAreas.find((area) =>
-        area.courtResponses?.some(
-          (court: any) => court.courtName === match.courtName,
-        ),
-      );
-      return { ...match, areaInfo: matchedArea };
+      const matchRentalAreaId = (match as any).rentalAreaId;
+
+      const matchedArea =
+        rentalAreas.find(
+          (area) =>
+            matchRentalAreaId && area.rentalAreaId === matchRentalAreaId,
+        ) ||
+        rentalAreas.find((area) =>
+          area.courtResponses?.some(
+            (court: any) => court.courtName === match.courtName,
+          ),
+        );
+
+      return {
+        ...match,
+        areaInfo: matchedArea,
+      };
     });
   }, [matches, rentalAreas]);
 
+  /*
+   * Vãng lai đã có rentalAreaId từ API mới,
+   * nên tìm khu sân trực tiếp bằng ID.
+   */
+  const sharedBookingsWithArea = useMemo<SharedBookingWithArea[]>(() => {
+    return sharedBookings.map((booking) => {
+      const matchedArea = rentalAreas.find(
+        (area) => area.rentalAreaId === booking.rentalAreaId,
+      );
+
+      return {
+        ...booking,
+        areaInfo: matchedArea || {
+          rentalAreaId: booking.rentalAreaId,
+          rentalAreaName: booking.rentalAreaName,
+        },
+      };
+    });
+  }, [sharedBookings, rentalAreas]);
+
+  const isMatchedLocation = (areaInfo: any) => {
+    if (!selectedLocation && !selectedWard) {
+      return true;
+    }
+
+    const address = areaInfo?.address || {};
+
+    const cityName = String(address?.city?.cityName || "").toLowerCase();
+
+    const wardName = String(address?.ward || "").toLowerCase();
+
+    const cityMatched =
+      !selectedLocation || cityName.includes(selectedLocation.toLowerCase());
+
+    const wardMatched =
+      !selectedWard || wardName.includes(selectedWard.toLowerCase());
+
+    return cityMatched && wardMatched;
+  };
+
   const filteredMatches = matchesWithArea
-    .filter((m) => ["OPEN", "READY", "CONFIRMED", "FULL"].includes(m.status))
-    .filter((m) => typeFilter === "ALL" || m.matchType === typeFilter)
-    .filter(
-      (m) =>
-        !selectedCategory ||
-        m.categoryName?.toLowerCase().includes(selectedCategory.toLowerCase()),
+    .filter((match) =>
+      ["OPEN", "READY", "CONFIRMED", "FULL"].includes(match.status),
     )
-    .filter((m) => {
-      if (!selectedLocation && !selectedWard) return true;
-
-      const areaAddress = m.areaInfo?.address || {};
-      const cityString = String(areaAddress.city?.cityName || "").toLowerCase();
-      const wardString = String(areaAddress.ward || "").toLowerCase();
-
-      const matchCity =
-        !selectedLocation ||
-        cityString.includes(selectedLocation.toLowerCase());
-      const matchWard =
-        !selectedWard || wardString.includes(selectedWard.toLowerCase());
-
-      return matchCity && matchWard;
-    })
-    .sort((a, b) => {
-      if (sortOrder === "PRICE_ASC")
-        return Number(a.courtPrice || 0) - Number(b.courtPrice || 0);
-      if (sortOrder === "PRICE_DESC")
-        return Number(b.courtPrice || 0) - Number(a.courtPrice || 0);
-
-      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-    });
-
-  const groupedMatches = useMemo(() => {
-    const groups: Record<string, { area: any; matches: MatchResponse[] }> = {};
-
-    filteredMatches.forEach((m) => {
-      const areaId = m.areaInfo?.rentalAreaId || "unknown_area";
-
-      if (!groups[areaId]) {
-        groups[areaId] = {
-          area: m.areaInfo || {
-            rentalAreaName: "Khu vực khác (Chưa xác định)",
-          },
-          matches: [],
-        };
+    .filter((match) => typeFilter === "ALL" || match.matchType === typeFilter)
+    .filter(
+      (match) =>
+        !selectedCategory ||
+        match.categoryName
+          ?.toLowerCase()
+          .includes(selectedCategory.toLowerCase()),
+    )
+    .filter((match) => isMatchedLocation(match.areaInfo))
+    .sort((first, second) => {
+      if (sortOrder === "PRICE_ASC") {
+        return Number(first.courtPrice || 0) - Number(second.courtPrice || 0);
       }
-      groups[areaId].matches.push(m);
+
+      if (sortOrder === "PRICE_DESC") {
+        return Number(second.courtPrice || 0) - Number(first.courtPrice || 0);
+      }
+
+      return (
+        new Date(first.startTime).getTime() -
+        new Date(second.startTime).getTime()
+      );
     });
 
-    return Object.values(groups);
-  }, [filteredMatches]);
+  /*
+   * Vãng lai được xem như dạng đánh thường.
+   *
+   * Khi chọn Tất cả hoặc Đánh thường thì hiện.
+   * Khi chọn Đánh Rank/Đánh kèo thì ẩn.
+   */
+  const filteredSharedBookings = sharedBookingsWithArea
+    .filter(() => ["ALL", "NORMAL"].includes(typeFilter))
+    .filter(
+      (booking) =>
+        !selectedCategory ||
+        booking.categoryName
+          ?.toLowerCase()
+          .includes(selectedCategory.toLowerCase()),
+    )
+    .filter((booking) => isMatchedLocation(booking.areaInfo))
+    .sort((first, second) => {
+      if (sortOrder === "PRICE_ASC") {
+        return (
+          Number(first.pricePerTicket || 0) - Number(second.pricePerTicket || 0)
+        );
+      }
 
-  const formatAreaAddress = (addressObj: any) => {
-    if (!addressObj) return "Chưa cập nhật địa chỉ";
-    const { street, ward, city } = addressObj;
-    const parts = [street, ward, city?.cityName].filter(Boolean);
+      if (sortOrder === "PRICE_DESC") {
+        return (
+          Number(second.pricePerTicket || 0) - Number(first.pricePerTicket || 0)
+        );
+      }
+
+      return (
+        new Date(first.startTime).getTime() -
+        new Date(second.startTime).getTime()
+      );
+    });
+
+  /*
+   * Quan trọng:
+   *
+   * 1. Đưa shared booking vào group trước.
+   * 2. Sau đó mới đưa match vào.
+   * 3. Khi render cũng render sharedBookings trước.
+   *
+   * Vì vậy thẻ Vãng lai luôn nằm trước thẻ Rank.
+   */
+  const groupedCommunity = useMemo<CommunityGroup[]>(() => {
+    const groups = new Map<string, CommunityGroup>();
+
+    const ensureGroup = (areaId: string, area: any) => {
+      if (!groups.has(areaId)) {
+        groups.set(areaId, {
+          area,
+          sharedBookings: [],
+          matches: [],
+        });
+      }
+
+      return groups.get(areaId)!;
+    };
+
+    /*
+     * Thêm vãng lai trước.
+     */
+    filteredSharedBookings.forEach((booking) => {
+      const areaId =
+        booking.rentalAreaId ||
+        booking.areaInfo?.rentalAreaId ||
+        `shared-${booking.rentalAreaName}`;
+
+      const area = booking.areaInfo || {
+        rentalAreaId: booking.rentalAreaId,
+        rentalAreaName: booking.rentalAreaName,
+      };
+
+      ensureGroup(areaId, area).sharedBookings.push(booking);
+    });
+
+    /*
+     * Sau đó mới thêm trận thường/Rank.
+     */
+    filteredMatches.forEach((match) => {
+      const areaId =
+        match.areaInfo?.rentalAreaId || `match-${match.courtName || "unknown"}`;
+
+      const area = match.areaInfo || {
+        rentalAreaId: areaId,
+        rentalAreaName: "Khu vực khác (Chưa xác định)",
+      };
+
+      ensureGroup(areaId, area).matches.push(match);
+    });
+
+    return Array.from(groups.values());
+  }, [filteredSharedBookings, filteredMatches]);
+
+  const formatAreaAddress = (address: any) => {
+    if (!address) {
+      return "Chưa cập nhật địa chỉ";
+    }
+
+    const parts = [address.street, address.ward, address.city?.cityName].filter(
+      Boolean,
+    );
+
     return parts.length > 0 ? parts.join(", ") : "Chưa cập nhật địa chỉ";
   };
+
+  const loading = loadingMatches || loadingShared;
 
   return (
     <div className="min-h-screen bg-slate-50 py-9 font-sans">
@@ -206,10 +608,15 @@ const MatchPage: React.FC = () => {
           <div className="flex-1">
             <Title
               level={2}
-              style={{ margin: 0, fontWeight: 800, color: "#1e293b" }}
+              style={{
+                margin: 0,
+                fontWeight: 800,
+                color: "#1e293b",
+              }}
             >
               Trận Đấu Vãng Lai
             </Title>
+
             <Text type="secondary" className="font-medium text-base mt-1 block">
               Tìm đồng đội giao lưu hoặc tham gia kèo có sẵn
             </Text>
@@ -222,20 +629,21 @@ const MatchPage: React.FC = () => {
             <Input.Search
               placeholder="Nhập mã phòng..."
               value={roomCodeInput}
-              onChange={(e) => setRoomCodeInput(e.target.value)}
+              onChange={(event) => setRoomCodeInput(event.target.value)}
               onSearch={handleJoinByRoomCode}
               maxLength={6}
               size="large"
               className="min-w-[200px] md:w-[280px] font-semibold uppercase"
-              style={{ borderRadius: "12px" }}
+              style={{
+                borderRadius: "12px",
+              }}
             />
 
-            {/* NÚT "TẠO TRẬN NGAY" MỚI */}
             <Button
               type="primary"
               size="large"
               icon={<Plus size={18} />}
-              onClick={() => navigate("/courts")} // Đổi đường dẫn thành /courts
+              onClick={() => navigate("/courts")}
               style={{
                 backgroundColor: "#9156F1",
                 borderColor: "#9156F1",
@@ -293,17 +701,18 @@ const MatchPage: React.FC = () => {
             resetFilters={resetFilters}
           />
 
-          <div className="flex-8 w-full">
+          <div className="min-w-0 flex-1 overflow-hidden">
             {loading ? (
               <div className="flex justify-center items-center py-20">
                 <Spin size="large" />
               </div>
-            ) : groupedMatches.length === 0 ? (
+            ) : groupedCommunity.length === 0 ? (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
                   <span className="text-slate-500 font-medium text-base">
-                    Không tìm thấy trận đấu nào! <br />
+                    Không tìm thấy trận đấu nào!
+                    <br />
                     <span className="text-sm font-normal">
                       Hãy thử thay đổi tiêu chí bộ lọc hoặc{" "}
                       <span
@@ -320,26 +729,31 @@ const MatchPage: React.FC = () => {
             ) : (
               <>
                 <div className="flex flex-col gap-6">
-                  {groupedMatches.map((group, index) => (
+                  {groupedCommunity.map((group, index) => (
                     <div
-                      key={group.area.rentalAreaId || index}
-                      className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+                      key={group.area?.rentalAreaId || index}
+                      className="w-full max-w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
                     >
                       <div className="p-4 border-b border-slate-100 flex items-center gap-4 bg-white">
                         <Avatar
                           size={50}
-                          src={group.area.images?.[0]?.imageUrl || undefined}
+                          src={group.area?.images?.[0]?.imageUrl || undefined}
                           className="border border-slate-200"
                         >
-                          {group.area.rentalAreaName?.[0]}
+                          {group.area?.rentalAreaName?.[0]}
                         </Avatar>
+
                         <div>
                           <Title
                             level={5}
-                            style={{ margin: 0, color: "#1e293b" }}
+                            style={{
+                              margin: 0,
+                              color: "#1e293b",
+                            }}
                           >
-                            {group.area.rentalAreaName}
+                            {group.area?.rentalAreaName || "Khu vực khác"}
                           </Title>
+
                           <Text
                             type="secondary"
                             className="flex items-center text-sm mt-1"
@@ -348,23 +762,19 @@ const MatchPage: React.FC = () => {
                               size={14}
                               className="mr-1 text-emerald-500"
                             />
-                            {formatAreaAddress(group.area.address)}
+
+                            {formatAreaAddress(group.area?.address)}
                           </Text>
                         </div>
                       </div>
 
                       <div className="p-4 bg-slate-50/50">
-                        <Row gutter={[16, 16]}>
-                          {group.matches.map((match) => (
-                            <Col xs={24} lg={12} xl={8} key={match.matchId}>
-                              <MatchCard
-                                match={match}
-                                onOpenJoinModal={handleOpenJoinModal}
-                                onJoinSuccess={() => fetchMatches(currentPage)}
-                              />
-                            </Col>
-                          ))}
-                        </Row>
+                        <CommunityHorizontalRow
+                          group={group}
+                          onOpenJoinModal={handleOpenJoinModal}
+                          onRefreshSharedBookings={fetchSharedBookings}
+                          onRefreshMatches={() => fetchMatches(currentPage)}
+                        />
                       </div>
                     </div>
                   ))}

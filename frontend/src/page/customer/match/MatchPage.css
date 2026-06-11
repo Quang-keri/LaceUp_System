@@ -155,16 +155,17 @@
   animation: pulseGlow 6s ease-in-out infinite;
 }
 
-/* ============================================
-   USAGE EXAMPLE
-   ============================================
-   <div class="bg-wrapper">
-     <div class="bg-topline"></div>
+.community-horizontal-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-inline: contain;
+}
 
-     <!-- optional SVG / img sport icons -->
-     <img class="bg-deco bg-deco--top-right"   src="badminton-racket.svg" alt="">
-     <img class="bg-deco bg-deco--bottom-left" src="pickleball.svg"       alt="">
+.community-horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
 
-     <!-- your page content here -->
-   </div>
-   ============================================ */
+.community-horizontal-card {
+  scroll-snap-align: start;
+}

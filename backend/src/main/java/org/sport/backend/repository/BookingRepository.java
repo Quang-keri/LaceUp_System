@@ -3,9 +3,11 @@ package org.sport.backend.repository;
 import jakarta.persistence.LockModeType;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.BookingType;
+import org.sport.backend.constant.PaymentStatus;
 import org.sport.backend.entity.Booking;
 import org.sport.backend.entity.RentalArea;
 import org.sport.backend.entity.User;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -128,29 +130,80 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
     );
 
     @Query("""
-        SELECT booking
-        FROM Booking booking
-        WHERE booking.bookingType = :bookingType
-          AND booking.bookingStatus = :bookingStatus
-          AND (
-                booking.minimumCheckCompleted = false
-                OR booking.minimumCheckCompleted IS NULL
-          )
-          AND booking.startTime <= :deadline
-          AND booking.startTime > :now
-        """)
+            SELECT booking
+            FROM Booking booking
+            WHERE booking.bookingType = :bookingType
+              AND booking.bookingStatus = :bookingStatus
+              AND (
+                    booking.minimumCheckCompleted = false
+                    OR booking.minimumCheckCompleted IS NULL
+              )
+              AND booking.startTime <= :deadline
+              AND booking.startTime > :now
+            """)
     List<Booking> findSharedBookingsDueForMinimumCheck(
-            @Param("bookingType")
-            BookingType bookingType,
+            @Param("bookingType") BookingType bookingType,
+            @Param("bookingStatus") BookingStatus bookingStatus,
+            @Param("now") LocalDateTime now,
+            @Param("deadline") LocalDateTime deadline
+    );
 
-            @Param("bookingStatus")
-            BookingStatus bookingStatus,
-
-            @Param("now")
-            LocalDateTime now,
-
-            @Param("deadline")
-            LocalDateTime deadline
+    @Query(
+            value = """
+                    SELECT b
+                    FROM Booking b
+                    WHERE b.bookingType = :bookingType
+                      AND b.bookingStatus = :bookingStatus
+                      AND b.startTime IS NOT NULL
+                      AND b.startTime > :now
+                      AND b.rentalArea IS NOT NULL
+                      AND (
+                            :rentalAreaId IS NULL
+                            OR b.rentalArea.rentalAreaId = :rentalAreaId
+                      )
+                      AND COALESCE(b.maxParticipants, 0) >
+                          COALESCE(
+                              (
+                                  SELECT SUM(bp.quantity)
+                                  FROM BookingParticipant bp
+                                  WHERE bp.booking = b
+                                    AND bp.paymentStatus IN (:reservedStatuses)
+                              ),
+                              0
+                          )
+                    ORDER BY b.startTime ASC
+                    """,
+            countQuery = """
+                    SELECT COUNT(b)
+                    FROM Booking b
+                    WHERE b.bookingType = :bookingType
+                      AND b.bookingStatus = :bookingStatus
+                      AND b.startTime IS NOT NULL
+                      AND b.startTime > :now
+                      AND b.rentalArea IS NOT NULL
+                      AND (
+                            :rentalAreaId IS NULL
+                            OR b.rentalArea.rentalAreaId = :rentalAreaId
+                      )
+                      AND COALESCE(b.maxParticipants, 0) >
+                          COALESCE(
+                              (
+                                  SELECT SUM(bp.quantity)
+                                  FROM BookingParticipant bp
+                                  WHERE bp.booking = b
+                                    AND bp.paymentStatus IN (:reservedStatuses)
+                              ),
+                              0
+                          )
+                    """
+    )
+    Page<Booking> findOpenSharedBookingsForCommunity(
+            @Param("bookingType") BookingType bookingType,
+            @Param("bookingStatus") BookingStatus bookingStatus,
+            @Param("now") LocalDateTime now,
+            @Param("rentalAreaId") UUID rentalAreaId,
+            @Param("reservedStatuses") List<PaymentStatus> reservedStatuses,
+            Pageable pageable
     );
 
 }

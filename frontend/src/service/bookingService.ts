@@ -4,6 +4,7 @@ import type {
   BookingParticipantResponse,
   BookingResponse,
   CreateBookingIntentPayload,
+  SharedBookingListResponse,
 } from "../types/booking";
 import type { ApiResponse } from "../types/ApiResponse";
 
@@ -235,6 +236,33 @@ class BookingService {
     const response = await api.get<ApiResponse<BookingListResponse>>(
       `/bookings?${params.toString()}`,
     );
+    return response.data;
+  }
+
+  async getOpenSharedBookingsForCommunity(
+    page: number = 1,
+    size: number = 100,
+    rentalAreaId?: string,
+  ) {
+    const response = await api.get<ApiResponse<SharedBookingListResponse>>(
+      "/bookings/shared/community",
+      {
+        params: {
+          page,
+          size,
+          ...(rentalAreaId ? { rentalAreaId } : {}),
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  async getSharedBookingParticipants(bookingId: string) {
+    const response = await api.get<ApiResponse<BookingParticipantResponse[]>>(
+      `/bookings/shared/${bookingId}/participants`,
+    );
+
     return response.data;
   }
 
