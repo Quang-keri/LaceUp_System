@@ -33,7 +33,6 @@ class MyApp extends StatelessWidget {
       title: 'LaceUp',
       debugShowCheckedModeBanner: false,
 
-      // Ngôn ngữ mặc định của ứng dụng
       locale: const Locale('vi', 'VN'),
 
       supportedLocales: const [

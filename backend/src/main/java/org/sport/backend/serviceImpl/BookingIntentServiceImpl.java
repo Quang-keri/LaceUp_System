@@ -41,7 +41,7 @@ public class BookingIntentServiceImpl implements BookingIntentService {
     private final CourtCopyRepository courtCopyRepository;
     private final BankAccountRepository bankAccountRepository;
     private final BookingIntentRepository bookingIntentRepository;
-    private final CourtPriceRepository courtPriceRepository;
+    private final IntentSlotRepository intentSlotRepository;
 
     private final UserService userService;
     private final BookingService bookingService;
@@ -502,6 +502,21 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                 + "?amount=" + amount.setScale(0, RoundingMode.HALF_UP)
                 + "&addInfo=" + encodedAddInfo
                 + "&accountName=" + encodedAccountName;
+    }
+
+    private boolean hasBlockingIntent(
+            UUID courtCopyId,
+            LocalDateTime startTime,
+            LocalDateTime endTime
+    ) {
+        return intentSlotRepository.countBlockingIntentSlots(
+                courtCopyId,
+                startTime,
+                endTime,
+                LocalDateTime.now(),
+                BookingIntentStatus.ACTIVE,
+                BookingIntentStatus.PENDING_OWNER_CONFIRM
+        ) > 0;
     }
 
 }

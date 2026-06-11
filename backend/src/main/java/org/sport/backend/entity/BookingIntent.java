@@ -38,7 +38,6 @@ public class BookingIntent {
     @Column(name = "note", length = 500)
     private String note;
 
-
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 

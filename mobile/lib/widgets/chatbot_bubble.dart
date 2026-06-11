@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -9,7 +10,6 @@ import '../views/area/area_detail/rental_area_detail_screen.dart';
 class ChatBotService {
   static Future<String> asking(String message) async {
     try {
-      // Gọi URL từ AppConstants
       final url = Uri.parse(AppConstants.chatBotUrl);
 
       final response = await http.post(
@@ -18,26 +18,27 @@ class ChatBotService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({
-          'message': message,
-        }),
+        body: jsonEncode({'message': message}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> responseData = jsonDecode(
-            utf8.decode(response.bodyBytes));
+          utf8.decode(response.bodyBytes),
+        );
 
         final resultText = responseData['result'] ?? responseData['data'];
 
         if (resultText != null) {
           return resultText.toString();
-        } else {
-          return "LaceUP AI: Dữ liệu trả về bị rỗng.";
         }
-      } else {
-        debugPrint('Lỗi Server: ${response.statusCode}');
-        throw Exception('Lỗi API từ server');
+
+        return 'LaceUP AI: Dữ liệu trả về bị rỗng.';
       }
+
+      debugPrint(
+        'Lỗi Server Chatbot: ${response.statusCode} - ${response.body}',
+      );
+      throw Exception('Lỗi API từ server');
     } catch (e) {
       debugPrint('Lỗi kết nối API Chatbot: $e');
       throw Exception('Không thể kết nối đến máy chủ.');
@@ -50,18 +51,24 @@ class ChatMessage {
   final String text;
   final bool isUser;
 
-  ChatMessage({required this.id, required this.text, required this.isUser});
+  const ChatMessage({
+    required this.id,
+    required this.text,
+    required this.isUser,
+  });
 }
 
 class ChatbotBubble extends StatelessWidget {
   const ChatbotBubble({super.key});
 
   void _openChat(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: false,
       backgroundColor: Colors.transparent,
-      builder: (context) => const ChatBottomSheet(),
+      barrierColor: Colors.black45,
+      builder: (_) => const ChatBottomSheet(),
     );
   }
 
@@ -69,7 +76,7 @@ class ChatbotBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return FloatingActionButton(
       onPressed: () => _openChat(context),
-      backgroundColor: Colors.purple.shade700,
+      backgroundColor: const Color(0xFF6A1B9A),
       elevation: 8,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(30),
@@ -88,164 +95,277 @@ class ChatBottomSheet extends StatefulWidget {
 }
 
 class _ChatBottomSheetState extends State<ChatBottomSheet> {
+  static const Color _primaryPurple = Color(0xFF6A1B9A);
+  static const Color _messagePurple = Color(0xFF9C27B0);
+
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _inputFocusNode = FocusNode();
+
   bool _isLoading = false;
 
-  final List<ChatMessage> _messages = [
+  final List<ChatMessage> _messages = const [
     ChatMessage(
       id: '1',
-      text: 'Chào bạn! Tôi là HLV Thể thao AI\nSẵn sàng lên kèo hay cần tư vấn chiến thuật nào?',
+      text:
+          'Chào bạn! Tôi là HLV Thể thao AI\n'
+          'Sẵn sàng lên kèo hay cần tư vấn chiến thuật nào?',
       isUser: false,
     ),
-  ];
+  ].toList();
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    _scrollController.dispose();
+    _inputFocusNode.dispose();
+    super.dispose();
+  }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent + 100,
-        duration: const Duration(milliseconds: 300),
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 280),
         curve: Curves.easeOut,
       );
-    }
+    });
   }
 
   Future<void> _handleSendMessage() async {
     final text = _inputController.text.trim();
-    if (text.isEmpty) return;
 
-    final newUserMsg = ChatMessage(
-      id: DateTime.now().toString(),
+    if (text.isEmpty || _isLoading) return;
+
+    final userMessage = ChatMessage(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
       text: text,
       isUser: true,
     );
 
     setState(() {
-      _messages.add(newUserMsg);
+      _messages.add(userMessage);
       _inputController.clear();
       _isLoading = true;
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _scrollToBottom();
 
     try {
-      final responseText = await ChatBotService.asking(newUserMsg.text);
+      final responseText = await ChatBotService.asking(userMessage.text);
+
+      if (!mounted) return;
 
       setState(() {
         _messages.add(
           ChatMessage(
-            id: DateTime.now().toString(),
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
             text: responseText,
             isUser: false,
           ),
         );
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
+
       setState(() {
         _messages.add(
           ChatMessage(
-            id: DateTime.now().toString(),
-            text: "Trọng tài vừa thổi còi báo lỗi kết nối! Vui lòng thử lại sau.",
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+            text:
+                'Trọng tài vừa thổi còi báo lỗi kết nối! '
+                'Vui lòng thử lại sau.',
             isUser: false,
           ),
         );
       });
     } finally {
-      setState(() => _isLoading = false);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _scrollToBottom();
+      }
     }
   }
 
-  void _navigateToDetail(String urlString) {
+  Future<void> _navigateToDetail(String urlString) async {
     try {
       final uri = Uri.parse(urlString.trim());
 
-      final rentalAreaId = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+      final validSegments = uri.pathSegments
+          .where((segment) => segment.trim().isNotEmpty)
+          .toList();
 
-      if (rentalAreaId.isNotEmpty) {
-        Navigator.pop(context);
+      final rentalAreaId = validSegments.isNotEmpty
+          ? validSegments.last.trim()
+          : '';
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RentalAreaDetailScreen(rentalAreaId: rentalAreaId),
-          ),
-        );
-      } else {
-        debugPrint('Không tìm thấy ID sân trong URL');
+      if (rentalAreaId.isEmpty) {
+        await _launchExternalURL(urlString);
+        return;
       }
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RentalAreaDetailScreen(rentalAreaId: rentalAreaId),
+        ),
+      );
     } catch (e) {
-      debugPrint('Lỗi parse URL để lấy ID: $e');
-      _launchExternalURL(urlString);
+      debugPrint('Lỗi parse URL để lấy ID sân: $e');
+      await _launchExternalURL(urlString);
     }
   }
 
   Future<void> _launchExternalURL(String urlString) async {
-    final Uri url = Uri.parse(urlString);
-    if (await canLaunchUrl(url)) {
+    final url = Uri.tryParse(urlString.trim());
+
+    if (url == null) return;
+
+    final canLaunch = await canLaunchUrl(url);
+
+    if (canLaunch) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
-  Widget _buildMessageContent(ChatMessage msg) {
-    if (msg.isUser) {
+  /// Nhận các chuỗi như:
+  /// "80,000 VNĐ - 200,000 VNĐ/giờ"
+  /// "80000 - 200000"
+  /// "80.000đ"
+  ///
+  /// Và chỉ hiển thị giá thấp nhất: "Từ 80k VNĐ".
+  String _formatMinimumPrice(String rawPrice) {
+    final matches = RegExp(r'\d[\d.,]*').allMatches(rawPrice).toList();
+
+    if (matches.isEmpty) {
+      return rawPrice.trim().isEmpty ? 'Liên hệ' : rawPrice.trim();
+    }
+
+    int? minimumPrice;
+
+    for (final match in matches) {
+      final digits = (match.group(0) ?? '').replaceAll(RegExp(r'[^\d]'), '');
+
+      final parsedValue = int.tryParse(digits);
+
+      if (parsedValue == null || parsedValue <= 0) continue;
+
+      if (minimumPrice == null || parsedValue < minimumPrice) {
+        minimumPrice = parsedValue;
+      }
+    }
+
+    if (minimumPrice == null) {
+      return rawPrice.trim().isEmpty ? 'Liên hệ' : rawPrice.trim();
+    }
+
+    if (minimumPrice >= 1000000) {
+      final millionValue = minimumPrice / 1000000;
+      final displayValue = millionValue == millionValue.roundToDouble()
+          ? millionValue.toInt().toString()
+          : millionValue.toStringAsFixed(1);
+
+      return 'Từ ${displayValue}tr VNĐ';
+    }
+
+    if (minimumPrice >= 1000) {
+      final thousandValue = minimumPrice / 1000;
+      final displayValue = thousandValue == thousandValue.roundToDouble()
+          ? thousandValue.toInt().toString()
+          : thousandValue.toStringAsFixed(1);
+
+      return 'Từ ${displayValue}k VNĐ';
+    }
+
+    return 'Từ $minimumPrice VNĐ';
+  }
+
+  Widget _buildMessageContent(ChatMessage message) {
+    if (message.isUser) {
       return Text(
-        msg.text,
-        style: const TextStyle(fontSize: 14, color: Colors.black87),
+        message.text,
+        style: const TextStyle(
+          fontSize: 14,
+          height: 1.4,
+          color: Colors.black87,
+        ),
       );
     }
 
     final rentalRegex = RegExp(r'\[RENTAL\|([^\]]+)\]');
-    final Iterable<RegExpMatch> matches = rentalRegex.allMatches(msg.text);
+    final matches = rentalRegex.allMatches(message.text).toList();
 
-    if (matches.isNotEmpty) {
-      final cleanText = msg.text.replaceAll(rentalRegex, '').trim();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (cleanText.isNotEmpty) ...[
-            Text(
-              cleanText,
-              style: const TextStyle(fontSize: 14, color: Colors.white),
-            ),
-            const SizedBox(height: 12),
-          ],
-          ...matches.map((match) {
-            final content = match.group(1) ?? '';
-            final parts = content.split('|');
-
-            final name = parts.isNotEmpty ? parts[0] : '';
-            final address = parts.length > 1 ? parts[1] : '';
-            final price = parts.length > 2 ? parts[2] : '';
-
-            final url = parts.isNotEmpty ? parts.last : '';
-
-            return _buildRentalCard(name, address, price, url);
-          }),
-        ],
+    if (matches.isEmpty) {
+      return Text(
+        message.text,
+        style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.white),
       );
     }
 
-    return Text(
-      msg.text,
-      style: const TextStyle(fontSize: 14, color: Colors.white),
+    final cleanText = message.text.replaceAll(rentalRegex, '').trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (cleanText.isNotEmpty) ...[
+          Text(
+            cleanText,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        ...matches.map((match) {
+          final content = match.group(1) ?? '';
+          final parts = content.split('|');
+
+          final name = parts.isNotEmpty ? parts[0].trim() : '';
+          final address = parts.length > 1 ? parts[1].trim() : '';
+          final price = parts.length > 2 ? parts[2].trim() : '';
+          final url = parts.length > 3 ? parts.last.trim() : '';
+
+          return _buildRentalCard(
+            name: name,
+            address: address,
+            price: price,
+            url: url,
+          );
+        }),
+      ],
     );
   }
 
-  Widget _buildRentalCard(String name, String address, String price,
-      String url) {
+  Widget _buildRentalCard({
+    required String name,
+    required String address,
+    required String price,
+    required String url,
+  }) {
     return GestureDetector(
-      onTap: () => _navigateToDetail(url.trim()),
+      onTap: url.isEmpty ? null : () => _navigateToDetail(url),
       child: Container(
+        width: double.infinity,
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.purple.shade100),
           boxShadow: const [
             BoxShadow(
-                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -256,264 +376,350 @@ class _ChatBottomSheetState extends State<ChatBottomSheet> {
               children: [
                 Expanded(
                   child: Text(
-                    name.trim(),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.purple.shade900,
-                    ),
+                    name.isEmpty ? 'Sân thể thao' : name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      height: 1.25,
+                      color: Colors.purple.shade900,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Icon(Icons.open_in_new, size: 16, color: Colors.orange),
+                if (url.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.open_in_new_rounded,
+                    size: 17,
+                    color: Colors.orange,
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 9),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_on, size: 14, color: Colors.orange),
-                // Tone màu cam
-                const SizedBox(width: 4),
+                const Icon(
+                  Icons.location_on_rounded,
+                  size: 16,
+                  color: Colors.orange,
+                ),
+                const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    address.trim(),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    address.isEmpty ? 'Chưa cập nhật địa chỉ' : address,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
               ],
             ),
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
+              padding: EdgeInsets.symmetric(vertical: 9),
               child: Divider(height: 1, thickness: 1),
             ),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.money, size: 14, color: Colors.green),
-                    const SizedBox(width: 4),
-                    Text(
-                      price.trim(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                const Icon(
+                  Icons.payments_outlined,
+                  size: 16,
+                  color: Colors.green,
                 ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _formatMinimumPrice(price),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     border: Border.all(color: Colors.orange.shade200),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('5/5', style: TextStyle(fontSize: 11,
+                      Text(
+                        '5/5',
+                        style: TextStyle(
+                          fontSize: 11,
                           color: Colors.orange,
-                          fontWeight: FontWeight.bold)),
-                      SizedBox(width: 2),
-                      Icon(Icons.star, size: 12, color: Colors.orange),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(width: 3),
+                      Icon(Icons.star_rounded, size: 13, color: Colors.orange),
                     ],
                   ),
-                )
+                ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery
-        .of(context)
-        .viewInsets
-        .bottom;
-
-    return Container(
-      margin: EdgeInsets.only(top: kToolbarHeight, bottom: bottomInset),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _buildLoadingMessage() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          color: _messagePurple,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+          ),
+        ),
+        child: const SizedBox(
+          width: 24,
+          height: 12,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        ),
       ),
-      child: Column(
+    );
+  }
+
+  Widget _buildMessageBubble(ChatMessage message) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final maxBubbleWidth = screenWidth * 0.84;
+
+    return Align(
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: message.isUser ? Colors.white : _messagePurple,
+          border: message.isUser
+              ? Border.all(color: Colors.purple.shade100)
+              : null,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(message.isUser ? 16 : 4),
+            bottomRight: Radius.circular(message.isUser ? 4 : 16),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: _buildMessageContent(message),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: [Color(0xFF4A148C), _primaryPurple]),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(bottom: BorderSide(color: Colors.orange, width: 3)),
+      ),
+      child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.all(7),
             decoration: const BoxDecoration(
+              shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [Color(0xFF4A148C), Color(0xFF6A1B9A)], // Màu Tím
+                colors: [Colors.orange, Colors.deepOrange],
               ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              border: Border(
-                  bottom: BorderSide(color: Colors.orange, width: 3)),
             ),
-            child: Row(
+            child: const Icon(Icons.smart_toy, color: Colors.white, size: 21),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                        colors: [Colors.orange, Colors.deepOrange]),
-                  ),
-                  child: const Icon(
-                      Icons.smart_toy, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'LACE UP BOT',
-                        style: TextStyle(color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontStyle: FontStyle.italic,
-                            fontSize: 16),
-                      ),
-                      Text(
-                        'TRỢ LÝ AI 24/7',
-                        style: TextStyle(color: Colors.orange,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                Text(
+                  'LACE UP BOT',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 16,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                )
+                SizedBox(height: 2),
+                Text(
+                  'TRỢ LÝ AI 24/7',
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
-
-          Expanded(
-            child: Container(
-              color: Colors.grey.shade50,
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: _messages.length + (_isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == _messages.length && _isLoading) {
-                    return Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.shade600,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
-                            bottomRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: const SizedBox(
-                          width: 24,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        ),
-                      ),
-                    );
-                  }
-
-                  final msg = _messages[index];
-                  return Align(
-                    alignment: msg.isUser ? Alignment.centerRight : Alignment
-                        .centerLeft,
-                    child: Container(
-                      constraints: BoxConstraints(maxWidth: MediaQuery
-                          .of(context)
-                          .size
-                          .width * 0.8),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: msg.isUser ? Colors.white : Colors.purple
-                            .shade600,
-                        border: msg.isUser ? Border.all(color: Colors.purple
-                            .shade100) : null,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(16),
-                          topRight: const Radius.circular(16),
-                          bottomLeft: Radius.circular(msg.isUser ? 16 : 0),
-                          bottomRight: Radius.circular(msg.isUser ? 0 : 16),
-                        ),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black12,
-                              blurRadius: 2,
-                              offset: Offset(0, 1)),
-                        ],
-                      ),
-                      child: _buildMessageContent(msg),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
+          IconButton(
+            tooltip: 'Đóng',
+            icon: const Icon(
+              Icons.close_rounded,
               color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.purple.shade100)),
+              size: 28,
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _inputController,
-                    enabled: !_isLoading,
-                    decoration: InputDecoration(
-                      hintText: 'Hỏi chiến thuật, sân bãi...',
-                      hintStyle: TextStyle(
-                          color: Colors.grey.shade400, fontSize: 14),
-                      filled: true,
-                      fillColor: Colors.purple.shade50,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onSubmitted: (_) => _handleSendMessage(),
-                  ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.purple.shade100)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _inputController,
+              focusNode: _inputFocusNode,
+              enabled: !_isLoading,
+              minLines: 1,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.send,
+              decoration: InputDecoration(
+                hintText: 'Hỏi về sân bãi...',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                filled: true,
+                fillColor: Colors.purple.shade50,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: _isLoading ? null : _handleSendMessage,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.shade800,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                        Icons.send, color: Colors.orange, size: 20),
-                  ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
-              ],
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: Colors.purple.shade200),
+                ),
+              ),
+              onSubmitted: (_) => _handleSendMessage(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _isLoading ? null : _handleSendMessage,
+              borderRadius: BorderRadius.circular(18),
+              child: Ink(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _isLoading ? Colors.grey.shade300 : _primaryPurple,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(
+                  _isLoading ? Icons.hourglass_top_rounded : Icons.send_rounded,
+                  color: _isLoading ? Colors.grey.shade500 : Colors.orange,
+                  size: 23,
+                ),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardInset = mediaQuery.viewInsets.bottom;
+    final navigationBarInset = mediaQuery.viewPadding.bottom;
+
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: keyboardInset > 0 ? 0 : navigationBarInset,
+        ),
+        child: FractionallySizedBox(
+          heightFactor: 0.94,
+          child: Material(
+            color: Colors.transparent,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              child: Container(
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    _buildHeader(),
+                    Expanded(
+                      child: Container(
+                        color: Colors.grey.shade50,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          itemCount: _messages.length + (_isLoading ? 1 : 0),
+                          itemBuilder: (_, index) {
+                            if (_isLoading && index == _messages.length) {
+                              return _buildLoadingMessage();
+                            }
+
+                            return _buildMessageBubble(_messages[index]);
+                          },
+                        ),
+                      ),
+                    ),
+                    _buildInputArea(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
