@@ -2,6 +2,7 @@ package org.sport.backend.dto.response.booking;
 
 import lombok.*;
 import org.sport.backend.constant.BookingIntentStatus;
+import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.rental.RentalAreaResponse;
 import org.sport.backend.dto.response.slot.IntentSlotResponse;
 

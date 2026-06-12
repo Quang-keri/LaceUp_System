@@ -40,22 +40,22 @@ class ProfileScreen extends StatelessWidget {
 
     final List<ProfileMenuItemData> activityItems = [
       ProfileMenuItemData(
-        title: 'Trận đấu của tôi',
-        icon: Icons.groups_outlined,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MyMatchScreen()),
-          );
-        },
-      ),
-      ProfileMenuItemData(
         title: 'Lịch sử đặt lịch',
         icon: Icons.history_rounded,
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
+          );
+        },
+      ),
+      ProfileMenuItemData(
+        title: 'Trận đấu của tôi',
+        icon: Icons.groups_outlined,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MyMatchScreen()),
           );
         },
       ),

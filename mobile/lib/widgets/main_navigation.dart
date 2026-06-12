@@ -25,10 +25,10 @@ class _MainNavigationState extends State<MainNavigation> {
 
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
+  List<Widget> get _pages => [
     AreaListScreen(),
     const MapScreen(),
-    const MatchPage(),
+    MatchPage(isActive: _selectedIndex == _centerTabIndex),
     const NewsScreen(),
     const ProfileScreen(),
   ];
@@ -219,13 +219,11 @@ class _MainNavigationState extends State<MainNavigation> {
       child: Scaffold(
         extendBody: true,
         body: IndexedStack(index: _selectedIndex, children: _pages),
-
         floatingActionButton: const Padding(
           padding: EdgeInsets.only(bottom: 4),
           child: ChatbotBubble(),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-
         bottomNavigationBar: Container(
           decoration: const BoxDecoration(
             color: _primaryColor,

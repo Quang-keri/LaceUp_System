@@ -274,6 +274,31 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                                             .build())
                                     .toList();
 
+                    // Xử lý lấy thông tin ngân hàng và tạo mã VietQR an toàn
+                    String bankName = null;
+                    String accountNumber = null;
+                    String accountName = null;
+                    String vietQrUrl = null;
+
+                    if (intent.getRentalArea() != null && intent.getRentalArea().getOwner() != null) {
+                        BankAccount bankAccount = intent.getRentalArea().getOwner().getBankAccount();
+                        if (bankAccount != null) {
+                            bankName = bankAccount.getBankName();
+                            accountNumber = bankAccount.getAccountNumber();
+                            accountName = bankAccount.getAccountHolderName();
+
+                            // Tạo nội dung chuyển khoản và URL VietQR
+                            String transferContent = "LACEUP " + intent.getBookingIntentId().toString().substring(0, 8);
+                            vietQrUrl = buildVietQrUrl(
+                                    bankAccount.getBankBin(),
+                                    bankAccount.getAccountNumber(),
+                                    intent.getPreviewPrice(),
+                                    transferContent,
+                                    bankAccount.getAccountHolderName()
+                            );
+                        }
+                    }
+
                     return BookingIntentResponse.builder()
                             .bookingIntentId(intent.getBookingIntentId())
                             .bookerName(intent.getBookerName())
@@ -301,6 +326,11 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                                     : null
                             )
                             .slots(slotResponses)
+                            // Map các dữ liệu ngân hàng đã xử lý vào Response
+                            .bankName(bankName)
+                            .accountNumber(accountNumber)
+                            .accountName(accountName)
+                            .vietQrUrl(vietQrUrl)
                             .build();
 
                 })

@@ -12,6 +12,7 @@ import '../../models/category.dart';
 import '../../models/rental_area.dart';
 import '../../services/category_service.dart';
 import '../../services/rental_service.dart';
+import '../area/area_detail/rental_area_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -618,7 +619,19 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ),
                   onPressed: () {
-                    Navigator.pop(sheetContext);
+                    Navigator.of(sheetContext).pop();
+
+                    Future.microtask(() {
+                      if (!mounted) return;
+
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RentalAreaDetailScreen(
+                            rentalAreaId: area.rentalAreaId,
+                          ),
+                        ),
+                      );
+                    });
                   },
                   child: const Text(
                     'Xem chi tiết',
