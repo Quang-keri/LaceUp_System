@@ -88,13 +88,22 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
     setState(() => uploading = true);
 
+    debugPrint('====================================');
+    debugPrint('[PAYMENT DEBUG] Bắt đầu gọi API upload...');
+    debugPrint('[PAYMENT DEBUG] File: ${selectedImage!.path}');
+    debugPrint('====================================');
+
     try {
-      await bookingService.uploadPaymentProof(
+      final result = await bookingService.uploadPaymentProof(
         bookingIntentId: widget.bookingId,
         imagePath: selectedImage!.path,
       );
 
       if (!mounted) return;
+
+      // IN RA KẾT QUẢ KHI THÀNH CÔNG
+      debugPrint('[PAYMENT DEBUG] UPLOAD THÀNH CÔNG!');
+      debugPrint('[PAYMENT DEBUG] Result trả về: $result');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -109,13 +118,58 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
           builder: (_) => const BookingHistoryScreen(),
         ),
       );
-    } catch (e) {
-      final message = getErrorMessage(e);
+    } catch (e, stackTrace) {
+      // IN RA TOÀN BỘ THÔNG TIN LỖI TRONG CONSOLE
+      debugPrint('🛑 ========= LỖI RỒI - XEM CHI TIẾT TẠI ĐÂY ========= 🛑');
+      debugPrint('[PAYMENT DEBUG] Kiểu dữ liệu của Lỗi: ${e.runtimeType}');
+      debugPrint('[PAYMENT DEBUG] Thông báo lỗi thô (e.toString()): $e');
+
+      // Kiểm tra xem lỗi có kèm Response từ Server không (Thường gặp nếu dùng thư viện Dio)
+      try {
+        final dynamic errorObj = e;
+        if (errorObj.response != null) {
+          debugPrint('[PAYMENT DEBUG] 👉 Mã lỗi HTTP từ Server: ${errorObj.response?.statusCode}');
+          debugPrint('[PAYMENT DEBUG] 👉 Data lỗi cụ thể từ Server: ${errorObj.response?.data}');
+        }
+      } catch (_) {
+        // Bỏ qua nếu đối tượng lỗi không phải là Network Error/DioError
+      }
+
+      debugPrint('[PAYMENT DEBUG] Vị trí lỗi chính xác (Stack Trace):');
+      debugPrint(stackTrace.toString());
+      debugPrint('🛑 ================================================= 🛑');
+
+      if (!mounted) return;
+
+      // HIỂN THỊ CẢ LỖI THÔ LÊN MÀN HÌNH (Gom cả message lẫn kết quả lỗi thô)
+      final cleanMessage = getErrorMessage(e);
+
+      // Tạo chuỗi hiển thị bao gồm lỗi đã dịch và lỗi thô từ hệ thống
+      String errorToDisplay = 'Thông báo: $cleanMessage\n\nLỗi hệ thống: $e';
+
+      // Nếu có response data từ server thì cộng thêm vào để nhìn cho rõ
+      try {
+        final dynamic errorObj = e;
+        if (errorObj.response?.data != null) {
+          errorToDisplay += '\n\nServer Data: ${errorObj.response.data}';
+        }
+      } catch (_) {}
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
+          content: SingleChildScrollView(
+            child: Text(
+              errorToDisplay,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+          backgroundColor: Colors.red.shade800,
+          duration: const Duration(seconds: 10), // Cho hiện 10 giây để kịp đọc/chụp màn hình
+          action: SnackBarAction(
+            label: 'ĐÓNG',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
         ),
       );
     } finally {
