@@ -91,36 +91,14 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         'gender': gender,
       };
 
-      await userService.updateUser(userId!, updateData);
+      await userService.updateUser(updateData);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(
-                  Icons.check_circle_rounded,
-                  color: Colors.white,
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text('Cập nhật thông tin thành công'),
-                ),
-              ],
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF2E9B62),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-          ),
-        );
 
       Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return;
       showError(e.toString());
     } finally {
       if (mounted) {

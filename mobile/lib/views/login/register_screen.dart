@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'verify_otp_screen.dart';
@@ -12,6 +14,10 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   static const Color primaryColor = AppColors.primary;
+
+  static final Uri _termsAndPrivacyUri = Uri.parse(
+    'https://laceupzone.id.vn/legal/terms-and-privacy',
+  );
 
   final _formKey = GlobalKey<FormState>();
 
@@ -64,13 +70,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      showError(e.toString().replaceAll('Exception: ', ''));
+
+      showError(
+        e.toString().replaceAll('Exception: ', ''),
+      );
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
+  }
+
+  Future<void> _openTermsAndPrivacy() async {
+    try {
+      final opened = await launchUrl(
+        _termsAndPrivacyUri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        showError(
+          'Không thể mở trang điều khoản và chính sách riêng tư',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      showError(
+        'Không thể mở trang điều khoản và chính sách riêng tư',
+      );
     }
   }
 
   void showError(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -81,6 +115,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void showSuccess(String message) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -92,7 +128,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> pickDate() async {
     final now = DateTime.now();
-    final maxAllowedDate = DateTime(now.year - 16, now.month, now.day);
+    final maxAllowedDate = DateTime(
+      now.year - 16,
+      now.month,
+      now.day,
+    );
 
     final picked = await showDatePicker(
       context: context,
@@ -104,10 +144,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       confirmText: 'Chọn',
     );
 
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
 
     dateOfBirthController.text =
-    '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+    '${picked.year.toString().padLeft(4, '0')}-'
+        '${picked.month.toString().padLeft(2, '0')}-'
+        '${picked.day.toString().padLeft(2, '0')}';
   }
 
   InputDecoration inputDecoration({
@@ -128,19 +170,107 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(
+          color: Colors.grey.shade300,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: primaryColor, width: 1.5),
+        borderSide: const BorderSide(
+          color: primaryColor,
+          width: 1.5,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.red),
+        borderSide: const BorderSide(
+          color: Colors.red,
+        ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        borderSide: const BorderSide(
+          color: Colors.red,
+          width: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTermsAndPrivacy() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: primaryColor.withOpacity(0.18),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.verified_user_outlined,
+              size: 19,
+              color: primaryColor,
+            ),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              runSpacing: 2,
+              children: [
+                Text(
+                  'Bằng việc đăng ký, bạn chấp nhận ',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _openTermsAndPrivacy,
+                    borderRadius: BorderRadius.circular(4),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 1,
+                      ),
+                      child: Text(
+                        'Điều khoản và Chính sách riêng tư',
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                          decorationColor: primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Text(
+                  ' của LaceUp.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -189,9 +319,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: primaryColor,
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   const Text(
                     'Tạo tài khoản LaceUp',
                     style: TextStyle(
@@ -199,9 +327,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   Text(
                     'Đăng ký tài khoản để đặt sân và theo dõi lịch sử đặt lịch của bạn',
                     textAlign: TextAlign.center,
@@ -211,7 +337,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       height: 1.4,
                     ),
                   ),
-
                   const SizedBox(height: 24),
 
                   TextFormField(
@@ -249,8 +374,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         return 'Vui lòng nhập email';
                       }
 
-                      final emailRegex =
-                      RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$');
+                      final emailRegex = RegExp(
+                        r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$',
+                      );
 
                       if (!emailRegex.hasMatch(value.trim())) {
                         return 'Email không hợp lệ';
@@ -301,7 +427,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               : Icons.visibility,
                         ),
                         onPressed: () {
-                          setState(() => hidePassword = !hidePassword);
+                          setState(() {
+                            hidePassword = !hidePassword;
+                          });
                         },
                       ),
                     ),
@@ -327,12 +455,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       icon: Icons.wc,
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'MALE', child: Text('Nam')),
-                      DropdownMenuItem(value: 'FEMALE', child: Text('Nữ')),
-                      DropdownMenuItem(value: 'OTHER', child: Text('Khác')),
+                      DropdownMenuItem(
+                        value: 'MALE',
+                        child: Text('Nam'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'FEMALE',
+                        child: Text('Nữ'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'OTHER',
+                        child: Text('Khác'),
+                      ),
                     ],
                     onChanged: (value) {
-                      if (value != null) setState(() => gender = value);
+                      if (value == null) return;
+
+                      setState(() {
+                        gender = value;
+                      });
                     },
                   ),
 
@@ -352,15 +493,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         return 'Vui lòng chọn ngày sinh';
                       }
 
-                      final dob = DateTime.tryParse(value.trim());
+                      final dob = DateTime.tryParse(
+                        value.trim(),
+                      );
 
                       if (dob == null) {
                         return 'Ngày sinh không hợp lệ';
                       }
 
                       final now = DateTime.now();
-                      final maxAllowedDate =
-                      DateTime(now.year - 16, now.month, now.day);
+                      final maxAllowedDate = DateTime(
+                        now.year - 16,
+                        now.month,
+                        now.day,
+                      );
 
                       if (dob.isAfter(maxAllowedDate)) {
                         return 'Bạn phải từ đủ 16 tuổi trở lên';
@@ -394,7 +540,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
+
+                  _buildTermsAndPrivacy(),
+
+                  const SizedBox(height: 18),
 
                   SizedBox(
                     width: double.infinity,
@@ -404,6 +554,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                        primaryColor.withOpacity(0.55),
+                        disabledForegroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -419,7 +572,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       )
                           : const Text(
-                        'Gửi mã xác thực',
+                        'Đăng ký',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

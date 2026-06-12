@@ -39,16 +39,25 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   }
 
   Future<void> _loadBookingIntents() async {
+    if (!mounted) return;
+
     setState(() => loadingIntents = true);
+
     try {
       final res = await bookingService.getMyBookingIntents();
+
+      if (!mounted) return;
+
       setState(() {
         bookingIntents = res;
       });
     } catch (e) {
+      if (!mounted) return;
       _showError(e);
     } finally {
-      if (mounted) setState(() => loadingIntents = false);
+      if (mounted) {
+        setState(() => loadingIntents = false);
+      }
     }
   }
 
@@ -204,7 +213,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
 
     if (confirm != true) return;
 
-    // Close the bottom sheet first if it's open
     Navigator.pop(context);
     setState(() => loadingBookings = true);
 
@@ -485,7 +493,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   }
 
   void _backToProfile() {
-    Navigator.pop(context);
+    if (!mounted) return;
+
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).popUntil((route) => route.isFirst);
   }
 
   bool _canCancelBooking(dynamic booking) {
@@ -1385,19 +1398,25 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _backToProfile();
+        if (didPop) return;
+
+        _backToProfile();
       },
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: _backToProfile,
           ),
           title: const Text(
             'Lịch sử đặt sân',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
@@ -1415,6 +1434,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         body: TabBarView(
           controller: tabController,
           children: [_pendingTab(), _historyTab()],
+          children: [
+            _pendingTab(),
+            _bookedTab(),
+          ],
         ),
       ),
     );
