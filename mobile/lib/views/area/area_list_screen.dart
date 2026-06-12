@@ -105,16 +105,17 @@ class _AreaListScreenState extends State<AreaListScreen> {
       final response = await postService.getPosts(
         page: page,
         size: size,
-        title: searchController.text.trim(),
-        minPrice: minPrice,
-        maxPrice: maxPrice,
+        title: searchController.text.trim().isEmpty
+            ? null
+            : searchController.text.trim(),
+        minPrice: minPrice > 0 ? minPrice : null,
+        maxPrice: maxPrice < 500000 ? maxPrice : null,
         sortBy: sortBy,
-        minRating: minRating,
-        provinceCodes: provinceCodes,
-        categoryIds: categoryIds,
-        amenityIds: amenityIds,
+        minRating: minRating > 0 ? minRating : null,
+        provinceCodes: provinceCodes.isNotEmpty ? provinceCodes : null,
+        categoryIds: categoryIds.isNotEmpty ? categoryIds : null,
+        amenityIds: amenityIds.isNotEmpty ? amenityIds : null,
       );
-
       if (!mounted) return;
 
       setState(() {
