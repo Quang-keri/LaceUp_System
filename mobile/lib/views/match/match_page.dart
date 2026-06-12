@@ -17,7 +17,9 @@ import 'match_filter.dart';
 import 'shared_booking_card.dart';
 
 class MatchPage extends StatefulWidget {
-  const MatchPage({super.key});
+  final bool isActive;
+
+  const MatchPage({super.key, this.isActive = true});
 
   @override
   State<MatchPage> createState() => _MatchPageState();
@@ -55,6 +57,19 @@ class _MatchPageState extends State<MatchPage> {
     super.initState();
     _fetchInitialData();
     _fetchRentalAreas();
+  }
+
+  @override
+  void didUpdateWidget(covariant MatchPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!oldWidget.isActive && widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        _refreshCommunity();
+      });
+    }
   }
 
   Future<void> _fetchInitialData() async {
@@ -678,48 +693,71 @@ class _MatchPageState extends State<MatchPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.flash_on),
-                  label: const Text('Tạo Trận'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF9156F1),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 16),
 
             Expanded(
-              child: (_isLoading || _isLoadingShared)
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF9156F1),
-                      ),
-                    )
-                  : _groupedMatches.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Không tìm thấy trận đấu nào!',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _refreshCommunity,
-                      child: _buildGroupedMatches(
-                        currentUserId,
-                        currentUserName,
-                      ),
-                    ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return RefreshIndicator(
+                    color: const Color(0xFF9156F1),
+                    onRefresh: _refreshCommunity,
+                    child: (_isLoading || _isLoadingShared)
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: constraints.maxHeight,
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF9156F1),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : _groupedMatches.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: constraints.maxHeight,
+                                child: const Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.sports_outlined,
+                                        size: 58,
+                                        color: Colors.grey,
+                                      ),
+                                      SizedBox(height: 12),
+                                      Text(
+                                        'Không tìm thấy trận đấu nào!',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      SizedBox(height: 6),
+                                      Text(
+                                        'Kéo xuống để tải lại',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : _buildGroupedMatches(currentUserId, currentUserName),
+                  );
+                },
+              ),
             ),
           ],
         ),

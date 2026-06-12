@@ -83,6 +83,17 @@ class SharedBookingService {
       throw Exception(_errorMessage(error, 'Không thể tham gia trận vãng lai'));
     }
   }
+
+  Future<dynamic> cancelSharedTicketByUser(String participantId) async {
+    try {
+      final response = await apiClient.put(
+        '/bookings/shared/ticket/$participantId/cancel',
+      );
+      return response.data;
+    } on DioException catch (error) {
+      throw Exception(_errorMessage(error, 'Không thể hủy vé vãng lai'));
+    }
+  }
 }
 
 final sharedBookingService = SharedBookingService();

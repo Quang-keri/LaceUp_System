@@ -36,7 +36,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                 FROM Transaction t
                 WHERE t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
                   AND t.type = org.sport.backend.constant.TransactionType.INCOME
-                  AND t.moneyFlow = org.sport.backend.constant.MoneyFlow.ADMIN_COLLECTED
                   AND t.transactionDate BETWEEN :startDate AND :endDate
                   AND (
                         :ownerId IS NULL
@@ -116,4 +115,27 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
 
     List<Transaction>  findAllByOwner_UserId(UUID ownerId);
+
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0)
+            FROM Transaction t
+            WHERE t.rentalArea.rentalAreaId = :rentalAreaId
+              AND DATE(t.transactionDate) = :date
+              AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
+              AND t.type = org.sport.backend.constant.TransactionType.INCOME
+              AND t.moneyFlow = org.sport.backend.constant.MoneyFlow.ADMIN_COLLECTED
+    """)
+    BigDecimal sumAdminCollectedByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
+
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0)
+            FROM Transaction t
+            WHERE t.rentalArea.rentalAreaId = :rentalAreaId
+              AND DATE(t.transactionDate) = :date
+              AND t.status = org.sport.backend.constant.TransactionStatus.SUCCESS
+              AND t.type = org.sport.backend.constant.TransactionType.INCOME
+              AND t.moneyFlow = org.sport.backend.constant.MoneyFlow.OWNER_COLLECTED
+    """)
+    BigDecimal sumOwnerCollectedByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
+
 }

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/services/booking_service.dart';
+import 'package:mobile/services/booking_shared_service.dart';
 import 'package:mobile/utils/error_utils.dart';
 
+import '../../area/area_detail/payment_proof_screen.dart';
 import '../../area/booking/ticket_payment_proof_screen.dart';
+import '../../../models/selected_booking_slot.dart';
+import '../profile_screen.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -81,17 +85,17 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         pendingSharedTickets = allBookings
             .where(
               (b) =>
-          b['bookingType'] == 'SHARED' &&
-              b['ticketPaymentStatus'] == 'PENDING',
-        )
+                  b['bookingType'] == 'SHARED' &&
+                  b['ticketPaymentStatus'] == 'PENDING',
+            )
             .toList();
 
         confirmedBookings = allBookings
             .where(
               (b) =>
-          !(b['bookingType'] == 'SHARED' &&
-              b['ticketPaymentStatus'] == 'PENDING'),
-        )
+                  !(b['bookingType'] == 'SHARED' &&
+                      b['ticketPaymentStatus'] == 'PENDING'),
+            )
             .toList();
       });
     } catch (e) {
@@ -104,7 +108,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   Future<void> _handleCancelBooking(dynamic booking) async {
     final isShared = booking['bookingType'] == 'SHARED';
     final startTimeStr = booking['startTime']?.toString();
-    final startTime = startTimeStr != null ? DateTime.tryParse(startTimeStr) : DateTime.now();
+    final startTime = startTimeStr != null
+        ? DateTime.tryParse(startTimeStr)
+        : DateTime.now();
     final hoursDiff = startTime?.difference(DateTime.now()).inHours ?? 0;
     final isLateCancel = hoursDiff < 5;
 
@@ -112,9 +118,13 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     if (isShared) {
       content = const Text.rich(
         TextSpan(
-          text: 'Bạn đang yêu cầu hủy vé vãng lai. Theo quy định, tiền mua vé sẽ ',
+          text:
+              'Bạn đang yêu cầu hủy vé vãng lai. Theo quy định, tiền mua vé sẽ ',
           children: [
-            TextSpan(text: 'không được hoàn lại', style: TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: 'không được hoàn lại',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             TextSpan(text: '. Bạn có chắc chắn muốn hủy?'),
           ],
         ),
@@ -125,11 +135,32 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           text: 'CẢNH BÁO: ',
           style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
           children: [
-            TextSpan(text: 'Bạn đang hủy lịch quá sát giờ, dưới 5 giờ. Bạn sẽ ', style: TextStyle(color: Colors.black)),
-            TextSpan(text: 'mất tiền cọc', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            TextSpan(text: ' và ', style: TextStyle(color: Colors.black)),
-            TextSpan(text: 'bị trừ 10 điểm uy tín', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            TextSpan(text: '. Bạn vẫn muốn tiếp tục hủy?', style: TextStyle(color: Colors.black)),
+            TextSpan(
+              text: 'Bạn đang hủy lịch quá sát giờ, dưới 5 giờ. Bạn sẽ ',
+              style: TextStyle(color: Colors.black),
+            ),
+            TextSpan(
+              text: 'mất tiền cọc',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text: ' và ',
+              style: TextStyle(color: Colors.black),
+            ),
+            TextSpan(
+              text: 'bị trừ 10 điểm uy tín',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text: '. Bạn vẫn muốn tiếp tục hủy?',
+              style: TextStyle(color: Colors.black),
+            ),
           ],
         ),
       );
@@ -138,7 +169,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         TextSpan(
           text: 'Bạn đang hủy lịch trước 5 giờ. Theo quy định, tiền cọc sẽ ',
           children: [
-            TextSpan(text: 'không được hoàn lại', style: TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: 'không được hoàn lại',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             TextSpan(text: '. Bạn có chắc chắn muốn hủy?'),
           ],
         ),
@@ -188,20 +222,29 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       if (isShared) {
         final participantId = booking['participantId']?.toString();
         if (participantId == null) throw Exception("Không tìm thấy mã vé");
-        await bookingService.cancelSharedTicketByUser(participantId);
+
+        final res = await sharedBookingService.cancelSharedTicketByUser(
+          participantId,
+        );
+
         if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hủy vé vãng lai thành công!'),
+          SnackBar(
+            content: Text(res['message'] ?? 'Hủy vé vãng lai thành công!'),
             backgroundColor: Colors.orange,
           ),
         );
       } else {
-        await bookingService.cancelBooking(booking['bookingId'].toString());
+        final res = await bookingService.cancelBooking(
+          booking['bookingId'].toString(),
+        );
+
         if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hủy lịch đặt sân thành công!'),
+          SnackBar(
+            content: Text(res['message'] ?? 'Hủy lịch đặt sân thành công!'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -240,6 +283,70 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     final date = DateTime.tryParse(value?.toString() ?? '');
     if (date == null) return '--';
     return DateFormat('HH:mm').format(date);
+  }
+
+  String _effectiveIntentStatus(dynamic intent) {
+    final status = intent['status']?.toString() ?? '';
+
+    if (status == 'ACTIVE') {
+      final expiresAt = DateTime.tryParse(
+        intent['expiresAt']?.toString() ?? '',
+      );
+
+      if (expiresAt != null && !expiresAt.isAfter(DateTime.now())) {
+        return 'EXPIRED';
+      }
+    }
+
+    return status;
+  }
+
+  bool _isPendingIntent(dynamic intent) {
+    final status = _effectiveIntentStatus(intent);
+    return status == 'ACTIVE' || status == 'PENDING_OWNER_CONFIRM';
+  }
+
+  bool _isFailedIntent(dynamic intent) {
+    final status = _effectiveIntentStatus(intent);
+    return const {'EXPIRED', 'CANCELLED', 'REJECTED'}.contains(status);
+  }
+
+  List get _pendingBookingIntents =>
+      bookingIntents.where(_isPendingIntent).toList();
+
+  List get _failedBookingIntents =>
+      bookingIntents.where(_isFailedIntent).toList();
+
+  double _toDouble(dynamic value) {
+    return double.tryParse(value?.toString() ?? '0') ?? 0;
+  }
+
+  Future<void> _openBookingPaymentProof(dynamic intent) async {
+    final bookingIntentId = intent['bookingIntentId']?.toString();
+
+    if (bookingIntentId == null || bookingIntentId.isEmpty) {
+      _showError('Không tìm thấy mã đơn đặt sân.');
+      return;
+    }
+
+    Navigator.pop(context);
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaymentProofScreen(
+          bookingId: bookingIntentId,
+          rentalArea: null,
+          selectedSlots: const <SelectedBookingSlot>[],
+          totalPrice: _toDouble(intent['previewPrice']),
+          bookingResult: intent,
+        ),
+      ),
+    );
+
+    if (mounted) {
+      await _loadAllData();
+    }
   }
 
   bool _hasProof(dynamic booking) {
@@ -326,8 +433,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   Color _statusColor(String status) {
     switch (status) {
       case 'ACTIVE':
-      case 'PENDING_OWNER_CONFIRM':
         return Colors.orange;
+      case 'PENDING_OWNER_CONFIRM':
+        return Colors.blue;
       case 'BOOKED':
       case 'CONFIRMED':
         return Colors.blue;
@@ -392,12 +500,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   }
 
   void _backToProfile() {
-    if (!mounted) return;
-
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).popUntil((route) => route.isFirst);
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ProfileScreen(),
+        ),
+      );
+    }
   }
 
   bool _canCancelBooking(dynamic booking) {
@@ -409,20 +521,79 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     final isShared = booking['bookingType'] == 'SHARED';
     if (isShared) {
       final ticketStatus = booking['ticketPaymentStatus']?.toString() ?? '';
-      return !['CANCELLED', 'CANCELLED_NO_REFUND', 'REFUND_PENDING', 'REFUNDED', 'FAILED', 'COMPLETED'].contains(ticketStatus);
+      return ![
+        'CANCELLED',
+        'CANCELLED_NO_REFUND',
+        'REFUND_PENDING',
+        'REFUNDED',
+        'FAILED',
+        'COMPLETED',
+      ].contains(ticketStatus);
     }
 
     final status = booking['bookingStatus']?.toString() ?? '';
-    return !['CANCELLED', 'COMPLETED'].contains(status);
+    return !['CANCELLED'].contains(status);
   }
 
-  void _showPendingDetail(dynamic intent) {
+  void _showIntentDetail(dynamic intent) {
     final slots = intent['slots'] ?? [];
-    final status = intent['status']?.toString() ?? '';
+    final status = _effectiveIntentStatus(intent);
+
+    late String infoTitle;
+    late String infoContent;
+    late IconData infoIcon;
+    late Color infoColor;
+
+    switch (status) {
+      case 'ACTIVE':
+        infoTitle = 'Chờ chuyển khoản';
+        infoContent =
+            'Bạn cần chuyển khoản và gửi ảnh chuyển khoản trong vòng 5 phút. '
+            'Nếu không gửi kịp, đơn sẽ tự động hết hạn.';
+        infoIcon = Icons.account_balance_wallet_outlined;
+        infoColor = Colors.orange;
+        break;
+      case 'PENDING_OWNER_CONFIRM':
+        infoTitle = 'Chờ chủ sân duyệt';
+        infoContent =
+            'Ảnh chuyển khoản đã được gửi. Vui lòng chờ chủ sân kiểm tra và xác nhận.';
+        infoIcon = Icons.hourglass_top_rounded;
+        infoColor = Colors.blue;
+        break;
+      case 'EXPIRED':
+        infoTitle = 'Đơn đã hết hạn';
+        infoContent =
+            'Đơn này đã hết hạn vì bạn chưa gửi ảnh chuyển khoản trong vòng 5 phút '
+            'kể từ lúc tạo đơn.';
+        infoIcon = Icons.timer_off_outlined;
+        infoColor = Colors.red;
+        break;
+      case 'REJECTED':
+        infoTitle = 'Đơn bị từ chối';
+        infoContent =
+            'Chủ sân đã từ chối đơn hoặc ảnh chuyển khoản chưa hợp lệ.';
+        infoIcon = Icons.highlight_off_rounded;
+        infoColor = Colors.red;
+        break;
+      case 'CANCELLED':
+        infoTitle = 'Đơn đã bị hủy';
+        infoContent = 'Đơn đặt sân này đã bị hủy và không còn hiệu lực.';
+        infoIcon = Icons.cancel_outlined;
+        infoColor = Colors.grey;
+        break;
+      default:
+        infoTitle = 'Trạng thái đơn';
+        infoContent = _intentStatusLabel(status);
+        infoIcon = Icons.info_outline;
+        infoColor = _statusColor(status);
+    }
+
+    final systemBottomInset = MediaQuery.viewPaddingOf(context).bottom;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
@@ -430,22 +601,22 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       builder: (_) {
         return DraggableScrollableSheet(
           expand: false,
-          initialChildSize: 0.78,
+          initialChildSize: 0.82,
           minChildSize: 0.45,
           maxChildSize: 0.95,
           builder: (_, controller) {
             return ListView(
               controller: controller,
-              padding: const EdgeInsets.all(18),
+              padding: EdgeInsets.fromLTRB(18, 18, 18, 24 + systemBottomInset),
               children: [
                 _bottomSheetHandle(),
                 Row(
                   children: [
-                    const Icon(Icons.pending_actions, color: Colors.orange),
+                    Icon(infoIcon, color: infoColor),
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
-                        'Chi tiết đơn chờ xác nhận',
+                        'Chi tiết đơn đặt sân',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -460,12 +631,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 ),
                 const SizedBox(height: 16),
                 _infoBox(
-                  title: 'Trạng thái thanh toán',
-                  content: status == 'ACTIVE'
-                      ? 'Bạn cần chuyển khoản và upload ảnh. Sau khi gửi ảnh, đơn sẽ chờ chủ sân duyệt.'
-                      : 'Bạn đã gửi ảnh chuyển khoản. Vui lòng chờ chủ sân duyệt.',
-                  icon: Icons.info_outline,
-                  color: Colors.orange,
+                  title: infoTitle,
+                  content: infoContent,
+                  icon: infoIcon,
+                  color: infoColor,
                 ),
                 const SizedBox(height: 12),
                 _detailCard(
@@ -511,7 +680,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                           : '-',
                     ),
                     _detailRow(
-                      'Hết hạn',
+                      'Hết hạn lúc',
                       intent['expiresAt'] != null
                           ? '${_formatDate(intent['expiresAt'])} ${_formatTime(intent['expiresAt'])}'
                           : '-',
@@ -520,6 +689,60 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 ),
                 const SizedBox(height: 12),
                 _slotListCard(slots),
+
+                if (status == 'ACTIVE') ...[
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => _openBookingPaymentProof(intent),
+                    icon: const Icon(
+                      Icons.upload_file_rounded,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Gửi ảnh chuyển khoản',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+
+                if (status == 'PENDING_OWNER_CONFIRM') ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.hourglass_top_rounded, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text(
+                          'Đang chờ chủ sân duyệt...',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             );
           },
@@ -529,6 +752,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   }
 
   void _showBookingDetail(dynamic booking) {
+    final systemBottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final slots = booking['slots'] ?? [];
     final status = booking['bookingStatus']?.toString() ?? '';
     final isShared = booking['bookingType'] == 'SHARED';
@@ -550,6 +774,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
@@ -563,7 +788,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           builder: (_, controller) {
             return ListView(
               controller: controller,
-              padding: const EdgeInsets.all(18),
+              padding: EdgeInsets.fromLTRB(18, 18, 18, 24 + systemBottomInset),
               children: [
                 _bottomSheetHandle(),
                 Row(
@@ -593,9 +818,9 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                     _detailRow(
                       isShared ? 'Mã vé' : 'Mã booking',
                       (isShared
-                          ? booking['participantId']
-                          : booking['bookingId'])
-                          ?.toString() ??
+                                  ? booking['participantId']
+                                  : booking['bookingId'])
+                              ?.toString() ??
                           '-',
                     ),
                     _detailRow(
@@ -622,43 +847,43 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                 _detailCard(
                   children: isShared
                       ? [
-                    _moneyRow(
-                      'Giá vé/người',
-                      booking['pricePerTicket'],
-                      Colors.black54,
-                    ),
-                    _detailRow(
-                      'Số lượng',
-                      '${booking['ticketQuantity'] ?? 1} vé',
-                    ),
-                    const Divider(height: 20, color: Colors.black12),
-                    _moneyRow(
-                      'Tổng tiền vé',
-                      displayPrice,
-                      Colors.orange,
-                    ),
-                  ]
+                          _moneyRow(
+                            'Giá vé/người',
+                            booking['pricePerTicket'],
+                            Colors.black54,
+                          ),
+                          _detailRow(
+                            'Số lượng',
+                            '${booking['ticketQuantity'] ?? 1} vé',
+                          ),
+                          const Divider(height: 20, color: Colors.black12),
+                          _moneyRow(
+                            'Tổng tiền vé',
+                            displayPrice,
+                            Colors.orange,
+                          ),
+                        ]
                       : [
-                    _moneyRow(
-                      'Tổng tiền',
-                      booking['totalPrice'],
-                      Colors.black,
-                    ),
-                    _moneyRow(
-                      'Đã cọc',
-                      booking['depositAmount'],
-                      Colors.orange,
-                    ),
-                    _moneyRow(
-                      'Còn lại',
-                      booking['remainingAmount'],
-                      Colors.red,
-                    ),
-                    _detailRow(
-                      'Phương thức',
-                      booking['paymentMethod']?.toString() ?? '-',
-                    ),
-                  ],
+                          _moneyRow(
+                            'Tổng tiền',
+                            booking['totalPrice'],
+                            Colors.black,
+                          ),
+                          _moneyRow(
+                            'Đã cọc',
+                            booking['depositAmount'],
+                            Colors.orange,
+                          ),
+                          _moneyRow(
+                            'Còn lại',
+                            booking['remainingAmount'],
+                            Colors.red,
+                          ),
+                          _detailRow(
+                            'Phương thức',
+                            booking['paymentMethod']?.toString() ?? '-',
+                          ),
+                        ],
                 ),
                 const SizedBox(height: 12),
                 _slotListCard(slots),
@@ -758,7 +983,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                ]
+                ],
               ],
             );
           },
@@ -920,13 +1145,32 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     );
   }
 
-  Widget _pendingCard(dynamic intent) {
-    final status = intent['status']?.toString() ?? '';
+  Widget _intentCard(dynamic intent) {
+    final status = _effectiveIntentStatus(intent);
     final slots = intent['slots'] ?? [];
     final courtCode = slots.isNotEmpty ? slots[0]['courtCode'] ?? '-' : '-';
+    final color = _statusColor(status);
+
+    IconData icon;
+    switch (status) {
+      case 'EXPIRED':
+        icon = Icons.timer_off_outlined;
+        break;
+      case 'REJECTED':
+        icon = Icons.highlight_off_rounded;
+        break;
+      case 'CANCELLED':
+        icon = Icons.cancel_outlined;
+        break;
+      case 'PENDING_OWNER_CONFIRM':
+        icon = Icons.hourglass_top_rounded;
+        break;
+      default:
+        icon = Icons.account_balance_wallet_outlined;
+    }
 
     return InkWell(
-      onTap: () => _showPendingDetail(intent),
+      onTap: () => _showIntentDetail(intent),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
@@ -938,11 +1182,8 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: Colors.orange.withOpacity(0.12),
-                  child: const Icon(
-                    Icons.pending_actions,
-                    color: Colors.orange,
-                  ),
+                  backgroundColor: color.withOpacity(0.12),
+                  child: Icon(icon, color: color),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -954,7 +1195,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                     ),
                   ),
                 ),
-                _statusChip(_intentStatusLabel(status), _statusColor(status)),
+                _statusChip(_intentStatusLabel(status), color),
               ],
             ),
             const SizedBox(height: 10),
@@ -1113,35 +1354,49 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   }
 
   Widget _pendingTab() {
-    if (loadingIntents || loadingBookings)
+    if (loadingIntents || loadingBookings) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    final pendingIntents = _pendingBookingIntents;
+
     return RefreshIndicator(
       color: primaryColor,
       onRefresh: _loadAllData,
-      child: (bookingIntents.isEmpty && pendingSharedTickets.isEmpty)
+      child: (pendingIntents.isEmpty && pendingSharedTickets.isEmpty)
           ? _emptyView('Không có đơn chờ xác nhận', Icons.pending_actions)
           : ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          ...bookingIntents.map((e) => _pendingCard(e)).toList(),
-          ...pendingSharedTickets.map((e) => _bookingCard(e)).toList(),
-        ],
-      ),
+              padding: const EdgeInsets.all(16),
+              children: [
+                ...pendingIntents.map((e) => _intentCard(e)),
+                ...pendingSharedTickets.map((e) => _bookingCard(e)),
+              ],
+            ),
     );
   }
 
-  Widget _bookedTab() {
-    if (loadingBookings)
+  Widget _historyTab() {
+    if (loadingIntents || loadingBookings) {
       return const Center(child: CircularProgressIndicator());
+    }
+
+    final failedIntents = _failedBookingIntents;
+
     return RefreshIndicator(
       color: primaryColor,
-      onRefresh: _loadBookings,
-      child: confirmedBookings.isEmpty
-          ? _emptyView('Chưa có lịch đặt sân nào', Icons.event_busy)
+      onRefresh: _loadAllData,
+      child: (confirmedBookings.isEmpty && failedIntents.isEmpty)
+          ? _emptyView(
+              'Chưa có đơn thành công hoặc thất bại',
+              Icons.history_rounded,
+            )
           : ListView(
-        padding: const EdgeInsets.all(16),
-        children: confirmedBookings.map((e) => _bookingCard(e)).toList(),
-      ),
+              padding: const EdgeInsets.all(16),
+              children: [
+                ...confirmedBookings.map((e) => _bookingCard(e)),
+                ...failedIntents.map((e) => _intentCard(e)),
+              ],
+            ),
     );
   }
 
@@ -1154,11 +1409,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-
-        _backToProfile();
+        // if (didPop) return;
+        //
+        // _backToProfile();
       },
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
@@ -1170,9 +1425,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           ),
           title: const Text(
             'Lịch sử đặt sân',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
@@ -1183,16 +1436,13 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
             unselectedLabelColor: Colors.white70,
             tabs: const [
               Tab(text: 'Chờ xác nhận'),
-              Tab(text: 'Lịch sử đặt sân'),
+              Tab(text: 'Thành công / Thất bại'),
             ],
           ),
         ),
         body: TabBarView(
           controller: tabController,
-          children: [
-            _pendingTab(),
-            _bookedTab(),
-          ],
+          children: [_pendingTab(), _historyTab()],
         ),
       ),
     );

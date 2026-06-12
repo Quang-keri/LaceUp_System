@@ -429,8 +429,12 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
   }
 
   Widget _bottomBar() {
+    // Lấy chiều cao của phần giao diện hệ thống phía dưới (Navigation Bar)
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      // Cộng thêm bottomInset vào padding bottom mặc định (20) để đẩy nút lên an toàn
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [

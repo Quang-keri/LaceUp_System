@@ -57,19 +57,35 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
                                                  @Param("endDateTime") LocalDateTime endDateTime,
                                                  @Param("rentalAreaId") UUID rentalAreaId);
 
+    // =========================================================================
+    // DOANH THU ĐỐI SOÁT THÁNG (Đã fix cho kèo vãng lai)
+    // =========================================================================
     @Query("""
-                 SELECT COALESCE(SUM(b.totalPrice), 0)
-                 FROM Booking b
-                 WHERE b.rentalArea.rentalAreaId = :rentalAreaId
-                   AND b.startTime >= :startDate AND b.startTime < :endDate
-                   AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
-                                           org.sport.backend.constant.BookingStatus.BOOKED)
-            \s""")
-    BigDecimal sumTotalAmountOfCompletedBookingsMonthly(
-            @Param("rentalAreaId") UUID rentalAreaId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
-    );
+                     SELECT COALESCE(SUM(b.totalPrice), 0)
+                     FROM Booking b
+                     WHERE b.rentalArea.rentalAreaId = :rentalAreaId
+                       AND b.startTime >= :startDate AND b.startTime < :endDate
+                       AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED, org.sport.backend.constant.BookingStatus.BOOKED)
+                       AND b.bookingType != org.sport.backend.constant.BookingType.SHARED
+            """)
+    BigDecimal sumNonSharedTotalAmountMonthly(@Param("rentalAreaId") UUID rentalAreaId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    @Query("""
+                     SELECT COALESCE(SUM(bp.amountPaid), 0)
+                     FROM BookingParticipant bp
+                     WHERE bp.booking.rentalArea.rentalAreaId = :rentalAreaId
+                       AND bp.booking.startTime >= :startDate AND bp.booking.startTime < :endDate
+                       AND bp.booking.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED, org.sport.backend.constant.BookingStatus.BOOKED)
+                       AND bp.booking.bookingType = org.sport.backend.constant.BookingType.SHARED
+                       AND bp.paymentStatus IN (org.sport.backend.constant.PaymentStatus.SUCCESS, org.sport.backend.constant.PaymentStatus.BOOKED, org.sport.backend.constant.PaymentStatus.COMPLETED)
+            """)
+    BigDecimal sumSharedTotalAmountMonthly(@Param("rentalAreaId") UUID rentalAreaId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    default BigDecimal sumTotalAmountOfCompletedBookingsMonthly(UUID rentalAreaId, LocalDateTime startDate, LocalDateTime endDate) {
+        BigDecimal nonShared = sumNonSharedTotalAmountMonthly(rentalAreaId, startDate, endDate);
+        BigDecimal shared = sumSharedTotalAmountMonthly(rentalAreaId, startDate, endDate);
+        return (nonShared != null ? nonShared : BigDecimal.ZERO).add(shared != null ? shared : BigDecimal.ZERO);
+    }
 
     @Query("""
                 SELECT COUNT(b)
@@ -84,25 +100,43 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("endDate") LocalDateTime endDate
     );
 
+    // =========================================================================
+    // DOANH THU ĐỐI SOÁT NGÀY (Đã fix cho kèo vãng lai)
+    // =========================================================================
     @Query("""
-                 SELECT COALESCE(SUM(s.price), 0)
-                 FROM Booking b
-                 JOIN b.slots s
-                 WHERE b.rentalArea.rentalAreaId = :rentalAreaId
-                   AND CAST(b.startTime AS date) = :date
-                   AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
-                                           org.sport.backend.constant.BookingStatus.BOOKED)
-            \s""")
-    BigDecimal sumSlotRevenueByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
+                     SELECT COALESCE(SUM(s.price), 0)
+                     FROM Slot s
+                     WHERE s.booking.rentalArea.rentalAreaId = :rentalAreaId
+                       AND CAST(s.booking.startTime AS date) = :date
+                       AND s.booking.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED, org.sport.backend.constant.BookingStatus.BOOKED)
+                       AND s.booking.bookingType != org.sport.backend.constant.BookingType.SHARED
+            """)
+    BigDecimal sumNonSharedSlotRevenueByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
+
+    @Query("""
+                     SELECT COALESCE(SUM(bp.amountPaid), 0)
+                     FROM BookingParticipant bp
+                     WHERE bp.booking.rentalArea.rentalAreaId = :rentalAreaId
+                       AND CAST(bp.booking.startTime AS date) = :date
+                       AND bp.booking.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED, org.sport.backend.constant.BookingStatus.BOOKED)
+                       AND bp.booking.bookingType = org.sport.backend.constant.BookingType.SHARED
+                       AND bp.paymentStatus IN (org.sport.backend.constant.PaymentStatus.SUCCESS, org.sport.backend.constant.PaymentStatus.BOOKED, org.sport.backend.constant.PaymentStatus.COMPLETED)
+            """)
+    BigDecimal sumSharedSlotRevenueByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
+
+    default BigDecimal sumSlotRevenueByDate(UUID rentalAreaId, LocalDate date) {
+        BigDecimal nonShared = sumNonSharedSlotRevenueByDate(rentalAreaId, date);
+        BigDecimal shared = sumSharedSlotRevenueByDate(rentalAreaId, date);
+        return (nonShared != null ? nonShared : BigDecimal.ZERO).add(shared != null ? shared : BigDecimal.ZERO);
+    }
 
     @Query("""
                  SELECT COALESCE(SUM(b.depositAmount), 0)
                  FROM Booking b
                  WHERE b.rentalArea.rentalAreaId = :rentalAreaId
                    AND CAST(b.startTime AS date) = :date
-                   AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED,\s
-                                           org.sport.backend.constant.BookingStatus.BOOKED)
-            \s""")
+                   AND b.bookingStatus IN (org.sport.backend.constant.BookingStatus.COMPLETED, org.sport.backend.constant.BookingStatus.BOOKED)
+            """)
     BigDecimal sumInitialPaidAmountByDate(@Param("rentalAreaId") UUID rentalAreaId, @Param("date") LocalDate date);
 
     boolean existsByRenter_UserIdAndBookingStatusIn(
@@ -205,5 +239,4 @@ public interface BookingRepository extends JpaRepository<Booking, UUID>, JpaSpec
             @Param("reservedStatuses") List<PaymentStatus> reservedStatuses,
             Pageable pageable
     );
-
 }

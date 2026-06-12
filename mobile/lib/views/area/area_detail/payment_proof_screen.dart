@@ -103,12 +103,11 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
         ),
       );
 
-      Navigator.pushAndRemoveUntil(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => const BookingHistoryScreen(),
         ),
-            (route) => false,
       );
     } catch (e) {
       final message = getErrorMessage(e);

@@ -369,42 +369,52 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
 
   Widget _buildTabsNav() {
     return Container(
-      color: primaryColor,
       width: double.infinity,
-      padding: const EdgeInsets.only(bottom: 12, top: 4),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: List.generate(_tabs.length, (index) {
-            final isActive = _activeTabIndex == index;
+      color: primaryColor,
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+      child: Row(
+        children: List.generate(_tabs.length, (index) {
+          final isActive = _activeTabIndex == index;
 
-            return GestureDetector(
-              onTap: () => setState(() => _activeTabIndex = index),
+          return Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                setState(() {
+                  _activeTabIndex = index;
+                });
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                height: 38,
+                margin: EdgeInsets.only(
+                  left: index == 0 ? 0 : 3,
+                  right: index == _tabs.length - 1 ? 0 : 3,
                 ),
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: isActive ? Colors.white : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white),
+                  border: Border.all(color: Colors.white, width: 1),
                 ),
-                child: Text(
-                  _tabs[index],
-                  style: TextStyle(
-                    color: isActive ? primaryColor : Colors.white,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 14,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _tabs[index],
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: isActive ? primaryColor : Colors.white,
+                      fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
-            );
-          }),
-        ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -498,7 +508,9 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       case 2:
         return CourtPriceTab(activeCourt: activeCourt);
       case 3:
-        return const CourtReviewTab();
+        return CourtReviewTab(
+          rentalAreaId: widget.rentalAreaId,
+        );
       default:
         return const SizedBox();
     }
