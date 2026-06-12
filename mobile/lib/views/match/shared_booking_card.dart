@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/booking_share.dart';
 import '../../services/booking_shared_service.dart';
+import '../area/booking/ticket_payment_proof_screen.dart';
 
 class SharedBookingCard extends StatefulWidget {
   final SharedBookingPublicResponse booking;
@@ -258,28 +259,66 @@ class _SharedBookingCardState extends State<SharedBookingCard> {
     });
 
     try {
-      await sharedBookingService.joinSharedBooking(
+      final result = await sharedBookingService.joinSharedBooking(
         bookingId: widget.booking.bookingId,
         quantity: quantity,
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đăng ký trận vãng lai thành công!'),
+          content: Text('Đăng ký vé vãng lai thành công!'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      await widget.onJoinSuccess();
-    } catch (error) {
-      if (!mounted) {
-        return;
+      // 1. Bóc tách ID lập tức (Bao trọn mọi cấu trúc Backend)
+      String? participantId;
+      Map<String, dynamic>? joinResultMap;
+
+      if (result is Map<String, dynamic>) {
+        joinResultMap = result;
+        participantId = result['participantId']?.toString();
+
+        if (participantId == null && result['result'] != null) {
+          participantId = result['result'] is Map
+              ? result['result']['participantId']?.toString()
+              : result['result'].toString();
+        }
+
+        if (participantId == null && result['data'] != null) {
+          participantId = result['data'] is Map
+              ? result['data']['participantId']?.toString()
+              : result['data'].toString();
+        }
+      } else if (result != null) {
+        participantId = result.toString();
       }
+
+      final String? finalParticipantId = participantId;
+
+      // 2. Refresh lại danh sách (KHÔNG DÙNG AWAIT ĐỂ TRÁNH UNMOUNT)
+      widget.onJoinSuccess();
+
+      // 3. Chuyển trang ngay và luôn
+      if (finalParticipantId != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TicketPaymentProofScreen(
+              participantId: finalParticipantId,
+              joinResult: joinResultMap,
+            ),
+          ),
+        );
+      } else {
+        // Fallback nếu Backend trả về rỗng
+        Navigator.pushNamed(context, '/booking-history');
+      }
+    } catch (error) {
+      if (!mounted) return;
 
       final message = error.toString().replaceFirst('Exception: ', '');
 

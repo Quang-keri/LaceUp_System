@@ -110,16 +110,12 @@ public class SettlementServiceImpl implements SettlementService {
             UUID rentalAreaId = rentalArea.getRentalAreaId();
 
             BigDecimal bookingRevenue = bookingRepository.sumSlotRevenueByDate(rentalAreaId, date);
-
-            BigDecimal initialPaidAmount = bookingRepository.sumInitialPaidAmountByDate(rentalAreaId, date);
-
-            BigDecimal matchJoinPaidAmount = paymentRepository.sumMatchJoinPaidAmount(rentalAreaId, date);
-
             bookingRevenue = bookingRevenue == null ? BigDecimal.ZERO : bookingRevenue;
-            initialPaidAmount = initialPaidAmount == null ? BigDecimal.ZERO : initialPaidAmount;
-            matchJoinPaidAmount = matchJoinPaidAmount == null ? BigDecimal.ZERO : matchJoinPaidAmount;
 
-            initialPaidAmount = initialPaidAmount.add(matchJoinPaidAmount);
+            BigDecimal adminCollected = transactionRepository.sumAdminCollectedByDate(rentalAreaId, date);
+            BigDecimal ownerCollected = transactionRepository.sumOwnerCollectedByDate(rentalAreaId, date);
+
+            BigDecimal initialPaidAmount = adminCollected.add(ownerCollected);
 
             BigDecimal extraServiceAmount = bookingServiceItemRepository.sumExtraServiceAmountOfCompletedBookings(rentalAreaId, date);
             extraServiceAmount = extraServiceAmount == null ? BigDecimal.ZERO : extraServiceAmount;
@@ -130,15 +126,12 @@ public class SettlementServiceImpl implements SettlementService {
                 continue;
             }
 
-            BigDecimal totalBaseRevenue = bookingRevenue.add(matchJoinPaidAmount);
-
             BigDecimal commissionRate = commissionService.getApplicableRate(rentalAreaId);
-
-            BigDecimal commissionAmount = totalBaseRevenue
+            BigDecimal commissionAmount = bookingRevenue
                     .multiply(commissionRate)
                     .setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal ownerAmount = initialPaidAmount
+            BigDecimal ownerAmount = adminCollected
                     .subtract(commissionAmount)
                     .setScale(2, RoundingMode.HALF_UP);
 

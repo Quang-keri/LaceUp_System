@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile/services/booking_service.dart';
+import 'package:mobile/services/booking_shared_service.dart';
 import 'package:mobile/utils/error_utils.dart';
 
 import '../../area/area_detail/payment_proof_screen.dart';
 import '../../area/booking/ticket_payment_proof_screen.dart';
 import '../../../models/selected_booking_slot.dart';
+import '../profile_screen.dart';
 
 class BookingHistoryScreen extends StatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -220,11 +222,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       if (isShared) {
         final participantId = booking['participantId']?.toString();
         if (participantId == null) throw Exception("Không tìm thấy mã vé");
-        await bookingService.cancelSharedTicketByUser(participantId);
+
+        final res = await sharedBookingService.cancelSharedTicketByUser(
+          participantId,
+        );
+
         if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hủy vé vãng lai thành công!'),
+          SnackBar(
+            content: Text(res['message'] ?? 'Hủy vé vãng lai thành công!'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -493,12 +500,16 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   }
 
   void _backToProfile() {
-    if (!mounted) return;
-
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).popUntil((route) => route.isFirst);
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const ProfileScreen(),
+        ),
+      );
+    }
   }
 
   bool _canCancelBooking(dynamic booking) {
@@ -1398,11 +1409,11 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-
-        _backToProfile();
+        // if (didPop) return;
+        //
+        // _backToProfile();
       },
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
@@ -1414,9 +1425,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           ),
           title: const Text(
             'Lịch sử đặt sân',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
@@ -1434,10 +1443,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
         body: TabBarView(
           controller: tabController,
           children: [_pendingTab(), _historyTab()],
-          children: [
-            _pendingTab(),
-            _bookedTab(),
-          ],
         ),
       ),
     );
