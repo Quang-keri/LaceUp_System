@@ -17,150 +17,200 @@ import java.util.*;
 public class VnPayConfig {
 
     @Value("${vnpay.version}")
-    private String vnp_Version;
+    private String version;
 
     @Value("${vnpay.command}")
-    private String vnp_Command;
+    private String command;
 
     @Value("${vnpay.pay-url}")
-    private String vnp_PayUrl;
+    private String payUrl;
 
     @Value("${vnpay.return-url}")
-    private String vnp_ReturnUrl;
+    private String returnUrl;
 
     @Value("${vnpay.tmn-code}")
-    private String vnp_TmnCode;
+    private String tmnCode;
 
     @Value("${vnpay.hash-secret}")
-    private String vnp_HashSecret;
+    private String hashSecret;
 
-    public String createPaymentUrl(long orderCode, long amountInVnd, String description) {
+    private static final TimeZone VN_TIMEZONE = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
+    private static final String DATE_PATTERN = "yyyyMMddHHmmss";
+
+    // =========================
+    // PUBLIC: CREATE PAYMENT URL
+    // =========================
+    public String createPaymentUrl(long orderCode, long amountVnd, String orderInfo) {
+
+        Map<String, String> params = buildParams(orderCode, amountVnd, orderInfo);
+
+        String query = buildQueryString(params);
+        String hashData = buildHashData(params);
+        String secureHash = hmacSHA512(hashSecret, hashData);
+
+        return payUrl + "?" + query + "&vnp_SecureHash=" + secureHash;
+    }
+
+    // =========================
+    // PARAM BUILDER
+    // =========================
+    private Map<String, String> buildParams(long orderCode, long amountVnd, String orderInfo) {
+
         Map<String, String> params = new HashMap<>();
 
-        params.put("vnp_Version", vnp_Version);
-        params.put("vnp_Command", vnp_Command);
-        params.put("vnp_TmnCode", vnp_TmnCode);
-        params.put("vnp_Amount", String.valueOf(amountInVnd * 100));
+        params.put("vnp_Version", version);
+        params.put("vnp_Command", command);
+        params.put("vnp_TmnCode", tmnCode);
+
+        // VNPay yêu cầu *100
+        params.put("vnp_Amount", String.valueOf(amountVnd * 100));
         params.put("vnp_CurrCode", "VND");
 
         params.put("vnp_TxnRef", String.valueOf(orderCode));
-        params.put("vnp_OrderInfo", description != null ? description : "Thanh toan don hang " + orderCode);
+        params.put("vnp_OrderInfo",
+                orderInfo != null ? orderInfo : "Thanh toan don hang " + orderCode);
+
         params.put("vnp_OrderType", "other");
         params.put("vnp_Locale", "vn");
-        params.put("vnp_ReturnUrl", vnp_ReturnUrl);
-        params.put("vnp_IpAddr", getCurrentIpAddress());
 
-        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-        params.put("vnp_CreateDate", formatter.format(cld.getTime()));
-// Hết hạn sau 15 phút
-        cld.add(Calendar.MINUTE, 15);
-        params.put("vnp_ExpireDate", formatter.format(cld.getTime()));
+        params.put("vnp_ReturnUrl", returnUrl);
+        params.put("vnp_IpAddr", getClientIp());
 
-        return buildQueryUrl(params);
+        String createDate = formatNow();
+        params.put("vnp_CreateDate", createDate);
+
+        Calendar expire = Calendar.getInstance(VN_TIMEZONE);
+        expire.setTime(new Date());
+        expire.add(Calendar.MINUTE, 15);
+        params.put("vnp_ExpireDate", new SimpleDateFormat(DATE_PATTERN).format(expire.getTime()));
+
+        return params;
     }
 
-    public boolean verifySignature(Map<String, String> fields) {
-        Map<String, String> vnpParams = new HashMap<>(fields);
-
-        String vnp_SecureHash = vnpParams.remove("vnp_SecureHash");
-        if (vnp_SecureHash == null) return false;
-
-        vnpParams.remove("vnp_SecureHashType");
-
-        String signValue = hashAllFields(vnpParams);
-        return signValue.equals(vnp_SecureHash);
+    // =========================
+    // QUERY STRING (URL)
+    // =========================
+    private String buildQueryString(Map<String, String> params) {
+        return buildSortedString(params, true);
     }
 
-    private String hashAllFields(Map<String, String> fields) {
-        List<String> fieldNames = new ArrayList<>(fields.keySet());
+    // =========================
+    // HASH DATA STRING
+    // =========================
+    private String buildHashData(Map<String, String> params) {
+        return buildSortedString(params, false);
+    }
+
+    // =========================
+    // CORE SORT + ENCODE LOGIC
+    // =========================
+    private String buildSortedString(Map<String, String> params, boolean encodeKey) {
+
+        List<String> fieldNames = new ArrayList<>(params.keySet());
         Collections.sort(fieldNames);
+
         StringBuilder sb = new StringBuilder();
 
         try {
-            for (String fieldName : fieldNames) {
-                String fieldValue = fields.get(fieldName);
-                if (fieldValue != null && !fieldValue.isEmpty()) {
-                    sb.append(fieldName)
-                            .append("=")
-                            .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()))
-                            .append("&");
+            for (String key : fieldNames) {
+                String value = params.get(key);
+
+                if (value == null || value.isEmpty()) continue;
+
+                if (sb.length() > 0) sb.append("&");
+
+                String encodedKey = URLEncoder.encode(key, StandardCharsets.UTF_8);
+                String encodedValue = URLEncoder.encode(value, StandardCharsets.UTF_8);
+
+                if (encodeKey) {
+                    sb.append(encodedKey).append("=").append(encodedValue);
+                } else {
+                    sb.append(key).append("=").append(encodedValue);
                 }
             }
-            if (sb.length() > 0) sb.setLength(sb.length() - 1);
-            return hmacSHA512(vnp_HashSecret, sb.toString());
         } catch (Exception e) {
-            throw new RuntimeException("Lỗi mã hóa dữ liệu hash của VNPay", e);
+            throw new RuntimeException("Error building VNPay string", e);
         }
+
+        return sb.toString();
     }
 
-    private String buildQueryUrl(Map<String, String> params) {
-        List<String> fieldNames = new ArrayList<>(params.keySet());
-        Collections.sort(fieldNames);
-        StringBuilder hashData = new StringBuilder();
-        StringBuilder query = new StringBuilder();
+    // =========================
+    // VERIFY SIGNATURE
+    // =========================
+    public boolean verifySignature(Map<String, String> fields) {
 
-        try {
-            for (String fieldName : fieldNames) {
-                String fieldValue = params.get(fieldName);
-                if (fieldValue != null && !fieldValue.isEmpty()) {
-                    hashData.append(fieldName).append("=").append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString())).append("&");
-                    query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()))
-                            .append("=")
-                            .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()))
-                            .append("&");
-                }
-            }
-            String queryUrl = query.substring(0, query.length() - 1);
-            String hashDataStr = hashData.substring(0, hashData.length() - 1);
-            String vnp_SecureHash = hmacSHA512(vnp_HashSecret, hashDataStr);
-            return vnp_PayUrl + "?" + queryUrl + "&vnp_SecureHash=" + vnp_SecureHash;
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi tạo URL VNPay", e);
-        }
+        Map<String, String> data = new HashMap<>(fields);
+
+        String secureHash = data.remove("vnp_SecureHash");
+        data.remove("vnp_SecureHashType");
+
+        if (secureHash == null) return false;
+
+        String signData = buildHashData(data);
+        String calculatedHash = hmacSHA512(hashSecret, signData);
+
+        return calculatedHash.equalsIgnoreCase(secureHash);
     }
 
-//    private String hashAllFields(Map<String, String> fields) {
-//        List<String> fieldNames = new ArrayList<>(fields.keySet());
-//        Collections.sort(fieldNames);
-//        StringBuilder sb = new StringBuilder();
-//        for (String fieldName : fieldNames) {
-//            String fieldValue = fields.get(fieldName);
-//            if (fieldValue != null && !fieldValue.isEmpty()) {
-//                sb.append(fieldName).append("=").append(fieldValue).append("&");
-//            }
-//        }
-//        if (sb.length() > 0) sb.setLength(sb.length() - 1);
-//        return hmacSHA512(vnp_HashSecret, sb.toString());
-//    }
-
+    // =========================
+    // HMAC SHA512
+    // =========================
     private String hmacSHA512(String key, String data) {
         try {
             Mac hmac512 = Mac.getInstance("HmacSHA512");
-            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(), "HmacSHA512");
+            SecretKeySpec secretKey = new SecretKeySpec(
+                    key.getBytes(StandardCharsets.UTF_8),
+                    "HmacSHA512"
+            );
+
             hmac512.init(secretKey);
-            byte[] result = hmac512.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(2 * result.length);
-            for (byte b : result) {
-                sb.append(String.format("%02x", b & 0xff));
+
+            byte[] bytes = hmac512.doFinal(data.getBytes(StandardCharsets.UTF_8));
+
+            StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b));
             }
+
             return sb.toString();
-        } catch (Exception ex) {
-            return "";
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating HMAC SHA512", e);
         }
     }
 
-    private String getCurrentIpAddress() {
+    // =========================
+    // TIME FORMAT
+    // =========================
+    private String formatNow() {
+        SimpleDateFormat formatter = new SimpleDateFormat(DATE_PATTERN);
+        formatter.setTimeZone(VN_TIMEZONE);
+        return formatter.format(new Date());
+    }
+
+    // =========================
+    // CLIENT IP SAFE
+    // =========================
+    private String getClientIp() {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-            if (attributes != null) {
-                HttpServletRequest request = attributes.getRequest();
-                String ip = request.getHeader("X-FORWARDED-FOR");
-                return (ip != null && !ip.isEmpty()) ? ip : request.getRemoteAddr();
+            ServletRequestAttributes attr =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+
+            if (attr == null) return "127.0.0.1";
+
+            HttpServletRequest request = attr.getRequest();
+
+            String ip = request.getHeader("X-Forwarded-For");
+
+            if (ip != null && !ip.isEmpty()) {
+                return ip.split(",")[0].trim();
             }
+
+            return request.getRemoteAddr();
+
         } catch (Exception e) {
-            // Fallback nếu không lấy được
+            return "127.0.0.1";
         }
-        return "127.0.0.1";
     }
 }
