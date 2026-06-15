@@ -235,7 +235,7 @@ const BookingDetailDrawer: React.FC<Props> = ({
     AntModal.confirm({
       title: isSharedTicket
         ? "Xác nhận hủy vé vãng lai?"
-        : "Xác nhận hủy booking?",
+        : "Xác nhận hủy đặt sân?",
       content: isSharedTicket ? (
         <span>
           Bạn đang yêu cầu hủy vé vãng lai. Theo quy định, tiền mua vé sẽ
@@ -249,7 +249,7 @@ const BookingDetailDrawer: React.FC<Props> = ({
         </span>
       ) : (
         <span>
-          Bạn đang hủy lịch trước 5 giờ. Theo quy định, tiền cọc sẽ
+          Bạn đang hủy lịch đặt sân. Theo quy định, tiền cọc sẽ
           <b> không được hoàn lại</b>. Bạn có chắc chắn muốn hủy?
         </span>
       ),

@@ -198,7 +198,7 @@ const MatchManagement: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <Title level={3} className="!mb-0">
-            Quản lý Trận đấu Vãng lai
+            Quản lý Trận đấu
           </Title>
           <Typography.Text type="secondary">
             Quản lý, theo dõi các trận ghép sân cộng đồng và xử lý tranh chấp

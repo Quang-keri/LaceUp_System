@@ -16,7 +16,8 @@ export default function CreateCourtModal({
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
 
-  // State quản lý việc nhập giá nháp
+  const [imageError, setImageError] = useState<string>("");
+
   const [isDraftPriceOpen, setIsDraftPriceOpen] = useState(false);
   const [draftPrices, setDraftPrices] = useState<any>(null);
 
@@ -31,11 +32,10 @@ export default function CreateCourtModal({
   const handleSubmit = async (values: any) => {
     try {
       if (fileList.length < 1) {
-        message.error("Phải upload ít nhất 1 ảnh");
+        setImageError("Bắt buộc phải upload ít nhất 1 ảnh!");
         return;
       }
 
-      // KIỂM TRA BẮT BUỘC PHẢI NHẬP GIÁ TRƯỚC KHI TẠO SÂN
       if (
         !draftPrices ||
         !draftPrices.prices ||
@@ -195,13 +195,33 @@ export default function CreateCourtModal({
             <Input placeholder="Ví dụ: Sân số 1, Sân số 2..." />
           </Form.Item>
 
-          <Form.Item label="Ảnh sân (1-2 ảnh)">
+          <Form.Item
+            label="Ảnh sân (1-2 ảnh)"
+            required
+            validateStatus={imageError ? "error" : ""} // Bật viền đỏ nếu có lỗi
+            help={imageError || "Hỗ trợ định dạng JPG, PNG. Tối đa 10MB/ảnh."} // Hiện lỗi hoặc dòng nhắc nhở
+          >
             <Upload
               listType="picture-card"
-              beforeUpload={() => false}
-              fileList={fileList}
-              onChange={({ fileList }) => setFileList(fileList)}
               maxCount={2}
+              fileList={fileList}
+              beforeUpload={(file) => {
+                const isLt10M = file.size / 1024 / 1024 < 10;
+                if (!isLt10M) {
+                  setImageError(
+                    `Ảnh "${file.name}" vượt quá 10MB. Vui lòng chọn ảnh nhẹ hơn!`,
+                  );
+                  return Upload.LIST_IGNORE;
+                }
+                setImageError("");
+                return false;
+              }}
+              onChange={({ fileList: newFileList }) => {
+                setFileList(newFileList);
+                if (newFileList.length > 0) {
+                  setImageError("");
+                }
+              }}
             >
               {fileList.length >= 2 ? null : <PlusOutlined />}
             </Upload>

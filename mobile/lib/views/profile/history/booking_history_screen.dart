@@ -136,7 +136,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
           children: [
             TextSpan(
-              text: 'Bạn đang hủy lịch quá sát giờ, dưới 5 giờ. Bạn sẽ ',
+              text: 'Bạn đang hủy lịch quá sát giờ sẽ ',
               style: TextStyle(color: Colors.black),
             ),
             TextSpan(
@@ -167,7 +167,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     } else {
       content = const Text.rich(
         TextSpan(
-          text: 'Bạn đang hủy lịch trước 5 giờ. Theo quy định, tiền cọc sẽ ',
+          text: 'Bạn đang hủy lịch đặt sân. Theo quy định, tiền cọc sẽ ',
           children: [
             TextSpan(
               text: 'không được hoàn lại',
@@ -183,7 +183,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          isShared ? 'Xác nhận hủy vé vãng lai?' : 'Xác nhận hủy booking?',
+          isShared ? 'Xác nhận hủy vé vãng lai?' : 'Xác nhận hủy đặt sân?',
           style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
         ),
         content: content,
