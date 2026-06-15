@@ -205,31 +205,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildDividerText() {
-    return const Row(
-      children: [
-        Expanded(
-          child: Divider(),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: 14,
-          ),
-          child: Text(
-            'HOẶC',
-            style: TextStyle(
-              color: Colors.black38,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -409,53 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
-
-                  _buildDividerText(),
-
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        showTopMessage(
-                          context,
-                          'Tính năng đăng nhập Google đang phát triển',
-                          isError: true,
-                        );
-                      },
-                      icon: const Text(
-                        'G',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      label: const Text(
-                        'Tiếp tục với Google',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        side: const BorderSide(
-                          color: primaryColor,
-                          width: 1.2,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                          BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 20),
 
                   SizedBox(
                     width: double.infinity,
