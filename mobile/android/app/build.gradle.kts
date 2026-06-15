@@ -1,4 +1,3 @@
-// Thêm phần import ở dòng đầu tiên của file
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -8,9 +7,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Đọc file key.properties
+// ======================
+// LOAD KEYSTORE
+// ======================
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
+
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
@@ -18,19 +20,23 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.laceup.sport"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "28.1.13356709"
+    ndkVersion = flutter.ndkVersion
 
-    signingConfigs {
-        create("release") {
-            // Đảm bảo lấy giá trị từ file properties
-            val storeFilePath = keystoreProperties.getProperty("storeFile")
-            storeFile = if (storeFilePath != null) file(storeFilePath) else null
-            storePassword = keystoreProperties.getProperty("storePassword")
-            keyAlias = keystoreProperties.getProperty("keyAlias")
-            keyPassword = keystoreProperties.getProperty("keyPassword")
-        }
+    // ======================
+    // JAVA / KOTLIN CONFIG
+    // ======================
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    // ======================
+    // DEFAULT CONFIG
+    // ======================
     defaultConfig {
         applicationId = "com.laceup.sport"
         minSdk = flutter.minSdkVersion
@@ -39,9 +45,28 @@ android {
         versionName = flutter.versionName
     }
 
+    // ======================
+    // SIGNING CONFIG (PLAY STORE)
+    // ======================
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storePassword = keystoreProperties["storePassword"] as String
+
+            storeFile = keystoreProperties["storeFile"]?.let {
+                file(it as String)
+            }
+        }
+    }
+
+    // ======================
+    // BUILD TYPES
+    // ======================
     buildTypes {
-        getByName("release") {
+        release {
             signingConfig = signingConfigs.getByName("release")
+
             isMinifyEnabled = false
             isShrinkResources = false
         }
