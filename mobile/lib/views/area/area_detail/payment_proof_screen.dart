@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/utils/error_utils.dart';
 import 'package:mobile/utils/top_message.dart';
@@ -35,7 +36,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
   final Color primaryColor = const Color(0xFF9156F1);
   final Color confirmColor = const Color(0xFFEA580C);
 
-  File? selectedImage;
+  XFile? selectedImage;
   bool uploading = false;
 
   String get bankName {
@@ -73,37 +74,25 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
     if (picked == null) return;
 
     setState(() {
-      selectedImage = File(picked.path);
+      selectedImage = picked;
     });
   }
 
   Future<void> _uploadProof() async {
     if (selectedImage == null) {
-      showTopMessage(
-        context,
-        'Vui lòng chọn ảnh chuyển khoản',
-      );
+      showTopMessage(context, 'Vui lòng chọn ảnh chuyển khoản');
       return;
     }
 
     setState(() => uploading = true);
 
-    debugPrint('====================================');
-    debugPrint('[PAYMENT DEBUG] Bắt đầu gọi API upload...');
-    debugPrint('[PAYMENT DEBUG] File: ${selectedImage!.path}');
-    debugPrint('====================================');
-
     try {
-      final result = await bookingService.uploadPaymentProof(
+      await bookingService.uploadPaymentProof(
         bookingIntentId: widget.bookingId,
-        imagePath: selectedImage!.path,
+        image: selectedImage!,
       );
 
       if (!mounted) return;
-
-      // IN RA KẾT QUẢ KHI THÀNH CÔNG
-      debugPrint('[PAYMENT DEBUG] UPLOAD THÀNH CÔNG!');
-      debugPrint('[PAYMENT DEBUG] Result trả về: $result');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -114,67 +103,72 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const BookingHistoryScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const BookingHistoryScreen()),
       );
-    } catch (e, stackTrace) {
-      // IN RA TOÀN BỘ THÔNG TIN LỖI TRONG CONSOLE
-      debugPrint('🛑 ========= LỖI RỒI - XEM CHI TIẾT TẠI ĐÂY ========= 🛑');
-      debugPrint('[PAYMENT DEBUG] Kiểu dữ liệu của Lỗi: ${e.runtimeType}');
-      debugPrint('[PAYMENT DEBUG] Thông báo lỗi thô (e.toString()): $e');
-
-      // Kiểm tra xem lỗi có kèm Response từ Server không (Thường gặp nếu dùng thư viện Dio)
-      try {
-        final dynamic errorObj = e;
-        if (errorObj.response != null) {
-          debugPrint('[PAYMENT DEBUG] 👉 Mã lỗi HTTP từ Server: ${errorObj.response?.statusCode}');
-          debugPrint('[PAYMENT DEBUG] 👉 Data lỗi cụ thể từ Server: ${errorObj.response?.data}');
-        }
-      } catch (_) {
-        // Bỏ qua nếu đối tượng lỗi không phải là Network Error/DioError
-      }
-
-      debugPrint('[PAYMENT DEBUG] Vị trí lỗi chính xác (Stack Trace):');
-      debugPrint(stackTrace.toString());
-      debugPrint('🛑 ================================================= 🛑');
-
+    } catch (e) {
       if (!mounted) return;
 
-      // HIỂN THỊ CẢ LỖI THÔ LÊN MÀN HÌNH (Gom cả message lẫn kết quả lỗi thô)
-      final cleanMessage = getErrorMessage(e);
+      String errorMsg = getErrorMessage(e);
 
-      // Tạo chuỗi hiển thị bao gồm lỗi đã dịch và lỗi thô từ hệ thống
-      String errorToDisplay = 'Thông báo: $cleanMessage\n\nLỗi hệ thống: $e';
-
-      // Nếu có response data từ server thì cộng thêm vào để nhìn cho rõ
-      try {
-        final dynamic errorObj = e;
-        if (errorObj.response?.data != null) {
-          errorToDisplay += '\n\nServer Data: ${errorObj.response.data}';
-        }
-      } catch (_) {}
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: SingleChildScrollView(
-            child: Text(
-              errorToDisplay,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-            ),
-          ),
-          backgroundColor: Colors.red.shade800,
-          duration: const Duration(seconds: 10), // Cho hiện 10 giây để kịp đọc/chụp màn hình
-          action: SnackBarAction(
-            label: 'ĐÓNG',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
-        ),
-      );
+      // Bắt lỗi kích thước file và hiển thị popup
+      if (errorMsg.toLowerCase().contains('maximum upload size exceeded') ||
+          errorMsg.toLowerCase().contains('size limit')) {
+        _showErrorDialog(
+          'Kích thước ảnh quá lớn.\nVui lòng chọn ảnh chuyển khoản có dung lượng tối đa dưới 10MB.',
+        );
+      } else {
+        _showErrorDialog('Đã xảy ra lỗi: $errorMsg');
+      }
     } finally {
       if (mounted) setState(() => uploading = false);
     }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'Không thể tải ảnh',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(height: 1.4, fontSize: 15),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: confirmColor,
+              minimumSize: const Size(120, 40),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Đã hiểu',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -212,12 +206,12 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
           child: uploading
               ? const CircularProgressIndicator(color: Colors.white)
               : const Text(
-            'Xác nhận đã tải ảnh chuyển khoản',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+                  'Xác nhận đã tải ảnh chuyển khoản',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
         ),
       ),
       body: ListView(
@@ -236,25 +230,13 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                 const SizedBox(height: 12),
                 _infoRow('Ngân hàng', bankName),
 
-                _infoRow(
-                  'Số tài khoản',
-                  accountNumber,
-                  enableCopy: true,
-                ),
+                _infoRow('Số tài khoản', accountNumber, enableCopy: true),
 
-                _infoRow(
-                  'Chủ tài khoản',
-                  accountName,
-                  enableCopy: true,
-                ),
+                _infoRow('Chủ tài khoản', accountName, enableCopy: true),
 
                 _infoRow('Số tiền', totalStr),
 
-                _infoRow(
-                  'Nội dung',
-                  transferContent,
-                  enableCopy: true,
-                ),
+                _infoRow('Nội dung', transferContent, enableCopy: true),
               ],
             ),
           ),
@@ -323,12 +305,19 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                 if (selectedImage != null)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      selectedImage!,
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+                    child: kIsWeb
+                        ? Image.network(
+                            selectedImage!.path,
+                            height: 220,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(selectedImage!.path),
+                            height: 220,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
                   )
                 else
                   Container(
@@ -365,11 +354,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
     );
   }
 
-  Widget _infoRow(
-      String label,
-      String value, {
-        bool enableCopy = false,
-      }) {
+  Widget _infoRow(String label, String value, {bool enableCopy = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -377,32 +362,21 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
         children: [
           SizedBox(
             width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.black54),
-            ),
+            child: Text(label, style: const TextStyle(color: Colors.black54)),
           ),
 
           Expanded(
             child: Text(
               value.isEmpty ? 'Chưa có' : value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
 
           if (enableCopy && value.isNotEmpty)
             IconButton(
-              icon: Icon(
-                Icons.copy_rounded,
-                size: 20,
-                color: primaryColor,
-              ),
+              icon: Icon(Icons.copy_rounded, size: 20, color: primaryColor),
               onPressed: () async {
-                await Clipboard.setData(
-                  ClipboardData(text: value),
-                );
+                await Clipboard.setData(ClipboardData(text: value));
 
                 if (!mounted) return;
 

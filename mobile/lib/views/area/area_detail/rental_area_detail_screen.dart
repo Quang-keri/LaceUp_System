@@ -510,6 +510,11 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
       case 3:
         return CourtReviewTab(
           rentalAreaId: widget.rentalAreaId,
+          onNavigateToBooking: () {
+            setState(() {
+              _activeTabIndex = 0;
+            });
+          },
         );
       default:
         return const SizedBox();

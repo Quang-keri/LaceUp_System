@@ -322,6 +322,8 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                                                     ? AddressResponse.builder().street(intent.getRentalArea().getAddress().getStreet()).ward(intent.getRentalArea().getAddress().getWard()).city(CityResponse.builder().cityName(intent.getRentalArea().getAddress().getCity().getCityName()).build()).build()
                                                     : null
                                     )
+                                    .contactName(intent.getRentalArea().getContactName())
+                                    .contactPhone(intent.getRentalArea().getContactPhone())
                                     .build()
                                     : null
                             )

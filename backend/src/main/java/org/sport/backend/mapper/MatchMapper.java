@@ -90,7 +90,7 @@ public interface MatchMapper {
                 .note(match.getNote())
 
                 .host(hostResponse)
-                .ownerCourt(ownerCourtResponse) // Gán OwnerCourt vào Response
+                .ownerCourt(ownerCourtResponse)
 
                 .reports(match.getReports() == null ? Collections.emptyList() :
                         match.getReports().stream()
@@ -114,6 +114,24 @@ public interface MatchMapper {
                                     userRes.setIsPaid(reg.getIsPaid());
                                     userRes.setPlayerCount(reg.getPlayerCount());
                                     userRes.setIsCancelled(reg.getIsCancelled());
+
+                                    if (reg.getPayments() != null && !reg.getPayments().isEmpty()) {
+                                        reg.getPayments().stream()
+                                                .max(Comparator.comparing(org.sport.backend.entity.Payment::getTransactionDate))
+                                                .ifPresent(payment -> {
+                                                    if (payment.getPaymentStatus() != null) {
+                                                        if (payment.getPaymentStatus() == org.sport.backend.constant.PaymentStatus.PENDING) {
+                                                            if (payment.getProof() == null || payment.getProof().trim().isEmpty()) {
+                                                                userRes.setPaymentStatus("UNPAID");
+                                                            } else {
+                                                                userRes.setPaymentStatus("PENDING");
+                                                            }
+                                                        } else {
+                                                            userRes.setPaymentStatus(payment.getPaymentStatus().name());
+                                                        }
+                                                    }
+                                                });
+                                    }
 
                                     return userRes;
                                 })

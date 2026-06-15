@@ -7,6 +7,7 @@ import org.sport.backend.dto.base.BaseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -51,4 +52,7 @@ public class MatchRegistration extends BaseEntity {
     @Column(name = "is_cancelled")
     @Builder.Default
     private Boolean isCancelled = false;
+
+    @OneToMany(mappedBy = "matchRegistration", fetch = FetchType.LAZY)
+    private List<Payment> payments;
 }

@@ -206,7 +206,16 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      _showTopMessage(getErrorMessage(e), isError: true);
+      String errorMsg = getErrorMessage(e);
+
+      if (errorMsg.toLowerCase().contains('maximum upload size exceeded') ||
+          errorMsg.toLowerCase().contains('size limit')) {
+        _showErrorDialog(
+          'Kích thước ảnh quá lớn.\nVui lòng chọn ảnh chuyển khoản có dung lượng tối đa dưới 10MB.',
+        );
+      } else {
+        _showErrorDialog('Đã xảy ra lỗi: $errorMsg');
+      }
     } finally {
       if (mounted) {
         setState(() => isUploading = false);
@@ -221,6 +230,53 @@ class _MatchPaymentScreenState extends State<MatchPaymentScreen> {
         backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'Không thể tải ảnh',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(height: 1.4, fontSize: 15),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: confirmColor,
+              minimumSize: const Size(120, 40),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Đã hiểu',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

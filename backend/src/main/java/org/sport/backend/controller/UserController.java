@@ -33,6 +33,7 @@ public class UserController {
 
     private final UserService userService;
     private final AccountDeletionServiceImpl accountDeletionService;
+
     @PostMapping("/me/account-deletion")
     public ResponseEntity<DeleteAccountResponse> requestDeletion(
 
@@ -47,6 +48,7 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/my-info")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<UserResponse>> getMyInfo() {

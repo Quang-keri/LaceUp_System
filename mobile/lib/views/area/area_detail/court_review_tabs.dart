@@ -8,8 +8,13 @@ import '../../../services/review_service.dart';
 
 class CourtReviewTab extends StatefulWidget {
   final String rentalAreaId;
+  final VoidCallback? onNavigateToBooking;
 
-  const CourtReviewTab({super.key, required this.rentalAreaId});
+  const CourtReviewTab({
+    super.key,
+    required this.rentalAreaId,
+    this.onNavigateToBooking,
+  });
 
   @override
   State<CourtReviewTab> createState() => _CourtReviewTabState();
@@ -17,6 +22,7 @@ class CourtReviewTab extends StatefulWidget {
 
 class _CourtReviewTabState extends State<CourtReviewTab> {
   static const Color primaryColor = Color(0xFF9156F1);
+  static const Color accentColor = Color(0xFFFF9800);
   static const int pageSize = 5;
 
   List<ReviewData> reviews = [];
@@ -93,7 +99,6 @@ class _CourtReviewTabState extends State<CourtReviewTab> {
     try {
       final result = await reviewService.getReviewsByRentalArea(
         widget.rentalAreaId,
-        // Backend dùng page bắt đầu từ 0.
         page: currentPage - 1,
         size: pageSize,
       );
@@ -140,6 +145,7 @@ class _CourtReviewTabState extends State<CourtReviewTab> {
     ReviewData? mine;
 
     try {
+      // Dùng API thật để check từ backend
       eligible = await reviewService.checkEligibility(widget.rentalAreaId);
 
       if (eligible) {
@@ -263,7 +269,7 @@ class _CourtReviewTabState extends State<CourtReviewTab> {
                                     ? Icons.star_rounded
                                     : Icons.star_border_rounded,
                                 color: selected
-                                    ? primaryColor
+                                    ? accentColor
                                     : Colors.grey.shade400,
                               ),
                             );
@@ -478,8 +484,7 @@ class _CourtReviewTabState extends State<CourtReviewTab> {
   }
 
   Widget _buildHeader() {
-    final bool canWriteReview =
-        isEligible && myReview == null && !loadingUserData;
+    final bool showReviewButton = myReview == null && !loadingUserData;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -503,9 +508,25 @@ class _CourtReviewTabState extends State<CourtReviewTab> {
             ),
           ),
         ),
-        if (canWriteReview)
+        if (showReviewButton)
           ElevatedButton.icon(
-            onPressed: _openReviewModal,
+            onPressed: () {
+              if (isEligible) {
+                _openReviewModal();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Vui lòng đặt lịch và trải nghiệm sân để đánh giá!',
+                    ),
+                    backgroundColor: accentColor,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+
+                widget.onNavigateToBooking?.call();
+              }
+            },
             icon: const Icon(Icons.edit_outlined, size: 17),
             label: const Text('Viết đánh giá'),
             style: ElevatedButton.styleFrom(
@@ -658,7 +679,7 @@ class _CourtReviewTabState extends State<CourtReviewTab> {
         return Icon(
           selected ? Icons.star_rounded : Icons.star_border_rounded,
           size: 19,
-          color: selected ? primaryColor : Colors.grey.shade50,
+          color: selected ? accentColor : Colors.grey.shade300,
         );
       }),
     );

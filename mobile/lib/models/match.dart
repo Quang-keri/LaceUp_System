@@ -40,7 +40,7 @@ class MatchRequest {
     this.minRank,
     this.maxRank,
     this.note,
-    this.playerCount
+    this.playerCount,
   });
 
   Map<String, dynamic> toJson() {
@@ -110,6 +110,8 @@ class MatchResponse {
   final double price;
   final String status;
   final UserResponse? host;
+  final UserResponse? ownerCourt; // Đã chuyển thành nullable cho an toàn
+  final String? ownerCourtPhone; // Thêm field lấy sđt chủ sân
   final double hostRating;
   final String level;
   final bool hasCourt;
@@ -142,7 +144,9 @@ class MatchResponse {
     required this.remainingSlots,
     required this.price,
     required this.status,
-    required this.host,
+    this.host,
+    this.ownerCourt,
+    this.ownerCourtPhone,
     required this.hostRating,
     required this.level,
     required this.hasCourt,
@@ -182,6 +186,11 @@ class MatchResponse {
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
       status: json['status']?.toString() ?? '',
       host: json['host'] != null ? UserResponse.fromJson(json['host']) : null,
+      ownerCourt: json['ownerCourt'] != null
+          ? UserResponse.fromJson(json['ownerCourt'])
+          : null,
+      ownerCourtPhone: json['ownerCourt']?['phone']?.toString(),
+      // Map sđt từ json
       hostRating: double.tryParse(json['hostRating']?.toString() ?? '0') ?? 0.0,
       level: json['level']?.toString() ?? '',
       hasCourt: json['hasCourt'] as bool? ?? false,

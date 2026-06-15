@@ -67,12 +67,18 @@ class ReviewService {
       }
 
       if (result is Map) {
+        // CHẶN BỔ SUNG: Đảm bảo Map này thực sự là data Review chứ không phải vỏ bọc API
+        if (!result.containsKey('reviewId') &&
+            !result.containsKey('id') &&
+            !result.containsKey('rating')) {
+          return null;
+        }
+
         return ReviewData.fromJson(Map<String, dynamic>.from(result));
       }
 
       return null;
     } on DioException catch (error) {
-      // Chưa đánh giá thì backend có thể trả 404.
       if (error.response?.statusCode == 404) {
         return null;
       }
@@ -99,8 +105,16 @@ class ReviewService {
   }
 
   dynamic _unwrapResult(dynamic data) {
-    if (data is Map && data.containsKey('result')) {
-      return data['result'];
+    if (data is Map) {
+      if (data.containsKey('result')) {
+        return data['result'];
+      }
+
+      // XỬ LÝ LỖI MẤT FIELD: Nếu backend ẩn field result do null,
+      // nhưng vẫn còn vỏ code/message/status thì trả về null.
+      if (data.containsKey('code') || data.containsKey('message') || data.containsKey('status')) {
+        return null;
+      }
     }
 
     return data;

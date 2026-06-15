@@ -3,6 +3,7 @@ package org.sport.backend.dto.response.booking;
 import lombok.*;
 import org.sport.backend.constant.BookingStatus;
 import org.sport.backend.constant.BookingType;
+import org.sport.backend.constant.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,5 +34,5 @@ public class SharedBookingPublicResponse {
     private UUID rentalAreaId;
     private String rentalAreaName;
     private String categoryName;
-
+    private PaymentStatus currentUserPaymentStatus;
 }

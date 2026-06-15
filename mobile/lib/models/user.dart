@@ -80,6 +80,7 @@ class UserResponse {
   final bool? isPaid;
   final int? playerCount;
   final bool? isCancelled;
+  final String? paymentStatus;
 
   final BankAccountResponse? bankAccount;
 
@@ -107,6 +108,7 @@ class UserResponse {
     this.playerCount,
     this.bankAccount,
     this.isCancelled,
+    this.paymentStatus
   });
 
   factory UserResponse.fromJson(Map<String, dynamic> json) {
@@ -139,6 +141,7 @@ class UserResponse {
       isPaid: json['isPaid'] as bool?,
       playerCount: int.tryParse(json['playerCount']?.toString() ?? '1'),
       isCancelled: json['isCancelled'] as bool? ?? false,
+      paymentStatus: json['paymentStatus'],
       bankAccount: json['bankAccount'] != null
           ? BankAccountResponse.fromJson(json['bankAccount'])
           : null,

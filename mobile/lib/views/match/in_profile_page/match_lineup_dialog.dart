@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../models/match.dart';
 import '../../../models/match_result.dart';
 import '../../../providers/auth_provider.dart';
@@ -43,10 +44,6 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
   Future<void> _handleSaveTeam() async {
     if (isSaving) return;
 
-    final activeParticipants = widget.match.participants
-        .where((p) => p.isCancelled != true)
-        .toList();
-
     final team1UserIds = teamAssignments.entries
         .where((e) => e.value == 1)
         .map((e) => e.key)
@@ -57,53 +54,15 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
         .map((e) => e.key)
         .toList();
 
-    final assignedUserIds = <String>{...team1UserIds, ...team2UserIds};
-
-    int playerSlotsOf(List<String> userIds) {
-      return activeParticipants
-          .where((p) => userIds.contains(p.userId))
-          .fold<int>(0, (total, player) => total + (player.playerCount ?? 1));
-    }
-
-    final totalActiveSlots = activeParticipants.fold<int>(
-      0,
-      (total, player) => total + (player.playerCount ?? 1),
-    );
-
-    final team1Slots = playerSlotsOf(team1UserIds);
-    final team2Slots = playerSlotsOf(team2UserIds);
     final maxPerTeam = (widget.match.maxPlayers / 2).ceil();
 
-    if (totalActiveSlots < 2) {
-      _setError(
-        'Trận đấu chưa đủ người để chia đội.',
-      );
+    if (team1UserIds.length > maxPerTeam) {
+      _setError('Đội 1 đã đầy!');
       return;
     }
 
-    if (team1UserIds.isEmpty || team2UserIds.isEmpty) {
-      _setError('Cần có ít nhất 1 người ở Đội 1 và 1 người ở Đội 2.');
-      return;
-    }
-
-    final hasUnassignedPlayer = activeParticipants.any(
-      (player) => !assignedUserIds.contains(player.userId),
-    );
-
-    if (hasUnassignedPlayer) {
-      _setError(
-        'Vẫn còn người chơi chưa chọn đội. Hãy chia đội đầy đủ trước khi lưu.',
-      );
-      return;
-    }
-
-    if (team1Slots > maxPerTeam) {
-      _setError('Đội 1 đã vượt quá $maxPerTeam người.');
-      return;
-    }
-
-    if (team2Slots > maxPerTeam) {
-      _setError('Đội 2 đã vượt quá $maxPerTeam người.');
+    if (team2UserIds.length > maxPerTeam) {
+      _setError('Đội 2 đã đầy!');
       return;
     }
 
@@ -130,7 +89,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(
-            content: Text('Lưu đội hình thành công'),
+            content: Text('Đã cập nhật đội của bạn thành công!'),
             backgroundColor: Color(0xFF16A34A),
             behavior: SnackBarBehavior.floating,
           ),
@@ -230,20 +189,27 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
       listen: false,
     ).user?['userId']?.toString();
 
-    // Check quyền: User hiện tại đã đóng tiền chưa?
-    final myInfo = widget.match.participants
+    final activeParticipants = widget.match.participants
+        .where((p) => p.isCancelled != true)
+        .toList();
+
+    final bool isParticipant = activeParticipants.any(
+      (member) => member.userId == myUserId,
+    );
+
+    final myInfo = activeParticipants
         .where((p) => p.userId == myUserId)
         .firstOrNull;
     final bool hasUnpaidFee =
         myInfo != null && (myInfo.amountDue ?? 0) > 0 && myInfo.isPaid != true;
 
-    final team1 = widget.match.participants
+    final team1 = activeParticipants
         .where((p) => teamAssignments[p.userId] == 1)
         .toList();
-    final team2 = widget.match.participants
+    final team2 = activeParticipants
         .where((p) => teamAssignments[p.userId] == 2)
         .toList();
-    final unassigned = widget.match.participants
+    final unassigned = activeParticipants
         .where((p) => !teamAssignments.containsKey(p.userId))
         .toList();
 
@@ -261,22 +227,6 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
-            // ĐÃ FIX: Thông báo nhắc thanh toán ngay trên đầu nếu nợ tiền
-            if (isEditable)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  hasUnpaidFee
-                      ? "Bạn phải thanh toán mới được chọn đội."
-                      : "Chạm vào tên của BẠN để chuyển/rời khỏi đội",
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: hasUnpaidFee ? Colors.red : Colors.grey,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-
             if (errorMessage != null) _buildErrorBanner(),
 
             const SizedBox(height: 16),
@@ -292,6 +242,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                     myUserId,
                     true,
                     hasUnpaidFee,
+                    isParticipant,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -303,6 +254,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                     myUserId,
                     false,
                     hasUnpaidFee,
+                    isParticipant,
                   ),
                 ),
               ],
@@ -320,18 +272,28 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+
               if (isEditable)
                 Column(
                   children: unassigned.map((p) {
                     bool isMe = p.userId == myUserId;
+                    bool isPlayerUnpaid =
+                        (p.amountDue ?? 0) > 0 && p.isPaid != true;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.grey.shade100),
+                        ),
+                      ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           CircleAvatar(
-                            radius: 12,
+                            radius: 18,
                             backgroundColor: isMe
                                 ? Colors.purple.shade100
                                 : Colors.grey.shade200,
@@ -340,7 +302,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                                   ? p.userName[0].toUpperCase()
                                   : 'U',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 14,
                                 color: isMe
                                     ? Colors.purple
                                     : Colors.grey.shade700,
@@ -348,102 +310,196 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Flexible(
-                                  child: Text(
-                                    p.userName,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: isMe
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: isMe
-                                          ? Colors.purple
-                                          : Colors.black87,
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        p.userName,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: isMe
+                                              ? FontWeight.bold
+                                              : FontWeight.w600,
+                                          color: isMe
+                                              ? Colors.purple
+                                              : Colors.black87,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    if (isMe) _buildMeBadge(Colors.purple),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "Điểm Rank: ${p.categoryRanks?.isNotEmpty == true ? p.categoryRanks![0].rankPoint : '0'}",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
                                   ),
                                 ),
-                                if (isMe) _buildMeBadge(Colors.purple),
+                                if ((p.amountDue ?? 0) > 0) ...[
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Cần góp: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(p.amountDue)}",
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.deepOrange,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: p.isPaid == true
+                                              ? Colors.purple.shade50
+                                              : Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          p.isPaid == true
+                                              ? "ĐÃ GÓP"
+                                              : "CHƯA GÓP",
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            color: p.isPaid == true
+                                                ? Colors.purple
+                                                : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ),
+                                      if ((p.playerCount ?? 1) > 1)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            "+${p.playerCount! - 1} slot",
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.orange.shade800,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
 
-                          // ĐÃ FIX LOGIC CHỌN ĐỘI:
-                          // Chỉ hiện nút bấm NẾU người đó là MÌNH, VÀ mình ĐÃ ĐÓNG TIỀN (hoặc không cần đóng tiền)
-                          if (isMe && !hasUnpaidFee) ...[
-                            InkWell(
-                              onTap: () => setState(() {
-                                teamAssignments[p.userId] = 1;
-                                errorMessage = null;
-                              }),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (isEditable &&
+                                  isParticipant &&
+                                  !isPlayerUnpaid) ...[
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    InkWell(
+                                      onTap: () => setState(() {
+                                        teamAssignments[p.userId] = 1;
+                                        errorMessage = null;
+                                      }),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          "Đội 1",
+                                          style: TextStyle(
+                                            color: Colors.orange,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    InkWell(
+                                      onTap: () => setState(() {
+                                        teamAssignments[p.userId] = 2;
+                                        errorMessage = null;
+                                      }),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.purple.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          "Đội 2",
+                                          style: TextStyle(
+                                            color: Colors.purple,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  "Vào Đội 1",
+                              ] else if (isPlayerUnpaid) ...[
+                                const Text(
+                                  "Chưa thanh toán",
                                   style: TextStyle(
-                                    color: Colors.orange,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                    fontSize: 11,
+                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            InkWell(
-                              onTap: () => setState(() {
-                                teamAssignments[p.userId] = 2;
-                                errorMessage = null;
-                              }),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.purple.shade50,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  "Vào Đội 2",
+                              ] else ...[
+                                const Text(
+                                  "Chưa chọn",
                                   style: TextStyle(
-                                    color: Colors.purple,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey,
+                                    fontSize: 11,
+                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
-                              ),
-                            ),
-                          ] else if (isMe && hasUnpaidFee) ...[
-                            const Text(
-                              "(Hãy thanh toán)",
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 10,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ] else ...[
-                            const Text(
-                              "Chưa chọn",
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 10,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                     );
@@ -481,7 +537,6 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
                     style: TextStyle(color: Colors.grey),
                   ),
                 ),
-                // ĐÃ FIX: Chỉ hiện nút "Lưu đội hình" nếu user đã đóng tiền xong
                 if (isEditable && !hasUnpaidFee) ...[
                   const SizedBox(width: 12),
                   ElevatedButton(
@@ -518,6 +573,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
     String? myUserId,
     bool isLeft,
     bool hasUnpaidFee,
+    bool isParticipant,
   ) {
     bool isWinner = false;
     if (widget.matchResultData != null) {
@@ -558,6 +614,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
             color,
             isLeft,
             hasUnpaidFee,
+            isParticipant,
           ),
         ),
       ],
@@ -588,6 +645,7 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
     Color teamColor,
     bool isLeft,
     bool hasUnpaidFee,
+    bool isParticipant,
   ) {
     final avatarWidget = CircleAvatar(
       radius: 14,
@@ -635,6 +693,25 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
             "Rank: ${player.categoryRanks != null && player.categoryRanks.isNotEmpty ? player.categoryRanks[0].rankPoint : '0'}",
             style: TextStyle(fontSize: 9, color: Colors.grey.shade500),
           ),
+
+          if ((player.playerCount ?? 1) > 1) ...[
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                "+${player.playerCount! - 1} slot",
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade800,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -656,8 +733,9 @@ class _MatchLineupDialogState extends State<MatchLineupDialog> {
       ),
     );
 
-    // ĐÃ FIX: Chỉ khi là "Mình" và không nợ tiền thì mới click gỡ được bản thân ra khỏi Đội
-    if (isEditable && isMe && !hasUnpaidFee) {
+    bool isPlayerUnpaid = (player.amountDue ?? 0) > 0 && player.isPaid != true;
+
+    if (isEditable && isParticipant && !isPlayerUnpaid) {
       return InkWell(
         onTap: () => setState(() {
           teamAssignments.remove(player.userId);

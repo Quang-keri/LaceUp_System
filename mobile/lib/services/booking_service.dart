@@ -142,15 +142,22 @@ class BookingService {
 
   Future<dynamic> uploadPaymentProof({
     required String bookingIntentId,
-    required String imagePath,
+    required XFile image,
   }) async {
     try {
-      final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(
-          imagePath,
-          filename: imagePath.split('/').last,
-        ),
-      });
+      MultipartFile multipartFile;
+
+      if (kIsWeb) {
+        final bytes = await image.readAsBytes();
+        multipartFile = MultipartFile.fromBytes(bytes, filename: image.name);
+      } else {
+        multipartFile = await MultipartFile.fromFile(
+          image.path,
+          filename: image.name,
+        );
+      }
+
+      final formData = FormData.fromMap({'image': multipartFile});
 
       final response = await apiClient.post(
         '/bookings/intent/$bookingIntentId/payment-proof',
@@ -168,9 +175,9 @@ class BookingService {
 
   Future<dynamic> uploadIntentPaymentProof({
     required String intentId,
-    required String imagePath,
+    required XFile image,
   }) {
-    return uploadPaymentProof(bookingIntentId: intentId, imagePath: imagePath);
+    return uploadPaymentProof(bookingIntentId: intentId, image: image);
   }
 
   Future<dynamic> previewOwnerBookingPrice({

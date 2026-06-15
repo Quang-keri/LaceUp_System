@@ -136,7 +136,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
           style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
           children: [
             TextSpan(
-              text: 'Bạn đang hủy lịch quá sát giờ, dưới 5 giờ. Bạn sẽ ',
+              text: 'Bạn đang hủy lịch quá sát giờ sẽ ',
               style: TextStyle(color: Colors.black),
             ),
             TextSpan(
@@ -167,7 +167,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     } else {
       content = const Text.rich(
         TextSpan(
-          text: 'Bạn đang hủy lịch trước 5 giờ. Theo quy định, tiền cọc sẽ ',
+          text: 'Bạn đang hủy lịch đặt sân. Theo quy định, tiền cọc sẽ ',
           children: [
             TextSpan(
               text: 'không được hoàn lại',
@@ -183,7 +183,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          isShared ? 'Xác nhận hủy vé vãng lai?' : 'Xác nhận hủy booking?',
+          isShared ? 'Xác nhận hủy vé vãng lai?' : 'Xác nhận hủy đặt sân?',
           style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
         ),
         content: content,
@@ -483,6 +483,18 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     );
   }
 
+  String _getFormattedAddress(dynamic addressData) {
+    if (addressData == null) return 'Đang cập nhật...';
+    if (addressData is String) return addressData;
+
+    final street = addressData['street']?.toString() ?? '';
+    final ward = addressData['ward']?.toString() ?? '';
+    final city = addressData['city']?['cityName']?.toString() ?? '';
+
+    final parts = [street, ward, city].where((e) => e.isNotEmpty).toList();
+    return parts.isEmpty ? 'Đang cập nhật...' : parts.join(', ');
+  }
+
   Widget _emptyView(String text, IconData icon) {
     return ListView(
       children: [
@@ -505,9 +517,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
     } else {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const ProfileScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const ProfileScreen()),
       );
     }
   }
@@ -644,8 +654,12 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                       intent['bookingIntentId']?.toString() ?? '-',
                     ),
                     _detailRow(
-                      'Khu sân',
-                      intent['rentalAreaName']?.toString() ?? '-',
+                      'Địa chỉ',
+                      _getFormattedAddress(intent['rentalArea']?['address'] ?? intent['rentalAreaAddress']),
+                    ),
+                    _detailRow(
+                      'SĐT chủ sân',
+                      intent['rentalArea']?['contactPhone']?.toString() ?? intent['contactPhone']?.toString() ?? 'Đang cập nhật...',
                     ),
                     _detailRow('Ngày', _formatDate(intent['startTime'])),
                     _detailRow(
@@ -823,9 +837,15 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
                               ?.toString() ??
                           '-',
                     ),
+                    // Map đúng theo cấu trúc JSON mới
                     _detailRow(
-                      'Khu sân',
-                      booking['rentalArea']?['rentalAreaName'] ?? '-',
+                      'Địa chỉ',
+                      _getFormattedAddress(booking['rentalArea']?['address']),
+                    ),
+                    _detailRow(
+                      'SĐT chủ sân',
+                      booking['rentalArea']?['contactPhone']?.toString() ??
+                          'Đang cập nhật...',
                     ),
                     _detailRow(
                       'Sân',
