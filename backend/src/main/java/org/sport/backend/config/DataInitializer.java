@@ -38,8 +38,6 @@ public class DataInitializer implements CommandLineRunner {
     private final RentalAreaRepository rentalAreaRepository;
     private final CourtCopyRepository courtCopyRepository;
     private final PostRepository postRepository;
-    private final UserAchievementRepository userAchievementRepository;
-    private final UserCategoryRankRepository userCategoryRankRepository;
     private final PasswordEncoder passwordEncoder;
     private final ItemGroupRepository itemGroupRepository;
     private final ObjectMapper objectMapper;
@@ -110,10 +108,6 @@ public class DataInitializer implements CommandLineRunner {
         }
         if (newsRepository.count() == 0) {
             seedNews();
-        }
-
-        if (reviewRepository.count() == 0) {
-            seedReviews();
         }
 
     }
@@ -555,67 +549,6 @@ public class DataInitializer implements CommandLineRunner {
             }
 
             courtPriceRepository.saveAll(prices);
-        }
-    }
-
-    private void seedReviews() {
-        List<RentalArea> rentalAreas = rentalAreaRepository.findAll();
-        if (rentalAreas.isEmpty()) return;
-
-        RentalArea area = rentalAreas.getFirst();
-
-        User renterMain = userRepository.findByEmail("renter@gmail.com").orElse(null);
-        User renter1 = userRepository.findByEmail("renter1@gmail.com").orElse(null);
-        User renter2 = userRepository.findByEmail("renter2@gmail.com").orElse(null);
-        User renter3 = userRepository.findByEmail("renter3@gmail.com").orElse(null);
-
-        List<Review> reviews = new ArrayList<>();
-
-        if (renterMain != null) {
-            reviews.add(Review.builder()
-                    .user(renterMain)
-                    .rentalArea(area)
-                    .rating(5)
-                    .comment("Sân rất đẹp, mặt thảm bám tốt. Chủ sân cũng rất nhiệt tình. Sẽ quay lại ủng hộ!")
-                    .build());
-        }
-        if (renter1 != null) {
-            reviews.add(Review.builder()
-                    .user(renter1)
-                    .rentalArea(area)
-                    .rating(4)
-                    .comment("Sân tốt, ánh sáng ok nhưng chỗ để xe hơi chật vào buổi tối.")
-                    .build());
-        }
-        if (renter2 != null) {
-            reviews.add(Review.builder()
-                    .user(renter2)
-                    .rentalArea(area)
-                    .rating(5)
-                    .comment("Giá cả hợp lý, tiện ích đầy đủ, wifi mạnh.")
-                    .build());
-        }
-        if (renter3 != null) {
-            reviews.add(Review.builder()
-                    .user(renter3)
-                    .rentalArea(area)
-                    .rating(3)
-                    .comment("Thảm sân số 2 hơi trơn một chút, mong chủ sân bảo trì thêm.")
-                    .build());
-        }
-
-        if (!reviews.isEmpty()) {
-            reviewRepository.saveAll(reviews);
-
-            // Tính trung bình Rating và lưu lại vào RentalArea
-            double averageRating = reviews.stream()
-                    .mapToInt(Review::getRating)
-                    .average()
-                    .orElse(0.0);
-
-            // Làm tròn đến 1 chữ số thập phân
-            area.setRating(Math.round(averageRating * 10.0) / 10.0);
-            rentalAreaRepository.save(area);
         }
     }
 

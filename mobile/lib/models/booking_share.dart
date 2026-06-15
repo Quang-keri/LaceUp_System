@@ -25,6 +25,7 @@ class SharedBookingPublicResponse {
   final String endTime;
 
   final String? note;
+  final String? currentUserPaymentStatus;
 
   const SharedBookingPublicResponse({
     required this.bookingId,
@@ -45,6 +46,7 @@ class SharedBookingPublicResponse {
     required this.startTime,
     required this.endTime,
     this.note,
+    this.currentUserPaymentStatus,
   });
 
   factory SharedBookingPublicResponse.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,7 @@ class SharedBookingPublicResponse {
       startTime: _stringValue(json['startTime']),
       endTime: _stringValue(json['endTime']),
       note: _nullableString(json['note']),
+      currentUserPaymentStatus: _nullableString(json['currentUserPaymentStatus']),
     );
   }
 

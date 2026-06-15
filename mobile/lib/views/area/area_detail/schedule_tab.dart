@@ -771,7 +771,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
             ),
             _buildModeButton(
               mode: 'match',
-              title: 'Đánh Rank',
+              title: 'Đánh hạng',
               icon: Icons.emoji_events_rounded,
               activeColor: primaryColor,
             ),

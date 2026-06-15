@@ -18,10 +18,7 @@ import org.sport.backend.exception.AppException;
 import org.sport.backend.exception.ErrorCode;
 import org.sport.backend.mapper.UserMapper;
 import org.sport.backend.properties.UrlProperties;
-import org.sport.backend.repository.PermissionRepository;
-import org.sport.backend.repository.ReputationLogRepository;
-import org.sport.backend.repository.RoleRepository;
-import org.sport.backend.repository.UserRepository;
+import org.sport.backend.repository.*;
 import org.sport.backend.repository.mongo.PasswordResetTokenRepository;
 import org.sport.backend.security.CustomUserDetails;
 import org.sport.backend.service.EmailService;
@@ -53,6 +50,7 @@ public class UserServiceImpl implements UserService {
     private final PermissionRepository permissionRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final ReputationLogRepository reputationLogRepository;
+    private final CategoryRepository categoryRepository;
 
     private final EmailService emailService;
 
@@ -86,6 +84,21 @@ public class UserServiceImpl implements UserService {
                 .active(true)
                 .createdAt(LocalDateTime.now())
                 .build();
+
+        List<Category> allCategories = categoryRepository.findAll();
+
+        List<UserCategoryRank> initialRanks = allCategories.stream().map(category ->
+                UserCategoryRank.builder()
+                        .user(user)
+                        .category(category)
+                        .rankPoint(0)
+                        .currentWinStreak(0)
+                        .totalWins(0)
+                        .totalMatches(0)
+                        .build()
+        ).collect(Collectors.toList());
+
+        user.setCategoryRanks(initialRanks);
 
         return userMapper.toUserResponse(userRepository.save(user));
     }

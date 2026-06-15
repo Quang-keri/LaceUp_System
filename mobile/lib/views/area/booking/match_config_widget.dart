@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/auth_provider.dart';
 
 class MatchConfigData {
   final String matchType;
@@ -6,6 +8,8 @@ class MatchConfigData {
   final int minPlayersToStart;
   final String note;
   final int playerCount;
+  final int? minRank;
+  final int? maxRank;
 
   MatchConfigData({
     required this.matchType,
@@ -13,6 +17,8 @@ class MatchConfigData {
     required this.minPlayersToStart,
     required this.note,
     required this.playerCount,
+    this.minRank,
+    this.maxRank,
   });
 }
 
@@ -31,7 +37,8 @@ class MatchConfigWidget extends StatefulWidget {
 }
 
 class _MatchConfigWidgetState extends State<MatchConfigWidget> {
-  String _matchType = 'NORMAL';
+  // Ép cứng mặc định là Đánh Rank
+  final String _matchType = 'RANKED';
   final TextEditingController _noteController = TextEditingController();
 
   final Color primaryColor = const Color(0xFF9156F1); // Tím LaceUp
@@ -95,13 +102,62 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
       _playerCount = _minPlayersToStart;
     }
 
-    widget.onChanged(MatchConfigData(
-      matchType: _matchType,
-      maxPlayers: _maxPlayers,
-      minPlayersToStart: _minPlayersToStart,
-      note: _noteController.text,
-      playerCount: _playerCount,
-    ));
+    int? minRank;
+    int? maxRank;
+
+    if (_matchType == 'RANKED') {
+      int currentRank = 0;
+
+      try {
+        final authProvider = context.read<AuthProvider>();
+        final user = authProvider.user;
+
+        if (user != null) {
+          List<dynamic> ranks = [];
+          if (user is Map) {
+            ranks = user['categoryRanks'] ?? [];
+          } else {
+            ranks = (user as dynamic).categoryRanks ?? [];
+          }
+
+          for (var r in ranks) {
+            String cName = '';
+            int cRank = 0;
+
+            if (r is Map) {
+              cName = r['categoryName']?.toString() ?? '';
+              cRank = int.tryParse(r['rankPoint']?.toString() ?? '0') ?? 0;
+            } else {
+              cName = (r as dynamic).categoryName?.toString() ?? '';
+              cRank = ((r as dynamic).rankPoint as num?)?.toInt() ?? 0;
+            }
+
+            if (cName.trim().toLowerCase() ==
+                widget.categoryName.trim().toLowerCase()) {
+              currentRank = cRank;
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Lỗi lấy rank người dùng: $e');
+      }
+
+      minRank = (currentRank - 500 < 0) ? 0 : (currentRank - 500);
+      maxRank = currentRank + 500;
+    }
+
+    widget.onChanged(
+      MatchConfigData(
+        matchType: _matchType,
+        maxPlayers: _maxPlayers,
+        minPlayersToStart: _minPlayersToStart,
+        note: _noteController.text,
+        playerCount: _playerCount,
+        minRank: minRank,
+        maxRank: maxRank,
+      ),
+    );
   }
 
   void _increment() {
@@ -155,9 +211,9 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F5FF), // Màu nền tím rất nhạt
+        color: const Color(0xFFF9F5FF),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: primaryColor.withOpacity(0.15)),
       ),
@@ -166,103 +222,161 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
         children: [
           const Text(
             'Cấu hình trận đấu',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.black87,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // --- HÀNG 1: Thể thức thi đấu & Số người có sẵn ---
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // 1. Thể thức thi đấu
               Expanded(
+                flex: 10,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         const Flexible(
-                          child: Text('Thể thức thi đấu',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            'Tổng người',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         Tooltip(
-                          message: 'Luật chơi riêng biệt cho trận đấu này',
+                          message:
+                              'Tổng số người tham gia tối đa của cả trận đấu',
                           triggerMode: TooltipTriggerMode.tap,
-                          child: Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 44, // Đồng bộ chiều cao với ô bên cạnh
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        value: _matchType,
-                        icon: const Icon(Icons.arrow_drop_down, size: 20),
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300)),
-                          enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300)),
-                          fillColor: Colors.white,
-                          filled: true,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'NORMAL',
-                              child: Text('Giao lưu', style: TextStyle(fontSize: 14))),
-                          // DropdownMenuItem(
-                          //     value: 'BET',
-                          //     child: Text('Chia Kèo',
-                          //         style: TextStyle(fontSize: 14, color: Color(0xFFEA580C)))),
-                          DropdownMenuItem(
-                              value: 'RANKED',
-                              child: Text('Đánh Rank',
-                                  style: TextStyle(fontSize: 14, color: Color(0xFF9156F1)))),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _matchType = val);
-                            _notifyChanges();
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // 2. Số người có sẵn
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Flexible(
-                          child: Text('Số người có sẵn',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                        const SizedBox(width: 4),
-                        Tooltip(
-                          message: 'Bao gồm bạn và bạn bè đi cùng (Tối đa $_minPlayersToStart)',
-                          triggerMode: TooltipTriggerMode.tap,
-                          child: Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
+                          child: Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Container(
-                      height: 44,
+                      height: 38, // Thu nhỏ height
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          InkWell(
+                            onTap: _maxPlayers > _minAllowed
+                                ? _decrement
+                                : null,
+                            child: Container(
+                              width: 28, // Thu nhỏ nút
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _maxPlayers > _minAllowed
+                                    ? Colors.grey.shade100
+                                    : disabledColor.withOpacity(0.3),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(7),
+                                  bottomLeft: Radius.circular(7),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.remove,
+                                color: _maxPlayers > _minAllowed
+                                    ? Colors.grey.shade600
+                                    : Colors.grey.shade400,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              '$_maxPlayers',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: _maxPlayers < _maxAllowed
+                                ? _increment
+                                : null,
+                            child: Container(
+                              width: 28,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _maxPlayers < _maxAllowed
+                                    ? primaryColor.withOpacity(0.1)
+                                    : disabledColor.withOpacity(0.3),
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(7),
+                                  bottomRight: Radius.circular(7),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.add,
+                                color: _maxPlayers < _maxAllowed
+                                    ? primaryColor
+                                    : Colors.grey.shade400,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+
+              // 2. Số người có sẵn
+              Expanded(
+                flex: 10,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Flexible(
+                          child: Text(
+                            'Có sẵn',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Tooltip(
+                          message:
+                              'Bao gồm bạn và bạn bè đi cùng (Tối đa $_minPlayersToStart)',
+                          triggerMode: TooltipTriggerMode.tap,
+                          child: Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 38,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -273,42 +387,59 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
                           InkWell(
                             onTap: _playerCount > 1 ? _decrementPlayer : null,
                             child: Container(
-                              width: 38,
+                              width: 28,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: _playerCount > 1 ? Colors.grey.shade100 : disabledColor.withOpacity(0.3),
+                                color: _playerCount > 1
+                                    ? Colors.grey.shade100
+                                    : disabledColor.withOpacity(0.3),
                                 borderRadius: const BorderRadius.only(
                                   topLeft: Radius.circular(7),
                                   bottomLeft: Radius.circular(7),
                                 ),
                               ),
-                              child: Icon(Icons.remove,
-                                  color: _playerCount > 1 ? Colors.grey.shade600 : Colors.grey.shade400,
-                                  size: 18),
+                              child: Icon(
+                                Icons.remove,
+                                color: _playerCount > 1
+                                    ? Colors.grey.shade600
+                                    : Colors.grey.shade400,
+                                size: 16,
+                              ),
                             ),
                           ),
                           Expanded(
                             child: Text(
                               '$_playerCount',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           InkWell(
-                            onTap: _playerCount < _minPlayersToStart ? _incrementPlayer : null,
+                            onTap: _playerCount < _minPlayersToStart
+                                ? _incrementPlayer
+                                : null,
                             child: Container(
-                              width: 38,
+                              width: 28,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: _playerCount < _minPlayersToStart ? secondaryColor.withOpacity(0.1) : disabledColor.withOpacity(0.3),
+                                color: _playerCount < _minPlayersToStart
+                                    ? secondaryColor.withOpacity(0.1)
+                                    : disabledColor.withOpacity(0.3),
                                 borderRadius: const BorderRadius.only(
                                   topRight: Radius.circular(7),
                                   bottomRight: Radius.circular(7),
                                 ),
                               ),
-                              child: Icon(Icons.add,
-                                  color: _playerCount < _minPlayersToStart ? secondaryColor : Colors.grey.shade400,
-                                  size: 18),
+                              child: Icon(
+                                Icons.add,
+                                color: _playerCount < _minPlayersToStart
+                                    ? secondaryColor
+                                    : Colors.grey.shade400,
+                                size: 16,
+                              ),
                             ),
                           ),
                         ],
@@ -317,127 +448,55 @@ class _MatchConfigWidgetState extends State<MatchConfigWidget> {
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(width: 6),
 
-          // --- HÀNG 2: Tổng số người & Số người / Team ---
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // 3. Tổng số người (Tối đa)
+              // 3. Số người / Team
               Expanded(
+                flex: 9,
+                // Cho ô này bé hơn 1 xíu để nhường diện tích cho 2 ô kia
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         const Flexible(
-                          child: Text('Tổng số người',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                        const SizedBox(width: 4),
-                        Tooltip(
-                          message: 'Tổng số người tham gia tối đa của cả trận đấu',
-                          triggerMode: TooltipTriggerMode.tap,
-                          child: Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          InkWell(
-                            onTap: _maxPlayers > _minAllowed ? _decrement : null,
-                            child: Container(
-                              width: 38,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: _maxPlayers > _minAllowed ? Colors.grey.shade100 : disabledColor.withOpacity(0.3),
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(7),
-                                  bottomLeft: Radius.circular(7),
-                                ),
-                              ),
-                              child: Icon(Icons.remove,
-                                  color: _maxPlayers > _minAllowed ? Colors.grey.shade600 : Colors.grey.shade400,
-                                  size: 18),
+                          child: Text(
+                            'Ng / Team',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          Expanded(
-                            child: Text(
-                              '$_maxPlayers',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: _maxPlayers < _maxAllowed ? _increment : null,
-                            child: Container(
-                              width: 38,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: _maxPlayers < _maxAllowed ? primaryColor.withOpacity(0.1) : disabledColor.withOpacity(0.3),
-                                borderRadius: const BorderRadius.only(
-                                  topRight: Radius.circular(7),
-                                  bottomRight: Radius.circular(7),
-                                ),
-                              ),
-                              child: Icon(Icons.add,
-                                  color: _maxPlayers < _maxAllowed ? primaryColor : Colors.grey.shade400,
-                                  size: 18),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // 4. Tối thiểu (Số slot/Team)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Flexible(
-                          child: Text('Số người / Team',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 2),
                         Tooltip(
                           message: 'Số lượng thành viên tối đa của 1 đội',
                           triggerMode: TooltipTriggerMode.tap,
-                          child: Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
+                          child: Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Container(
-                      height: 44,
+                      height: 38,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '$_minPlayersToStart vs $_minPlayersToStart',
+                        '$_minPlayersToStart v $_minPlayersToStart',
                         style: const TextStyle(
-                            color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14),
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],

@@ -77,10 +77,18 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                                 pageable
                         );
 
+        User currentUser = null;
+        try {
+            currentUser = userService.getCurrentUserEntity();
+        } catch (Exception e) {
+            // Bỏ qua nếu user chưa đăng nhập
+        }
+        final User finalUser = currentUser;
+
         List<SharedBookingPublicResponse> responses =
                 bookingPage.getContent()
                         .stream()
-                        .map(this::mapToCommunityResponse)
+                        .map(booking -> mapToCommunityResponse(booking, finalUser))
                         .toList();
 
         return PageResponse
@@ -1056,7 +1064,8 @@ public class SharedBookingServiceImpl implements SharedBookingService {
     }
 
     private SharedBookingPublicResponse mapToCommunityResponse(
-            Booking booking
+            Booking booking,
+            User currentUser
     ) {
         RentalArea rentalArea = booking.getRentalArea();
 
@@ -1103,6 +1112,18 @@ public class SharedBookingServiceImpl implements SharedBookingService {
 
         long remainingSlots = Math.max(0, maxParticipants - reservedParticipants);
 
+        PaymentStatus currentUserStatus = null;
+        if (currentUser != null) {
+            Optional<BookingParticipant> participantOpt = bookingParticipantRepository
+                    .findTopByBooking_BookingIdAndUser_UserIdOrderByCreatedAtDesc(
+                            booking.getBookingId(),
+                            currentUser.getUserId()
+                    );
+            if (participantOpt.isPresent()) {
+                currentUserStatus = participantOpt.get().getPaymentStatus();
+            }
+        }
+
         return SharedBookingPublicResponse
                 .builder()
                 .bookingId(booking.getBookingId())
@@ -1143,6 +1164,7 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 .startTime(booking.getStartTime())
                 .endTime(booking.getEndTime())
                 .note(booking.getNote())
+                .currentUserPaymentStatus(currentUserStatus)
                 .build();
     }
 

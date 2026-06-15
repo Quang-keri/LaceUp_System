@@ -33,19 +33,17 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean active;
-    private Integer rankPoint;
-    private BigDecimal fakeMoney;
     private List<CategoryRankResponse> categoryRanks;
     private Integer teamNumber;
     private Integer creditScore;
     private String memberTier;
-    private Integer totalMatches;
     private BigDecimal totalSpent;
     private BigDecimal amountDue;
     private Boolean isPaid;
     private Integer playerCount;
     private UUID registrationId;
     private Boolean isCancelled;
+    private String paymentStatus;
     private BankAccountResponse bankAccount;
 
 }

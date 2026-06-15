@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../models/post.dart';
 
@@ -14,9 +15,11 @@ class AreaCard extends StatelessWidget {
     required this.onBookTap,
   });
 
+  static final formatter = NumberFormat.decimalPattern('vi_VN');
+
   String formatPrice(double? price) {
     if (price == null) return 'Đang cập nhật';
-    return '${price.toStringAsFixed(0)}đ/giờ';
+    return 'Từ: ${formatter.format(price)}đ/giờ';
   }
 
   @override

@@ -192,6 +192,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
             ? _noteController.text
             : widget.matchConfig!.note,
         playerCount: widget.matchConfig!.playerCount,
+        minRank: widget.matchConfig!.minRank,
+        maxRank: widget.matchConfig!.maxRank,
       );
 
       await matchService.createMatch(payload);

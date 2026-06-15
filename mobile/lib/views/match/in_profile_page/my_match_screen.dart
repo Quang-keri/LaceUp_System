@@ -25,7 +25,6 @@ class _MyMatchScreenState extends State<MyMatchScreen>
   late TabController _tabController;
 
   final Set<String> _leftMatchIds = {};
-  final Set<String> _waitingApprovalMatchIds = {};
 
   @override
   void initState() {
@@ -80,15 +79,10 @@ class _MyMatchScreenState extends State<MyMatchScreen>
 
     if (!mounted || uploaded != true) return;
 
-    setState(() {
-      _waitingApprovalMatchIds.add(match.matchId);
-    });
-
     await _fetchMyMatches();
 
     if (!mounted) return;
 
-    // Đợi frame hiện tại render xong rồi mới hiển thị SnackBar.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _showPaymentProofSuccess();
@@ -538,17 +532,14 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     final bool isPaid = myInfo?.isPaid == true;
 
     final bool isWaitingApproval =
-        myInfo != null &&
-        !isPaid &&
-        _waitingApprovalMatchIds.contains(match.matchId);
+        myInfo != null && myInfo.paymentStatus == 'PENDING';
 
     final bool needsPayment =
         myInfo != null &&
         (myInfo.amountDue ?? 0) > 0 &&
-        !isPaid &&
+        myInfo.isPaid != true &&
         !isWaitingApproval;
 
-    // Định dạng dùng chung cho Nút bấm để nó nhỏ gọn lại
     final smallButtonStyle = ElevatedButton.styleFrom(
       minimumSize: const Size(0, 36),
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -716,13 +707,14 @@ class _MyMatchScreenState extends State<MyMatchScreen>
   }
 
   Widget _buildEmptyState(String message, IconData icon) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 80, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+        Icon(icon, size: 80, color: Colors.grey.shade300),
+        const SizedBox(height: 16),
+        Center(
+          child: Text(
             message,
             style: TextStyle(
               color: Colors.grey.shade500,
@@ -730,8 +722,8 @@ class _MyMatchScreenState extends State<MyMatchScreen>
               fontWeight: FontWeight.w500,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -790,28 +782,38 @@ class _MyMatchScreenState extends State<MyMatchScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                activeMatches.isEmpty
-                    ? _buildEmptyState(
-                        "Không có trận đấu nào đang diễn ra",
-                        Icons.sports_tennis,
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 8, bottom: 20),
-                        itemCount: activeMatches.length,
-                        itemBuilder: (context, index) =>
-                            _buildMatchCard(activeMatches[index]),
-                      ),
-                historyMatches.isEmpty
-                    ? _buildEmptyState(
-                        "Không có dữ liệu lịch sử",
-                        Icons.history,
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 8, bottom: 20),
-                        itemCount: historyMatches.length,
-                        itemBuilder: (context, index) =>
-                            _buildMatchCard(historyMatches[index]),
-                      ),
+                RefreshIndicator(
+                  onRefresh: _fetchMyMatches,
+                  color: kAppOrange,
+                  child: activeMatches.isEmpty
+                      ? _buildEmptyState(
+                          "Không có trận đấu nào đang diễn ra",
+                          Icons.sports_tennis,
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(top: 8, bottom: 20),
+                          itemCount: activeMatches.length,
+                          itemBuilder: (context, index) =>
+                              _buildMatchCard(activeMatches[index]),
+                        ),
+                ),
+                RefreshIndicator(
+                  onRefresh: _fetchMyMatches,
+                  color: kAppOrange,
+                  child: historyMatches.isEmpty
+                      ? _buildEmptyState(
+                          "Không có dữ liệu lịch sử",
+                          Icons.history,
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(top: 8, bottom: 20),
+                          itemCount: historyMatches.length,
+                          itemBuilder: (context, index) =>
+                              _buildMatchCard(historyMatches[index]),
+                        ),
+                ),
               ],
             ),
     );

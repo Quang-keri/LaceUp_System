@@ -299,18 +299,24 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
             height: 50,
             child: ElevatedButton.icon(
               onPressed: () {
+                final bottomSheetContext = context;
                 showDialog(
                   context: context,
-                  builder: (context) => MatchLineupDialog(
+                  builder: (dialogContext) => MatchLineupDialog(
                     match: widget.match,
                     matchResultData: matchResultData,
-                    onSuccess: widget.onSuccess,
+                    onSuccess: () {
+                      if (Navigator.canPop(bottomSheetContext)) {
+                        Navigator.pop(bottomSheetContext);
+                      }
+                      widget.onSuccess();
+                    },
                   ),
                 );
               },
               icon: const Icon(Icons.groups_outlined),
               label: const Text(
-                "XEM ĐỘI HÌNH & CHIẾN THUẬT",
+                "Xem đội hình và chiến thuật",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
@@ -421,6 +427,12 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
             Icons.location_on_outlined,
             widget.match.courtName,
             addressStr,
+          ),
+          const SizedBox(height: 12),
+          _buildInfoRow(
+            Icons.phone_outlined,
+            "SĐT chủ sân",
+            widget.match.ownerCourtPhone ?? 'Đang cập nhật...',
           ),
           const SizedBox(height: 12),
           _buildInfoRow(
@@ -540,9 +552,15 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
         .firstOrNull;
     bool isParticipant = myInfo != null && myInfo.isCancelled != true;
 
+    bool isWaitingApproval =
+        myInfo != null && myInfo.paymentStatus == 'PENDING';
+
     bool needsPayment = false;
     if (myInfo != null) {
-      needsPayment = (myInfo.amountDue ?? 0) > 0 && myInfo.isPaid != true;
+      needsPayment =
+          (myInfo.amountDue ?? 0) > 0 &&
+          myInfo.isPaid != true &&
+          !isWaitingApproval;
     }
 
     bool isCompleted = widget.match.status == 'COMPLETED';
@@ -559,22 +577,13 @@ class _MatchDetailBottomSheetState extends State<MatchDetailBottomSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (needsPayment &&
+        if (isWaitingApproval &&
             !['COMPLETED', 'CANCELLED'].contains(widget.match.status))
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      MatchPaymentScreen(matchId: widget.match.matchId),
-                ),
-              ).then((_) => widget.onSuccess());
-            },
-            icon: const Icon(Icons.payment, size: 20),
+          OutlinedButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.hourglass_top_rounded, size: 20),
             label: const Text(
-              'Thanh toán ngay',
+              'Đang chờ chủ sân duyệt ảnh',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(

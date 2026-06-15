@@ -342,6 +342,14 @@ class _SharedBookingCardState extends State<SharedBookingCard> {
   Widget build(BuildContext context) {
     final booking = widget.booking;
 
+    final String? userStatus = booking.currentUserPaymentStatus;
+    final bool isPending = userStatus == 'PENDING';
+    final bool isBooked =
+        userStatus == 'SUCCESS' ||
+        userStatus == 'BOOKED' ||
+        userStatus == 'COMPLETED';
+    final bool isFull = booking.remainingSlots <= 0;
+
     final progress = booking.maxParticipants > 0
         ? (booking.reservedParticipants / booking.maxParticipants)
               .clamp(0.0, 1.0)
@@ -492,12 +500,16 @@ class _SharedBookingCardState extends State<SharedBookingCard> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: booking.remainingSlots <= 0 || _isJoining
-                      ? null
+                  onPressed: (isFull || _isJoining || isPending || isBooked)
+                      ? null // Disable nút nếu rơi vào các trường hợp này
                       : _openJoinDialog,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _orange,
+                    backgroundColor: (isPending || isBooked)
+                        ? Colors.grey.shade400
+                        : const Color(0xFFEA580C),
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    disabledForegroundColor: Colors.grey.shade600,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -511,9 +523,22 @@ class _SharedBookingCardState extends State<SharedBookingCard> {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.person_add_alt_1, size: 18),
+                      : Icon(
+                          isPending
+                              ? Icons.hourglass_top_rounded
+                              : isBooked
+                              ? Icons.check_circle_outline
+                              : Icons.person_add_alt_1,
+                          size: 18,
+                        ),
                   label: Text(
-                    booking.remainingSlots > 0 ? 'Tham gia' : 'Đã đầy',
+                    isPending
+                        ? 'Chờ duyệt'
+                        : isBooked
+                        ? 'Đã tham gia'
+                        : isFull
+                        ? 'Đã đầy'
+                        : 'Tham gia',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
