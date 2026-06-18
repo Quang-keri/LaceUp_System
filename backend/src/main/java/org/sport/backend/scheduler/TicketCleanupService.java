@@ -19,7 +19,7 @@ public class TicketCleanupService {
 
     private final BookingParticipantRepository bookingParticipantRepository;
 
-    @Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRate = 3600000)
     @Transactional
     public void cleanupExpiredPendingTickets() {
         LocalDateTime expireTime = LocalDateTime.now().minusMinutes(15);

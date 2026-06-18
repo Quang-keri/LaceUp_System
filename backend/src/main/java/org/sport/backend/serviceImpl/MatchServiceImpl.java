@@ -544,6 +544,7 @@ public class MatchServiceImpl implements MatchService {
     }
 
     @Transactional
+    @Override
     public void generateNextMatches() {
         List<Match> recurringConfigs = matchRepository.findByIsRecurringTrue();
 

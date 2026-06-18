@@ -15,11 +15,13 @@ import org.sport.backend.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -39,6 +41,8 @@ public class SharedBookingServiceImpl implements SharedBookingService {
 
     private final UserService userService;
     private final CloudinaryService cloudinaryService;
+
+    private final TaskScheduler taskScheduler;
 
     @Transactional(readOnly = true)
     @Override
@@ -291,6 +295,10 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 .build();
 
         BookingParticipant saved = bookingParticipantRepository.saveAndFlush(participant);
+
+        final UUID ticketId = saved.getParticipantId();
+        taskScheduler.schedule(() -> cancelUnpaidTicket(ticketId),
+                Instant.now().plus(15, java.time.temporal.ChronoUnit.MINUTES));
 
         return mapToResponse(saved);
     }
@@ -1166,6 +1174,17 @@ public class SharedBookingServiceImpl implements SharedBookingService {
                 .note(booking.getNote())
                 .currentUserPaymentStatus(currentUserStatus)
                 .build();
+    }
+
+    @Transactional
+    public void cancelUnpaidTicket(UUID participantId) {
+        bookingParticipantRepository.findById(participantId).ifPresent(ticket -> {
+            if (ticket.getPaymentStatus() == PaymentStatus.PENDING) {
+                ticket.setPaymentStatus(PaymentStatus.CANCELLED);
+                bookingParticipantRepository.save(ticket);
+                System.out.println("LaceUP System: Đã hủy vé vãng lai quá hạn 15 phút - ID: " + participantId);
+            }
+        });
     }
 
 }

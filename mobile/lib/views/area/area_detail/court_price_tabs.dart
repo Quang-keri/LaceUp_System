@@ -2,14 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/court.dart';
+import '../../../models/rental_area.dart';
 
 class CourtPriceTab extends StatelessWidget {
+  final RentalAreaResponse? rentalArea;
   final CourtResponse? activeCourt;
+  final ValueChanged<CourtResponse>? onCourtSelected;
 
-  const CourtPriceTab({super.key, required this.activeCourt});
+  const CourtPriceTab({
+    super.key,
+    required this.rentalArea,
+    required this.activeCourt,
+    this.onCourtSelected,
+  });
 
-  final Color primaryColor = const Color(0xFF9156F1); // Tím LaceUP
-  final Color selectedColor = const Color(0xFFEA580C); // Cam LaceUP
+  final Color primaryColor = const Color(0xFF9156F1);
+  final Color selectedColor = const Color(0xFFEA580C);
 
   // Helper: Format "05:00:00" -> "5h" hoặc "05:30:00" -> "5h30"
   String _formatTime(String? time) {
@@ -46,9 +54,7 @@ class CourtPriceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (activeCourt == null ||
-        activeCourt!.priceRules == null ||
-        activeCourt!.priceRules!.isEmpty) {
+    if (activeCourt == null || activeCourt!.priceRules.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Container(
@@ -69,8 +75,19 @@ class CourtPriceTab extends StatelessWidget {
     }
 
     final rules = activeCourt!.priceRules!;
+    final courts = rentalArea?.courts ?? [];
 
-    // 1. Gom nhóm Dữ liệu: Cụm Ngày -> Thứ -> Danh sách các mốc Giá
+    CourtResponse? dropdownValue;
+    if (courts.isNotEmpty) {
+      try {
+        dropdownValue = courts.firstWhere(
+          (c) => c.courtId == activeCourt!.courtId,
+        );
+      } catch (_) {
+        dropdownValue = null;
+      }
+    }
+
     Map<String, Map<String, List<dynamic>>> groupedRules = {};
 
     for (var rule in rules) {
@@ -91,22 +108,58 @@ class CourtPriceTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              children: [
-                const TextSpan(
-                  text: 'Bảng giá ',
-                  style: TextStyle(color: Colors.black87),
+          Row(
+            children: [
+              const Text(
+                'Bảng giá',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: selectedColor.withOpacity(0.3)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<CourtResponse>(
+                      value: dropdownValue,
+                      isExpanded: true,
+                      icon: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: selectedColor,
+                      ),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: selectedColor,
+                      ),
+                      onChanged: (CourtResponse? newValue) {
+                        if (newValue != null && onCourtSelected != null) {
+                          onCourtSelected!(newValue);
+                        }
+                      },
+                      items: courts.map<DropdownMenuItem<CourtResponse>>((
+                        CourtResponse court,
+                      ) {
+                        return DropdownMenuItem<CourtResponse>(
+                          value: court,
+                          child: Text(
+                            court.courtName,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
-                TextSpan(
-                  text: '- ${activeCourt!.courtName}',
-                  style: TextStyle(color: selectedColor),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // 2. Render từng Bảng theo từng Cụm Ngày
           ...groupedRules.entries.map((dateEntry) {
@@ -120,10 +173,15 @@ class CourtPriceTab extends StatelessWidget {
                 children: [
                   // HEADER: Cụm Ngày
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: primaryColor,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(8),
+                      ),
                     ),
                     child: Text(
                       dateRange,
@@ -184,7 +242,9 @@ class CourtPriceTab extends StatelessWidget {
             children: [
               // Ảo thuật RowSpan: Chỉ hiển thị tên "Thứ" ở dòng đầu tiên của cụm
               _buildCell(i == 0 ? dayType : '', isBold: i == 0),
-              _buildCell('${_formatTime(rule.startTime)} - ${_formatTime(rule.endTime)}'),
+              _buildCell(
+                '${_formatTime(rule.startTime)} - ${_formatTime(rule.endTime)}',
+              ),
               _buildCell(
                 '${NumberFormat('#,###', 'vi_VN').format(rule.pricePerHour)} đ',
                 textColor: selectedColor,
@@ -199,8 +259,12 @@ class CourtPriceTab extends StatelessWidget {
     return rows;
   }
 
-  // Widget vẽ ô cell trong bảng
-  Widget _buildCell(String text, {bool isHeader = false, bool isBold = false, Color? textColor}) {
+  Widget _buildCell(
+    String text, {
+    bool isHeader = false,
+    bool isBold = false,
+    Color? textColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: Text(

@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +29,7 @@ import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -47,6 +49,8 @@ public class BookingIntentServiceImpl implements BookingIntentService {
     private final BookingService bookingService;
     private final CourtPriceService courtPriceService;
     private final CloudinaryService cloudinaryService;
+
+    private final TaskScheduler taskScheduler;
 
     @Transactional
     @Override
@@ -77,7 +81,6 @@ public class BookingIntentServiceImpl implements BookingIntentService {
         for (SlotRequest slotReq : request.getSlotRequests()) {
 
             List<CourtCopy> selectedCopies = new ArrayList<>();
-
 
             if (slotReq.getCourtCopyId() != null) {
 
@@ -157,7 +160,6 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                 throw new RuntimeException("Phải cung cấp courtId hoặc courtCopyId");
             }
 
-
             for (CourtCopy courtCopy : selectedCopies) {
 
                 if (rentalArea == null) {
@@ -166,7 +168,6 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                         .equals(courtCopy.getCourt().getRentalArea().getRentalAreaId())) {
                     throw new RuntimeException("Tất cả sân phải thuộc cùng một khu vực");
                 }
-
 
                 BigDecimal price = courtPriceService.calculatePrice(
                         courtCopy,
@@ -206,6 +207,12 @@ public class BookingIntentServiceImpl implements BookingIntentService {
 
         bookingIntentRepository.save(intent);
 
+        final UUID intentId = intent.getBookingIntentId();
+        taskScheduler.schedule(
+                () -> cancelIfNotPaid(intentId),
+                intent.getExpiresAt().atZone(ZoneId.systemDefault()).toInstant()
+        );
+
         List<IntentSlotResponse> slotResponses = intentSlots.stream()
                 .map(slot -> IntentSlotResponse.builder()
                         .courtCopyId(slot.getCourtCopy().getCourtCopyId())
@@ -215,6 +222,7 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                         .price(slot.getPrice())
                         .build())
                 .toList();
+
         BankAccount bankAccount = bankAccountRepository
                 .findByUser_UserId(intent.getRentalArea().getOwner().getUserId())
                 .orElseThrow(() -> new RuntimeException("Owner chưa cấu hình tài khoản ngân hàng"));
@@ -240,6 +248,17 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                 .accountName(rentalArea != null && rentalArea.getOwner() != null ? rentalArea.getOwner().getBankAccount() != null ? rentalArea.getOwner().getBankAccount().getAccountHolderName() : null : null)
                 .vietQrUrl(vietQrUrl)
                 .build();
+    }
+
+    @Transactional
+    public void cancelIfNotPaid(UUID intentId) {
+        bookingIntentRepository.findById(intentId).ifPresent(intent -> {
+            if (intent.getStatus() == BookingIntentStatus.ACTIVE) {
+                intent.setStatus(BookingIntentStatus.EXPIRED);
+                bookingIntentRepository.save(intent);
+                System.out.println("LaceUP System: Đã tự động huỷ vé giữ chỗ do quá 5 phút thanh toán - ID: " + intentId);
+            }
+        });
     }
 
     @Override
@@ -579,5 +598,4 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                 BookingIntentStatus.PENDING_OWNER_CONFIRM
         ) > 0;
     }
-
 }
