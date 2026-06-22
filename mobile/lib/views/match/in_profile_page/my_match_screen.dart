@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/views/match/in_profile_page/achievement_showcase_tab.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 import '../../../providers/auth_provider.dart';
@@ -7,6 +8,7 @@ import '../../../services/match_service.dart';
 import 'approve_result_dialog.dart';
 import 'match_detail_bottom_sheet.dart';
 import 'match_payment_screen.dart';
+import 'my_ranks_widget.dart';
 
 const Color kAppOrange = Colors.orange;
 const Color kAppPurple = Colors.purple;
@@ -29,7 +31,8 @@ class _MyMatchScreenState extends State<MyMatchScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    // Đổi length thành 4 cho 4 tabs
+    _tabController = TabController(length: 4, vsync: this);
     _fetchMyMatches();
   }
 
@@ -334,6 +337,11 @@ class _MyMatchScreenState extends State<MyMatchScreen>
         textColor = Colors.grey.shade700;
         text = "Đã hoàn thành";
         break;
+      case 'EXPIRED':
+        bgColor = Colors.grey.shade200;
+        textColor = Colors.grey.shade700;
+        text = "Đã hết hạn";
+        break;
       case 'CANCELLED':
         bgColor = Colors.red.shade50;
         textColor = Colors.red;
@@ -375,12 +383,6 @@ class _MyMatchScreenState extends State<MyMatchScreen>
         text = "Rank (${match.minRank ?? 0}-${match.maxRank ?? 0})";
         icon = Icons.emoji_events;
         break;
-      // case 'BET':
-      //   bgColor = Colors.orange.shade50;
-      //   textColor = Colors.orange;
-      //   text = match.note?.isNotEmpty == true ? "Kèo: ${match.note}" : "Kèo";
-      //   icon = Icons.local_fire_department;
-      //   break;
       case 'NORMAL':
       default:
         bgColor = Colors.blue.shade50;
@@ -540,24 +542,15 @@ class _MyMatchScreenState extends State<MyMatchScreen>
         myInfo.isPaid != true &&
         !isWaitingApproval;
 
-    final smallButtonStyle = ElevatedButton.styleFrom(
-      minimumSize: const Size(0, 36),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-    );
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      // Nhỏ margin lại
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey.shade200),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0), // Padding bên trong cũng thu lại
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -571,7 +564,7 @@ class _MyMatchScreenState extends State<MyMatchScreen>
                       ? match.title
                       : 'Giao lưu ${match.categoryName}',
                   style: const TextStyle(
-                    fontSize: 15, // Chữ nhỏ lại xíu
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -580,7 +573,6 @@ class _MyMatchScreenState extends State<MyMatchScreen>
               ],
             ),
             const SizedBox(height: 8),
-            // Giảm khoảng cách
             Row(
               children: [
                 const Icon(Icons.calendar_today, size: 14, color: kAppOrange),
@@ -604,7 +596,6 @@ class _MyMatchScreenState extends State<MyMatchScreen>
               ],
             ),
             const SizedBox(height: 10),
-
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -618,11 +609,9 @@ class _MyMatchScreenState extends State<MyMatchScreen>
                     borderColor: const Color(0xFFEF4444),
                     backgroundColor: Colors.white,
                   ),
-
                 if (myInfo != null &&
                     ['OPEN', 'PENDING', 'READY'].contains(match.status))
                   const SizedBox(width: 8),
-
                 Expanded(
                   child: Align(
                     alignment: Alignment.centerRight,
@@ -640,7 +629,6 @@ class _MyMatchScreenState extends State<MyMatchScreen>
                             backgroundColor: const Color(0xFFFFF7ED),
                             borderColor: const Color(0xFFFDBA74),
                           ),
-
                         if (isPaid)
                           _buildCompactStatus(
                             label: 'Đã TT',
@@ -649,9 +637,12 @@ class _MyMatchScreenState extends State<MyMatchScreen>
                             backgroundColor: const Color(0xFFECFDF3),
                             borderColor: const Color(0xFF86EFAC),
                           ),
-
                         if (needsPayment &&
-                            !['COMPLETED', 'CANCELLED'].contains(match.status))
+                            ![
+                              'COMPLETED',
+                              'CANCELLED',
+                              'EXPIRED',
+                            ].contains(match.status))
                           _buildCompactActionButton(
                             label: 'Thanh toán',
                             icon: Icons.account_balance_wallet_rounded,
@@ -660,7 +651,6 @@ class _MyMatchScreenState extends State<MyMatchScreen>
                             backgroundColor: kAppOrange,
                             filled: true,
                           ),
-
                         if (match.status == 'WAITING_RESULT_APPROVAL')
                           _buildCompactActionButton(
                             label: 'Xử lý KQ',
@@ -743,6 +733,10 @@ class _MyMatchScreenState extends State<MyMatchScreen>
     List<MatchResponse> historyMatches = [];
 
     for (var m in matches) {
+      if (m.status == 'CANCELLED') {
+        continue;
+      }
+
       var rawInfo = m.participants
           .where((p) => p.userId == myUserId)
           .firstOrNull;
@@ -750,7 +744,7 @@ class _MyMatchScreenState extends State<MyMatchScreen>
       bool hasLeft =
           (rawInfo?.isCancelled == true) || _leftMatchIds.contains(m.matchId);
 
-      if (hasLeft || ['COMPLETED', 'CANCELLED'].contains(m.status)) {
+      if (hasLeft || ['COMPLETED', 'EXPIRED'].contains(m.status)) {
         historyMatches.add(m);
       } else if (activeStatuses.contains(m.status)) {
         activeMatches.add(m);
@@ -759,7 +753,6 @@ class _MyMatchScreenState extends State<MyMatchScreen>
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      // Thêm nền xám nhạt để card nổi bật hơn
       appBar: AppBar(
         automaticallyImplyLeading: true,
         title: const Text(
@@ -771,9 +764,13 @@ class _MyMatchScreenState extends State<MyMatchScreen>
           labelColor: kAppPurple,
           unselectedLabelColor: Colors.grey,
           indicatorColor: kAppOrange,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: const [
             Tab(text: "Đang diễn ra & Chờ"),
-            Tab(text: "Hoàn thành & Đã hủy"),
+            Tab(text: "Hoàn thành & Hết hạn"),
+            Tab(text: "Xếp hạng"),
+            Tab(text: "Thành tựu"),
           ],
         ),
       ),
@@ -814,6 +811,8 @@ class _MyMatchScreenState extends State<MyMatchScreen>
                               _buildMatchCard(historyMatches[index]),
                         ),
                 ),
+                MyRanksWidget(userId: myUserId),
+                const AchievementShowcaseTab(),
               ],
             ),
     );

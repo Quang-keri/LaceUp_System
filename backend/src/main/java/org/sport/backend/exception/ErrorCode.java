@@ -80,6 +80,7 @@ public enum ErrorCode {
             "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên",
             HttpStatus.FORBIDDEN
     ),
+    AGE_UNDER_16(2006, "Bạn phải đủ 16 tuổi!", HttpStatus.NOT_ACCEPTABLE),
 
     // Role
     ROLE_NOT_FOUND(

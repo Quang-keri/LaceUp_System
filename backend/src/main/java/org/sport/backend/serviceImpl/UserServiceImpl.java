@@ -36,7 +36,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -69,6 +71,8 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
+
+        validateAge(request.getDateOfBirth());
 
         Role role = roleRepository.findByRoleName(request.getRoleName())
                 .orElseThrow(() -> new AppException(ErrorCode.ROLE_NOT_FOUND));
@@ -161,7 +165,10 @@ public class UserServiceImpl implements UserService {
         if (request.getUserName() != null) user.setUserName(request.getUserName());
         if (request.getPhone() != null) user.setPhone(request.getPhone());
         if (request.getGender() != null) user.setGender(request.getGender());
-        if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
+        if (request.getDateOfBirth() != null) {
+            validateAge(request.getDateOfBirth());
+            user.setDateOfBirth(request.getDateOfBirth());
+        }
 
         boolean hasBankInfo = request.getBankName() != null ||
                 request.getAccountNumber() != null ||
@@ -176,9 +183,19 @@ public class UserServiceImpl implements UserService {
 
             if (request.getBankName() != null) bankAccount.setBankName(request.getBankName());
             if (request.getAccountNumber() != null) bankAccount.setAccountNumber(request.getAccountNumber());
-            if (request.getAccountHolderName() != null) bankAccount.setAccountHolderName(request.getAccountHolderName());
+            if (request.getAccountHolderName() != null)
+                bankAccount.setAccountHolderName(request.getAccountHolderName());
 
             user.setBankAccount(bankAccount);
+        }
+    }
+
+    private void validateAge(LocalDate dateOfBirth) {
+        if (dateOfBirth != null) {
+            int age = Period.between(dateOfBirth, LocalDate.now()).getYears();
+            if (age < 16) {
+                throw new AppException(ErrorCode.AGE_UNDER_16);
+            }
         }
     }
 
