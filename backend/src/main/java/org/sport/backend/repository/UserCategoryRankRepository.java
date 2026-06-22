@@ -16,4 +16,11 @@ public interface UserCategoryRankRepository extends JpaRepository<UserCategoryRa
     List<UserCategoryRank> findByUser_UserId(UUID userId);
 
     void deleteAllByUser_UserId(UUID userId);
+
+    List<UserCategoryRank> findTop100ByCategory_CategoryIdOrderByRankPointDesc(Integer categoryId);
+
+    long countByCategory_CategoryId(Integer categoryId);
+
+    long countByCategory_CategoryIdAndRankPointGreaterThan(Integer categoryId, Integer rankPoint);
+
 }

@@ -53,6 +53,11 @@ public enum ErrorCode {
             "Tài khoản này chỉ đăng nhập bằng Google",
             HttpStatus.BAD_REQUEST
     ),
+    NOT_FOUND(
+            1009,
+            "Không tìm thấy",
+            HttpStatus.NOT_FOUND
+    ),
 
     // User
     USER_EXISTED(
