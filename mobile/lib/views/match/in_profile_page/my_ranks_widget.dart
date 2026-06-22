@@ -267,8 +267,23 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
       );
     }
 
+    // 1. Cắt lấy Top 10
+    List<LeaderboardEntryResponse> displayList = top100.take(10).toList();
+
+    // 2. Kiểm tra xem user hiện tại có trong Top 10 chưa
+    bool amIInTop10 = displayList.any((e) => e.userId == widget.userId);
+    LeaderboardEntryResponse? appendedMe;
+
+    // 3. Nếu chưa, nối thêm user vào cuối
+    if (!amIInTop10 && myStats?.myStats != null) {
+      appendedMe = myStats!.myStats;
+    }
+
+    int totalItems = displayList.length + (appendedMe != null ? 1 : 0);
+
     return Column(
       children: [
+        // Dropdown chọn bộ môn
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Container(
@@ -308,6 +323,7 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
           ),
         ),
 
+        // Thống kê hạng của tôi
         if (myStats != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -365,139 +381,213 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
             ),
           ),
 
+        // List Top 10 + Current User (nếu có)
         Expanded(
           child: isLoadingLeaderboard
               ? const Center(
                   child: CircularProgressIndicator(color: kAppOrange),
                 )
-              : top100.isEmpty
-              ? const Center(child: Text("Chưa có dữ liệu Top 100"))
+              : displayList.isEmpty
+              ? const Center(child: Text("Chưa có dữ liệu Bảng xếp hạng"))
               : ListView.builder(
-                  itemCount: top100.length,
+                  itemCount: totalItems,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
                   itemBuilder: (context, index) {
-                    final userStat = top100[index];
+                    final bool isAppended = index == displayList.length;
+                    final userStat = isAppended
+                        ? appendedMe!
+                        : displayList[index];
+                    final int stt = isAppended
+                        ? myStats!.currentRankPosition
+                        : index + 1;
+
                     final rankInfo = getRankInfo(userStat.rankPoint.toDouble());
                     final isMe = userStat.userId == widget.userId;
 
                     Widget rankIcon;
-                    if (index == 0)
-                      rankIcon = const Icon(
-                        Icons.military_tech,
-                        color: Colors.amber,
-                        size: 32,
+                    if (stt == 1) {
+                      rankIcon = CircleAvatar(
+                        backgroundColor: Colors.amber.shade600,
+                        radius: 15,
+                        child: const Text(
+                          '1',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       );
-                    else if (index == 1)
-                      rankIcon = const Icon(
-                        Icons.military_tech,
-                        color: Colors.blueGrey,
-                        size: 32,
+                    } else if (stt == 2) {
+                      rankIcon = CircleAvatar(
+                        backgroundColor: Colors.blueGrey.shade300,
+                        radius: 15,
+                        child: const Text(
+                          '2',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       );
-                    else if (index == 2)
-                      rankIcon = const Icon(
-                        Icons.military_tech,
-                        color: Colors.deepOrange,
-                        size: 32,
+                    } else if (stt == 3) {
+                      rankIcon = CircleAvatar(
+                        backgroundColor: Colors.deepOrange.shade400,
+                        radius: 15,
+                        child: const Text(
+                          '3',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       );
-                    else
+                    } else {
                       rankIcon = CircleAvatar(
                         backgroundColor: Colors.grey.shade200,
-                        radius: 14,
+                        radius: 15,
                         child: Text(
-                          '${index + 1}',
+                          '$stt',
                           style: const TextStyle(
-                            fontSize: 12,
                             color: Colors.black87,
                             fontWeight: FontWeight.bold,
+                            fontSize: 13,
                           ),
                         ),
                       );
+                    }
 
-                    return Card(
-                      color: isMe ? kAppOrange.withOpacity(0.05) : Colors.white,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isMe ? kAppOrange : Colors.transparent,
-                        ),
-                      ),
-                      elevation: 0.5,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        leading: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(width: 32, child: Center(child: rankIcon)),
-                            const SizedBox(width: 8),
-                            CircleAvatar(
-                              backgroundImage: userStat.avatar != null
-                                  ? NetworkImage(userStat.avatar!)
-                                  : null,
-                              backgroundColor: kAppPurple.withOpacity(0.2),
-                              child: userStat.avatar == null
-                                  ? const Icon(Icons.person, color: kAppPurple)
-                                  : null,
-                            ),
-                          ],
-                        ),
-                        title: Text(
-                          userStat.userName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isMe ? kAppOrange : Colors.black87,
+                    return Column(
+                      children: [
+                        // Thêm dải phân cách nếu là item chèn thêm ở dưới cùng
+                        if (isAppended) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                  color: kAppOrange.withOpacity(0.5),
+                                  thickness: 1,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                child: Icon(
+                                  Icons.keyboard_double_arrow_down,
+                                  size: 16,
+                                  color: kAppOrange.withOpacity(0.8),
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(
+                                  color: kAppOrange.withOpacity(0.5),
+                                  thickness: 1,
+                                ),
+                              ),
+                            ],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Row(
-                          children: [
-                            Image.asset(
-                              rankInfo.imagePath,
-                              width: 20,
-                              height: 20,
-                              errorBuilder: (_, __, ___) =>
-                                  const Icon(Icons.star, size: 16),
+                          const SizedBox(height: 6),
+                        ],
+                        Card(
+                          color: isMe
+                              ? kAppOrange.withOpacity(0.05)
+                              : Colors.white,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: isMe ? kAppOrange : Colors.transparent,
+                              width: isAppended ? 1.5 : 1.0,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${userStat.rankPoint} Đ',
+                          ),
+                          elevation: isAppended ? 2 : 0.5,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            leading: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 32,
+                                  child: Center(child: rankIcon),
+                                ),
+                                const SizedBox(width: 8),
+                                CircleAvatar(
+                                  backgroundImage: userStat.avatar != null
+                                      ? NetworkImage(userStat.avatar!)
+                                      : null,
+                                  backgroundColor: kAppPurple.withOpacity(0.2),
+                                  child: userStat.avatar == null
+                                      ? const Icon(
+                                          Icons.person,
+                                          color: kAppPurple,
+                                        )
+                                      : null,
+                                ),
+                              ],
+                            ),
+                            title: Text(
+                              userStat.userName,
                               style: TextStyle(
-                                color: rankInfo.color,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${userStat.winRate}% Win',
-                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: kAppPurple,
-                                fontSize: 13,
+                                color: isMe ? kAppOrange : Colors.black87,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            Text(
-                              '${userStat.totalMatches} trận',
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 11,
-                              ),
+                            subtitle: Row(
+                              children: [
+                                Image.asset(
+                                  rankInfo.imagePath,
+                                  width: 20,
+                                  height: 20,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.star, size: 16),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${userStat.rankPoint} Đ',
+                                  style: TextStyle(
+                                    color: rankInfo.color,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${userStat.winRate}% Win',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: kAppPurple,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  '${userStat.totalMatches} trận',
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     );
                   },
                 ),

@@ -17,8 +17,8 @@ import {
 import { TrophyOutlined, CrownFilled, FireOutlined } from "@ant-design/icons";
 import { useAuth } from "../../../context/AuthContext";
 import userService from "../../../service/userService";
-import type { UserDashboardResponse } from "../../../types/user";
 import leaderboardService from "../../../service/leaderboardService";
+import type { UserDashboardResponse } from "../../../types/user";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -31,18 +31,16 @@ const MyRanks: React.FC = () => {
 
   // State cho Bảng xếp hạng
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [top100, setTop100] = useState<any[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [myStats, setMyStats] = useState<any>(null);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
 
-  // Lấy dữ liệu cá nhân ban đầu
   useEffect(() => {
     if (user?.userId) {
       userService
         .getUserDashboard(user.userId)
         .then((res) => {
           setDashboardData(res.result);
-          // Set mặc định chọn bộ môn đầu tiên cho Bảng xếp hạng nếu có
           if (
             res.result?.categoryRanks &&
             res.result.categoryRanks.length > 0
@@ -54,7 +52,6 @@ const MyRanks: React.FC = () => {
     }
   }, [user]);
 
-  // Lấy dữ liệu Bảng xếp hạng khi chọn bộ môn
   useEffect(() => {
     if (selectedCategory) {
       fetchLeaderboardData(selectedCategory);
@@ -69,8 +66,32 @@ const MyRanks: React.FC = () => {
         leaderboardService.getMyLeaderboardStats(categoryId),
       ]);
 
-      if (top100Res.code === 200) setTop100(top100Res.result || []);
-      if (myStatsRes.code === 200) setMyStats(myStatsRes.result || null);
+      if (top100Res.code === 200 && myStatsRes.code === 200) {
+        const allTop = top100Res.result || [];
+        const stats = myStatsRes.result || null;
+
+        const displayData = allTop
+          .slice(0, 10)
+          .map((item: any, index: number) => ({
+            ...item,
+            stt: index + 1,
+          }));
+
+        const amIInTop10 = displayData.some(
+          (item) => item.userId === user?.userId,
+        );
+
+        if (!amIInTop10 && stats?.myStats) {
+          displayData.push({
+            ...stats.myStats,
+            stt: stats.currentRankPosition,
+            isAppendedMe: true,
+          });
+        }
+
+        setLeaderboardData(displayData);
+        setMyStats(stats);
+      }
     } catch (error) {
       console.error("Lỗi khi tải bảng xếp hạng:", error);
     } finally {
@@ -118,24 +139,55 @@ const MyRanks: React.FC = () => {
     };
   };
 
-  // Cột cho bảng Top 100
   const columns = [
     {
-      title: "Hạng",
-      key: "rank",
+      title: "STT",
+      key: "stt",
       width: 80,
       align: "center" as const,
-      render: (_: any, __: any, index: number) => {
-        const rank = index + 1;
-        if (rank === 1)
-          return <CrownFilled className="text-3xl text-yellow-500" />;
-        if (rank === 2)
-          return <CrownFilled className="text-3xl text-gray-400" />;
-        if (rank === 3)
-          return <CrownFilled className="text-3xl text-orange-600" />;
+      render: (record: any) => {
+        const stt = record.stt;
+
+        if (stt === 1)
+          return (
+            <Avatar
+              style={{
+                backgroundColor: "#eab308",
+                color: "white",
+                fontWeight: "bold",
+              }}
+            >
+              1
+            </Avatar>
+          );
+        if (stt === 2)
+          return (
+            <Avatar
+              style={{
+                backgroundColor: "#9ca3af",
+                color: "white",
+                fontWeight: "bold",
+              }}
+            >
+              2
+            </Avatar>
+          );
+        if (stt === 3)
+          return (
+            <Avatar
+              style={{
+                backgroundColor: "#ea580c",
+                color: "white",
+                fontWeight: "bold",
+              }}
+            >
+              3
+            </Avatar>
+          );
+
         return (
           <Text strong className="text-gray-500 text-lg">
-            {rank}
+            {stt}
           </Text>
         );
       },
@@ -234,7 +286,6 @@ const MyRanks: React.FC = () => {
     );
   }
 
-  // TAB 1: THỐNG KÊ CÁ NHÂN
   const renderPersonalStats = () =>
     !dashboardData?.categoryRanks ||
     dashboardData.categoryRanks.length === 0 ? (
@@ -270,7 +321,7 @@ const MyRanks: React.FC = () => {
                       percent={item.winRate}
                       size="small"
                       showInfo={false}
-                      strokeColor={{ "0%": "#a855f7", "100%": "#f97316" }} // Chuyển sắc Tím -> Cam
+                      strokeColor={{ "0%": "#a855f7", "100%": "#f97316" }}
                     />
                   </div>
                 </div>
@@ -281,13 +332,12 @@ const MyRanks: React.FC = () => {
       </Row>
     );
 
-  // TAB 2: BẢNG XẾP HẠNG
   const renderLeaderboard = () => (
     <div className="pt-2">
       <div className="flex justify-between items-center mb-6">
         <Title level={5} className="m-0 text-purple-800">
           <TrophyOutlined className="mr-2 text-orange-500" />
-          Top 100 Cao Thủ
+          Top 10 Cao Thủ
         </Title>
         <Select
           value={selectedCategory}
@@ -329,15 +379,18 @@ const MyRanks: React.FC = () => {
       )}
 
       <Table
-        dataSource={top100}
+        dataSource={leaderboardData}
         columns={columns}
-        rowKey="userId"
+        rowKey={(record) => record.userId + (record.isAppendedMe ? "_me" : "")} // Chống trùng key
         pagination={false}
         loading={loadingLeaderboard}
         className="border border-gray-100 rounded-xl overflow-hidden shadow-sm"
-        rowClassName={(record) =>
-          record.userId === user?.userId ? "bg-orange-50" : ""
-        }
+        rowClassName={(record) => {
+          let classes = record.userId === user?.userId ? "bg-orange-50" : "";
+          if (record.isAppendedMe)
+            classes += " border-t-2 border-dashed border-orange-300"; // Thêm border đứt quãng để phân biệt khoảng cách
+          return classes;
+        }}
       />
     </div>
   );
