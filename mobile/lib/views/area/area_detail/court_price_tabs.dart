@@ -38,17 +38,26 @@ class CourtPriceTab extends StatelessWidget {
   // Helper: Trích xuất Ngày bắt đầu & kết thúc để làm Header
   String _getDateRange(dynamic rule) {
     try {
+      final specificDate = rule.specificDate;
       final startDate = rule.startDate;
       final endDate = rule.endDate;
 
+      // 1. Kiểm tra Ngày cụ thể (Ưu tiên)
+      if (specificDate != null) {
+        final date = DateTime.parse(specificDate.toString());
+        return DateFormat('dd/MM/yyyy').format(date);
+      }
+
+      // 2. Kiểm tra Khoảng ngày (Date Range)
       if (startDate != null && endDate != null) {
         final start = DateTime.parse(startDate.toString());
         final end = DateTime.parse(endDate.toString());
         return '${DateFormat('dd/MM/yyyy').format(start)} - ${DateFormat('dd/MM/yyyy').format(end)}';
       }
     } catch (e) {
-      // Bỏ qua nếu không parse được ngày
+      // Bỏ qua nếu không parse được ngày, tự fallback về Ngày thường
     }
+
     return 'Ngày thường';
   }
 
