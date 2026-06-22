@@ -17,7 +17,7 @@ public class BookingIntentExpirationScheduler {
 
     private final BookingIntentRepository bookingIntentRepository;
 
-    @Scheduled(fixedDelay = 30000)
+    @Scheduled(fixedDelay = 3600000)
     @Transactional
     public void expireUnpaidBookingIntents() {
         List<BookingIntent> intents =

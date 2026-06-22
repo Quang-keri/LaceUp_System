@@ -54,5 +54,8 @@ public interface MatchService {
     PageResponse<MatchResponse> getUserMatchHistory(UUID userId, int page, int size);
 
     @Transactional
+    void generateNextMatches();
+
+    @Transactional
     void leaveMatch(UUID matchId);
 }

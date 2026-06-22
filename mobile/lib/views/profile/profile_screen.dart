@@ -59,27 +59,27 @@ class ProfileScreen extends StatelessWidget {
           );
         },
       ),
-      ProfileMenuItemData(
-        title: 'Xếp hạng của tôi',
-        icon: Icons.workspace_premium_outlined,
-        isComingSoon: true,
-        onTap: () {
-          showComingSoon(context);
-        },
-      ),
-      ProfileMenuItemData(
-        title: 'Tủ kính thành tựu',
-
-        icon: Icons.emoji_events_outlined,
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AchievementShowcaseScreen(),
-            ),
-          );
-        },
-      ),
+      // ProfileMenuItemData(
+      //   title: 'Xếp hạng của tôi',
+      //   icon: Icons.workspace_premium_outlined,
+      //   isComingSoon: true,
+      //   onTap: () {
+      //     showComingSoon(context);
+      //   },
+      // ),
+      // ProfileMenuItemData(
+      //   title: 'Tủ kính thành tựu',
+      //
+      //   icon: Icons.emoji_events_outlined,
+      //   onTap: () {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(
+      //         builder: (_) => const AchievementShowcaseScreen(),
+      //       ),
+      //     );
+      //   },
+      // ),
       ProfileMenuItemData(
         title: 'Gói hội viên',
         icon: Icons.card_membership_outlined,
@@ -115,9 +115,7 @@ class ProfileScreen extends StatelessWidget {
         isComingSoon: false,
         onTap: () {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const UserBankAccountScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const UserBankAccountScreen()),
           );
         },
       ),
@@ -385,11 +383,9 @@ class ProfileScreen extends StatelessWidget {
         subtitle: 'Quyền riêng tư, điều khoản sử dụng và xóa tài khoản',
         icon: Icons.verified_user_outlined,
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const TermsPolicyScreen(),
-            ),
-          );
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const TermsPolicyScreen()));
         },
       ),
       ProfileMenuItemData(
@@ -406,20 +402,14 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 title: const Row(
                   children: [
-                    Icon(
-                      Icons.language_rounded,
-                      color: primaryPurple,
-                    ),
+                    Icon(Icons.language_rounded, color: primaryPurple),
                     SizedBox(width: 10),
                     Text('Ngôn ngữ'),
                   ],
                 ),
                 content: const Text(
                   'Ứng dụng hiện đang sử dụng Tiếng Việt.',
-                  style: TextStyle(
-                    color: secondaryTextColor,
-                    height: 1.5,
-                  ),
+                  style: TextStyle(color: secondaryTextColor, height: 1.5),
                 ),
                 actions: [
                   FilledButton(
@@ -441,8 +431,7 @@ class ProfileScreen extends StatelessWidget {
     ];
 
     return SingleChildScrollView(
-      keyboardDismissBehavior:
-      ScrollViewKeyboardDismissBehavior.onDrag,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(18, 24, 18, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -452,17 +441,12 @@ class ProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  lightPurple,
-                  Colors.white,
-                ],
+                colors: [lightPurple, Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: primaryPurple.withOpacity(0.22),
-              ),
+              border: Border.all(color: primaryPurple.withOpacity(0.22)),
               boxShadow: [
                 BoxShadow(
                   color: primaryPurple.withOpacity(0.08),
@@ -499,7 +483,7 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   'Đăng nhập để quản lý lịch đặt sân, trận đấu '
-                      'và thông tin tài khoản của bạn.',
+                  'và thông tin tài khoản của bạn.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: secondaryTextColor,
@@ -518,8 +502,7 @@ class ProfileScreen extends StatelessWidget {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) =>
-                                const LoginScreen(),
+                                builder: (_) => const LoginScreen(),
                               ),
                             );
                           },
@@ -528,8 +511,7 @@ class ProfileScreen extends StatelessWidget {
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           child: const Text(
@@ -550,8 +532,7 @@ class ProfileScreen extends StatelessWidget {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) =>
-                                const RegisterScreen(),
+                                builder: (_) => const RegisterScreen(),
                               ),
                             );
                           },
@@ -562,8 +543,7 @@ class ProfileScreen extends StatelessWidget {
                               width: 1.5,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                           child: const Text(

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -44,7 +45,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       final response = await userService.getMyInfo();
 
       final Map<String, dynamic> user =
-      response is Map<String, dynamic> && response.containsKey('result')
+          response is Map<String, dynamic> && response.containsKey('result')
           ? Map<String, dynamic>.from(response['result'])
           : Map<String, dynamic>.from(response);
 
@@ -81,6 +82,20 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       return;
     }
 
+    final DateTime now = DateTime.now();
+    final DateTime? dob = DateTime.tryParse(dobController.text.trim());
+    if (dob != null) {
+      int age = now.year - dob.year;
+      if (now.month < dob.month ||
+          (now.month == dob.month && now.day < dob.day)) {
+        age--;
+      }
+      if (age < 16) {
+        showError('Người dùng phải từ đủ 16 tuổi trở lên.');
+        return;
+      }
+    }
+
     try {
       setState(() => isSaving = true);
 
@@ -95,8 +110,21 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
       if (!mounted) return;
 
-
       Navigator.pop(context, true);
+    } on DioException catch (e) {
+      if (!mounted) return;
+
+      String errorMessage = 'Không thể cập nhật. Vui lòng thử lại sau.';
+
+      if (e.response != null && e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map<String, dynamic> && data.containsKey('message')) {
+          errorMessage = data['message'];
+        } else {
+          errorMessage = data.toString();
+        }
+      }
+      showError(errorMessage);
     } catch (e) {
       if (!mounted) return;
       showError(e.toString());
@@ -114,7 +142,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
     final DateTime initialDate =
         DateTime.tryParse(dobController.text.trim()) ??
-            DateTime(now.year - 18, now.month, now.day);
+        DateTime(now.year - 18, now.month, now.day);
 
     final DateTime? selectedDate = await showDatePicker(
       context: context,
@@ -221,10 +249,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           content: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                color: Colors.white,
-              ),
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
               const SizedBox(width: 10),
               Expanded(child: Text(displayMessage)),
             ],
@@ -313,11 +338,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               ),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  top: BorderSide(
-                    color: Color(0xFFEDE9F2),
-                  ),
-                ),
+                border: Border(top: BorderSide(color: Color(0xFFEDE9F2))),
               ),
               child: _buildSaveButton(),
             ),
@@ -325,39 +346,34 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         ),
         body: isLoading
             ? const Center(
-          child: CircularProgressIndicator(
-            color: primaryPurple,
-            strokeWidth: 3,
-          ),
-        )
+                child: CircularProgressIndicator(
+                  color: primaryPurple,
+                  strokeWidth: 3,
+                ),
+              )
             : SafeArea(
-          top: false,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              keyboardDismissBehavior:
-              ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                10,
-                horizontalPadding,
-                110,
+                top: false,
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      10,
+                      horizontalPadding,
+                      110,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [_buildInformationCard()],
+                    ),
+                  ),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-
-                  _buildInformationCard(),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
-
-
 
   Widget _buildInformationCard() {
     return Container(
@@ -365,9 +381,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFEDE9F2),
-        ),
+        border: Border.all(color: const Color(0xFFEDE9F2)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.035),
@@ -381,11 +395,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.badge_outlined,
-                color: primaryPurple,
-                size: 22,
-              ),
+              Icon(Icons.badge_outlined, color: primaryPurple, size: 22),
               SizedBox(width: 5),
               Text(
                 'Thông tin cơ bản',
@@ -397,7 +407,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               ),
             ],
           ),
-
 
           const SizedBox(height: 22),
           _buildInput(
@@ -552,34 +561,23 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                color: Color(0xFFE8E3ED),
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE8E3ED)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                color: Color(0xFFE8E3ED),
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE8E3ED)),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                color: Color(0xFFE6E2E9),
-              ),
+              borderSide: const BorderSide(color: Color(0xFFE6E2E9)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                color: primaryPurple,
-                width: 1.6,
-              ),
+              borderSide: const BorderSide(color: primaryPurple, width: 1.6),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(
-                color: Color(0xFFD64545),
-              ),
+              borderSide: const BorderSide(color: Color(0xFFD64545)),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
@@ -596,21 +594,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   Widget _buildGenderSelector() {
     const List<Map<String, dynamic>> genders = [
-      {
-        'value': 'Male',
-        'label': 'Nam',
-        'icon': Icons.male_rounded,
-      },
-      {
-        'value': 'Female',
-        'label': 'Nữ',
-        'icon': Icons.female_rounded,
-      },
-      {
-        'value': 'Other',
-        'label': 'Khác',
-        'icon': Icons.person_outline_rounded,
-      },
+      {'value': 'Male', 'label': 'Nam', 'icon': Icons.male_rounded},
+      {'value': 'Female', 'label': 'Nữ', 'icon': Icons.female_rounded},
+      {'value': 'Other', 'label': 'Khác', 'icon': Icons.person_outline_rounded},
     ];
 
     return Column(
@@ -632,19 +618,17 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
             return Expanded(
               child: Padding(
-                padding: EdgeInsets.only(
-                  right: value == 'Other' ? 0 : 8,
-                ),
+                padding: EdgeInsets.only(right: value == 'Other' ? 0 : 8),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: isSaving
                         ? null
                         : () {
-                      setState(() {
-                        gender = value;
-                      });
-                    },
+                            setState(() {
+                              gender = value;
+                            });
+                          },
                     borderRadius: BorderRadius.circular(14),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
@@ -675,9 +659,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                               item['label'] as String,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isSelected
-                                    ? primaryPurple
-                                    : textColor,
+                                color: isSelected ? primaryPurple : textColor,
                                 fontSize: 13,
                                 fontWeight: isSelected
                                     ? FontWeight.w800
@@ -709,22 +691,17 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         child: Ink(
           height: 54,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                primaryPurple,
-                darkPurple,
-              ],
-            ),
+            gradient: const LinearGradient(colors: [primaryPurple, darkPurple]),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isDisabled
                 ? []
                 : [
-              BoxShadow(
-                color: primaryPurple.withOpacity(0.28),
-                blurRadius: 15,
-                offset: const Offset(0, 7),
-              ),
-            ],
+                    BoxShadow(
+                      color: primaryPurple.withOpacity(0.28),
+                      blurRadius: 15,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
           ),
           child: InkWell(
             onTap: isDisabled ? null : updateProfile,
@@ -732,32 +709,32 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             child: Center(
               child: isSaving
                   ? const SizedBox(
-                width: 23,
-                height: 23,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              )
+                      width: 23,
+                      height: 23,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
                   : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.save_outlined,
-                    color: Colors.white,
-                    size: 21,
-                  ),
-                  SizedBox(width: 9),
-                  Text(
-                    'Lưu thay đổi',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.save_outlined,
+                          color: Colors.white,
+                          size: 21,
+                        ),
+                        SizedBox(width: 9),
+                        Text(
+                          'Lưu thay đổi',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),

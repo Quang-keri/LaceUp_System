@@ -63,12 +63,6 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
             @Param("excludeMatchId") UUID excludeMatchId
     );
 
-    List<Match> findByStatusAndEndTimeBefore(
-            MatchStatus status,
-            LocalDateTime endTime
-    );
-
-
     boolean existsByHost_UserIdAndStatusIn(
             UUID userId,
             Collection<MatchStatus> statuses
@@ -76,10 +70,16 @@ public interface MatchRepository extends JpaRepository<Match, UUID>, JpaSpecific
 
     List<Match> findAllByHost_UserId(UUID userId);
 
-   boolean existsByCourt_RentalArea_Owner_UserIdAndStatusIn(
+    boolean existsByCourt_RentalArea_Owner_UserIdAndStatusIn(
             UUID ownerId,
             Collection<MatchStatus> statuses
     );
 
-     List<Match> findAllByCourt_RentalArea_Owner_UserId(UUID ownerId);
+    @Query("SELECT m FROM Match m LEFT JOIN FETCH m.booking " +
+            "WHERE m.status IN :pendingStatuses AND m.endTime < :startOfToday")
+    List<Match> findByStatusInAndEndTimeBefore(
+            @Param("pendingStatuses") List<MatchStatus> pendingStatuses,
+            @Param("startOfToday") LocalDateTime startOfToday
+    );
+
 }

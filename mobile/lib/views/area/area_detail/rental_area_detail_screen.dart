@@ -506,7 +506,16 @@ class _RentalAreaDetailScreenState extends State<RentalAreaDetailScreen> {
           },
         );
       case 2:
-        return CourtPriceTab(activeCourt: activeCourt);
+        return CourtPriceTab(
+          rentalArea: rentalArea,
+          activeCourt: activeCourt,
+          onCourtSelected: (court) {
+            setState(() {
+              activeCourt = court;
+              selectedSlots.clear();
+            });
+          },
+        );
       case 3:
         return CourtReviewTab(
           rentalAreaId: widget.rentalAreaId,

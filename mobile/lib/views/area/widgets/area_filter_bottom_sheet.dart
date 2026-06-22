@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 import 'multi_select_wrap.dart';
 
-typedef AreaFilterApply = void Function({
-required int newMinPrice,
-required int newMaxPrice,
-required int newMinRating,
-required String? newSortBy,
-required List<int> newProvinceCodes,
-required List<int> newCategoryIds,
-required List<int> newAmenityIds,
-});
+typedef AreaFilterApply =
+    void Function({
+      required int newMinPrice,
+      required int newMaxPrice,
+      required int newMinRating,
+      required String? newSortBy,
+      required List<int> newProvinceCodes,
+      required List<int> newCategoryIds,
+      required List<int> newAmenityIds,
+    });
 
 class AreaFilterBottomSheet extends StatefulWidget {
   final ScrollController scrollController;
@@ -110,8 +111,8 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
       newAmenityIds: List<int>.from(tempAmenityIds),
     );
   }
+
   Widget _buildProvinceSelectOption() {
-    // Hàm phụ để lấy tên các tỉnh đã chọn hiển thị ra ngoài nút
     String getSelectedNames() {
       if (tempProvinceCodes.isEmpty) return 'Tất cả khu vực';
 
@@ -137,15 +138,21 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
                   ),
                   contentPadding: const EdgeInsets.only(top: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   content: SizedBox(
                     width: double.maxFinite,
-                    height: MediaQuery.of(context).size.height * 0.5, // Chiều cao tối đa = 50% màn hình
+                    height:
+                        MediaQuery.of(context).size.height *
+                        0.5, // Chiều cao tối đa = 50% màn hình
                     child: ListView.builder(
                       itemCount: widget.provinces.length,
                       itemBuilder: (context, index) {
                         final province = widget.provinces[index];
-                        final isSelected = tempProvinceCodes.contains(province.code);
+                        final isSelected = tempProvinceCodes.contains(
+                          province.code,
+                        );
 
                         return CheckboxListTile(
                           title: Text(
@@ -154,16 +161,20 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
                           ),
                           value: isSelected,
                           activeColor: const Color(0xFF9156F1),
-                          controlAffinity: ListTileControlAffinity.leading, // Checkbox nằm bên trái
+                          controlAffinity: ListTileControlAffinity.leading,
+                          // Checkbox nằm bên trái
                           onChanged: (bool? value) {
-                            setStateDialog(() { // Cập nhật lại list trong Dialog
+                            setStateDialog(() {
+                              // Cập nhật lại list trong Dialog
                               if (value == true) {
                                 tempProvinceCodes.add(province.code);
                               } else {
                                 tempProvinceCodes.remove(province.code);
                               }
                             });
-                            setState(() {}); // Cập nhật lại UI hiển thị bên ngoài BottomSheet
+                            setState(
+                              () {},
+                            ); // Cập nhật lại UI hiển thị bên ngoài BottomSheet
                           },
                         );
                       },
@@ -205,19 +216,27 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: tempProvinceCodes.isEmpty ? Colors.black54 : const Color(0xFF1F2937),
-                  fontWeight: tempProvinceCodes.isEmpty ? FontWeight.w500 : FontWeight.w700,
+                  color: tempProvinceCodes.isEmpty
+                      ? Colors.black54
+                      : const Color(0xFF1F2937),
+                  fontWeight: tempProvinceCodes.isEmpty
+                      ? FontWeight.w500
+                      : FontWeight.w700,
                   fontSize: 15,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black54),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.black54,
+            ),
           ],
         ),
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -250,8 +269,7 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
                 const SizedBox(height: 22),
 
                 _sectionTitle('Khu vực'),
-              _buildProvinceSelectOption(),
-
+                _buildProvinceSelectOption(),
 
                 const SizedBox(height: 22),
 
@@ -417,23 +435,28 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
           active: tempMinRating == 0,
           onTap: () => setState(() => tempMinRating = 0),
         ),
-        ...[1,2,3, 4, 5].map(
-              (star) => _choiceChip(
-            label: '⭐ $star+',
+        ...[1, 2, 3, 4, 5].map((star) {
+          String labelText;
+          if (star == 5) {
+            labelText = '⭐ 5.0';
+          } else {
+            labelText = '⭐ $star - $star.9';
+          }
+
+          return _choiceChip(
+            label: labelText,
             active: tempMinRating == star,
             onTap: () => setState(() => tempMinRating = star),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }
 
   Widget _bottomBar() {
-    // Lấy chiều cao của phần giao diện hệ thống phía dưới (Navigation Bar)
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      // Cộng thêm bottomInset vào padding bottom mặc định (20) để đẩy nút lên an toàn
       padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
       decoration: BoxDecoration(
         color: Colors.white,

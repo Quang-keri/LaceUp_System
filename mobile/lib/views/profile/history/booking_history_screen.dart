@@ -315,7 +315,10 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen>
       bookingIntents.where(_isPendingIntent).toList();
 
   List get _failedBookingIntents =>
-      bookingIntents.where(_isFailedIntent).toList();
+      bookingIntents.where((intent) {
+        final status = _effectiveIntentStatus(intent);
+        return const {'CANCELLED', 'REJECTED'}.contains(status);
+      }).toList();
 
   double _toDouble(dynamic value) {
     return double.tryParse(value?.toString() ?? '0') ?? 0;
