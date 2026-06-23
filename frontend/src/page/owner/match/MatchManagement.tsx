@@ -6,6 +6,7 @@ import {
   CalendarOutlined,
   PlusOutlined,
   AlertOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import matchService from "../../../service/match/matchService.ts";
@@ -100,6 +101,27 @@ const MatchManagement: React.FC = () => {
     });
   };
 
+  // Hàm render trạng thái tiếng Việt (Giống hệt bên Modal)
+  const renderMatchStatus = (status: string) => {
+    const statusMap: Record<string, { color: string; text: string }> = {
+      OPEN: { color: "blue", text: "Đang ghép đội" },
+      READY: { color: "cyan", text: "Sẵn sàng" },
+      FULL: { color: "cyan", text: "Đã đủ người" },
+      PLAYING: { color: "geekblue", text: "Đang diễn ra" },
+      WAITING_RESULT_APPROVAL: { color: "orange", text: "Chờ duyệt kết quả" },
+      DISPUTED: { color: "volcano", text: "Tranh chấp" },
+      COMPLETED: { color: "green", text: "Đã kết thúc" },
+      CANCELLED: { color: "red", text: "Đã hủy" },
+    };
+
+    const mapped = statusMap[status] || { color: "default", text: status };
+    return (
+      <Tag color={mapped.color} className="m-0 font-medium">
+        {mapped.text}
+      </Tag>
+    );
+  };
+
   const columns: ColumnsType<MatchResponse> = [
     {
       title: "Tên trận / Sân",
@@ -138,25 +160,22 @@ const MatchManagement: React.FC = () => {
       title: "Trạng thái",
       key: "status",
       render: (record: MatchResponse) => {
-        let color = "default";
-        if (record.status === "OPEN") color = "processing";
-        if (record.status === "CONFIRMED" || record.status === "READY")
-          color = "success";
-        if (record.status === "FULL") color = "warning";
-        if (record.status === "CANCELLED") color = "error";
-        if (record.status === "COMPLETED") color = "default";
-
+        // Logic kiểm tra xem có Report hoặc Result nào đang chờ Chủ sân xử lý không
         const hasPendingReport = record.reports?.some(
           (r: any) => r.status === "PENDING",
         );
+        const hasDisputedResult = (record as any).results?.some(
+          (r: any) => r.status === "DISPUTED",
+        );
 
         return (
-          <Space direction="vertical" size={2}>
-            <Tag color={color} className="m-0">
-              {record.status}
-            </Tag>
-            {hasPendingReport && (
-              <Tooltip title="Trận đấu có báo cáo đang chờ bạn xử lý!">
+          <Space direction="vertical" size={4}>
+            {/* Hiển thị Trạng thái trận đấu bằng Tiếng Việt */}
+            {renderMatchStatus(record.status)}
+
+            {/* Hiển thị Cờ Cảnh Báo nếu cần Chủ sân can thiệp */}
+            {hasPendingReport ? (
+              <Tooltip title="Trận đấu có Báo cáo vi phạm đang chờ bạn xử lý!">
                 <Tag
                   color="red"
                   icon={<AlertOutlined />}
@@ -165,7 +184,17 @@ const MatchManagement: React.FC = () => {
                   CÓ BÁO CÁO
                 </Tag>
               </Tooltip>
-            )}
+            ) : hasDisputedResult ? (
+              <Tooltip title="Có người chơi bị đánh dấu vắng mặt. Chờ bạn xác nhận!">
+                <Tag
+                  color="orange"
+                  icon={<WarningOutlined />}
+                  className="m-0 font-bold border-orange-300"
+                >
+                  CHỜ XÁC NHẬN VẮNG
+                </Tag>
+              </Tooltip>
+            ) : null}
           </Space>
         );
       },
@@ -173,23 +202,25 @@ const MatchManagement: React.FC = () => {
     {
       title: "Thao tác",
       key: "action",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => handleViewDetail(record.matchId)}
-            type={
-              record.reports?.some((r: any) => r.status === "PENDING")
-                ? "primary"
-                : "default"
-            }
-            danger={record.reports?.some((r: any) => r.status === "PENDING")}
-          >
-            Chi tiết
-          </Button>
-        </Space>
-      ),
+      render: (_, record) => {
+        const needsAttention =
+          record.reports?.some((r: any) => r.status === "PENDING") ||
+          (record as any).results?.some((r: any) => r.status === "DISPUTED");
+
+        return (
+          <Space size="middle">
+            <Button
+              icon={<EyeOutlined />}
+              size="small"
+              onClick={() => handleViewDetail(record.matchId)}
+              type={needsAttention ? "primary" : "default"}
+              danger={needsAttention}
+            >
+              Chi tiết
+            </Button>
+          </Space>
+        );
+      },
     },
   ];
 

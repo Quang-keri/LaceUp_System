@@ -109,7 +109,26 @@ const SharedBookingCard: React.FC<SharedBookingCardProps> = ({
       if (response?.code === 200 || response?.code === 1000) {
         setIsModalOpen(false);
         message.success("Đăng ký vãng lai thành công!");
+
         onJoinSuccess();
+
+        // BÓC TÁCH ID ĐỂ CHUYỂN TRANG THANH TOÁN
+        let participantId = null;
+        const resultData = response.result || response.data;
+
+        if (typeof resultData === "string") {
+          participantId = resultData;
+        } else if (resultData?.participantId) {
+          participantId = resultData.participantId;
+        }
+
+        // Chuyển hướng
+        if (participantId) {
+          navigate(`/payment-ticket/${participantId}`);
+        } else {
+          // Fallback nếu không bắt được ID
+          navigate("/my-matches");
+        }
       }
     } catch (error: any) {
       message.error(

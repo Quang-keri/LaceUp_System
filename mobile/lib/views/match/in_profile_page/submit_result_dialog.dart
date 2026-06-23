@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../../models/match.dart';
 import '../../../models/user.dart';
 import '../../../services/match_service.dart';
-import 'report_dialog.dart';
 
 class SubmitResultDialog extends StatefulWidget {
   final MatchResponse match;
@@ -79,19 +78,6 @@ class _SubmitResultDialogState extends State<SubmitResultDialog> {
         setState(() => isLoading = false);
       }
     }
-  }
-
-  void _openReportModal() {
-    final navigatorContext = Navigator.of(context).context;
-    Navigator.pop(context);
-
-    showDialog(
-      context: navigatorContext,
-      builder: (context) => ReportDialog(
-        matchId: widget.match.matchId,
-        allPlayers: widget.match.participants,
-      ),
-    );
   }
 
   String _getErrorMessage(Object error, {required String fallback}) {
@@ -451,7 +437,7 @@ class _SubmitResultDialogState extends State<SubmitResultDialog> {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Người bị đánh dấu vắng có thể bị trừ điểm uy tín.',
+                'Người bị đánh dấu vắng sẽ bị trừ điểm uy tín và Rank.',
                 style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
               ),
               const SizedBox(height: 10),
@@ -480,15 +466,15 @@ class _SubmitResultDialogState extends State<SubmitResultDialog> {
                   Expanded(
                     child: SizedBox(
                       height: 48,
-                      child: OutlinedButton.icon(
-                        onPressed: isLoading ? null : _openReportModal,
-                        icon: const Icon(Icons.flag_outlined, size: 18),
-                        label: const Text('Báo cáo'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFEF4444),
-                          side: const BorderSide(color: Color(0xFFEF4444)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(11),
+                      child: TextButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => Navigator.pop(context),
+                        child: const Text(
+                          'Hủy',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),

@@ -1,39 +1,72 @@
-import React, { useEffect, useState } from "react";
-import {
-  Row,
-  Col,
-  Card,
-  Spin,
-  Typography,
-  Empty,
-  Progress,
-  Tabs,
-  Select,
-  Table,
-  Space,
-  Avatar,
-  Tag,
-} from "antd";
-import { TrophyOutlined, CrownFilled, FireOutlined } from "@ant-design/icons";
+import React, { useContext, useEffect, useState } from "react";
+import { TrophyOutlined, FireOutlined } from "@ant-design/icons";
 import { useAuth } from "../../../context/AuthContext";
 import userService from "../../../service/userService";
 import leaderboardService from "../../../service/leaderboardService";
 import type { UserDashboardResponse } from "../../../types/user";
+import { CategoryContext } from "../../../context/CategoryContext";
+import {
+  Avatar,
+  Card,
+  Col,
+  Empty,
+  Progress,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tabs,
+  Tag,
+  Typography,
+} from "antd";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
+
+interface LeaderboardEntry {
+  userId: string;
+  userName: string;
+  avatar: string | null;
+  rankPoint: number;
+  displayRank: string;
+  winRate: number;
+  currentWinStreak: number;
+  totalMatches: number;
+  stt?: number;
+  isAppendedMe?: boolean;
+}
+
+interface MyLeaderboardStats {
+  currentRankPosition: number;
+  totalUsersInCategory: number;
+  topPercentage: number;
+  myStats: LeaderboardEntry | null;
+}
 
 const MyRanks: React.FC = () => {
   const { user } = useAuth();
+  const { categories, loading: isCategoryLoading } =
+    useContext(CategoryContext);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState<
+    string | undefined
+  >(undefined);
   const [dashboardData, setDashboardData] =
     useState<UserDashboardResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // State cho Bảng xếp hạng
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
-  const [myStats, setMyStats] = useState<any>(null);
+  // Định nghĩa kiểu dữ liệu rõ ràng cho State
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>(
+    [],
+  );
+  const [myStats, setMyStats] = useState<MyLeaderboardStats | null>(null);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (categories && categories.length > 0 && !selectedCategoryId) {
+      setSelectedCategoryId(categories[0].categoryId);
+    }
+  }, [categories, selectedCategoryId]);
 
   useEffect(() => {
     if (user?.userId) {
@@ -41,59 +74,71 @@ const MyRanks: React.FC = () => {
         .getUserDashboard(user.userId)
         .then((res) => {
           setDashboardData(res.result);
-          if (
-            res.result?.categoryRanks &&
-            res.result.categoryRanks.length > 0
-          ) {
-            setSelectedCategory(res.result.categoryRanks[0].categoryId);
-          }
         })
         .finally(() => setLoading(false));
     }
   }, [user]);
 
   useEffect(() => {
-    if (selectedCategory) {
-      fetchLeaderboardData(selectedCategory);
+    if (selectedCategoryId) {
+      fetchLeaderboardData(selectedCategoryId);
     }
-  }, [selectedCategory]);
+  }, [selectedCategoryId]);
 
-  const fetchLeaderboardData = async (categoryId: number) => {
+  const fetchLeaderboardData = async (categoryId: string) => {
     setLoadingLeaderboard(true);
     try {
-      const [top100Res, myStatsRes] = await Promise.all([
-        leaderboardService.getTop100ByCategory(categoryId),
-        leaderboardService.getMyLeaderboardStats(categoryId),
-      ]);
+      // 1. Gọi API lấy dữ liệu Top 100 trước
+      const top100Res = await leaderboardService.getTop100ByCategory(
+        categoryId as any,
+      );
+      let allTop: LeaderboardEntry[] = [];
 
-      if (top100Res.code === 200 && myStatsRes.code === 200) {
-        const allTop = top100Res.result || [];
-        const stats = myStatsRes.result || null;
+      if (top100Res && top100Res.code === 200) {
+        allTop = top100Res.result || [];
+      }
 
-        const displayData = allTop
-          .slice(0, 10)
-          .map((item: any, index: number) => ({
-            ...item,
-            stt: index + 1,
-          }));
+      // Xử lý cắt lấy Top 10 ban đầu
+      const displayData: LeaderboardEntry[] = allTop
+        .slice(0, 10)
+        .map((item, index: number) => ({
+          ...item,
+          stt: index + 1,
+        }));
 
+      let stats: MyLeaderboardStats | null = null;
+      try {
+        const myStatsRes = await leaderboardService.getMyLeaderboardStats(
+          categoryId as any,
+        );
+        if (myStatsRes && myStatsRes.code === 200) {
+          stats = myStatsRes.result || null;
+        }
+      } catch (e) {
+        console.error(
+          "Không lấy được thứ hạng cá nhân (User chưa phân hạng hoặc lỗi API):",
+          e,
+        );
+      }
+
+      if (stats) {
         const amIInTop10 = displayData.some(
           (item) => item.userId === user?.userId,
         );
 
-        if (!amIInTop10 && stats?.myStats) {
+        if (!amIInTop10 && stats.myStats) {
           displayData.push({
             ...stats.myStats,
             stt: stats.currentRankPosition,
             isAppendedMe: true,
           });
         }
-
-        setLeaderboardData(displayData);
-        setMyStats(stats);
       }
+
+      setLeaderboardData(displayData);
+      setMyStats(stats);
     } catch (error) {
-      console.error("Lỗi khi tải bảng xếp hạng:", error);
+      console.error("Lỗi nghiêm trọng khi tải bảng xếp hạng:", error);
     } finally {
       setLoadingLeaderboard(false);
     }
@@ -139,15 +184,15 @@ const MyRanks: React.FC = () => {
     };
   };
 
+  // Định nghĩa chặt chẽ kiểu dữ liệu cho các cột dữ liệu Table
   const columns = [
     {
       title: "STT",
       key: "stt",
       width: 80,
       align: "center" as const,
-      render: (record: any) => {
+      render: (record: LeaderboardEntry) => {
         const stt = record.stt;
-
         if (stt === 1)
           return (
             <Avatar
@@ -184,7 +229,6 @@ const MyRanks: React.FC = () => {
               3
             </Avatar>
           );
-
         return (
           <Text strong className="text-gray-500 text-lg">
             {stt}
@@ -195,7 +239,7 @@ const MyRanks: React.FC = () => {
     {
       title: "Người chơi",
       key: "user",
-      render: (record: any) => (
+      render: (record: LeaderboardEntry) => (
         <Space>
           <Avatar
             src={
@@ -215,7 +259,7 @@ const MyRanks: React.FC = () => {
     {
       title: "Cấp bậc",
       key: "rankLevel",
-      render: (record: any) => {
+      render: (record: LeaderboardEntry) => {
         const rankInfo = getRankInfo(record.rankPoint);
         return (
           <Space>
@@ -255,7 +299,7 @@ const MyRanks: React.FC = () => {
       title: "Tỉ lệ thắng",
       key: "winRate",
       align: "center" as const,
-      render: (record: any) => (
+      render: (record: LeaderboardEntry) => (
         <Space direction="vertical" size={0} className="w-full items-center">
           <Text className="text-xs text-gray-500">
             {record.totalMatches} trận
@@ -340,18 +384,16 @@ const MyRanks: React.FC = () => {
           Top 10 Cao Thủ
         </Title>
         <Select
-          value={selectedCategory}
-          onChange={setSelectedCategory}
-          style={{ width: 200 }}
           placeholder="Chọn bộ môn"
-          className="rounded-lg"
-        >
-          {dashboardData?.categoryRanks?.map((cat) => (
-            <Option key={cat.categoryId} value={cat.categoryId}>
-              {cat.categoryName}
-            </Option>
-          ))}
-        </Select>
+          style={{ width: 200 }}
+          value={selectedCategoryId}
+          onChange={(value) => setSelectedCategoryId(value)}
+          loading={isCategoryLoading || loadingLeaderboard}
+          options={categories.map((cat) => ({
+            value: cat.categoryId,
+            label: cat.categoryName,
+          }))}
+        />
       </div>
 
       {myStats && (
@@ -381,14 +423,16 @@ const MyRanks: React.FC = () => {
       <Table
         dataSource={leaderboardData}
         columns={columns}
-        rowKey={(record) => record.userId + (record.isAppendedMe ? "_me" : "")} // Chống trùng key
+        rowKey={(record: LeaderboardEntry) =>
+          record.userId + (record.isAppendedMe ? "_me" : "")
+        }
         pagination={false}
         loading={loadingLeaderboard}
         className="border border-gray-100 rounded-xl overflow-hidden shadow-sm"
-        rowClassName={(record) => {
+        rowClassName={(record: LeaderboardEntry) => {
           let classes = record.userId === user?.userId ? "bg-orange-50" : "";
           if (record.isAppendedMe)
-            classes += " border-t-2 border-dashed border-orange-300"; // Thêm border đứt quãng để phân biệt khoảng cách
+            classes += " border-t-2 border-dashed border-orange-300";
           return classes;
         }}
       />

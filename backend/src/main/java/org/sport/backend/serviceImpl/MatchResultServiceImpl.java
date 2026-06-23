@@ -104,27 +104,22 @@ public class MatchResultServiceImpl implements MatchResultService {
                     .winningTeamNumber(winningTeam)
                     .winnerIds(winnerIds)
                     .loserIds(loserIds)
-                    .status(ResultStatus.APPROVED)
+                    .status(ResultStatus.DISPUTED)
                     .absentUserIds(absentIds)
                     .build();
 
-            match.setStatus(MatchStatus.COMPLETED);
+            match.setStatus(MatchStatus.WAITING_RESULT_APPROVAL);
             matchRepository.save(match);
 
             MatchResult savedResult = matchResultRepository.save(result);
-
-            processCreditScore(savedResult);
-            if (match.getMatchType() == MatchType.RANKED) {
-                processRankedMatch(savedResult);
-            } else if (match.getMatchType() == MatchType.BET) {
-                processBetMatch(savedResult);
-            }
 
             notifyCourtOwnerAboutAbsence(savedResult);
             eventPublisher.publishEvent(new MatchResultApprovedEvent(savedResult));
 
             log.info("Trận đấu [{}] đã tự động chốt kết quả do đối thủ vắng mặt toàn bộ.", match.getMatchId());
-            return matchResultMapper.toResponse(savedResult);
+            MatchResultResponse response = matchResultMapper.toResponse(savedResult);
+            response.setMessage("Đã ghi nhận vắng mặt. Đang chờ Chủ sân xác nhận!");
+            return response;
 
         } else {
             MatchResult result = MatchResult.builder()
@@ -151,30 +146,44 @@ public class MatchResultServiceImpl implements MatchResultService {
         MatchResult result = matchResultRepository.findById(resultId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy báo cáo kết quả này"));
 
-        if (result.getStatus() != ResultStatus.PENDING) {
-            throw new RuntimeException("Kết quả này đã được xử lý!");
-        }
-
         Match match = result.getMatch();
 
-        MatchRegistration currentReg = registrationRepository.findByMatchAndUser(match, currentUser)
-                .orElseThrow(() -> new RuntimeException("Chỉ người tham gia mới được duyệt kết quả!"));
+        // 1. KIỂM TRA AI ĐANG GỌI API (CHỦ SÂN HAY NGƯỜI CHƠI?)
+        boolean isOwner = match.getCourt() != null && match.getCourt().getRentalArea() != null &&
+                match.getCourt().getRentalArea().getOwner().getUserId().equals(currentUser.getUserId());
 
-        if (result.getAbsentUserIds() != null && result.getAbsentUserIds().contains(currentUser.getUserId())) {
-            throw new RuntimeException("Hệ thống ghi nhận bạn đã vắng mặt (absent) ở trận này, do đó bạn không thể thao tác duyệt kết quả!");
+        if (isOwner) {
+            // ---> QUYỀN CHỦ SÂN: Chỉ duyệt những ca đang Tranh Chấp (DISPUTED)
+            if (result.getStatus() != ResultStatus.DISPUTED) {
+                throw new RuntimeException("Chủ sân chỉ được duyệt kết quả khi có tranh chấp (DISPUTED)!");
+            }
+        } else {
+            // ---> QUYỀN NGƯỜI CHƠI: Duyệt bình thường (PENDING)
+            if (result.getStatus() != ResultStatus.PENDING) {
+                throw new RuntimeException("Kết quả này đã được xử lý!");
+            }
+
+            MatchRegistration currentReg = registrationRepository.findByMatchAndUser(match, currentUser)
+                    .orElseThrow(() -> new RuntimeException("Chỉ người tham gia mới được duyệt kết quả!"));
+
+            if (result.getAbsentUserIds() != null && result.getAbsentUserIds().contains(currentUser.getUserId())) {
+                throw new RuntimeException("Hệ thống ghi nhận bạn đã vắng mặt ở trận này, không thể duyệt kết quả!");
+            }
+
+            MatchRegistration submitterReg = registrationRepository.findByMatchAndUser_UserId(match, result.getSubmitterId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người gửi kết quả"));
+
+            if (currentReg.getTeamNumber() != null && currentReg.getTeamNumber().equals(submitterReg.getTeamNumber())) {
+                throw new RuntimeException("Chỉ người thuộc đội đối thủ mới có quyền duyệt kết quả này!");
+            }
         }
 
-        MatchRegistration submitterReg = registrationRepository.findByMatchAndUser_UserId(match, result.getSubmitterId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin người gửi kết quả"));
-
-        if (currentReg.getTeamNumber() != null && currentReg.getTeamNumber().equals(submitterReg.getTeamNumber())) {
-            throw new RuntimeException("Chỉ người thuộc đội đối thủ mới có quyền duyệt kết quả này!");
-        }
-
+        // 2. THỰC THI CHỐT KẾT QUẢ
         if (isAccepted) {
             result.setStatus(ResultStatus.APPROVED);
             match.setStatus(MatchStatus.COMPLETED);
 
+            // Các hàm cộng/trừ điểm sẽ chạy khi được duyệt
             processCreditScore(result);
 
             if (match.getMatchType() == MatchType.RANKED) {
@@ -184,11 +193,15 @@ public class MatchResultServiceImpl implements MatchResultService {
             }
 
             notifyCourtOwnerAboutAbsence(result);
-
             eventPublisher.publishEvent(new MatchResultApprovedEvent(result));
         } else {
+            // Nếu bị từ chối
             result.setStatus(ResultStatus.REJECTED);
-            match.setStatus(MatchStatus.DISPUTED);
+            if (isOwner) {
+                match.setStatus(MatchStatus.WAITING_RESULT_APPROVAL); // Chủ sân từ chối -> Quay lại chờ User chốt lại
+            } else {
+                match.setStatus(MatchStatus.DISPUTED); // Đối thủ từ chối -> Báo động Tranh chấp
+            }
         }
 
         matchRepository.save(match);
@@ -201,6 +214,18 @@ public class MatchResultServiceImpl implements MatchResultService {
         User currentUser = userService.getCurrentUserEntity();
         Match match = matchRepository.findById(request.getMatchId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy trận đấu"));
+
+        MatchRegistration reporterReg = registrationRepository.findByMatchAndUser(match, currentUser)
+                .orElseThrow(() -> new RuntimeException("Bạn không tham gia trận đấu này!"));
+
+        if (reporterReg.getIsPaid() == null || !reporterReg.getIsPaid()) {
+            throw new RuntimeException("Bạn chưa hoàn tất thanh toán tiền sân. Chỉ những người chơi đã đóng tiền mới có quyền báo cáo hoặc yêu cầu hủy trận!");
+        }
+
+        List<UUID> reportedIds = request.getReportedUserIds();
+        if (reportedIds != null && reportedIds.contains(currentUser.getUserId())) {
+            throw new RuntimeException("Bạn không thể tự báo cáo vi phạm cho chính mình!");
+        }
 
         MatchReport report = MatchReport.builder()
                 .match(match)
@@ -242,43 +267,101 @@ public class MatchResultServiceImpl implements MatchResultService {
         if (!isAccepted) {
             report.setStatus(MatchReportStatus.REJECTED);
             matchReportRepository.save(report);
-            log.info("Chủ sân [{}] đã TỪ CHỐI báo cáo khẩn cấp cho trận [{}]", currentUser.getUserName(), match.getMatchId());
+            log.info("Chủ sân [{}] đã TỪ CHỐI báo cáo vi phạm cho trận [{}]", currentUser.getUserName(), match.getMatchId());
             return;
         }
 
         report.setStatus(MatchReportStatus.RESOLVED);
         matchReportRepository.save(report);
 
-        if ("EARLY_ABSENT".equalsIgnoreCase(report.getReasonType()) || "ABSENT".equalsIgnoreCase(report.getReasonType())) {
+        List<UUID> reportedIds = report.getReportedUserIds() != null ? report.getReportedUserIds() : new ArrayList<>();
 
-            match.setStatus(MatchStatus.CANCELLED);
-            matchRepository.save(match);
+        if (!reportedIds.isEmpty()) {
+            List<User> reportedUsers = userRepository.findAllById(reportedIds);
 
-            List<Slot> matchSlots = slotRepository.findByMatch(match);
-            if (matchSlots != null && !matchSlots.isEmpty()) {
-                for (Slot slot : matchSlots) {
-                    slot.setSlotStatus(SlotStatus.CANCELLED);
-                }
-                slotRepository.saveAll(matchSlots);
-                log.info("Đã giải phóng {} slot(s) của trận [{}] do HỦY khẩn cấp", matchSlots.size(), match.getMatchId());
+            if (reportedUsers.isEmpty()) {
+                log.warn("⚠️ Không tìm thấy User bằng ID trực tiếp. Đang thử convert từ RegistrationID sang UserID...");
+                List<MatchRegistration> regs = registrationRepository.findAllById(reportedIds);
+                reportedUsers = regs.stream().map(MatchRegistration::getUser).toList();
+
+                reportedIds = reportedUsers.stream().map(User::getUserId).toList();
             }
 
-            List<UUID> reportedIds = report.getReportedUserIds();
-            if (reportedIds != null && !reportedIds.isEmpty()) {
-                List<User> reportedUsers = userRepository.findAllById(reportedIds);
-                for (User u : reportedUsers) {
-                    updateCreditScore(u, -20, "Vắng mặt và bị hủy trận khẩn cấp (Owner duyệt)");
-                }
+            for (User u : reportedUsers) {
+                updateCreditScore(u, -20, "Vi phạm trong trận (Lý do: " + report.getReasonType() + ") - Owner xác nhận");
+                log.info("💥 Đã trừ 20 điểm uy tín của User [{}]", u.getUserId());
             }
+        }
 
-            List<Payment> successfulPayments = paymentRepository.findSuccessfulPaymentsByMatch(match.getMatchId());
+        if (match.getMatchType() == MatchType.RANKED && match.getCategory() != null) {
+            List<MatchRegistration> registrations = registrationRepository.findByMatch(match);
 
-            if (!successfulPayments.isEmpty()) {
-                for (Payment payment : successfulPayments) {
-                    payment.setPaymentStatus(PaymentStatus.REFUND_PENDING);
+            Map<Integer, List<MatchRegistration>> teamMap = registrations.stream()
+                    .filter(reg -> reg.getTeamNumber() != null)
+                    .collect(Collectors.groupingBy(MatchRegistration::getTeamNumber));
+
+            for (Map.Entry<Integer, List<MatchRegistration>> entry : teamMap.entrySet()) {
+                List<MatchRegistration> teamRegs = entry.getValue();
+
+                List<UUID> finalReportedIds = reportedIds;
+                List<MatchRegistration> reportedInTeam = teamRegs.stream()
+                        .filter(reg -> finalReportedIds.contains(reg.getUser().getUserId()))
+                        .toList();
+
+                List<UUID> finalReportedIds1 = reportedIds;
+                List<MatchRegistration> innocentInTeam = teamRegs.stream()
+                        .filter(reg -> !finalReportedIds1.contains(reg.getUser().getUserId()))
+                        .toList();
+
+                if (!reportedInTeam.isEmpty()) {
+                    for (MatchRegistration guiltyReg : reportedInTeam) {
+                        User guiltyUser = guiltyReg.getUser();
+                        UserCategoryRank guiltyRank = userCategoryRankRepository
+                                .findByUser_UserIdAndCategory_CategoryId(guiltyUser.getUserId(), match.getCategory().getCategoryId())
+                                .orElse(UserCategoryRank.builder()
+                                        .user(guiltyUser)
+                                        .category(match.getCategory())
+                                        .rankPoint(0)
+                                        .totalMatches(0)
+                                        .totalWins(0)
+                                        .currentWinStreak(0)
+                                        .build());
+
+                        int currentPoints = guiltyRank.getRankPoint() != null ? guiltyRank.getRankPoint() : 0;
+                        int penaltyPoints = 30;
+
+                        guiltyRank.setRankPoint(Math.max(0, currentPoints - penaltyPoints));
+                        guiltyRank.setCurrentWinStreak(0);
+                        userCategoryRankRepository.save(guiltyRank);
+
+                        log.info("Đã TRỪ {} điểm Rank của user [{}] vì vi phạm/bỏ bom trong trận RANKED.", penaltyPoints, guiltyUser.getUserId());
+                    }
                 }
-                paymentRepository.saveAll(successfulPayments);
-                log.info("Đã đưa {} giao dịch của trận [{}] vào danh sách Chờ Hoàn Tiền.", successfulPayments.size(), match.getMatchId());
+
+                if (!reportedInTeam.isEmpty() && !innocentInTeam.isEmpty()) {
+                    for (MatchRegistration innocentReg : innocentInTeam) {
+                        User teammateUser = innocentReg.getUser();
+
+                        UserCategoryRank teammateRank = userCategoryRankRepository
+                                .findByUser_UserIdAndCategory_CategoryId(teammateUser.getUserId(), match.getCategory().getCategoryId())
+                                .orElse(UserCategoryRank.builder()
+                                        .user(teammateUser)
+                                        .category(match.getCategory())
+                                        .rankPoint(0)
+                                        .totalMatches(0)
+                                        .totalWins(0)
+                                        .currentWinStreak(0)
+                                        .build());
+
+                        int currentPoints = teammateRank.getRankPoint() != null ? teammateRank.getRankPoint() : 0;
+
+                        int compensationPoints = 10;
+                        teammateRank.setRankPoint(currentPoints + compensationPoints);
+                        userCategoryRankRepository.save(teammateRank);
+
+                        log.info("Đã đền bù {} điểm Rank cho user [{}] vì bị đồng đội bỏ bom trong trận RANKED.", compensationPoints, teammateUser.getUserId());
+                    }
+                }
             }
         }
     }
@@ -308,7 +391,26 @@ public class MatchResultServiceImpl implements MatchResultService {
             UUID userId = user.getUserId();
 
             if (absents.contains(userId)) {
-                pointChangesLog.put(userId, 0);
+                UserCategoryRank absentRank = userCategoryRankRepository
+                        .findByUser_UserIdAndCategory_CategoryId(userId, category.getCategoryId())
+                        .orElse(UserCategoryRank.builder()
+                                .user(user)
+                                .category(category)
+                                .rankPoint(0)
+                                .totalMatches(0)
+                                .totalWins(0)
+                                .currentWinStreak(0)
+                                .build());
+
+                int currentPoints = absentRank.getRankPoint() != null ? absentRank.getRankPoint() : 0;
+                int penaltyPoints = 30;
+
+                absentRank.setRankPoint(Math.max(0, currentPoints - penaltyPoints));
+                absentRank.setCurrentWinStreak(0);
+                absentRank.setTotalMatches(absentRank.getTotalMatches() + 1);
+                userCategoryRankRepository.save(absentRank);
+
+                pointChangesLog.put(userId, -penaltyPoints);
                 continue;
             }
 
@@ -444,6 +546,7 @@ public class MatchResultServiceImpl implements MatchResultService {
                     .user(user)
                     .pointsChanged(newScore - currentScore)
                     .reason(reason)
+                    .createdAt(LocalDateTime.now())
                     .build();
             reputationLogRepository.save(log);
         }

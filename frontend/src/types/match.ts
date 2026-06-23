@@ -61,6 +61,7 @@ export interface ReportRequest {
 export interface MatchReportResponse {
   reportId: string;
   reporterName: string;
+  reportedUserIds: string[];
   reasonType: string;
   description: string;
   status: "PENDING" | "RESOLVED" | "REJECTED";

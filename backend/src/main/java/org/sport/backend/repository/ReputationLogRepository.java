@@ -13,6 +13,6 @@ public interface ReputationLogRepository extends JpaRepository<ReputationLog, Lo
 
     Page<ReputationLog> findByUser_UserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
-
     void deleteAllByUser_UserId(UUID userId);
+
 }

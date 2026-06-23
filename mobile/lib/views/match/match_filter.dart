@@ -92,7 +92,6 @@ class MatchFilter extends StatelessWidget {
             ),
 
             const Divider(height: 30, thickness: 1, color: Color(0xFFF1F5F9)),
-            _buildSectionTitle('Sắp xếp'),
 
             _buildSectionTitle('Sắp xếp'),
             _buildRadioOption('Mới nhất', 'NEWEST', sortOrder, setSortOrder),
@@ -138,13 +137,13 @@ class MatchFilter extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _buildFilterChip('Tất cả', 'ALL', typeFilter, setTypeFilter),
+                // ĐÃ SỬA: Đổi thành Vãng lai (SHARED) và Đánh Rank (RANKED)
                 _buildFilterChip(
-                  'Đánh thường',
-                  'NORMAL',
+                  'Vãng lai',
+                  'SHARED',
                   typeFilter,
                   setTypeFilter,
                 ),
-                // _buildFilterChip('Đánh kèo', 'BET', typeFilter, setTypeFilter),
                 _buildFilterChip(
                   'Đánh Rank',
                   'RANKED',

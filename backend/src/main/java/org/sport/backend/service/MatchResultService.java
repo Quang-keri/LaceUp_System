@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface MatchResultService {
     MatchResultResponse submitResult(MatchResultRequest request);
+
     MatchResultResponse respondToResult(UUID resultId, boolean isAccepted);
 
     @Transactional

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../models/user.dart';
 import '../../../models/leaderboard_model.dart';
+import '../../../models/category.dart'; // Đảm bảo đã import model Category
 import '../../../services/user_service.dart';
 import '../../../services/leaderboard_service.dart';
+import '../../../services/category_service.dart'; // Cần import CategoryService
 
 const Color kAppOrange = Colors.orange;
 const Color kAppPurple = Colors.purple;
@@ -27,6 +29,7 @@ class MyRanksWidget extends StatefulWidget {
 class _MyRanksWidgetState extends State<MyRanksWidget> {
   bool isLoading = true;
   UserDashboardResponse? dashboardData;
+  List<CategoryResponse> allCategories = []; // Thêm biến lưu TẤT CẢ bộ môn
 
   int? selectedCategoryId;
   List<LeaderboardEntryResponse> top100 = [];
@@ -36,24 +39,32 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
   @override
   void initState() {
     super.initState();
-    _fetchDashboardData();
+    _initData();
   }
 
-  Future<void> _fetchDashboardData() async {
+  Future<void> _initData() async {
     try {
+      // 1. Lấy toàn bộ danh sách Category vì trên App không có state global
+      final catPage = await categoryService.getAllCategories(size: 50);
+
+      // 2. Lấy thống kê cá nhân
       final rawData = await userService.getUserDashboard(widget.userId);
+
       if (!mounted) return;
 
       setState(() {
+        // Lưu ý: Nếu PageResponse của ông định nghĩa biến chứa list là 'items' hay 'result' thì sửa lại chữ .data cho đúng nhé
+        allCategories = catPage.data ?? [];
         dashboardData = UserDashboardResponse.fromJson(rawData);
-        if (dashboardData?.categoryRanks != null &&
-            dashboardData!.categoryRanks!.isNotEmpty) {
-          selectedCategoryId = dashboardData!.categoryRanks!.first.categoryId;
+
+        // Mặc định chọn bộ môn đầu tiên trong list TẤT CẢ bộ môn
+        if (allCategories.isNotEmpty) {
+          selectedCategoryId = allCategories.first.categoryId;
           _fetchLeaderboardData();
         }
       });
     } catch (e) {
-      debugPrint('Error fetching ranks: $e');
+      debugPrint('Error fetching init data: $e');
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
@@ -65,26 +76,33 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
     if (selectedCategoryId == null) return;
 
     setState(() => isLoadingLeaderboard = true);
-    try {
-      final topRes = await leaderboardService.getTop100ByCategory(
-        selectedCategoryId!,
-      );
-      final statsRes = await leaderboardService.getMyLeaderboardStats(
-        selectedCategoryId!,
-      );
 
-      if (!mounted) return;
-      setState(() {
-        top100 = topRes;
-        myStats = statsRes;
-      });
+    List<LeaderboardEntryResponse> topRes = [];
+    MyLeaderboardStatsResponse? statsRes;
+
+    try {
+      topRes = await leaderboardService.getTop100ByCategory(
+        selectedCategoryId!,
+      );
     } catch (e) {
-      debugPrint('Error fetching leaderboard: $e');
-    } finally {
-      if (mounted) {
-        setState(() => isLoadingLeaderboard = false);
-      }
+      debugPrint('Lỗi tải Top 100: $e');
     }
+
+    try {
+      statsRes = await leaderboardService.getMyLeaderboardStats(
+        selectedCategoryId!,
+      );
+    } catch (e) {
+      debugPrint('Bỏ qua lỗi tải My Stats (User chưa phân hạng): $e');
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      top100 = topRes;
+      myStats = statsRes;
+      isLoadingLeaderboard = false;
+    });
   }
 
   RankInfo getRankInfo(double pointsData) {
@@ -256,25 +274,10 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
   }
 
   Widget _buildLeaderboardTab() {
-    final ranks = dashboardData?.categoryRanks ?? [];
-
-    if (ranks.isEmpty) {
-      return Center(
-        child: Text(
-          "Cần tham gia thi đấu để xem bảng xếp hạng.",
-          style: TextStyle(color: Colors.grey.shade600),
-        ),
-      );
-    }
-
-    // 1. Cắt lấy Top 10
     List<LeaderboardEntryResponse> displayList = top100.take(10).toList();
-
-    // 2. Kiểm tra xem user hiện tại có trong Top 10 chưa
     bool amIInTop10 = displayList.any((e) => e.userId == widget.userId);
     LeaderboardEntryResponse? appendedMe;
 
-    // 3. Nếu chưa, nối thêm user vào cuối
     if (!amIInTop10 && myStats?.myStats != null) {
       appendedMe = myStats!.myStats;
     }
@@ -283,47 +286,77 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
 
     return Column(
       children: [
-        // Dropdown chọn bộ môn
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Container(
+        // Thanh cuộn ngang chọn bộ môn (thay thế Dropdown)
+        Container(
+          height: 45,
+          margin: const EdgeInsets.only(top: 16, bottom: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kAppPurple.withOpacity(0.3)),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: selectedCategoryId,
-                isExpanded: true,
-                icon: const Icon(Icons.keyboard_arrow_down, color: kAppPurple),
-                items: ranks.map((rank) {
-                  return DropdownMenuItem<int>(
-                    value: rank.categoryId,
-                    child: Text(
-                      rank.categoryName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: kAppPurple,
+            itemCount: allCategories.length,
+            itemBuilder: (context, index) {
+              final cat = allCategories[index];
+              final isSelected = cat.categoryId == selectedCategoryId;
+
+              // Format lại tên cho ngắn gọn (VD: "Sân cầu lông" -> "Cầu lông")
+              String displayName = cat.categoryName
+                  .replaceAll(RegExp(r'^Sân\s+', caseSensitive: false), '')
+                  .trim();
+              if (displayName.isNotEmpty) {
+                displayName =
+                    displayName[0].toUpperCase() + displayName.substring(1);
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () {
+                    if (!isSelected) {
+                      setState(() {
+                        selectedCategoryId = cat.categoryId;
+                      });
+                      _fetchLeaderboardData();
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: isSelected ? kAppPurple : Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: isSelected
+                            ? kAppPurple
+                            : kAppPurple.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: kAppPurple.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: Center(
+                      child: Text(
+                        displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: isSelected ? Colors.white : kAppPurple,
+                        ),
                       ),
                     ),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null && val != selectedCategoryId) {
-                    setState(() {
-                      selectedCategoryId = val;
-                    });
-                    _fetchLeaderboardData();
-                  }
-                },
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
 
-        // Thống kê hạng của tôi
         if (myStats != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -381,7 +414,6 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
             ),
           ),
 
-        // List Top 10 + Current User (nếu có)
         Expanded(
           child: isLoadingLeaderboard
               ? const Center(
@@ -464,7 +496,6 @@ class _MyRanksWidgetState extends State<MyRanksWidget> {
 
                     return Column(
                       children: [
-                        // Thêm dải phân cách nếu là item chèn thêm ở dưới cùng
                         if (isAppended) ...[
                           const SizedBox(height: 6),
                           Row(
