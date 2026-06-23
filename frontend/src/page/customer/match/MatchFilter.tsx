@@ -139,8 +139,7 @@ const MatchFilter: React.FC<MatchFilterProps> = ({
           <Row gutter={[8, 12]}>
             {[
               { id: "ALL", label: "Tất cả" },
-              { id: "NORMAL", label: "Đánh thường" },
-              { id: "BET", label: "Đánh kèo" },
+              { id: "SHARED", label: "Vãng lai" },
               { id: "RANKED", label: "Đánh Rank" },
             ].map((type) => (
               <Col span={12} key={type.id}>

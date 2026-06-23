@@ -7,6 +7,7 @@ import org.sport.backend.dto.response.bank.BankAccountResponse;
 import org.sport.backend.dto.response.city.CityResponse;
 import org.sport.backend.dto.response.match.MatchReportResponse;
 import org.sport.backend.dto.response.match.MatchResponse;
+import org.sport.backend.dto.response.match.MatchResultResponse;
 import org.sport.backend.dto.response.user.UserResponse;
 import org.sport.backend.entity.Address;
 import org.sport.backend.entity.CourtPrice;
@@ -92,11 +93,25 @@ public interface MatchMapper {
                 .host(hostResponse)
                 .ownerCourt(ownerCourtResponse)
 
+                .results(match.getMatchResults() == null ? Collections.emptyList() :
+                        match.getMatchResults().stream()
+                                .map(result -> MatchResultResponse.builder()
+                                        .resultId(result.getResultId())
+                                        .submitterId(result.getSubmitterId())
+                                        .winningTeamNumber(result.getWinningTeamNumber())
+                                        .winnerIds(result.getWinnerIds())
+                                        .loserIds(result.getLoserIds())
+                                        .absentUserIds(result.getAbsentUserIds())
+                                        .status(result.getStatus())
+                                        .build())
+                                .collect(Collectors.toList()))
+
                 .reports(match.getReports() == null ? Collections.emptyList() :
                         match.getReports().stream()
                                 .map(report -> MatchReportResponse.builder()
                                         .reportId(report.getReportId())
                                         .reporterName(report.getReporter() != null ? report.getReporter().getUserName() : "Người chơi")
+                                        .reportedUserIds(report.getReportedUserIds())
                                         .reasonType(report.getReasonType())
                                         .description(report.getDescription())
                                         .status(report.getStatus())

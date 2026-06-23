@@ -20,4 +20,5 @@ public class MatchResultResponse {
     private ResultStatus status;
     private List<UUID> absentUserIds;
     private Map<UUID, Integer> rankChanges;
+    private String message;
 }

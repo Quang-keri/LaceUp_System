@@ -27,6 +27,9 @@ import ApproveResultModal from "./my-match/ApproveResultModal.tsx";
 import MatchDetailModal from "./my-match/MatchDetailModal.tsx";
 import SubmitResultModal from "./my-match/SubmitResultModal.tsx";
 
+import MyAchievements from "./MyAchievements";
+import MyRankPage from "./MyRankPage.tsx";
+
 const { Title, Text } = Typography;
 
 const MyMatchPage: React.FC = () => {
@@ -172,7 +175,6 @@ const MyMatchPage: React.FC = () => {
             );
           })}
           renderItem={(match) => {
-            // KHAI BÁO BIẾN Ở ĐẦY ĐỂ DÙNG CHUNG CHO CẢ KHỐI CARD
             const myParticipantInfo = match.participants?.find(
               (p: any) => p.userId === user?.userId,
             );
@@ -348,7 +350,6 @@ const MyMatchPage: React.FC = () => {
             );
           })}
           renderItem={(match) => {
-            // FIX LỖI Ở ĐÂY: Phải khai báo biến trước khi return giao diện
             const myParticipantInfo = match.participants?.find(
               (p: any) => p.userId === user?.userId,
             );
@@ -406,6 +407,26 @@ const MyMatchPage: React.FC = () => {
         />
       ),
     },
+    // THÊM TAB THÀNH TỰU VÀO ĐÂY
+    {
+      key: "3",
+      label: "Thành tựu",
+      children: (
+        <div className="pt-2">
+          <MyAchievements userId={user?.userId} />
+        </div>
+      ),
+    },
+    // THÊM TAB XẾP HẠNG CỦA TÔI VÀO ĐÂY
+    {
+      key: "4",
+      label: "Xếp hạng của tôi",
+      children: (
+        <div className="pt-2">
+          <MyRankPage />
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -413,7 +434,7 @@ const MyMatchPage: React.FC = () => {
       <Card
         title={
           <span style={{ fontSize: "20px", fontWeight: 600 }}>
-            Trận đấu của tôi
+            Hồ sơ & Trận đấu của tôi
           </span>
         }
         bordered={false}
@@ -421,6 +442,7 @@ const MyMatchPage: React.FC = () => {
       >
         <Tabs defaultActiveKey="1" items={tabItems} />
       </Card>
+
       <MatchDetailModal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}

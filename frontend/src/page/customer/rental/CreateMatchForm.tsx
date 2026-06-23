@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Form,
-  InputNumber,
-  Select,
-  Input,
-  Button,
-  message,
-  Tooltip,
-} from "antd";
+import { Form, InputNumber, Input, Button, message, Tooltip } from "antd";
 import dayjs from "dayjs";
 import { Info } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -23,7 +15,6 @@ import type { CategoryRankResponse, UserResponse } from "../../../types/user";
 export interface MatchFormValues {
   startTime: dayjs.Dayjs;
   duration: number;
-  matchType: "NORMAL" | "BET" | "RANKED";
   maxPlayers: number;
   minPlayersToStart: number;
   playerCount: number;
@@ -98,7 +89,6 @@ export default function CreateMatchForm({
 
   const watchStartTime = Form.useWatch("startTime", form);
   const watchDuration = Form.useWatch("duration", form);
-  const watchMatchType = Form.useWatch("matchType", form);
   const watchMaxPlayers = Form.useWatch("maxPlayers", form);
 
   const currentStartTime = watchStartTime || form.getFieldValue("startTime");
@@ -113,14 +103,14 @@ export default function CreateMatchForm({
   const isRacketSport =
     categoryName.includes("cầu lông") || categoryName.includes("pickleball");
 
-  let minAllowed = 2;
+  let minAllowed = 4;
   let maxAllowed = 4;
 
   if (isFootball) {
     minAllowed = 10;
     maxAllowed = 20;
   } else if (isRacketSport) {
-    minAllowed = 2;
+    minAllowed = 4;
     maxAllowed = 10;
   }
   const currentCategoryId = court?.categoryId;
@@ -192,16 +182,13 @@ export default function CreateMatchForm({
   useEffect(() => {
     if (!court) return;
 
-    if (!form.getFieldValue("matchType")) {
-      form.setFieldsValue({
-        maxPlayers: minAllowed,
-        minPlayersToStart: minAllowed / 2,
-        playerCount: 1,
-        duration: selectedDuration || 1,
-        matchType: "NORMAL",
-        note: "",
-      });
-    }
+    form.setFieldsValue({
+      maxPlayers: minAllowed,
+      minPlayersToStart: minAllowed / 2,
+      playerCount: 1,
+      duration: selectedDuration || 1,
+      note: "",
+    });
   }, [court, minAllowed, selectedDuration, form]);
 
   const handleRequireLogin = (values: MatchFormValues) => {
@@ -240,10 +227,10 @@ export default function CreateMatchForm({
         minPlayersToStart: Number(values.minPlayersToStart),
         playerCount: Number(values.playerCount) || 1,
         isRecurring: false,
-        matchType: values.matchType,
+        matchType: "RANKED", // Ép cứng luôn là Đánh Rank
 
-        minRank: values.matchType === "RANKED" ? calculatedMinRank : undefined,
-        maxRank: values.matchType === "RANKED" ? calculatedMaxRank : undefined,
+        minRank: calculatedMinRank,
+        maxRank: calculatedMaxRank,
         note: values.note || "",
       };
 
@@ -304,7 +291,7 @@ export default function CreateMatchForm({
     <div className="animate-in fade-in duration-300">
       <div className="mb-3 p-3 bg-[#f3e8ff]/50 rounded-lg border border-[#e9d5ff]">
         <p className="text-sm text-purple-900 font-semibold">
-          Sân áp dụng cho trận ghép
+          Sân áp dụng cho trận ghép (Chế độ Leo Rank)
         </p>
       </div>
 
@@ -346,7 +333,6 @@ export default function CreateMatchForm({
         onFinish={handleCreateMatch}
         initialValues={{
           duration: selectedDuration || 1,
-          matchType: "NORMAL",
           maxPlayers: minAllowed,
           minPlayersToStart: minAllowed / 2,
           playerCount: 1,
@@ -359,57 +345,12 @@ export default function CreateMatchForm({
           <InputNumber />
         </Form.Item>
 
+        {/* Hàng 1: Tổng số người & Số người có sẵn */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <Form.Item
             label={
               <span className="font-semibold text-gray-700 text-sm flex items-center gap-1 whitespace-nowrap">
-                Thể thức
-                <Tooltip title="Luật chơi riêng biệt cho trận đấu này">
-                  <Info size={14} className="text-gray-400" />
-                </Tooltip>
-              </span>
-            }
-            name="matchType"
-            className="mb-0"
-          >
-            <Select
-              className="w-full h-11 [&_.ant-select-selector]:!border-[#9156F1] [&_.ant-select-selector]:!shadow-[0_0_0_2px_rgba(145,86,241,0.15)]"
-              optionLabelProp="label"
-              popupMatchSelectWidth={false}
-            >
-              <Select.Option value="NORMAL" label="Giao lưu">
-                <div className="flex flex-col py-1">
-                  <span className="font-semibold text-gray-800">Giao lưu</span>
-                  <span className="text-[11px] text-gray-500">
-                    Chơi vui vẻ cọ xát
-                  </span>
-                </div>
-              </Select.Option>
-              <Select.Option value="BET" label="Chia Kèo">
-                <div className="flex flex-col py-1">
-                  <span className="font-semibold text-[#ea580c]">Chia Kèo</span>
-                  <span className="text-[11px] text-gray-500">
-                    Đội thua chịu phạt
-                  </span>
-                </div>
-              </Select.Option>
-              <Select.Option value="RANKED" label="Đánh Rank">
-                <div className="flex flex-col py-1">
-                  <span className="font-semibold text-[#9156F1]">
-                    Đánh Rank
-                  </span>
-                  <span className="text-[11px] text-gray-500">
-                    Tích lũy điểm hạng
-                  </span>
-                </div>
-              </Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label={
-              <span className="font-semibold text-gray-700 text-sm flex items-center gap-1 whitespace-nowrap">
-                <span className="text-red-500">*</span> Tổng số người
+                Tổng số người
                 <Tooltip
                   title={`Tổng số người tham gia tối đa của cả trận đấu (từ ${minAllowed} đến ${maxAllowed} người)`}
                 >
@@ -439,7 +380,6 @@ export default function CreateMatchForm({
                 if (val && val % 2 === 0) {
                   const teamSize = val / 2;
                   form.setFieldValue("minPlayersToStart", teamSize);
-                  // FIX: Đảm bảo số người có sẵn không vượt quá teamSize mới
                   const currentCount = form.getFieldValue("playerCount");
                   if (currentCount > teamSize) {
                     form.setFieldValue("playerCount", teamSize);
@@ -448,13 +388,11 @@ export default function CreateMatchForm({
               }}
             />
           </Form.Item>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
           <Form.Item
             label={
               <span className="font-semibold text-gray-700 text-sm flex items-center gap-1 whitespace-nowrap">
-                <span className="text-red-500">*</span> Số người có sẵn
+                Số người có sẵn
                 <Tooltip
                   title={`Số lượng không được vượt quá số người của 1 Team (${maxPerTeam} người)`}
                 >
@@ -477,12 +415,15 @@ export default function CreateMatchForm({
             <InputNumber
               style={{ width: "100%" }}
               min={1}
-              max={maxPerTeam} // FIX: Giới hạn cứng số lượng người nhập vào bằng số người 1 Team
+              max={maxPerTeam}
               className="h-11 flex items-center rounded-lg"
               placeholder="VD: 1"
             />
           </Form.Item>
+        </div>
 
+        {/* Hàng 2: Số người/Team & Vùng Elo */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <Form.Item
             label={
               <span className="font-semibold text-gray-700 text-sm flex items-center gap-1 whitespace-nowrap">
@@ -501,21 +442,28 @@ export default function CreateMatchForm({
               className="h-11 flex items-center rounded-lg bg-gray-50 text-gray-500 border-gray-200"
             />
           </Form.Item>
-        </div>
 
-        {watchMatchType === "RANKED" && user && (
-          <div className="mb-4 px-3 py-2.5 bg-purple-50 rounded-lg border border-purple-100 flex flex-col animate-in fade-in slide-in-from-top-2 duration-300">
-            <span className="text-[13px] text-purple-900 font-medium">
-              Vùng Elo cho phép:{" "}
-              <span className="font-bold text-[#9156F1]">
-                {calculatedMinRank} - {calculatedMaxRank}
-              </span>
-            </span>
-            <span className="text-[11px] text-purple-600/80 italic mt-0.5">
-              (Dựa trên điểm rank hiện tại của bạn là {currentRank})
-            </span>
-          </div>
-        )}
+          {user ? (
+            <Form.Item
+              label={<span className="invisible">Ẩn label</span>}
+              className="mb-0"
+            >
+              <div className="h-11 px-3 py-1 bg-purple-50 rounded-lg border border-purple-100 flex flex-col justify-center animate-in fade-in slide-in-from-top-2 duration-300">
+                <span className="text-[12px] text-purple-900 font-medium leading-tight">
+                  Vùng Elo:{" "}
+                  <span className="font-bold text-[#9156F1]">
+                    {calculatedMinRank} - {calculatedMaxRank}
+                  </span>
+                </span>
+                <span className="text-[10px] text-purple-600/80 italic leading-tight mt-0.5">
+                  (Rank của bạn: {currentRank})
+                </span>
+              </div>
+            </Form.Item>
+          ) : (
+            <div />
+          )}
+        </div>
 
         <Form.Item
           label={

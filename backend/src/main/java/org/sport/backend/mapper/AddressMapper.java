@@ -8,9 +8,7 @@ import org.sport.backend.entity.Address;
 @Mapper(componentModel = "spring")
 public interface AddressMapper {
 
-    default AddressResponse toAddressResponse(
-            Address address
-    ) {
+    default AddressResponse toAddressResponse(Address address) {
         if (address == null) {
             return null;
         }
@@ -22,6 +20,10 @@ public interface AddressMapper {
                     .cityId(address.getCity().getCityId())
                     .cityName(address.getCity().getCityName())
                     .provinceCode(address.getCity().getProvinceCode())
+                    .build();
+        } else if (address.getCityName() != null) {
+            cityResponse = CityResponse.builder()
+                    .cityName(address.getCityName())
                     .build();
         }
 

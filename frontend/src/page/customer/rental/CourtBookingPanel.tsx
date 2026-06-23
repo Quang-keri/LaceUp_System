@@ -48,25 +48,26 @@ export default function CourtBookingPanel({
     ) {
       const matchedRules = targetRules.filter((rule: any) => {
         if (!rule.startTime || !rule.endTime) return false;
-
         const ruleStartMin = timeToMinutes(rule.startTime);
         const ruleEndMin = timeToMinutes(rule.endTime);
-
         const isTimeMatch =
           currentMin >= ruleStartMin && currentMin < ruleEndMin;
-
         if (!isTimeMatch) return false;
 
-        if (rule.dayType && rule.dayType !== dayTypeTarget) return false;
+        const isDayTypeMatch =
+          !rule.dayType ||
+          rule.dayType === "ALL" ||
+          rule.dayType === dayTypeTarget;
+        if (!isDayTypeMatch) return false;
 
-        if (rule.specificDate) {
-          return rule.specificDate === formattedDate;
+        if (rule.specificDate && rule.specificDate !== formattedDate) {
+          return false;
         }
 
         if (rule.startDate && rule.endDate) {
-          return (
-            formattedDate >= rule.startDate && formattedDate <= rule.endDate
-          );
+          if (formattedDate < rule.startDate || formattedDate > rule.endDate) {
+            return false;
+          }
         }
 
         return true;

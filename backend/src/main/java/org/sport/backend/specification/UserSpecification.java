@@ -6,6 +6,7 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import org.sport.backend.constant.MemberTier;
 import org.sport.backend.entity.Booking;
+import org.sport.backend.entity.MatchRegistration;
 import org.sport.backend.entity.User;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
@@ -69,14 +70,21 @@ public class UserSpecification {
 
             if (ownerId != null) {
                 assert query != null;
-                Subquery<UUID> subquery = query.subquery(UUID.class);
-                Root<Booking> bookingRoot = subquery.from(Booking.class);
-                Join<Object, Object> rentalAreaJoin = bookingRoot.join("rentalArea");
 
-                subquery.select(bookingRoot.join("renter").get("userId"))
-                        .where(criteriaBuilder.equal(rentalAreaJoin.join("owner").get("userId"), ownerId));
+                Subquery<UUID> bookingSubquery = query.subquery(UUID.class);
+                Root<Booking> bookingRoot = bookingSubquery.from(Booking.class);
+                bookingSubquery.select(bookingRoot.join("renter").get("userId"))
+                        .where(criteriaBuilder.equal(bookingRoot.join("rentalArea").join("owner").get("userId"), ownerId));
 
-                predicates.add(root.get("userId").in(subquery));
+                Subquery<UUID> matchSubquery = query.subquery(UUID.class);
+                Root<MatchRegistration> matchRegRoot = matchSubquery.from(MatchRegistration.class);
+                matchSubquery.select(matchRegRoot.join("user").get("userId"))
+                        .where(criteriaBuilder.equal(matchRegRoot.join("match").join("court").join("rentalArea").join("owner").get("userId"), ownerId));
+
+                predicates.add(criteriaBuilder.or(
+                        root.get("userId").in(bookingSubquery),
+                        root.get("userId").in(matchSubquery)
+                ));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

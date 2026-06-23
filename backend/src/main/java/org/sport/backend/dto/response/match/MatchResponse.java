@@ -34,6 +34,7 @@ public class MatchResponse {
     private String note;
     private Integer minRank;
     private Integer maxRank;
+    private List<MatchResultResponse> results;
     private List<MatchReportResponse> reports;
     private Boolean isPaid;
     private BigDecimal amountDue;

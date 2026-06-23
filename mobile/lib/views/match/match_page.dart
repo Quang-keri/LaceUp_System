@@ -66,7 +66,6 @@ class _MatchPageState extends State<MatchPage> {
     if (!oldWidget.isActive && widget.isActive) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-
         _refreshCommunity();
       });
     }
@@ -100,29 +99,20 @@ class _MatchPageState extends State<MatchPage> {
   }
 
   Future<void> _fetchSharedBookings() async {
-    if (mounted) {
-      setState(() {
-        _isLoadingShared = true;
-      });
-    }
+    if (mounted) setState(() => _isLoadingShared = true);
 
     try {
       final bookings = await sharedBookingService
           .getOpenSharedBookingsForCommunity(page: 1, size: 100);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _sharedBookings = bookings;
         _groupMatchesByArea();
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.toString().replaceFirst('Exception: ', '')),
@@ -131,11 +121,7 @@ class _MatchPageState extends State<MatchPage> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingShared = false;
-        });
-      }
+      if (mounted) setState(() => _isLoadingShared = false);
     }
   }
 
@@ -177,6 +163,16 @@ class _MatchPageState extends State<MatchPage> {
   }
 
   Future<void> _fetchMatches() async {
+    // ĐÃ SỬA: Chặn không gọi API Match nếu người dùng chỉ lọc Vãng lai (SHARED)
+    // Tránh việc Backend báo lỗi vì SHARED không phải là enum hợp lệ của bảng Match
+    if (_typeFilter == 'SHARED') {
+      setState(() {
+        _matches = [];
+        _groupMatchesByArea();
+      });
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final response = await matchService.getOpenMatches(
@@ -209,7 +205,6 @@ class _MatchPageState extends State<MatchPage> {
               a.startTime,
             ).compareTo(DateTime.parse(b.startTime));
           } catch (e) {
-            debugPrint('Lỗi parse ngày tháng: $e');
             return 0;
           }
         });
@@ -239,7 +234,6 @@ class _MatchPageState extends State<MatchPage> {
       }
 
       final cityName = (area?.cityName ?? '').toLowerCase();
-
       final wardName = (area?.address?.ward ?? '').toLowerCase();
 
       final cityMatched =
@@ -271,8 +265,10 @@ class _MatchPageState extends State<MatchPage> {
       );
     }
 
+    // Lọc Shared Booking
     final filteredShared = _sharedBookings.where((booking) {
-      if (!['ALL', 'NORMAL'].contains(_typeFilter)) {
+      // ĐÃ SỬA: CHỈ HIỂN THỊ KHI TẤT CẢ hoặc VÃNG LAI
+      if (!['ALL', 'SHARED'].contains(_typeFilter)) {
         return false;
       }
 
@@ -305,11 +301,7 @@ class _MatchPageState extends State<MatchPage> {
       filteredShared.sort((first, second) {
         final firstTime = DateTime.tryParse(first.startTime);
         final secondTime = DateTime.tryParse(second.startTime);
-
-        if (firstTime == null || secondTime == null) {
-          return 0;
-        }
-
+        if (firstTime == null || secondTime == null) return 0;
         return firstTime.compareTo(secondTime);
       });
     }
@@ -346,6 +338,7 @@ class _MatchPageState extends State<MatchPage> {
       );
     }
 
+    // Lọc Matches
     for (final match in _matches) {
       RentalAreaResponse? matchedArea;
 
@@ -362,7 +355,6 @@ class _MatchPageState extends State<MatchPage> {
       }
 
       final areaId = matchedArea?.rentalAreaId ?? 'match-${match.courtName}';
-
       final areaName =
           matchedArea?.rentalAreaName ?? 'Khu vực khác (Chưa xác định)';
 
@@ -455,6 +447,7 @@ class _MatchPageState extends State<MatchPage> {
                 },
                 typeFilter: _typeFilter,
                 setTypeFilter: (val) {
+                  // Gọi lại _fetchMatches khi click đổi bộ lọc
                   setModalState(() => _typeFilter = val);
                   setState(() => _typeFilter = val);
                   _fetchMatches();

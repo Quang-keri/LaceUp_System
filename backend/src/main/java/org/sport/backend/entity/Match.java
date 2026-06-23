@@ -72,6 +72,9 @@ public class Match extends BaseEntity {
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY)
     private List<MatchReport> reports;
 
+    @OneToMany(mappedBy = "match", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<MatchResult> matchResults;
+
     @OneToMany(mappedBy = "match", fetch = FetchType.LAZY)
     private List<Slot> slots;
 

@@ -635,6 +635,7 @@ const MatchDetailModal: React.FC<MatchDetailModalProps> = ({
         onClose={() => setIsReportModalOpen(false)}
         matchId={match.matchId}
         allPlayers={activeParticipants}
+        currentUserId={user?.userId}
       />
     </Modal>
   );

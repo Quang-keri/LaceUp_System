@@ -1,11 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  Plus,
-} from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Avatar,
@@ -80,10 +74,6 @@ const CommunityHorizontalRow: React.FC<CommunityHorizontalRowProps> = ({
 
   const CARD_GAP = 16;
 
-  /*
-   * Gộp chung thành một danh sách.
-   * Vãng lai được đưa vào trước nên luôn đứng trước Rank/Kèo/Giao lưu.
-   */
   const items = useMemo<CommunityItem[]>(() => {
     const sharedItems: CommunityItem[] = group.sharedBookings.map(
       (booking) => ({
@@ -102,10 +92,6 @@ const CommunityHorizontalRow: React.FC<CommunityHorizontalRowProps> = ({
     return [...sharedItems, ...matchItems];
   }, [group.sharedBookings, group.matches]);
 
-  /*
-   * Đo CHÍNH viewport của carousel, không dùng window.innerWidth.
-   * Vì bên trái còn có bộ lọc nên chiều rộng thật của carousel nhỏ hơn màn hình.
-   */
   useEffect(() => {
     const viewport = viewportRef.current;
 
@@ -127,9 +113,6 @@ const CommunityHorizontalRow: React.FC<CommunityHorizontalRowProps> = ({
     };
   }, []);
 
-  /*
-   * Responsive dựa theo chiều rộng thật của khung card.
-   */
   const itemsPerView = useMemo(() => {
     if (viewportWidth < 640) {
       return 1;
@@ -171,10 +154,6 @@ const CommunityHorizontalRow: React.FC<CommunityHorizontalRowProps> = ({
 
   return (
     <div className="relative w-full min-w-0 max-w-full">
-      {/*
-       * viewport chỉ làm nhiệm vụ cắt đúng phần hiển thị.
-       * Track bên trong mới di chuyển bằng transform nên card lướt mượt.
-       */}
       <div
         ref={viewportRef}
         className="w-full min-w-0 max-w-full overflow-hidden"
@@ -245,41 +224,25 @@ const MatchPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [matches, setMatches] = useState<MatchResponse[]>([]);
-
   const [sharedBookings, setSharedBookings] = useState<
     SharedBookingPublicResponse[]
   >([]);
-
   const [rentalAreas, setRentalAreas] = useState<any[]>([]);
-
   const [loadingMatches, setLoadingMatches] = useState(false);
-
   const [loadingShared, setLoadingShared] = useState(false);
-
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-
   const [selectedMatch, setSelectedMatch] = useState<MatchResponse | null>(
     null,
   );
-
   const [provinces, setProvinces] = useState<any[]>([]);
-
   const [wards, setWards] = useState<any[]>([]);
-
   const [typeFilter, setTypeFilter] = useState("ALL");
-
   const [sortOrder, setSortOrder] = useState("NEWEST");
-
   const [selectedLocation, setSelectedLocation] = useState("");
-
   const [selectedWard, setSelectedWard] = useState("");
-
   const [selectedCategory, setSelectedCategory] = useState("");
-
   const [roomCodeInput, setRoomCodeInput] = useState("");
-
   const [currentPage, setCurrentPage] = useState(1);
-
   const [totalElements, setTotalElements] = useState(0);
 
   const PAGE_SIZE = 12;
@@ -295,7 +258,6 @@ const MatchPage: React.FC = () => {
 
       if (response?.code === 200 || response?.code === 1000) {
         setMatches(response?.result?.data || []);
-
         setTotalElements(response?.result?.totalElements || 0);
       }
     } catch (error) {
@@ -319,7 +281,6 @@ const MatchPage: React.FC = () => {
       }
     } catch (error) {
       console.error("Lỗi lấy trận vãng lai:", error);
-
       message.error("Không thể tải danh sách vãng lai");
     } finally {
       setLoadingShared(false);
@@ -329,7 +290,6 @@ const MatchPage: React.FC = () => {
   const fetchRentalAreas = async () => {
     try {
       const response = await rentalService.getAllRentalAreas(1, 100);
-
       setRentalAreas(response?.result?.data || []);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin khu vực:", error);
@@ -383,7 +343,6 @@ const MatchPage: React.FC = () => {
       .then((response) => {
         if (response?.code === 200 || response?.code === 1000) {
           message.success("Vào phòng thành công!");
-
           setRoomCodeInput("");
           fetchMatches(currentPage);
           navigate("/my-matches");
@@ -396,13 +355,6 @@ const MatchPage: React.FC = () => {
       });
   };
 
-  /*
-   * Gắn area vào trận đấu thường.
-   *
-   * Ưu tiên tìm bằng rentalAreaId.
-   * Nếu response Match chưa có rentalAreaId
-   * thì tìm tạm bằng courtName như code cũ.
-   */
   const matchesWithArea = useMemo<MatchWithArea[]>(() => {
     return matches.map((match) => {
       const matchRentalAreaId = (match as any).rentalAreaId;
@@ -425,10 +377,6 @@ const MatchPage: React.FC = () => {
     });
   }, [matches, rentalAreas]);
 
-  /*
-   * Vãng lai đã có rentalAreaId từ API mới,
-   * nên tìm khu sân trực tiếp bằng ID.
-   */
   const sharedBookingsWithArea = useMemo<SharedBookingWithArea[]>(() => {
     return sharedBookings.map((booking) => {
       const matchedArea = rentalAreas.find(
@@ -451,14 +399,11 @@ const MatchPage: React.FC = () => {
     }
 
     const address = areaInfo?.address || {};
-
     const cityName = String(address?.city?.cityName || "").toLowerCase();
-
     const wardName = String(address?.ward || "").toLowerCase();
 
     const cityMatched =
       !selectedLocation || cityName.includes(selectedLocation.toLowerCase());
-
     const wardMatched =
       !selectedWard || wardName.includes(selectedWard.toLowerCase());
 
@@ -493,14 +438,9 @@ const MatchPage: React.FC = () => {
       );
     });
 
-  /*
-   * Vãng lai được xem như dạng đánh thường.
-   *
-   * Khi chọn Tất cả hoặc Đánh thường thì hiện.
-   * Khi chọn Đánh Rank/Đánh kèo thì ẩn.
-   */
+  // ĐÃ SỬA LẠI THÀNH SHARED ĐỂ NHẬN DIỆN ĐÚNG BỘ LỌC
   const filteredSharedBookings = sharedBookingsWithArea
-    .filter(() => ["ALL", "NORMAL"].includes(typeFilter))
+    .filter(() => ["ALL", "SHARED"].includes(typeFilter))
     .filter(
       (booking) =>
         !selectedCategory ||
@@ -528,15 +468,6 @@ const MatchPage: React.FC = () => {
       );
     });
 
-  /*
-   * Quan trọng:
-   *
-   * 1. Đưa shared booking vào group trước.
-   * 2. Sau đó mới đưa match vào.
-   * 3. Khi render cũng render sharedBookings trước.
-   *
-   * Vì vậy thẻ Vãng lai luôn nằm trước thẻ Rank.
-   */
   const groupedCommunity = useMemo<CommunityGroup[]>(() => {
     const groups = new Map<string, CommunityGroup>();
 
@@ -552,9 +483,6 @@ const MatchPage: React.FC = () => {
       return groups.get(areaId)!;
     };
 
-    /*
-     * Thêm vãng lai trước.
-     */
     filteredSharedBookings.forEach((booking) => {
       const areaId =
         booking.rentalAreaId ||
@@ -569,9 +497,6 @@ const MatchPage: React.FC = () => {
       ensureGroup(areaId, area).sharedBookings.push(booking);
     });
 
-    /*
-     * Sau đó mới thêm trận thường/Rank.
-     */
     filteredMatches.forEach((match) => {
       const areaId =
         match.areaInfo?.rentalAreaId || `match-${match.courtName || "unknown"}`;

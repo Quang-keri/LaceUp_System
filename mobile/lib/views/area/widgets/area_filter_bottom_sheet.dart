@@ -438,9 +438,9 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
         ...[1, 2, 3, 4, 5].map((star) {
           String labelText;
           if (star == 5) {
-            labelText = '⭐ 5.0';
+            labelText = '⭐ 5';
           } else {
-            labelText = '⭐ $star - $star.9';
+            labelText = '⭐ $star';
           }
 
           return _choiceChip(

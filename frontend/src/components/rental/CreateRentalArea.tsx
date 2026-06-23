@@ -22,7 +22,6 @@ import Step4CourtCopy from "./Step4CourtCopy";
 import Step5Services from "./Step5Services";
 import Step6Legal from "./Step6Legal";
 
-
 const getApiErrorMessage = (error: any): string => {
   const data = error?.response?.data;
 
@@ -127,7 +126,6 @@ const FormContainer: React.FC = () => {
       legalInfo: finalStepData,
     };
 
-
     try {
       const rentalPayload = {
         userId: user?.userId || "",
@@ -207,7 +205,8 @@ const FormContainer: React.FC = () => {
               courtPriceService.createCourtPrice({
                 courtId: courtId,
                 pricePerHour: priceConfig.pricePerHour,
-                priceType: priceConfig.priceType || "DEFAULT",
+                priceType: priceConfig.priceType || "NORMAL",
+                dayType: priceConfig.dayType,
                 startTime: priceConfig.startTime,
                 endTime: priceConfig.endTime,
                 priority: 1,
@@ -256,7 +255,6 @@ const FormContainer: React.FC = () => {
         "Tạo cơ sở thành công! Giờ đây hãy tới trang quản lí cơ sở !",
       );
     } catch (error: any) {
-
       const errorMessage = getApiErrorMessage(error);
 
       message.error({

@@ -234,6 +234,17 @@ public class RentalAreaServiceImpl implements RentalAreaService {
         CityResponse cityResponse = null;
         AddressResponse addressResponse = null;
 
+        if (rentalArea.getAddress().getCity() == null) {
+            cityResponse = CityResponse.builder()
+                    .cityName(rentalArea.getAddress().getCityName())
+                    .build();
+        } else {
+            cityResponse = CityResponse.builder()
+                    .cityId(rentalArea.getAddress().getCity().getCityId())
+                    .cityName(rentalArea.getAddress().getCity().getCityName())
+                    .build();
+        }
+
         if (address != null) {
             City city = address.getCity();
 

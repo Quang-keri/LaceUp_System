@@ -338,7 +338,20 @@ public class BookingIntentServiceImpl implements BookingIntentService {
                                     .rentalAreaName(intent.getRentalArea().getRentalAreaName())
                                     .address(
                                             intent.getRentalArea().getAddress() != null
-                                                    ? AddressResponse.builder().street(intent.getRentalArea().getAddress().getStreet()).ward(intent.getRentalArea().getAddress().getWard()).city(CityResponse.builder().cityName(intent.getRentalArea().getAddress().getCity().getCityName()).build()).build()
+                                                    ? AddressResponse.builder()
+                                                    .street(intent.getRentalArea().getAddress().getStreet())
+                                                    .ward(intent.getRentalArea().getAddress().getWard())
+                                                    .city(intent.getRentalArea().getAddress().getCity() != null
+                                                            ? CityResponse.builder()
+                                                            .cityName(intent.getRentalArea().getAddress().getCity().getCityName())
+                                                            .build()
+                                                            : (intent.getRentalArea().getAddress().getCityName() != null
+                                                            ? CityResponse.builder()
+                                                            .cityName(intent.getRentalArea().getAddress().getCityName())
+                                                            .build()
+                                                            : null)
+                                                    )
+                                                    .build()
                                                     : null
                                     )
                                     .contactName(intent.getRentalArea().getContactName())

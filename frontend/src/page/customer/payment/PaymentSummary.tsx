@@ -61,7 +61,6 @@ export default function PaymentSummary({
         >
           <Radio value="PAY_OS">Chuyển khoản PAY OS</Radio>
           <Radio value="VN_PAY">Chuyển khoản VNPay</Radio>
-          <Radio value="CASH">Thanh toán tại sân (Tiền mặt)</Radio>
         </Radio.Group>
       </Card>
 
