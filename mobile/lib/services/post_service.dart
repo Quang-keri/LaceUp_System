@@ -16,6 +16,7 @@ class PostService {
     String? sortBy,
     int? minRating,
     List<int>? provinceCodes,
+    List<String>? wards,
     List<int>? categoryIds,
     List<int>? amenityIds,
   }) async {
@@ -28,6 +29,7 @@ class PostService {
       'sortBy': sortBy,
       'minRating': minRating,
       'provinceCodes': provinceCodes?.join(','),
+      'wards': wards?.join(','),
       'categoryIds': categoryIds?.join(','),
       'amenityIds': amenityIds?.join(','),
     };

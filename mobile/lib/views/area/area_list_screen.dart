@@ -36,6 +36,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
   String? sortBy;
 
   List<int> provinceCodes = [];
+  List<String> wards = [];
   List<int> categoryIds = [];
   List<int> amenityIds = [];
 
@@ -67,6 +68,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
     if (minRating > 0) count++;
     if (minPrice > 0 || maxPrice < 500000) count++;
     if (provinceCodes.isNotEmpty) count++;
+    if (wards.isNotEmpty) count++;
     if (categoryIds.isNotEmpty) count++;
     if (amenityIds.isNotEmpty) count++;
     return count;
@@ -76,6 +78,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
 
   Future<void> fetchFilterData() async {
     try {
+      await locationService.clearCache();
       final provinceRes = await locationService.getProvinces();
       final categoryRes = await categoryService.getAllCategories(
         page: 1,
@@ -113,6 +116,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
         sortBy: sortBy,
         minRating: minRating > 0 ? minRating : null,
         provinceCodes: provinceCodes.isNotEmpty ? provinceCodes : null,
+        wards: wards.isNotEmpty ? wards : null,
         categoryIds: categoryIds.isNotEmpty ? categoryIds : null,
         amenityIds: amenityIds.isNotEmpty ? amenityIds : null,
       );
@@ -139,6 +143,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
       minRating = 0;
       sortBy = null;
       provinceCodes = [];
+      wards = [];
       categoryIds = [];
       amenityIds = [];
     });
@@ -164,6 +169,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
               minRating: minRating,
               sortBy: sortBy,
               provinceCodes: provinceCodes,
+              wards: wards,
               categoryIds: categoryIds,
               amenityIds: amenityIds,
               provinces: provinces,
@@ -176,6 +182,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
                 required newMinPrice,
                 required newMinRating,
                 required newProvinceCodes,
+                required newWards,
                 required newSortBy,
               }) {
                 setState(() {
@@ -184,6 +191,7 @@ class _AreaListScreenState extends State<AreaListScreen> {
                   minRating = newMinRating;
                   sortBy = newSortBy;
                   provinceCodes = newProvinceCodes;
+                  wards = newWards;
                   categoryIds = newCategoryIds;
                   amenityIds = newAmenityIds;
                   page = 1;

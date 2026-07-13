@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:mobile/services/location_service.dart';
 import 'multi_select_wrap.dart';
 
 typedef AreaFilterApply =
@@ -9,6 +9,7 @@ typedef AreaFilterApply =
       required int newMinRating,
       required String? newSortBy,
       required List<int> newProvinceCodes,
+      required List<String> newWards,
       required List<int> newCategoryIds,
       required List<int> newAmenityIds,
     });
@@ -22,6 +23,7 @@ class AreaFilterBottomSheet extends StatefulWidget {
   final String? sortBy;
 
   final List<int> provinceCodes;
+  final List<String> wards;
   final List<int> categoryIds;
   final List<int> amenityIds;
 
@@ -39,6 +41,7 @@ class AreaFilterBottomSheet extends StatefulWidget {
     required this.minRating,
     required this.sortBy,
     required this.provinceCodes,
+    required this.wards,
     required this.categoryIds,
     required this.amenityIds,
     required this.provinces,
@@ -58,8 +61,12 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
   late String? tempSortBy;
 
   late List<int> tempProvinceCodes;
+  late List<String> tempWards;
   late List<int> tempCategoryIds;
   late List<int> tempAmenityIds;
+
+  List<WardResponse> availableWards = [];
+  bool loadingWards = false;
 
   @override
   void initState() {
@@ -71,8 +78,46 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
     tempSortBy = widget.sortBy;
 
     tempProvinceCodes = List<int>.from(widget.provinceCodes);
+    tempWards = List<String>.from(widget.wards);
     tempCategoryIds = List<int>.from(widget.categoryIds);
     tempAmenityIds = List<int>.from(widget.amenityIds);
+  }
+
+  Future<void> fetchWards() async {
+    if (tempProvinceCodes.isEmpty) {
+      if (mounted) {
+        setState(() {
+          availableWards = [];
+          tempWards.clear();
+        });
+      }
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        loadingWards = true;
+      });
+    }
+    try {
+      List<WardResponse> allWards = [];
+      for (int code in tempProvinceCodes) {
+        final wards = await locationService.getWardsByProvince(code);
+        allWards.addAll(wards);
+      }
+      if (mounted) {
+        setState(() {
+          availableWards = allWards;
+        });
+      }
+    } catch (e) {
+      debugPrint('Fetch wards error: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          loadingWards = false;
+        });
+      }
+    }
   }
 
   int get tempFilterCount {
@@ -81,6 +126,7 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
     if (tempMinRating > 0) count++;
     if (tempMinPrice > 0 || tempMaxPrice < 500000) count++;
     if (tempProvinceCodes.isNotEmpty) count++;
+    if (tempWards.isNotEmpty) count++;
     if (tempCategoryIds.isNotEmpty) count++;
     if (tempAmenityIds.isNotEmpty) count++;
     return count;
@@ -93,8 +139,10 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
       tempMinRating = 0;
       tempSortBy = null;
       tempProvinceCodes.clear();
+      tempWards.clear();
       tempCategoryIds.clear();
       tempAmenityIds.clear();
+      availableWards.clear();
     });
   }
 
@@ -107,6 +155,7 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
       newMinRating: tempMinRating,
       newSortBy: tempSortBy,
       newProvinceCodes: List<int>.from(tempProvinceCodes),
+      newWards: List<String>.from(tempWards),
       newCategoryIds: List<int>.from(tempCategoryIds),
       newAmenityIds: List<int>.from(tempAmenityIds),
     );
@@ -125,13 +174,19 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
 
     return InkWell(
       onTap: () {
-        // Mở Dialog khi bấm vào
+        String searchQuery = '';
         showDialog(
           context: context,
           builder: (BuildContext context) {
-            // Dùng StatefulBuilder để Dialog có thể tự cập nhật UI khi tích Checkbox
             return StatefulBuilder(
               builder: (context, setStateDialog) {
+                final filteredProvinces = widget.provinces.where((p) {
+                  if (searchQuery.isEmpty) return true;
+                  final nameLower = p.name.toString().toLowerCase();
+                  final queryLower = searchQuery.toLowerCase();
+                  return nameLower.contains(queryLower);
+                }).toList();
+
                 return AlertDialog(
                   title: const Text(
                     'Chọn Khu vực',
@@ -143,41 +198,63 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
                   ),
                   content: SizedBox(
                     width: double.maxFinite,
-                    height:
-                        MediaQuery.of(context).size.height *
-                        0.5, // Chiều cao tối đa = 50% màn hình
-                    child: ListView.builder(
-                      itemCount: widget.provinces.length,
-                      itemBuilder: (context, index) {
-                        final province = widget.provinces[index];
-                        final isSelected = tempProvinceCodes.contains(
-                          province.code,
-                        );
-
-                        return CheckboxListTile(
-                          title: Text(
-                            province.name,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
+                    height: MediaQuery.of(context).size.height * 0.5,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: 'Tìm kiếm khu vực...',
+                              prefixIcon: const Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                            onChanged: (val) {
+                              setStateDialog(() {
+                                searchQuery = val;
+                              });
+                            },
                           ),
-                          value: isSelected,
-                          activeColor: const Color(0xFF9156F1),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          // Checkbox nằm bên trái
-                          onChanged: (bool? value) {
-                            setStateDialog(() {
-                              // Cập nhật lại list trong Dialog
-                              if (value == true) {
-                                tempProvinceCodes.add(province.code);
-                              } else {
-                                tempProvinceCodes.remove(province.code);
-                              }
-                            });
-                            setState(
-                              () {},
-                            ); // Cập nhật lại UI hiển thị bên ngoài BottomSheet
-                          },
-                        );
-                      },
+                        ),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: filteredProvinces.length,
+                            itemBuilder: (context, index) {
+                              final province = filteredProvinces[index];
+                              final isSelected = tempProvinceCodes.contains(
+                                province.code,
+                              );
+
+                              return CheckboxListTile(
+                                title: Text(
+                                  province.name,
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                value: isSelected,
+                                activeColor: const Color(0xFF9156F1),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                onChanged: (bool? value) {
+                                  setStateDialog(() {
+                                    if (value == true) {
+                                      if (!tempProvinceCodes.contains(province.code)) {
+                                        tempProvinceCodes.add(province.code);
+                                      }
+                                    } else {
+                                      tempProvinceCodes.remove(province.code);
+                                    }
+                                    availableWards.clear();
+                                    tempWards.clear();
+                                  });
+                                  setState(() {});
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   actions: [
@@ -237,6 +314,185 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
     );
   }
 
+  Widget _buildWardSelectOption() {
+    String getSelectedNames() {
+      if (tempWards.isEmpty) return 'Tất cả phường/xã';
+      return tempWards.join(', ');
+    }
+
+    final bool isCurrentlyLoading = loadingWards;
+
+    return InkWell(
+      onTap: isCurrentlyLoading
+          ? null
+          : () async {
+              if (tempProvinceCodes.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Vui lòng chọn khu vực trước'),
+                  ),
+                );
+                return;
+              }
+
+              if (availableWards.isEmpty) {
+                await fetchWards();
+              }
+
+              if (!mounted) return;
+
+              String searchQuery = '';
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return StatefulBuilder(
+                    builder: (context, setStateDialog) {
+                      final filteredWards = availableWards.where((w) {
+                        if (searchQuery.isEmpty) return true;
+                        final nameLower = w.name.toString().toLowerCase();
+                        final queryLower = searchQuery.toLowerCase();
+                        return nameLower.contains(queryLower);
+                      }).toList();
+
+                      return AlertDialog(
+                        title: const Text(
+                          'Chọn Phường/Xã',
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                        ),
+                        contentPadding: const EdgeInsets.only(top: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        content: SizedBox(
+                          width: double.maxFinite,
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText: 'Tìm kiếm phường/xã...',
+                                    prefixIcon: const Icon(Icons.search),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  onChanged: (val) {
+                                    setStateDialog(() {
+                                      searchQuery = val;
+                                    });
+                                  },
+                                ),
+                              ),
+                              Expanded(
+                                child: filteredWards.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'Không tìm thấy phường/xã nào',
+                                          style: TextStyle(color: Colors.black54),
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        itemCount: filteredWards.length,
+                                        itemBuilder: (context, index) {
+                                          final ward = filteredWards[index];
+                                          final isSelected = tempWards.contains(
+                                            ward.name,
+                                          );
+
+                                          return CheckboxListTile(
+                                            title: Text(
+                                              ward.name,
+                                              style: const TextStyle(fontWeight: FontWeight.w500),
+                                            ),
+                                            value: isSelected,
+                                            activeColor: const Color(0xFF9156F1),
+                                            controlAffinity: ListTileControlAffinity.leading,
+                                            onChanged: (bool? value) {
+                                              setStateDialog(() {
+                                                if (value == true) {
+                                                  tempWards.add(ward.name);
+                                                } else {
+                                                  tempWards.remove(ward.name);
+                                                }
+                                              });
+                                              setState(() {});
+                                            },
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text(
+                              'Xong',
+                              style: TextStyle(
+                                color: Color(0xFF9156F1),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              );
+            },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.black12.withOpacity(0.06)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                isCurrentlyLoading ? 'Đang tải phường/xã...' : getSelectedNames(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: tempWards.isEmpty || isCurrentlyLoading
+                      ? Colors.black54
+                      : const Color(0xFF1F2937),
+                  fontWeight: tempWards.isEmpty || isCurrentlyLoading
+                      ? FontWeight.w500
+                      : FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            isCurrentlyLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF9156F1)),
+                    ),
+                  )
+                : const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Colors.black54,
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -253,6 +509,19 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
               controller: widget.scrollController,
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
               children: [
+                _sectionTitle('Loại sân'),
+                _whiteCard(
+                  child: MultiSelectWrap(
+                    items: widget.categories,
+                    selectedIds: tempCategoryIds,
+                    getId: (item) => item.categoryId,
+                    getName: (item) => item.categoryName,
+                    onChanged: () => setState(() {}),
+                  ),
+                ),
+
+                const SizedBox(height: 22),
+
                 _sectionTitle('Sắp xếp'),
                 _sortChips(),
 
@@ -273,16 +542,8 @@ class _AreaFilterBottomSheetState extends State<AreaFilterBottomSheet> {
 
                 const SizedBox(height: 22),
 
-                _sectionTitle('Loại sân'),
-                _whiteCard(
-                  child: MultiSelectWrap(
-                    items: widget.categories,
-                    selectedIds: tempCategoryIds,
-                    getId: (item) => item.categoryId,
-                    getName: (item) => item.categoryName,
-                    onChanged: () => setState(() {}),
-                  ),
-                ),
+                _sectionTitle('Phường/Xã'),
+                _buildWardSelectOption(),
 
                 const SizedBox(height: 22),
 

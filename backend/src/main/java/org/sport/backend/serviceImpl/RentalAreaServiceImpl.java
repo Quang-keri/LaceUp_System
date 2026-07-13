@@ -745,6 +745,45 @@ public class RentalAreaServiceImpl implements RentalAreaService {
 
         BankAccountResponse bankAccountResponse = bankAccountMapper.toResponse(bankAccount);
 
+        LegalProfile legalProfile =
+                legalProfileRepository
+                        .findByRentalArea_RentalAreaId(
+                                rentalArea.getRentalAreaId()
+                        )
+                        .orElse(null);
+
+        LegalProfileResponse legalProfileResponse = null;
+
+        if (legalProfile != null) {
+            legalProfileResponse = LegalProfileResponse.builder()
+                    .id(legalProfile.getId())
+                    .businessLicenseNumber(
+                            legalProfile.getBusinessLicenseNumber()
+                    )
+                    .taxId(legalProfile.getTaxId())
+                    .legalNote(legalProfile.getLegalNote())
+                    .companyName(legalProfile.getCompanyName())
+                    .responsiblePersonName(
+                            legalProfile.getResponsiblePersonName()
+                    )
+                    .address(legalProfile.getAddress())
+                    .rentalAreaId(rentalArea.getRentalAreaId())
+                    .images(
+                            legalProfile.getImages() != null
+                                    ? legalProfile.getImages()
+                                    .stream()
+                                    .map(img ->
+                                            LegalImageResponse.builder()
+                                                    .legalImageId(img.getId())
+                                                    .imageUrl(img.getImageUrl())
+                                                    .build()
+                                    )
+                                    .toList()
+                                    : List.of()
+                    )
+                    .build();
+        }
+
         return RentalAreaDetailResponse.builder()
                 .rentalAreaId(rentalArea.getRentalAreaId())
                 .rentalAreaName(rentalArea.getRentalAreaName())
@@ -763,6 +802,8 @@ public class RentalAreaServiceImpl implements RentalAreaService {
                 .bankAccount(bankAccountResponse)
                 .longitude(rentalArea.getLongitude())
                 .latitude(rentalArea.getLatitude())
+                .verificationStatus(rentalArea.getVerificationStatus())
+                .legalProfileResponse(legalProfileResponse)
                 .build();
     }
 

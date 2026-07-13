@@ -57,7 +57,16 @@ class LocationService {
   static const String _provincesKey = 'cached_provinces';
   static const String _wardsKey = 'cached_wards';
 
-  final Dio _dio = Dio();
+  late final Dio _dio;
+
+  LocationService() {
+    _dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+      ),
+    );
+  }
 
   Future<List<ProvinceResponse>> getProvinces({
     bool forceRefresh = false,
@@ -69,9 +78,11 @@ class LocationService {
 
       if (cached != null && cached.isNotEmpty) {
         final List decoded = jsonDecode(cached);
-        return decoded
-            .map((e) => ProvinceResponse.fromJson(e as Map<String, dynamic>))
-            .toList();
+        if (decoded.isNotEmpty) {
+          return decoded
+              .map((e) => ProvinceResponse.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
       }
     }
 
@@ -103,9 +114,11 @@ class LocationService {
 
       if (cached != null && cached.isNotEmpty) {
         final List decoded = jsonDecode(cached);
-        return decoded
-            .map((e) => WardResponse.fromJson(e as Map<String, dynamic>))
-            .toList();
+        if (decoded.isNotEmpty) {
+          return decoded
+              .map((e) => WardResponse.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
       }
     }
 

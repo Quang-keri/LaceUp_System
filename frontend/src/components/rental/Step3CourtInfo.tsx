@@ -174,19 +174,19 @@ export default function Step3CourtInfo({
                 <Form.Item
                   {...field}
                   name={[field.name, "courtImages"]}
-                  label="Hình ảnh thực tế (Tối đa 5 ảnh)"
+                  label="Hình ảnh thực tế (Tối đa 2 ảnh)"
                   valuePropName="fileList"
                   getValueFromEvent={normFile}
                   rules={[
                     {
                       required: true,
-                      message: "Ít nhất 1 tấm ảnh và tối đa 5 tấm ảnh",
+                      message: "Ít nhất 1 tấm ảnh và tối đa 2 tấm ảnh",
                     },
                   ]}
                 >
                   <Upload
                     listType="picture-card"
-                    maxCount={5}
+                    maxCount={2}
                     multiple
                     beforeUpload={() => false}
                   >
