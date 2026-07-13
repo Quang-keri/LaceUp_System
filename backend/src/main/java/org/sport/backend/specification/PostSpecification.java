@@ -112,7 +112,8 @@ public class PostSpecification {
 
             if (
                     (filter.getCityIds() != null && !filter.getCityIds().isEmpty()) ||
-                            (filter.getProvinceCodes() != null && !filter.getProvinceCodes().isEmpty())
+                             (filter.getProvinceCodes() != null && !filter.getProvinceCodes().isEmpty()) ||
+                             (filter.getWards() != null && !filter.getWards().isEmpty())
             ) {
                 rentalAreaJoin = courtJoin.join("rentalArea", JoinType.INNER);
             }
@@ -134,6 +135,15 @@ public class PostSpecification {
                                 .get("city")
                                 .get("provinceCode")
                                 .in(filter.getProvinceCodes())
+                );
+            }
+
+            if (filter.getWards() != null && !filter.getWards().isEmpty()) {
+                predicates.add(
+                        rentalAreaJoin
+                                .get("address")
+                                .get("ward")
+                                .in(filter.getWards())
                 );
             }
 

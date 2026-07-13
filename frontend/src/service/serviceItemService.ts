@@ -38,7 +38,10 @@ class ServiceItemService {
 
     if (data.images && data.images.length > 0) {
       data.images.forEach((file: any) => {
-        formData.append("imageUrls", file);
+        const raw = file?.originFileObj ?? file;
+        if (raw instanceof File || raw instanceof Blob) {
+          formData.append("imageUrls", raw);
+        }
       });
     }
 
@@ -64,7 +67,10 @@ class ServiceItemService {
 
     if (data.images && data.images.length > 0) {
       data.images.forEach((file: any) => {
-        formData.append("imageUrls", file);
+        const raw = file?.originFileObj ?? file;
+        if (raw instanceof File || raw instanceof Blob) {
+          formData.append("imageUrls", raw);
+        }
       });
     }
 

@@ -57,7 +57,13 @@ export default function Step6Legal({
           <Col xs={24} md={12}>
             <Form.Item
               name="companyName"
-              label="Tên công ty/Cơ sở kinh doanh (Tùy chọn)"
+              label="Tên công ty/Cơ sở kinh doanh"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập tên công ty/cơ sở kinh doanh",
+                },
+              ]}
             >
               <Input
                 placeholder="Nhập tên công ty hoặc cơ sở kinh doanh"
@@ -69,7 +75,13 @@ export default function Step6Legal({
           <Col xs={24} md={12}>
             <Form.Item
               name="responsiblePersonName"
-              label="Tên người đại diện pháp luật (Tùy chọn)"
+              label="Tên người đại diện pháp luật"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập tên người đại diện pháp luật",
+                },
+              ]}
             >
               <Input
                 placeholder="Nhập tên người chịu trách nhiệm pháp lý"
@@ -81,7 +93,13 @@ export default function Step6Legal({
           <Col xs={24} md={12}>
             <Form.Item
               name="address"
-              label="Địa chỉ đăng ký kinh doanh (Tùy chọn)"
+              label="Địa chỉ đăng ký kinh doanh"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập địa chỉ đăng ký kinh doanh",
+                },
+              ]}
             >
               <Input
                 placeholder="Nhập địa chỉ ghi trên giấy phép"
@@ -93,7 +111,13 @@ export default function Step6Legal({
           <Col xs={24} md={12}>
             <Form.Item
               name="businessLicense"
-              label="Số giấy phép kinh doanh (Tùy chọn)"
+              label="Số giấy phép kinh doanh"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập số giấy phép kinh doanh",
+                },
+              ]}
             >
               <Input placeholder="Nhập số giấy phép kinh doanh" size="large" />
             </Form.Item>
@@ -102,7 +126,13 @@ export default function Step6Legal({
           <Col xs={24} md={12}>
             <Form.Item
               name="taxCode"
-              label="Mã số thuế doanh nghiệp (Tùy chọn)"
+              label="Mã số thuế doanh nghiệp"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập mã số thuế doanh nghiệp",
+                },
+              ]}
             >
               <Input placeholder="Nhập mã số thuế" size="large" />
             </Form.Item>
@@ -126,6 +156,12 @@ export default function Step6Legal({
               label="Hình ảnh giấy tờ pháp lý (Tối đa 3 ảnh)"
               valuePropName="fileList"
               getValueFromEvent={normFile}
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng tải lên hình ảnh giấy tờ pháp lý",
+                },
+              ]}
             >
               <Upload
                 listType="picture-card"
